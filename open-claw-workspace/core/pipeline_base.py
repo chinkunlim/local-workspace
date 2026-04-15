@@ -23,8 +23,12 @@ import psutil
 import threading
 from typing import Dict, Any, List, Optional
 
+from .config_manager import ConfigManager
+from .config_validation import ConfigValidator
+from .path_builder import PathBuilder
 from .state_manager import StateManager
 from .llm_client import OllamaClient
+from .log_manager import build_logger
 
 
 class PipelineBase:
@@ -40,38 +44,32 @@ class PipelineBase:
         self.skill_name = skill_name
         self.logger = logger
 
-        # Determine workspace root
-        # __file__ is core/pipeline_base.py → parent is core/ → parent is workspace root
         script_dir = os.path.dirname(os.path.abspath(__file__))
         default_workspace = os.path.abspath(os.path.join(script_dir, ".."))
         self.workspace_root = os.environ.get("WORKSPACE_DIR", default_workspace)
 
-        # Dynamic base_dir: data/{skill_name}/
-        self.base_dir = os.path.join(self.workspace_root, "data", skill_name)
-
-        # Phase directories (voice-memo convention; pdf-knowledge subclasses may override)
-        self.dirs = {
-            "p0": os.path.join(self.base_dir, "raw_data"),
-            "p1": os.path.join(self.base_dir, "01_transcript"),
-            "p2": os.path.join(self.base_dir, "02_proofread"),
-            "p3": os.path.join(self.base_dir, "03_merged"),
-            "p4": os.path.join(self.base_dir, "04_highlighted"),
-            "p5": os.path.join(self.base_dir, "05_notion_synthesis"),
-        }
-
-        # For skills that have their own prompt file next to their scripts
-        # (pdf-knowledge scripts set self.prompt_file themselves if they need one)
-        self.config_dir = os.path.join(self.workspace_root, "skills", self.skill_name, "config")
-        self.prompt_file = os.path.join(self.config_dir, "prompt.md")
-        self.config_file = os.path.join(self.config_dir, "config.yaml")
-        self.log_file = os.path.join(self.base_dir, "system.log")
+        self.path_builder = PathBuilder(self.workspace_root, skill_name)
+        self.config_manager = ConfigManager(self.workspace_root, skill_name)
+        self.base_dir = self.path_builder.base_dir
+        self.dirs = self.path_builder.phase_dirs
+        self.config_dir = self.path_builder.config_dir
+        self.prompt_file = self.path_builder.prompt_file
+        self.config_file = self.path_builder.config_file
+        self.log_file = self.path_builder.log_file
 
         # Ensure base_dir and log parent exist before logging
-        os.makedirs(self.base_dir, exist_ok=True)
+        self.path_builder.ensure_directories()
         os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
 
         self.state_manager = StateManager(self.base_dir)
-        self.llm = OllamaClient()
+        runtime_cfg = self.config_manager.get_section("runtime", {})
+        ollama_cfg = runtime_cfg.get("ollama", {}) if isinstance(runtime_cfg, dict) else {}
+        self.llm = OllamaClient(
+            api_url=ConfigValidator.require(ollama_cfg.get("api_url"), "runtime.ollama.api_url"),
+            timeout=ollama_cfg.get("timeout_seconds", 600),
+            retries=ollama_cfg.get("retries", 3),
+            backoff_seconds=ollama_cfg.get("backoff_seconds", 5.0),
+        )
         self.stop_requested = False
         self.pause_requested = False
 
@@ -83,22 +81,7 @@ class PipelineBase:
     # ------------------------------------------------------------------ #
 
     def _setup_logging(self):
-        import logging
-        from logging.handlers import RotatingFileHandler
-
-        logger_name = f"OpenClaw.{self.skill_name}"
-        logger = logging.getLogger(logger_name)
-        if not logger.handlers:
-            log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-            os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
-            file_handler = RotatingFileHandler(
-                self.log_file, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
-            )
-            file_handler.setFormatter(log_formatter)
-            logger.setLevel(logging.INFO)
-            logger.propagate = False
-            logger.addHandler(file_handler)
-        self.logger = logger
+        self.logger = self.logger or build_logger(f"OpenClaw.{self.skill_name}", log_file=self.log_file)
 
     def log(self, msg: str, level: str = "info"):
         if "tqdm" in sys.modules:
@@ -171,10 +154,19 @@ class PipelineBase:
 
     def check_system_health(self) -> bool:
         """Monitor RAM, Disk, Temp. Return True if graceful stop is needed."""
-        # Apple Silicon (darwin): Unified Memory + efficient Swap means lower thresholds
-        # are needed to avoid false-positive pauses on 16GB machines running 14B models.
-        warning_mb, critical_mb = (500, 200) if sys.platform == "darwin" else (4000, 2048)
-        warning_temp, critical_temp = 85, 95
+        hardware_cfg = self.config_manager.get_section("hardware", {})
+        ram_cfg = hardware_cfg.get("ram", {}) if isinstance(hardware_cfg, dict) else {}
+        temp_cfg = hardware_cfg.get("temperature", {}) if isinstance(hardware_cfg, dict) else {}
+        battery_cfg = hardware_cfg.get("battery", {}) if isinstance(hardware_cfg, dict) else {}
+        disk_cfg = hardware_cfg.get("disk", {}) if isinstance(hardware_cfg, dict) else {}
+
+        warning_mb = ConfigValidator.require_int(ram_cfg.get("warning_mb"), "hardware.ram.warning_mb", min_value=1)
+        critical_mb = ConfigValidator.require_int(ram_cfg.get("critical_mb"), "hardware.ram.critical_mb", min_value=1)
+        warning_temp = ConfigValidator.require_int(temp_cfg.get("warning_celsius"), "hardware.temperature.warning_celsius", min_value=1)
+        critical_temp = ConfigValidator.require_int(temp_cfg.get("critical_celsius"), "hardware.temperature.critical_celsius", min_value=1)
+        critical_disk_mb = ConfigValidator.require_int(disk_cfg.get("min_free_mb"), "hardware.disk.min_free_mb", min_value=1)
+        low_battery_percent = ConfigValidator.require_int(battery_cfg.get("low_percent"), "hardware.battery.low_percent", min_value=1, max_value=100)
+        critical_battery_percent = ConfigValidator.require_int(battery_cfg.get("critical_percent"), "hardware.battery.critical_percent", min_value=1, max_value=100)
 
         available_ram = psutil.virtual_memory().available / (1024 * 1024)
         disk_free = psutil.disk_usage(self.base_dir).free / (1024 * 1024)
@@ -195,10 +187,10 @@ class PipelineBase:
         if available_ram < critical_mb:
             self.log(f"💥 [RAM 耗盡] 可用僅 {available_ram:.0f}MB！強制停機！", "error")
             os._exit(1)
-        elif disk_free < 200:
+        elif disk_free < critical_disk_mb:
             self.log(f"💾 [空間耗盡] 磁碟空間剩餘 {disk_free:.0f}MB！強制停機！", "error")
             os._exit(1)
-        elif not power_plugged and bat_percent < 5:
+        elif not power_plugged and bat_percent < critical_battery_percent:
             self.log(f"🪫 [電力極低] 電量僅 {bat_percent}% 且未充電！", "error")
             os._exit(1)
         elif current_temp and current_temp >= critical_temp:
@@ -206,7 +198,7 @@ class PipelineBase:
             os._exit(1)
 
         # Graceful Warning
-        if available_ram < warning_mb or (not power_plugged and bat_percent < 15):
+        if available_ram < warning_mb or (not power_plugged and bat_percent < low_battery_percent):
             if not self.stop_requested:
                 reason = "RAM 偏低" if available_ram < warning_mb else "電力不足"
                 self.log(f"🚨 [資源預警] {reason}，啟動暫停 (Pause) 儲存進度...", "warn")
@@ -246,20 +238,7 @@ class PipelineBase:
 
     def get_config(self, phase_name: str, subject_name: str = None) -> Dict[str, Any]:
         """Read config.yaml profile."""
-        import yaml
-        if not os.path.exists(self.config_file):
-            return {}
-        with open(self.config_file, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
-        phase_config = data.get(phase_name.lower().replace(" ", ""), {})
-        active = phase_config.get("active_profile", "default")
-
-        if subject_name:
-            overrides = phase_config.get("subject_overrides", {})
-            if subject_name in overrides:
-                active = overrides[subject_name]
-
-        return phase_config.get("profiles", {}).get(active, {})
+        return self.config_manager.get_profile(phase_name.lower().replace(" ", ""), subject_name=subject_name)
 
     # ------------------------------------------------------------------ #
     #  Task Management (voice-memo pattern; optional for other skills)     #

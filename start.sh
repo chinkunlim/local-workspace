@@ -9,9 +9,17 @@ RED='\033[0;31m'
 NC='\033[0m' # 無顏色
 
 # 獲取腳本所在目錄的絕對路徑
-WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 獲取腳本所在目錄的絕對路徑，然後進入 open-claw-workspace
+_LOCAL_WORKSPACE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/open-claw-workspace" && pwd)"
+export WORKSPACE_DIR
+export PYTHONPATH="${_LOCAL_WORKSPACE}:${WORKSPACE_DIR}:${PYTHONPATH}"
 LOG_DIR="${WORKSPACE_DIR}/logs"
 mkdir -p "$LOG_DIR"
+STARTUP_LOG="${LOG_DIR}/startup.log"
+
+exec > >(tee -a "$STARTUP_LOG") 2>&1
 
 echo -e "${CYAN}==================================================${NC}"
 echo -e "${CYAN}          🚀 Starting AI Ecosystem              ${NC}"

@@ -27,11 +27,18 @@ import gc
 from typing import List, Optional
 from dataclasses import dataclass, field, asdict
 
-# --- Workspace root sys.path setup ---
+# --- Boundary-Safe Initialization ---
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.path.abspath(os.path.join(_script_dir, "../../.."))
-if _workspace_root not in sys.path:
-    sys.path.insert(0, _workspace_root)
+_skill_root = os.path.dirname(os.path.dirname(_script_dir))  # skills/pdf-knowledge
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _script_dir]
 
 from core.pipeline_base import PipelineBase
 
@@ -94,18 +101,11 @@ class Phase1aDiagnostic(PipelineBase):
             "final": os.path.join(self.base_dir, "05_Final_Knowledge"),
             "error": os.path.join(self.base_dir, "Error"),
         }
-        self._load_config()
-
-    def _load_config(self):
-        """Load config.yaml settings with fallback defaults."""
-        import yaml
-        config_path = os.path.join(_workspace_root, "skills", "pdf-knowledge", "config", "config.yaml")
-        self._config = {}
-        if os.path.exists(config_path):
-            with open(config_path, "r", encoding="utf-8") as f:
-                self._config = yaml.safe_load(f) or {}
-        diag = self._config.get("pdf_processing", {}).get("diagnostic", {})
-        self.min_text_chars = diag.get("min_text_chars_first_page", 50)
+        self.min_text_chars = self.config_manager.get_nested(
+            "pdf_processing", "diagnostic", "min_text_chars_first_page"
+        )
+        if self.min_text_chars is None:
+            raise RuntimeError("pdf-knowledge config missing pdf_processing.diagnostic.min_text_chars_first_page")
 
     # ------------------------------------------------------------------ #
     #  Public Entry Point                                                  #
@@ -337,8 +337,8 @@ class Phase1aDiagnostic(PipelineBase):
         report_dict = asdict(report)
         report_dict.pop("pdf_path", None)  # Don't export full path for security
 
-        with open(report_path, "w", encoding="utf-8") as f:
-            json.dump(report_dict, f, ensure_ascii=False, indent=2)
+        from core import AtomicWriter
+        AtomicWriter.write_json(report_path, report_dict)
 
         self.info(f"💾 [Diagnose] scan_report.json 已寫入: {report_path}")
 

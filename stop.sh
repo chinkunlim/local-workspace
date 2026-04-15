@@ -8,6 +8,13 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # 無顏色
 
+WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="${WORKSPACE_DIR}/logs"
+mkdir -p "$LOG_DIR"
+STOP_LOG="${LOG_DIR}/stop.log"
+
+exec > >(tee -a "$STOP_LOG") 2>&1
+
 echo -e "${CYAN}==================================================${NC}"
 echo -e "${CYAN}          🛑 Stopping AI Ecosystem              ${NC}"
 echo -e "${CYAN}==================================================${NC}"

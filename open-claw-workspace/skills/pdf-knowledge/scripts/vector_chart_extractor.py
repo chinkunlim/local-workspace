@@ -22,11 +22,18 @@ import json
 import subprocess
 from typing import List, Dict, Optional
 
-# --- Workspace root sys.path setup ---
+# --- Boundary-Safe Initialization ---
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.path.abspath(os.path.join(_script_dir, "../../.."))
-if _workspace_root not in sys.path:
-    sys.path.insert(0, _workspace_root)
+_skill_root = os.path.dirname(os.path.dirname(_script_dir))  # skills/pdf-knowledge
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _script_dir]
 
 from core.pipeline_base import PipelineBase
 
@@ -46,18 +53,11 @@ class Phase1cVectorChartExtractor(PipelineBase):
         self.dirs = {
             "processed": os.path.join(self.base_dir, "02_Processed"),
         }
-        self._load_config()
-
-    def _load_config(self):
-        import yaml
-        config_path = os.path.join(_workspace_root, "skills", "pdf-knowledge", "config", "config.yaml")
-        self._config = {}
-        if os.path.exists(config_path):
-            with open(config_path, "r", encoding="utf-8") as f:
-                self._config = yaml.safe_load(f) or {}
-        vc = self._config.get("pdf_processing", {}).get("vector_chart", {})
-        self.dpi = vc.get("dpi", 150)
-        self.fmt = vc.get("format", "jpeg")
+        vc = self.config_manager.get_nested("pdf_processing", "vector_chart") or {}
+        self.dpi = vc.get("dpi")
+        self.fmt = vc.get("format")
+        if self.dpi is None or self.fmt is None:
+            raise RuntimeError("pdf-knowledge config missing pdf_processing.vector_chart.dpi or format")
 
     # ------------------------------------------------------------------ #
     #  Public Entry Point                                                  #
@@ -188,18 +188,20 @@ class Phase1cVectorChartExtractor(PipelineBase):
             )
             new_rows.append(row)
 
-        with open(figure_list_path, "w", encoding="utf-8") as f:
-            # Write or preserve header
-            if not existing.strip():
-                f.write("# Figure List\n\n")
-                f.write("> 自動生成。[P] = raster 圖片，[V] = 向量圖表光柵化\n\n")
-                f.write("| 檔案名稱 | 頁碼 | 原始 Caption | VLM 描述 | 數據趨勢標籤 | 來源 |\n")
-                f.write("| :--- | :---: | :--- | :--- | :---: | :---: |\n")
-            else:
-                f.write(existing.rstrip() + "\n")
+        from core import AtomicWriter
+        content = []
+        if not existing.strip():
+            content.append("# Figure List\n\n")
+            content.append("> 自動生成。[P] = raster 圖片，[V] = 向量圖表光柵化\n\n")
+            content.append("| 檔案名稱 | 頁碼 | 原始 Caption | VLM 描述 | 數據趨勢標籤 | 來源 |\n")
+            content.append("| :--- | :---: | :--- | :--- | :---: | :---: |\n")
+        else:
+            content.append(existing.rstrip() + "\n")
 
-            for row in new_rows:
-                f.write(row + "\n")
+        for row in new_rows:
+            content.append(row + "\n")
+
+        AtomicWriter.write_text(figure_list_path, "".join(content))
 
         self.info(f"📄 [VectorChart] figure_list.md 已更新 (+{len(new_rows)} 筆)")
 

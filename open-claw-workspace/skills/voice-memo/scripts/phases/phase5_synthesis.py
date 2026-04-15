@@ -1,7 +1,19 @@
 # -*- coding: utf-8 -*-
 import sys, os
-# Add scripts directory to sys.path so 'core' can be imported when running standalone
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+
+# --- Boundary-Safe Initialization ---
+_phase_dir = os.path.dirname(os.path.abspath(__file__))
+_scripts_dir = os.path.dirname(_phase_dir)
+_skill_root = os.path.dirname(os.path.dirname(_scripts_dir))  # skills/voice-memo
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _scripts_dir])
 
 import os
 import re
@@ -28,7 +40,9 @@ class Phase5NotionSynthesis(PipelineBase):
 
     def _agentic_mermaid_retry(self, node_text: str, base_prompt: str, model: str, options: dict) -> str:
         """Agentic loop to fix Mermaid syntax errors."""
-        max_retries = 2
+        max_retries = self.config_manager.get_nested("context", "phase5_mermaid_retry_max")
+        if max_retries is None:
+            raise RuntimeError("voice-memo context.phase5_mermaid_retry_max is missing")
         for attempt in range(1, max_retries + 1):
             errors = self._validate_mermaid(node_text)
             if not errors: return node_text, None # Success
@@ -118,10 +132,14 @@ class Phase5NotionSynthesis(PipelineBase):
             subj, fname = task["subject"], task["filename"]
             
             config = self.get_config("phase5", subject_name=subj)
-            model = config.get("model", "gemma3:12b")
+            model = config.get("model")
             options = config.get("options", {})
-            chunk_thresh = config.get("chunk_threshold", 6000)
-            map_size = config.get("map_chunk_size", 4000)
+            chunk_thresh = config.get("chunk_threshold")
+            map_size = config.get("map_chunk_size")
+            if not model:
+                raise RuntimeError(f"phase5 config missing model for {subj}")
+            if chunk_thresh is None or map_size is None:
+                raise RuntimeError(f"phase5 config missing chunk thresholds for {subj}")
             models_used.add(model)
             
             base_name = os.path.splitext(fname)[0]

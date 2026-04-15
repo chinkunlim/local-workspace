@@ -4,8 +4,20 @@ Phase 0: Automatic Glossary Generation
 Refactored to V7.0 OOP Architecture
 """
 import sys, os
-# Add scripts directory to sys.path so 'core' can be imported when running standalone
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+
+# --- Boundary-Safe Initialization ---
+_phase_dir = os.path.dirname(os.path.abspath(__file__))
+_scripts_dir = os.path.dirname(_phase_dir)
+_skill_root = os.path.dirname(os.path.dirname(_scripts_dir))  # skills/voice-memo
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _scripts_dir]
 
 import os
 import json
@@ -73,7 +85,9 @@ class Phase0Glossary(PipelineBase):
             if self.check_system_health(): break
             
             config = self.get_config("phase0", subject_name=subj)
-            model_name = config.get("model", "gemma3:12b")
+            model_name = config.get("model")
+            if not model_name:
+                raise RuntimeError(f"phase0 config missing model for {subj}")
             options = config.get("options", {})
             models_used.add(model_name)
             

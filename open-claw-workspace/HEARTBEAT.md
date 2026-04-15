@@ -1,7 +1,9 @@
-# HEARTBEAT.md Template
+# HEARTBEAT.md
 
-```markdown
-# Keep this file empty (or with only comments) to skip heartbeat API calls.
+## Operational Heartbeat Checklist
+1. Verify no critical service failures in logs.
+2. Verify no unresolved resume state regressions.
+3. Verify no stale docs after recent behavior changes.
+4. Verify pending tasks and blockers in skill task files.
 
-# Add tasks below when you want the agent to check something periodically.
-```
+If no action is needed, respond with HEARTBEAT_OK.

@@ -5,14 +5,23 @@ V7.0 OOP Architecture — with Checkpoint Resume, Sorted Tasks, Batch Reprocess 
 """
 import os
 import sys
-import argparse
 
-# --- Initialize Pipeline Base context first to determine paths ---
-script_dir = os.path.dirname(os.path.abspath(__file__))
-default_workspace = os.path.abspath(os.path.join(script_dir, "../../.."))
-workspace_root = os.environ.get("WORKSPACE_DIR", default_workspace)
-sys.path.insert(0, workspace_root)
-base_dir = os.path.join(workspace_root, "data", "voice-memo")
+# --- Boundary-Safe Initialization ---
+# scripts/run_all.py → scripts → skills/voice-memo → open-claw-workspace → local-workspace
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_skill_root = os.path.dirname(os.path.dirname(_script_dir))  # skills/voice-memo
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _script_dir]
+
+workspace_root = _workspace_root
+base_dir = os.path.join(_openclawed_root, "data", "voice-memo")
 
 # --- Import Core and Phases ---
 from core import StateManager
@@ -22,6 +31,9 @@ from phases.phase2_proofread import Phase2Proofread
 from phases.phase3_merge import Phase3Merge
 from phases.phase4_highlight import Phase4Highlight
 from phases.phase5_synthesis import Phase5NotionSynthesis
+from core import ConfigManager, build_skill_parser
+
+_runtime_config = ConfigManager(_openclawed_root, "voice-memo")
 
 def print_status_dashboard(state_mgr: StateManager):
     """Print the DAG / Cache status."""
@@ -68,7 +80,12 @@ def preflight_check():
         fail = True
 
     try:
-        requests.get("http://127.0.0.1:11434/api/tags", timeout=3).raise_for_status()
+        ollama_cfg = _runtime_config.get_section("runtime", {}).get("ollama", {})
+        api_url = ollama_cfg.get("api_url")
+        if not api_url:
+            raise RuntimeError("voice-memo runtime.ollama.api_url is missing")
+        tags_url = api_url.replace("/generate", "/tags")
+        requests.get(tags_url, timeout=3).raise_for_status()
     except Exception:
         print("❌ 錯誤：無法連線至 Ollama (`ollama serve`)。")
         fail = True
@@ -122,17 +139,17 @@ def check_and_resume(sm: StateManager) -> dict:
 
 def main():
     preflight_check()
-    parser = argparse.ArgumentParser(
-        description="V7.0 Voice Memo Pipeline 五階段處理"
+    parser = build_skill_parser(
+        "V7.0 Voice Memo Pipeline 五階段處理",
+        include_subject=True,
+        include_force=True,
+        include_resume=True,
+        include_interactive=True,
+        include_start_phase=True,
     )
-    parser.add_argument("--interactive", "-i", action="store_true")
     parser.add_argument("--glossary", action="store_true")
     parser.add_argument("--glossary-merge", action="store_true")
     parser.add_argument("--glossary-force", action="store_true")
-    parser.add_argument("--from", dest="start_phase", type=int, default=1, choices=range(1, 100))
-    parser.add_argument("--force", "-f", action="store_true", help="強制重跑所有已完成任務")
-    parser.add_argument("--subject", "-s", type=str, help="只處理此科目")
-    parser.add_argument("--resume", "-r", action="store_true", help="強制從 checkpoint 繼續（若有）")
     args = parser.parse_args()
 
     sm = StateManager(base_dir)

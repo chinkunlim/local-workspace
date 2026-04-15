@@ -2,34 +2,73 @@
 import os
 import json
 import hashlib
+import threading
 from datetime import datetime
 from typing import Dict, Any, List, Optional
+
+from .atomic_writer import AtomicWriter
 
 class StateManager:
     PHASES = ["p1", "p2", "p3", "p4", "p5"]
 
     def __init__(self, base_dir: str):
         self.base_dir = base_dir
-        self.state_file = os.path.join(base_dir, ".pipeline_state.json")
-        self.checklist_file = os.path.join(base_dir, "checklist.md")
-        self.raw_dir = os.path.join(base_dir, "raw_data")
+        canonical_state_dir = os.path.join(base_dir, "state")
+        legacy_state_file = os.path.join(base_dir, ".pipeline_state.json")
+        legacy_checklist_file = os.path.join(base_dir, "checklist.md")
+        canonical_state_file = os.path.join(canonical_state_dir, ".pipeline_state.json")
+        canonical_checklist_file = os.path.join(canonical_state_dir, "checklist.md")
+
+        self.state_file = canonical_state_file if os.path.exists(canonical_state_file) or not os.path.exists(legacy_state_file) else legacy_state_file
+        self.checklist_file = canonical_checklist_file if os.path.exists(canonical_checklist_file) or not os.path.exists(legacy_checklist_file) else legacy_checklist_file
+
+        canonical_raw_dir = os.path.join(base_dir, "input", "raw_data")
+        legacy_raw_dir = os.path.join(base_dir, "raw_data")
+        if self._dir_has_files(canonical_raw_dir) or not self._dir_has_files(legacy_raw_dir):
+            self.raw_dir = canonical_raw_dir
+        else:
+            self.raw_dir = legacy_raw_dir
+        self._lock = threading.RLock()
+        self._checkpoint: Optional[Dict[str, Any]] = None
         self.state: Dict[str, Dict[str, Any]] = self._load_state()
+
+    @staticmethod
+    def _dir_has_files(path: str) -> bool:
+        try:
+            if not os.path.isdir(path):
+                return False
+            with os.scandir(path) as entries:
+                return any(entry.is_file() for entry in entries)
+        except OSError:
+            return False
 
     def _load_state(self) -> Dict[str, Dict[str, Any]]:
         """Load internal state from JSON or return empty structure."""
         if os.path.exists(self.state_file):
             try:
                 with open(self.state_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    raw = json.load(f)
+                if isinstance(raw, dict):
+                    self._checkpoint = raw.get("_checkpoint")
+                    if isinstance(raw.get("_state"), dict):
+                        return raw.get("_state", {})
+                    return {k: v for k, v in raw.items() if not str(k).startswith("_")}
             except Exception:
                 pass
         return {}
 
     def _save_state(self):
         """Persist state to JSON and re-render checklist.md view."""
-        with open(self.state_file, "w", encoding="utf-8") as f:
-            json.dump(self.state, f, ensure_ascii=False, indent=2)
+        with self._lock:
+            payload = self._serialize_state()
+            AtomicWriter.write_json(self.state_file, payload)
         self._render_checklist()
+
+    def _serialize_state(self) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {subject: files for subject, files in self.state.items()}
+        if self._checkpoint:
+            payload["_checkpoint"] = self._checkpoint
+        return payload
 
     def get_file_hash(self, filepath: str) -> str:
         """Return SHA-256 hash of a file."""
@@ -43,107 +82,111 @@ class StateManager:
 
     def sync_physical_files(self):
         """Scans raw_data/ for .m4a files and updates internal state."""
-        if not os.path.exists(self.raw_dir):
-            return
+        with self._lock:
+            if not os.path.exists(self.raw_dir):
+                return
             
-        subjects = [d for d in os.listdir(self.raw_dir) if os.path.isdir(os.path.join(self.raw_dir, d))]
-        for subj in subjects:
-            if subj not in self.state:
-                self.state[subj] = {}
-            
-            subj_audio = os.path.join(self.raw_dir, subj)
-            import glob
-            physical_files = glob.glob(os.path.join(subj_audio, "*.m4a"))
-            
-            for pf in physical_files:
-                fname = os.path.basename(pf)
-                fhash = self.get_file_hash(pf)
-                mtime = datetime.fromtimestamp(os.path.getmtime(pf)).strftime('%Y-%m-%d')
+            subjects = [d for d in os.listdir(self.raw_dir) if os.path.isdir(os.path.join(self.raw_dir, d))]
+            for subj in subjects:
+                if subj not in self.state:
+                    self.state[subj] = {}
                 
-                if fname not in self.state[subj]:
-                    self.state[subj][fname] = {
-                        "p1": "⏳", "p2": "⏳", "p3": "⏳", "p4": "⏳", "p5": "⏳",
-                        "hash": fhash,
-                        "date": mtime,
-                        "note": "更新/新增",
-                        "output_hashes": {},
-                        "char_count": {}
-                    }
-                else:
-                    # If raw audio changed, negate everything
-                    if self.state[subj][fname].get("hash") != fhash:
-                        self.state[subj][fname].update({
+                subj_audio = os.path.join(self.raw_dir, subj)
+                import glob
+                physical_files = glob.glob(os.path.join(subj_audio, "*.m4a"))
+                
+                for pf in physical_files:
+                    fname = os.path.basename(pf)
+                    fhash = self.get_file_hash(pf)
+                    mtime = datetime.fromtimestamp(os.path.getmtime(pf)).strftime('%Y-%m-%d')
+                    
+                    if fname not in self.state[subj]:
+                        self.state[subj][fname] = {
                             "p1": "⏳", "p2": "⏳", "p3": "⏳", "p4": "⏳", "p5": "⏳",
                             "hash": fhash,
                             "date": mtime,
-                            "note": "音檔已變更"
-                        })
-        self._save_state()
+                            "note": "更新/新增",
+                            "output_hashes": {},
+                            "char_count": {}
+                        }
+                    else:
+                        # If raw audio changed, negate everything
+                        if self.state[subj][fname].get("hash") != fhash:
+                            self.state[subj][fname].update({
+                                "p1": "⏳", "p2": "⏳", "p3": "⏳", "p4": "⏳", "p5": "⏳",
+                                "hash": fhash,
+                                "date": mtime,
+                                "note": "音檔已變更"
+                            })
+            self._save_state()
 
     def cascade_invalidate(self, subject: str, filename: str, changed_phase: str):
         """Invalidate dependent phases. E.g. if p1 output changes, p2-p5 become ⏳."""
-        if subject not in self.state or filename not in self.state[subject]: return
-        
-        idx = self.PHASES.index(changed_phase)
-        record = self.state[subject][filename]
-        
-        # All subsequent phases are invalidated
-        invalidated_any = False
-        for p in self.PHASES[idx+1:]:
-            if record.get(p) == "✅":
-                record[p] = "⏳"
-                invalidated_any = True
-                
-        if invalidated_any:
-            record["note"] = f"{changed_phase.upper()} 被手動修改 (DAG 重啟)"
-            self._save_state()
+        with self._lock:
+            if subject not in self.state or filename not in self.state[subject]: return
+            
+            idx = self.PHASES.index(changed_phase)
+            record = self.state[subject][filename]
+            
+            # All subsequent phases are invalidated
+            invalidated_any = False
+            for p in self.PHASES[idx+1:]:
+                if record.get(p) == "✅":
+                    record[p] = "⏳"
+                    invalidated_any = True
+                    
+            if invalidated_any:
+                record["note"] = f"{changed_phase.upper()} 被手動修改 (DAG 重啟)"
+                self._save_state()
 
     def update_task(self, subject: str, filename: str, phase_key: str, status: str = "✅", 
                     char_count: int = None, output_hash: str = None, note_tag: str = None):
-        if subject not in self.state or filename not in self.state[subject]:
-            return
+        with self._lock:
+            if subject not in self.state or filename not in self.state[subject]:
+                return
+                
+            record = self.state[subject][filename]
+            record[phase_key] = status
             
-        record = self.state[subject][filename]
-        record[phase_key] = status
-        
-        if char_count is not None:
-            record.setdefault("char_count", {})[phase_key] = char_count
-            
-        if output_hash is not None:
-            record.setdefault("output_hashes", {})[phase_key] = output_hash
-            
-        if note_tag is not None:
-            record["note"] = note_tag
-            
-        self._save_state()
+            if char_count is not None:
+                record.setdefault("char_count", {})[phase_key] = char_count
+                
+            if output_hash is not None:
+                record.setdefault("output_hashes", {})[phase_key] = output_hash
+                
+            if note_tag is not None:
+                record["note"] = note_tag
+                
+            self._save_state()
 
     def check_output_hashes(self, phase_dirs: Dict[str, str]):
         """
         Check if physical outputs of completed phases have been manually edited.
         phase_dirs is a dict mapping phase_key like 'p1' to its base directory path.
         """
-        changed = False
-        for subj, files in self.state.items():
-            for fname, record in files.items():
-                for i, p in enumerate(self.PHASES):
-                    if record.get(p) == "✅":
-                        expected_hash = record.get("output_hashes", {}).get(p)
-                        if not expected_hash: continue
-                        
-                        target_dir = phase_dirs.get(p)
-                        if not target_dir: continue
-                        
-                        base_name = os.path.splitext(fname)[0]
-                        out_path = os.path.join(target_dir, subj, f"{base_name}.md")
-                        current_hash = self.get_file_hash(out_path)
-                        
-                        if current_hash and current_hash != expected_hash:
-                            self.cascade_invalidate(subj, fname, p)
-                            # Update to the new human-edited hash so it stops invalidating
-                            record.setdefault("output_hashes", {})[p] = current_hash
-                            changed = True
-        if changed:
-            self._save_state()
+        with self._lock:
+            changed = False
+            for subj, files in self.state.items():
+                for fname, record in files.items():
+                    for i, p in enumerate(self.PHASES):
+                        if record.get(p) == "✅":
+                            expected_hash = record.get("output_hashes", {}).get(p)
+                            if not expected_hash: continue
+                            
+                            target_dir = phase_dirs.get(p)
+                            if not target_dir: continue
+                            
+                            base_name = os.path.splitext(fname)[0]
+                            out_path = os.path.join(target_dir, subj, f"{base_name}.md")
+                            current_hash = self.get_file_hash(out_path)
+                            
+                            if current_hash and current_hash != expected_hash:
+                                self.cascade_invalidate(subj, fname, p)
+                                # Update to the new human-edited hash so it stops invalidating
+                                record.setdefault("output_hashes", {})[p] = current_hash
+                                changed = True
+            if changed:
+                self._save_state()
 
     # ------------------------------------------------------------------ #
     #  Checkpoint 管理 — 斷點續傳                                          #
@@ -155,48 +198,38 @@ class StateManager:
         記錄下一個「尚未完成」的任務起點，而非剛完成的那個，
         讓 resume 時能直接從這裡繼續，避免重跑已完成項目。
         """
-        raw: Dict = {}
-        if os.path.exists(self.state_file):
-            try:
-                with open(self.state_file, "r", encoding="utf-8") as f:
-                    raw = json.load(f)
-            except Exception:
-                raw = {"_state": self.state}
-        raw["_checkpoint"] = {
-            "subject": subject,
-            "filename": filename,
-            "phase_key": phase_key,
-            "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        with open(self.state_file, "w", encoding="utf-8") as f:
-            json.dump(raw, f, ensure_ascii=False, indent=2)
+        with self._lock:
+            self._checkpoint = {
+                "subject": subject,
+                "filename": filename,
+                "phase_key": phase_key,
+                "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            self._save_state()
 
     def load_checkpoint(self) -> Optional[Dict[str, str]]:
         """
         從 state file 讀取 checkpoint。
         若不存在，回傳 None；存在則回傳 {subject, filename, phase_key, saved_at}。
         """
-        if not os.path.exists(self.state_file):
-            return None
-        try:
-            with open(self.state_file, "r", encoding="utf-8") as f:
-                raw = json.load(f)
-            return raw.get("_checkpoint", None)
-        except Exception:
-            return None
+        with self._lock:
+            if self._checkpoint is not None:
+                return self._checkpoint
+            if not os.path.exists(self.state_file):
+                return None
+            try:
+                with open(self.state_file, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+                self._checkpoint = raw.get("_checkpoint", None)
+                return self._checkpoint
+            except Exception:
+                return None
 
     def clear_checkpoint(self):
         """清除 checkpoint（正常完成或使用者選擇全新開始時呼叫）。"""
-        if not os.path.exists(self.state_file):
-            return
-        try:
-            with open(self.state_file, "r", encoding="utf-8") as f:
-                raw = json.load(f)
-            raw.pop("_checkpoint", None)
-            with open(self.state_file, "w", encoding="utf-8") as f:
-                json.dump(raw, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        with self._lock:
+            self._checkpoint = None
+            self._save_state()
 
     def _render_checklist(self):
         """Render read-only checklist.md"""

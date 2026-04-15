@@ -1,7 +1,19 @@
 # -*- coding: utf-8 -*-
 import sys, os
-# Add scripts directory to sys.path so 'core' can be imported when running standalone
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+
+# --- Boundary-Safe Initialization ---
+_phase_dir = os.path.dirname(os.path.abspath(__file__))
+_scripts_dir = os.path.dirname(_phase_dir)
+_skill_root = os.path.dirname(os.path.dirname(_scripts_dir))  # skills/voice-memo
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _scripts_dir]
 
 import os
 import re
@@ -11,8 +23,14 @@ from core import PipelineBase
 class Phase2Proofread(PipelineBase):
     def __init__(self):
         super().__init__(phase_key="p2", phase_name="上下文校對", logger=None)
-        self.LOOKBACK_CHARS = 200
-        self.VERBATIM_THRESHOLD = 0.85
+        lookback = self.config_manager.get_nested("context", "phase2_lookback_chars")
+        if lookback is None:
+            raise RuntimeError("voice-memo context.phase2_lookback_chars is missing")
+        self.LOOKBACK_CHARS = int(lookback)
+        threshold = self.config_manager.get_nested("thresholds", "phase2_verbatim")
+        if threshold is None:
+            raise RuntimeError("voice-memo thresholds.phase2_verbatim is missing")
+        self.VERBATIM_THRESHOLD = float(threshold)
         
     def _get_glossary(self, subject: str) -> str:
         import json
@@ -47,8 +65,12 @@ class Phase2Proofread(PipelineBase):
             subj, fname = task["subject"], task["filename"]
             
             config = self.get_config("phase2", subject_name=subj)
-            model_name = config.get("model", "gemma3:12b")
-            chunk_size = int(config.get("chunk_size", 2000))
+            model_name = config.get("model")
+            chunk_size = int(config.get("chunk_size"))
+            if not model_name:
+                raise RuntimeError(f"phase2 config missing model for {subj}")
+            if chunk_size <= 0:
+                raise RuntimeError(f"phase2 config chunk_size must be > 0 for {subj}")
             options = config.get("options", {})
             models_used.add(model_name)
             

@@ -11,7 +11,10 @@ description: >
 將 PDF 放入 `01_Inbox/`，系統自動完成：診斷 → 提取 → 圖表補充 → OCR 品質評估 → Gemini 代理分析。
 
 **Data Lineage**:
-`01_Inbox/` → `02_Processed/` → `03_Agent_Core/` → `05_Final_Knowledge/`
+`input/01_Inbox/` → `output/02_Processed/` → `output/03_Agent_Core/` → `output/05_Final_Knowledge/`
+
+**State / Logs**:
+`state/` · `logs/system.log` · `logs/dashboard.log`
 
 **Workspace root**: `/Users/limchinkun/Desktop/local-workspace/open-claw-workspace`
 
@@ -121,7 +124,7 @@ python3 skills/pdf-knowledge/scripts/inbox_watcher.py
 ## Notes
 
 - **安全邊界**：所有 Playwright 操作在 `core/security_manager.py` + `config/security_policy.yaml` 授權下執行。
-  Dashboard「安全記錄」可查詢 `03_Agent_Core/{PDF_ID}/security_audit.log`。
+  Dashboard「安全記錄」可查詢 `output/03_Agent_Core/{PDF_ID}/security_audit.log`。
 - **斷點續傳**：中斷後重啟，系統自動從 `resume_state.json` 繼續。
 - **IMMUTABLE**：`raw_extracted.md` 禁止任何修改（任何 AI 均不得修改此檔案）。
 - **術語保護**：`config/priority_terms.json` 只有使用者可直接修改。AI 可建議，需使用者確認。

@@ -82,3 +82,32 @@ phase5:
         num_ctx: 32768
         temperature: 0.6
         num_predict: 8192
+
+runtime:
+  ollama:
+    api_url: "http://127.0.0.1:11434/api/generate"
+    timeout_seconds: 600
+    retries: 3
+    backoff_seconds: 5
+
+hardware:
+  ram:
+    warning_mb: 500
+    critical_mb: 200
+  temperature:
+    warning_celsius: 85
+    critical_celsius: 95
+  battery:
+    low_percent: 15
+    critical_percent: 5
+  disk:
+    min_free_mb: 200
+
+thresholds:
+  phase2_verbatim: 0.85
+  phase3_verbatim: 0.70
+  phase4_verbatim: 0.95
+context:
+  phase2_lookback_chars: 200
+  phase3_lookback_chars: 150
+  phase5_mermaid_retry_max: 2

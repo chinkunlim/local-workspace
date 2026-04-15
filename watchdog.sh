@@ -2,18 +2,23 @@
 
 # --- 基礎設定 ---
 WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export WORKSPACE_DIR
+export PYTHONPATH="${WORKSPACE_DIR}:${WORKSPACE_DIR}/open-claw-workspace:${PYTHONPATH}"
+
 LOG_DIR="${WORKSPACE_DIR}/logs"
 mkdir -p "$LOG_DIR"
 LOG="${LOG_DIR}/ram_watchdog.log" # 統一收納至 logs 目錄
+
+exec >> "$LOG" 2>&1
 
 CRITICAL_MB=1500
 WARNING_MB=2500
 
 # 攔截停止信號優雅退出
-trap 'echo "[$(date +'\''%H:%M:%S'\'')] 🛑 Watchdog stopped." | tee -a "$LOG"; exit 0' SIGINT SIGTERM
+trap 'echo "[$(date +'\''%H:%M:%S'\'')] 🛑 Watchdog stopped."; exit 0' SIGINT SIGTERM
 
 log() { 
-    echo "[$(date +'%H:%M:%S')] $1" | tee -a "$LOG" 
+    echo "[$(date +'%H:%M:%S')] $1"
 }
 
 # 獲取 Mac 可用記憶體：Free + Inactive + Speculative (更符合活動監視器指標)

@@ -23,11 +23,24 @@ import os
 import sys
 import json
 
-# --- Workspace root sys.path setup ---
+# --- Boundary-Safe Initialization ---
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.path.abspath(os.path.join(_script_dir, "../../.."))
-if _workspace_root not in sys.path:
-    sys.path.insert(0, _workspace_root)
+_skill_root = os.path.dirname(os.path.dirname(_script_dir))  # skills/pdf-knowledge
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Ensure WORKSPACE_DIR points to open-claw-workspace for config path resolution
+if not os.path.isdir(os.path.join(os.environ.get("WORKSPACE_DIR", _workspace_root), "open-claw-workspace")):
+    os.environ["WORKSPACE_DIR"] = _openclawed_root
+
+# Enforce sandbox boundary: only core and this skill
+# But preserve site-packages for third-party dependencies
+_original_sys_path = sys.path.copy()
+sys.path = [_core_dir, _script_dir] + [p for p in _original_sys_path if 'site-packages' in p or 'dist-packages' in p]
 
 try:
     from flask import Flask, jsonify, request, render_template_string
@@ -35,34 +48,26 @@ except ImportError:
     print("❌ Flask 未安裝。請執行: pip install flask")
     sys.exit(1)
 
-from core.resume_manager import ResumeManager
+from core import ConfigManager, ResumeManager, ConfigValidator, build_logger
 
-import yaml
 
 # ---------------------------------------------------------------------------- #
 #  Config Loading                                                               #
 # ---------------------------------------------------------------------------- #
 
-config_path = os.path.join(_workspace_root, "skills", "pdf-knowledge", "config", "config.yaml")
-_config = {}
-if os.path.exists(config_path):
-    with open(config_path, "r", encoding="utf-8") as f:
-        raw = f.read()
-        # Replace ${WORKSPACE_DIR} placeholders
-        raw = raw.replace("${WORKSPACE_DIR}", _workspace_root)
-        _config = yaml.safe_load(raw) or {}
+_config_manager = ConfigManager(_openclawed_root, "pdf-knowledge")
+_config = _config_manager.data
 
-FLASK_HOST = _config.get("flask", {}).get("host", "127.0.0.1")
-FLASK_PORT = _config.get("flask", {}).get("port", 5001)
-BASE_DIR = os.path.join(_workspace_root, "data", "pdf-knowledge")
+FLASK_HOST = ConfigValidator.require(_config_manager.get_nested("flask", "host"), "flask.host")
+FLASK_PORT = ConfigValidator.require_int(_config_manager.get_nested("flask", "port"), "flask.port", min_value=1)
+BASE_DIR = os.path.join(_openclawed_root, "data", "pdf-knowledge")
 AGENT_CORE_DIR = os.path.join(BASE_DIR, "03_Agent_Core")
-
-# ---------------------------------------------------------------------------- #
-#  Flask App                                                                    #
-# ---------------------------------------------------------------------------- #
-
 app = Flask(__name__)
 resume_manager = ResumeManager(BASE_DIR)
+dashboard_logger = build_logger(
+    "OpenClaw.pdf-knowledge.dashboard",
+    log_file=os.path.join(BASE_DIR, "logs", "dashboard.log"),
+)
 
 
 # ---------------------------------------------------------------------------- #
@@ -214,6 +219,7 @@ def _get_completed_count():
 
 @app.route("/")
 def dashboard():
+    dashboard_logger.info("dashboard rendered")
     interrupted = resume_manager.get_all_interrupted()
     inbox_files = _get_inbox_files()
     stats = {
@@ -232,6 +238,7 @@ def dashboard():
 
 @app.route("/status")
 def status():
+    dashboard_logger.info("status requested")
     interrupted = resume_manager.get_all_interrupted()
     return jsonify({
         "skill": "pdf-knowledge",
@@ -247,6 +254,7 @@ def status():
 
 @app.route("/resume")
 def resume_list():
+    dashboard_logger.info("resume list requested")
     interrupted = resume_manager.get_all_interrupted()
     return jsonify(interrupted)
 
@@ -256,9 +264,12 @@ def process_all():
     """Trigger scan_inbox + process_all in background."""
     from threading import Thread
 
+    dashboard_logger.info("process-all requested")
+
     def run():
         sys.path.insert(0, _script_dir)
         from queue_manager import QueueManager
+
         qm = QueueManager()
         qm.startup_check()
         qm.scan_inbox()
@@ -274,16 +285,16 @@ def process_one(pdf_id: str):
     """Resume or re-process a specific PDF."""
     cp = resume_manager.check_resumable(pdf_id)
     action = "resume" if cp else "reprocess"
+    dashboard_logger.info("process-one requested for %s (%s)", pdf_id, action)
 
     def run():
         sys.path.insert(0, _script_dir)
         from queue_manager import QueueManager
+
         qm = QueueManager()
         inbox = os.path.join(BASE_DIR, "01_Inbox")
         pdf_path = os.path.join(inbox, f"{pdf_id}.pdf")
         if not os.path.exists(pdf_path):
-            processed = os.path.join(BASE_DIR, "02_Processed", pdf_id)
-            # Try to find original
             print(f"⚠️ {pdf_id}.pdf 不在 Inbox，跳過")
             return
         qm._queue.append({
@@ -296,9 +307,9 @@ def process_one(pdf_id: str):
         qm.process_next()
 
     from threading import Thread
+
     t = Thread(target=run, daemon=True)
     t.start()
-
     return jsonify({"status": action, "pdf_id": pdf_id})
 
 
@@ -335,9 +346,9 @@ def source_preview():
 # ---------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-    import argparse
+    from core import build_skill_parser
 
-    parser = argparse.ArgumentParser(description="PDF Knowledge Dashboard")
+    parser = build_skill_parser("PDF Knowledge Dashboard")
     parser.add_argument("--host", default=FLASK_HOST)
     parser.add_argument("--port", type=int, default=FLASK_PORT)
     parser.add_argument("--debug", action="store_true")

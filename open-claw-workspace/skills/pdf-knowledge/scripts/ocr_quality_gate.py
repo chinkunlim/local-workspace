@@ -24,18 +24,25 @@ import subprocess
 import tempfile
 from typing import List, Dict, Optional
 
-# --- Workspace root sys.path setup ---
+# --- Boundary-Safe Initialization ---
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.path.abspath(os.path.join(_script_dir, "../../.."))
-if _workspace_root not in sys.path:
-    sys.path.insert(0, _workspace_root)
+_skill_root = os.path.dirname(os.path.dirname(_script_dir))  # skills/pdf-knowledge
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _script_dir]
 
 from core.pipeline_base import PipelineBase
 
-# OCR confidence threshold constant (configurable via config.yaml)
-DEFAULT_CONFIDENCE_THRESHOLD = 0.80
-DEFAULT_OCR_DPI = 200
-DEFAULT_OCR_LANG = "chi_tra+eng"
+# OCR settings are required from config.yaml.
+DEFAULT_CONFIDENCE_THRESHOLD = None
+DEFAULT_OCR_DPI = None
+DEFAULT_OCR_LANG = None
 
 
 class Phase1dOCRQualityGate(PipelineBase):
@@ -53,19 +60,12 @@ class Phase1dOCRQualityGate(PipelineBase):
         self.dirs = {
             "processed": os.path.join(self.base_dir, "02_Processed"),
         }
-        self._load_config()
-
-    def _load_config(self):
-        import yaml
-        config_path = os.path.join(_workspace_root, "skills", "pdf-knowledge", "config", "config.yaml")
-        self._config = {}
-        if os.path.exists(config_path):
-            with open(config_path, "r", encoding="utf-8") as f:
-                self._config = yaml.safe_load(f) or {}
-        ocr_cfg = self._config.get("pdf_processing", {}).get("ocr", {})
-        self.dpi = ocr_cfg.get("dpi", DEFAULT_OCR_DPI)
-        self.lang = ocr_cfg.get("lang", DEFAULT_OCR_LANG)
-        self.threshold = ocr_cfg.get("confidence_threshold", DEFAULT_CONFIDENCE_THRESHOLD)
+        ocr_cfg = self.config_manager.get_nested("pdf_processing", "ocr") or {}
+        self.dpi = ocr_cfg.get("dpi")
+        self.lang = ocr_cfg.get("lang")
+        self.threshold = ocr_cfg.get("confidence_threshold")
+        if self.dpi is None or self.lang is None or self.threshold is None:
+            raise RuntimeError("pdf-knowledge config missing pdf_processing.ocr.dpi/lang/confidence_threshold")
 
     # ------------------------------------------------------------------ #
     #  Public Entry Point                                                  #
@@ -227,11 +227,11 @@ class Phase1dOCRQualityGate(PipelineBase):
     ):
         """Update scan_report.json with OCR assessment results."""
         report_path = os.path.join(self.dirs["processed"], pdf_id, "scan_report.json")
-        if not os.path.exists(report_path):
-            return
         try:
-            with open(report_path) as f:
-                data = json.load(f)
+            data = {}
+            if os.path.exists(report_path):
+                with open(report_path) as f:
+                    data = json.load(f)
 
             data["low_confidence_pages"] = low_confidence_pages
             data["ocr_page_scores"] = {str(k): round(v, 4) for k, v in page_scores.items()}
@@ -239,8 +239,8 @@ class Phase1dOCRQualityGate(PipelineBase):
             data["ocr_dpi"] = self.dpi
             data["ocr_lang"] = self.lang
 
-            with open(report_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+            from core import AtomicWriter
+            AtomicWriter.write_json(report_path, data)
 
             self.info(f"💾 [OCR] scan_report.json 已更新 (low_confidence_pages: {low_confidence_pages})")
         except Exception as e:

@@ -1,64 +1,120 @@
-# Open Claw Project - Master Coding Guidelines
-> [!IMPORTANT]
-> **全局核心指導原則**：這是一份專為邊緣設備（16GB macOS）打造的全本機系統。所有新擴充的 Skills、系統維護、或 AI 自動編程，**必須嚴格遵循**本指南中的資源驗證與架構哲學。
+# Open Claw Engineering and Documentation Standard
 
----
+Version: 2026-04-15
+Scope: Entire open-claw-workspace (core, skills, scripts, docs, and operations)
 
-## 🏗️ 第一維度：系統架構與設計哲學 (Architecture & Philosophy)
+## 1. Purpose
+This document is the mandatory contract for all AI coding agents and human contributors.
+The goal is production-grade reliability on local hardware, with explicit auditability, deterministic behavior, and clean handoff across Claude Code, Copilot, and Google Antigravity workflows.
 
-1. **極致本地原生 (Local-First & No Docker)**
-   - **禁止容器化包袱**：為確保深度調用 Apple Silicon (Metal Performance Shaders, MPS) 與 CPU 極致效能，絕不強加 Docker。
-2. **強物件導向繼承制 (OOP Base Architecture)**
-   - **強制繼承基底**：所有業務腳本 (Script) 與工具類，**絕對不得**寫成 Procedural Script。必須全面繼承工作區根目錄的 `core.pipeline_base.PipelineBase` 類別。
-   - **解耦核心與技能**：路徑管理、`State Manager` (狀態庫)、`Resume Manager` (斷點續傳)、硬體監控 (`check_system_health`) 必須收斂在 `core/` 下。個別 Skill 只實作 `run(self)` 以及私有邏輯。
-3. **目錄結構與配置層分離 (Separation of Concerns)**
-   - **執行庫分離**：所有的狀態記錄、中間產物與除錯日誌，必須放進 `data/[skill_name]/` 下。
-   - **配置與邏輯分離**：所有的 `config.yaml` 或提示詞檔案 (Prompt) 必須統一收納於 `skills/[skill_name]/config/` 之中。
+## 2. Architecture Rules
+1. Local-first only. Do not introduce cloud-only dependencies as required runtime paths.
+2. All skill execution code must inherit from core.pipeline_base.PipelineBase or a direct shared core abstraction.
+3. Shared logic belongs in core, not duplicated under skills.
+4. Canonical data layout is mandatory for each skill:
+   - input
+   - output
+   - state
+   - logs
+5. Legacy folder names may exist only as compatibility aliases during migration.
 
----
+## 3. Configuration Rules
+1. No hardcoded runtime values in Python for model names, thresholds, URLs, or critical paths.
+2. Required config keys must fail fast through core/config_validation.py.
+3. Do not silently fallback for missing critical values.
+4. Keep config machine-readable and deterministic.
 
-## 💾 第二維度：資源防禦與記憶體管理 (Resource Defense)
+## 4. Reliability and Safety Rules
+1. State and checkpoint writes must be atomic.
+2. Long-running steps must support interruption and deterministic resume semantics.
+3. Resource guards are required before and during heavy tasks:
+   - RAM
+   - Disk
+   - Temperature
+   - Battery (when applicable)
+4. Security boundaries must be explicit for browser or network automation.
 
-1. **記憶體生命週期與優雅卸載 (Graceful Unload)**
-   - 模型、重型資源分配策略必須是互斥的。例如當 Playwright 或 Docling (耗能 ~2.5GB) 執行時，LLM 必須主動卸載。
-   - 階段完成或中斷時，強制呼叫 `unload_model()` 或 `gc.collect()` 將 VRAM 與 RAM 交還。
-2. **智能切割與上下文守衛 (Context Window Guard)**
-   - 14B 級別以上的模型，`num_ctx` **嚴禁突破 16384** (避免高壓 Swap 摧毀系統流暢度)。遇到超大文本需採用 `smart_split` 進行 Map-Reduce。
-3. **輕量診斷與前置快速退出 (Fail-Fast Policy)**
-   - 在執行高記憶體耗用任務前（如 PDF 解析），必須先執行毫秒級別的輕量腳本掃描。若判定無法處理（如加密失敗），立即終止並隔離，保護記憶體不被無端浪費。
+## 5. Logging Rules
+1. All runtime operations must produce logs.
+2. Use shared logger tooling from core/log_manager.py.
+3. Workspace-level logs:
+   - start.sh -> logs/startup.log
+   - stop.sh -> logs/stop.log
+   - watchdog.sh -> logs/ram_watchdog.log
+4. Skill-level logs:
+   - data/<skill>/logs/system.log
+   - Additional scoped logs allowed when justified (for example dashboard.log, security_audit.log)
+5. Log lines must allow incident reconstruction without guessing.
 
----
+## 6. Code Quality Rules
+1. Type hints are required for non-trivial functions.
+2. Comments must explain intent or risk, not obvious syntax.
+3. Keep side effects explicit.
+4. Preserve deterministic ordering for batch processing.
+5. Preserve public API compatibility unless migration notes are written.
 
-## ⚙️ 第三維度：可維護性與動態配置 (Config & Scalability)
+## 7. Documentation Contract (Mandatory)
+For every significant change, update documentation in the same commit.
 
-1. **打火機哲學（零硬編碼 No Hardcoding）**
-   - 模型選擇、選項閥值、路徑、甚至是 CSS Selector，絕對不允許寫在 `.py` 的變數裡，需全數由 `config.yaml` 讀取。
-2. **型別標註與因果註解 (Type Hints & Contextual Docstrings)**
-   - 所有函數標註明確的型別（如 `-> List[Dict]`）。
-   - **只寫「為什麼 (Why)」，不寫「是什麼 (What)」**：防禦性與商業邏輯需寫明初衷，例如為什麼要採用雙層驗證機制。
-3. **保護術語與冪等自癒 (Idempotency & Resilience)**
-   - 所有修改操作必須對應 Hash 狀態的驗證（`State Manager`）。程式中斷後，重新執行需能從最後一個完整的 Checkpoint 給予接續處理的選項。
-   - LLM 輸出錯亂時，程式不應中斷，應進入 `Agentic Retry Loop` 嘗試自我修復指令。
+### 7.1 Required Files
+At minimum, update these files when relevant:
+- skills/<skill_name>/SKILL.md
+- skills/<skill_name>/docs/ARCHITECTURE.md
+- skills/<skill_name>/docs/DECISIONS*.md
+- skills/<skill_name>/docs/HANDOFF*.md
+- skills/<skill_name>/docs/PROGRESS*.md
+- skills/<skill_name>/docs/TASKS*.md
+- skills/<skill_name>/docs/WALKTHROUGH*.md
 
----
+### 7.2 Writing Standard for skills/<skill_name>/docs/*.md
+All docs in skills/<skill_name>/docs/*.md must follow these rules:
+1. Use English as the primary language for precision and multi-agent interoperability.
+2. Use clear section headers with stable names.
+3. Distinguish facts, decisions, and plans.
+4. Every decision entry must include:
+   - decision id
+   - date
+   - rationale
+   - impact
+   - affected files
+5. Every handoff file must include:
+   - current state
+   - next actions
+   - known risks
+   - verification status
+6. Every progress file must be chronological and immutable for past milestones.
+7. Every tasks file must separate:
+   - active
+   - queued
+   - blocked
+   - done
+8. Every walkthrough file must be executable by a new operator without hidden assumptions.
+9. Use exact script names and paths. Avoid vague wording.
+10. Record constraints and failure modes explicitly.
 
-## 👁️ 第四維度：使用者體驗與介面活性 (Runtime UX & Non-blocking)
+### 7.3 AI Professional Output Grade
+Documentation and code must meet professional standards expected from:
+- Claude Code
+- GitHub Copilot
+- Google Antigravity
 
-1. **活著的終端機 (Alive Console)**
-   - **嚴禁介面假死 (Freeze)**。舉凡網路請求、大型模型推論、檔案解析，皆必須掛載 Background Ticker Thread（如 Spinner / tqdm）來呈現動畫。
-2. **專案級標準日誌格式 (Unified Emoji Logger)**
-   - UI 訊息或 Log 必須掛載明確視覺化 Emojis：如 `🔍 偵測`, `🧠 運作中`, `✅ 完成`, `⚠️ 警告`, `❌ 錯誤`。
-3. **產出純淨度保護 (Output Purity)**
-   - 使用者體驗絕對乾淨。所有的 Console Meta、錯誤回溯、修改日誌，不可散落在產出文件的「文章主體」內，必須被完全隔離。
+This means:
+1. No fluff.
+2. No contradictory statements.
+3. No stale instructions.
+4. No ambiguous ownership.
+5. No missing operational context.
 
----
+## 8. Language Policy for Markdown
+Recommended policy for this repository:
+1. English-first for technical docs and cross-agent consistency.
+2. Optional bilingual notes allowed only when operator context requires it.
+3. If bilingual, English must remain canonical and complete.
 
-## 🤝 第五維度：頂尖 AI 協作與狀態同步 (Top-Tier AI Sync)
-
-1. **極限高標準的角色代入 (Strict Expert Persona)**
-   - 助手需預設自己是「頂級 Senior Backend/System Architect」。代碼需直接達到 Production-ready 級別。**沒有 MVP。**
-2. **核心 Meta 文件自動更新機制**：
-   每當大型變更完成，需主動去維護專案的工作簿狀態，不遺失上下文：
-   - `handoff.md` / `task.md` / `walkthrough.md` 等進度與里程碑。
-3. **自動 Git 版控同步 (Auto Local Commits)**：
-   每一次測試確定通過，AI 助手必須執行 Local Git `add` / `commit` 來儲存還原點 (Rollback points)，編撰清晰的版本歷史脈絡。
+## 9. Review Gate Before Merge
+Before considering a change complete:
+1. Runtime errors check passes for touched files.
+2. Operational scripts parse correctly (for shell changes).
+3. Docs are updated and internally consistent.
+4. Logging and resume behavior remain intact.
+5. A rollback path is clear.

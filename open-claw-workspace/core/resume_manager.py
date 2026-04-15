@@ -32,8 +32,11 @@ Usage:
 
 import os
 import json
+import threading
 from datetime import datetime
 from typing import Optional, Dict, Any
+
+from .atomic_writer import AtomicWriter
 
 
 class ResumeManager:
@@ -51,6 +54,7 @@ class ResumeManager:
         """
         self.base_dir = base_dir
         self.agent_core_dir = os.path.join(base_dir, "03_Agent_Core")
+        self._lock = threading.RLock()
 
     # ------------------------------------------------------------------ #
     #  Checkpoint Operations                                               #
@@ -73,22 +77,22 @@ class ResumeManager:
                          (i.e. chunks 0..chunk_index-1 are already complete)
             extra: Optional extra context to store (e.g. {"gem": "psychology_expert"}).
         """
-        checkpoint_dir = os.path.join(self.agent_core_dir, pdf_id)
-        os.makedirs(checkpoint_dir, exist_ok=True)
-        checkpoint_path = os.path.join(checkpoint_dir, "resume_state.json")
+        with self._lock:
+            checkpoint_dir = os.path.join(self.agent_core_dir, pdf_id)
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            checkpoint_path = os.path.join(checkpoint_dir, "resume_state.json")
 
-        state = {
-            "pdf_id": pdf_id,
-            "phase": phase,
-            "chunk_index": chunk_index,
-            "saved_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-            "status": "interrupted",
-        }
-        if extra:
-            state.update(extra)
+            state = {
+                "pdf_id": pdf_id,
+                "phase": phase,
+                "chunk_index": chunk_index,
+                "saved_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+                "status": "interrupted",
+            }
+            if extra:
+                state.update(extra)
 
-        with open(checkpoint_path, "w", encoding="utf-8") as f:
-            json.dump(state, f, ensure_ascii=False, indent=2)
+            AtomicWriter.write_json(checkpoint_path, state)
 
     def check_resumable(self, pdf_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -97,35 +101,36 @@ class ResumeManager:
         Returns:
             The checkpoint dict if found and status is "interrupted", else None.
         """
-        checkpoint_path = os.path.join(self.agent_core_dir, pdf_id, "resume_state.json")
-        if not os.path.exists(checkpoint_path):
-            return None
-        try:
-            with open(checkpoint_path, "r", encoding="utf-8") as f:
-                state = json.load(f)
-            if state.get("status") == "interrupted":
-                return state
-            return None
-        except Exception:
-            return None
+        with self._lock:
+            checkpoint_path = os.path.join(self.agent_core_dir, pdf_id, "resume_state.json")
+            if not os.path.exists(checkpoint_path):
+                return None
+            try:
+                with open(checkpoint_path, "r", encoding="utf-8") as f:
+                    state = json.load(f)
+                if state.get("status") == "interrupted":
+                    return state
+                return None
+            except Exception:
+                return None
 
     def clear_checkpoint(self, pdf_id: str):
         """
         Mark a PDF as fully completed (sets status to "completed").
         Keeps the file for audit purposes but removes the "interrupted" flag.
         """
-        checkpoint_path = os.path.join(self.agent_core_dir, pdf_id, "resume_state.json")
-        if not os.path.exists(checkpoint_path):
-            return
-        try:
-            with open(checkpoint_path, "r", encoding="utf-8") as f:
-                state = json.load(f)
-            state["status"] = "completed"
-            state["completed_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-            with open(checkpoint_path, "w", encoding="utf-8") as f:
-                json.dump(state, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        with self._lock:
+            checkpoint_path = os.path.join(self.agent_core_dir, pdf_id, "resume_state.json")
+            if not os.path.exists(checkpoint_path):
+                return
+            try:
+                with open(checkpoint_path, "r", encoding="utf-8") as f:
+                    state = json.load(f)
+                state["status"] = "completed"
+                state["completed_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                AtomicWriter.write_json(checkpoint_path, state)
+            except Exception:
+                pass
 
     def get_all_interrupted(self) -> Dict[str, Dict]:
         """
@@ -136,13 +141,14 @@ class ResumeManager:
             Dict mapping pdf_id → checkpoint dict
         """
         interrupted = {}
-        if not os.path.exists(self.agent_core_dir):
-            return interrupted
+        with self._lock:
+            if not os.path.exists(self.agent_core_dir):
+                return interrupted
 
-        for pdf_id in os.listdir(self.agent_core_dir):
-            checkpoint = self.check_resumable(pdf_id)
-            if checkpoint:
-                interrupted[pdf_id] = checkpoint
+            for pdf_id in os.listdir(self.agent_core_dir):
+                checkpoint = self.check_resumable(pdf_id)
+                if checkpoint:
+                    interrupted[pdf_id] = checkpoint
         return interrupted
 
     def resume_from(self, pdf_id: str) -> Optional[Dict[str, Any]]:
@@ -150,20 +156,20 @@ class ResumeManager:
         Convenience: load checkpoint and mark as "resuming".
         Returns checkpoint or None if not resumable.
         """
-        checkpoint = self.check_resumable(pdf_id)
-        if not checkpoint:
-            return None
+        with self._lock:
+            checkpoint = self.check_resumable(pdf_id)
+            if not checkpoint:
+                return None
 
-        # Mark as resuming
-        checkpoint_path = os.path.join(self.agent_core_dir, pdf_id, "resume_state.json")
-        try:
-            with open(checkpoint_path, "r", encoding="utf-8") as f:
-                state = json.load(f)
-            state["status"] = "resuming"
-            state["resumed_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-            with open(checkpoint_path, "w", encoding="utf-8") as f:
-                json.dump(state, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+            # Mark as resuming
+            checkpoint_path = os.path.join(self.agent_core_dir, pdf_id, "resume_state.json")
+            try:
+                with open(checkpoint_path, "r", encoding="utf-8") as f:
+                    state = json.load(f)
+                state["status"] = "resuming"
+                state["resumed_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                AtomicWriter.write_json(checkpoint_path, state)
+            except Exception:
+                pass
 
-        return checkpoint
+            return checkpoint

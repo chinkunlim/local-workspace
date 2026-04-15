@@ -1,17 +1,15 @@
-# USER.md - About Your Human
+# USER.md
 
-_Learn about the person you're helping. Update this as you go._
+## User Profile
+- Name: pending
+- Preferred address: pending
+- Timezone: Asia/Taipei (assumed, confirm if needed)
 
-- **Name:**
-- **What to call them:**
-- **Pronouns:** _(optional)_
-- **Timezone:**
-- **Notes:**
+## Working Preferences
+1. Strong preference for clean architecture.
+2. Strong preference for strict naming consistency.
+3. Strong preference for complete logging and explicit records.
+4. Strong preference for production-grade AI coding output.
 
-## Context
-
-_(What do they care about? What projects are they working on? What annoys them? What makes them laugh? Build this over time.)_
-
----
-
-The more you know, the better you can help. But remember — you're learning about a person, not building a dossier. Respect the difference.
+## Communication
+Use concise, high-signal updates during implementation and explicit summaries after changes.

@@ -1,42 +1,48 @@
-# PDF Knowledge Skill — Architecture & Feature Spec
+# PDF Knowledge Architecture
 
-這份文件記錄了 **PDF Knowledge Pipeline** 專屬的 PDF 文件處理技術框架、圖形/欄位解構機制與資料流向。全域的開發標準請參閱專案根目錄 `docs/CODING_GUIDELINES.md`。
+Last Updated: 2026-04-15
+Owner: pdf-knowledge maintainers
 
----
+## 1. Scope
+PDF Knowledge ingests academic PDF files and produces structured, verifiable knowledge outputs through staged extraction and operator-aware processing.
 
-## 📑 PDF 解析三部曲 (The 3-Step Extraction Philosophy)
+## 2. Functional Pipeline
+1. Phase 1a lightweight PDF diagnostic
+2. Phase 1b deep extraction
+3. Phase 1c vector chart supplementation
+4. Phase 1d OCR quality gate
+5. Queue-driven processing and resume lifecycle
+6. Dashboard-assisted operations
 
-為預防 PDF 各式不規範的加密、錯版或掃描檔佔用高昂資源，本系統強制以下流程：
+## 3. Data Flow
+Canonical model:
+- input/01_Inbox
+- output/02_Processed
+- output/03_Agent_Core
+- output/05_Final_Knowledge
+- state
+- logs
 
-### 1. 輕量診斷 (Diagnostic pre-flight)
-- **工具**：`poppler-utils` (`pdfinfo`, `pdffonts`, `pdfimages`)。
-- **目的**：5 秒內攔截無文字的掃描件、壞掉的字型編碼 (Identity-H)、以及抓出潛在的亂碼與雙欄佈局。
-- 診斷結果被統整進 `scan_report.json`，供子系統查閱並決策是否能進入下一步。
+## 4. Core Runtime Features
+- Shared PipelineBase orchestration
+- ResumeManager for interruption recovery
+- Security policy boundaries for browser automation
+- ModelMutex for resource contention prevention
+- Atomic report and artifact writes
 
-### 2. 深度提取 (Docling Deep Extraction)
-- **觸發**：診斷認定無誤後執行。
-- **目標**：結構化剖析 Heading 邊界、處理文獻標示與斷行規則。
+## 5. Reliability Controls
+- Early diagnostic fail-fast strategy
+- Immutable raw extraction artifacts
+- OCR confidence scoring and warning propagation
+- Error isolation into dedicated failure paths
 
-### 3. 向量圖表補充與 OCR 光柵 (Vector / Raster Validation)
-- 處理 `poppler` 未抓出的向量圖表，使用 `pdftoppm` 精準擷取。
-- 對於診斷抓出的低信心頁面，拉高 DPI 重作 Tesseract OCR，並進行語義長度驗證 (Fallback機制)。
+## 6. Current Gaps Compared to Voice Skill
+- No comparable interactive CLI phase walk for human review checkpoints
+- No explicit synthesis anti-content-loss guard equivalent
+- No unified checklist rendering equivalent to voice-memo state table
 
----
-
-## 🔒 資訊提取安全網 (Context & Security Guard)
-
-1. **Playwright 零污染憑證保護**
-   - 堅決不動用 `accounts.google.com` 在 headless 內的存取！預覽或搜集網頁資訊利用既有的本地 Persistent Profile 處理。
-   - 所有跳轉網址必須通過內部 `security_policy.yaml` 路由驗證，阻攔惡意跨站追蹤。
-2. **多欄與公式防護 (Equation & Column Protection)**
-   - 雙欄 PDF 若引發 Docling 失準，立即掛起 `column_handler.py` (語義檢測法)。
-   - 統計數據 (p-value, F-test 等) 使用 LaTeX 安全層級進行防改寫置換 `[LATEX_N]`，預防 LLM 在修飾語句時將數字「圓整」或造假。
-
----
-
-## 🤝 使用者處理介面流 (Intervention Modes)
-
-系統區分三種處理介入層級：
-1. **全自動模式**：完全順跑佇列。
-2. **暫停模式**：執行完目前 PDF 工作後，立即駐停並掛起 Checkpoint，直到獲得命令。
-3. **人工接管 (Manual Handover)**：Chrome 面板進入前台，由操作者與網頁直接互動對話，完成人工判定後「交回系統」。
+## 7. Complement Plan
+High priority:
+1. Add synthesis-stage anti-content-loss guard.
+2. Add optional interactive phase checkpoint mode.
+3. Add explicit phase checklist rendering for operator parity.

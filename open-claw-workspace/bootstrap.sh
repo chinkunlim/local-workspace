@@ -1,7 +1,14 @@
 #!/bin/bash
 # Open Claw Workspace - macOS Bootstrap Script
 
+# 設定 WORKSPACE_DIR 環境變數
+WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export WORKSPACE_DIR
+export PYTHONPATH="${WORKSPACE_DIR}:${WORKSPACE_DIR}/open-claw-workspace:${PYTHONPATH}"
+
 echo "🔧 正在驗證 Open Claw Workspace 相依環境..."
+echo "   WORKSPACE_DIR: $WORKSPACE_DIR"
+echo "   PYTHONPATH: $PYTHONPATH"
 
 # 1. 檢查 Homebrew
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"

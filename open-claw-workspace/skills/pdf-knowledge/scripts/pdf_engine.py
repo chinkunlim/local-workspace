@@ -25,11 +25,18 @@ import hashlib
 import shutil
 from typing import Optional, Dict
 
-# --- Workspace root sys.path setup ---
+# --- Boundary-Safe Initialization ---
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.path.abspath(os.path.join(_script_dir, "../../.."))
-if _workspace_root not in sys.path:
-    sys.path.insert(0, _workspace_root)
+_skill_root = os.path.dirname(os.path.dirname(_script_dir))  # skills/pdf-knowledge
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _script_dir]
 
 from core.pipeline_base import PipelineBase
 from core.resume_manager import ResumeManager
@@ -41,8 +48,8 @@ class Phase1bPDFEngine(PipelineBase):
     Reads scan_report.json from Phase 1a to adapt processing strategy.
     """
 
-    # Font fallback: if Docling vs OCR text length differs > this threshold, use OCR
-    FONT_FALLBACK_DIFF_THRESHOLD = 0.20
+    # Font fallback threshold is defined in config.yaml.
+    FONT_FALLBACK_DIFF_THRESHOLD = None
 
     def __init__(self):
         super().__init__(
@@ -54,18 +61,13 @@ class Phase1bPDFEngine(PipelineBase):
             "processed": os.path.join(self.base_dir, "02_Processed"),
         }
         self.resume_manager = ResumeManager(self.base_dir)
-        self._load_config()
-
-    def _load_config(self):
-        import yaml
-        config_path = os.path.join(_workspace_root, "skills", "pdf-knowledge", "config", "config.yaml")
-        self._config = {}
-        if os.path.exists(config_path):
-            with open(config_path, "r", encoding="utf-8") as f:
-                self._config = yaml.safe_load(f) or {}
-        docling_cfg = self._config.get("pdf_processing", {}).get("docling", {})
-        self.gc_collect_after = docling_cfg.get("gc_collect_after", True)
-        self.font_diff_threshold = docling_cfg.get("font_fallback_diff_threshold", self.FONT_FALLBACK_DIFF_THRESHOLD)
+        docling_cfg = self.config_manager.get_nested("pdf_processing", "docling") or {}
+        self.gc_collect_after = docling_cfg.get("gc_collect_after")
+        self.font_diff_threshold = docling_cfg.get("font_fallback_diff_threshold")
+        if self.gc_collect_after is None:
+            raise RuntimeError("pdf-knowledge config missing pdf_processing.docling.gc_collect_after")
+        if self.font_diff_threshold is None:
+            raise RuntimeError("pdf-knowledge config missing pdf_processing.docling.font_fallback_diff_threshold")
 
     # ------------------------------------------------------------------ #
     #  Public Entry Point                                                  #
@@ -134,13 +136,18 @@ class Phase1bPDFEngine(PipelineBase):
             extracted_text = self._apply_terminology_protection(extracted_text)
 
             # Write IMMUTABLE raw_extracted.md
-            with open(raw_output_path, "w", encoding="utf-8") as f:
-                f.write(f"<!-- raw_extracted.md — IMMUTABLE — DO NOT MODIFY —\n")
-                f.write(f"     pdf_id: {pdf_id}\n")
-                f.write(f"     source: {os.path.basename(pdf_path)}\n")
-                f.write(f"     pages: {scan_report.get('pages', '?')}\n")
-                f.write(f"-->\n\n")
-                f.write(extracted_text)
+            from core import AtomicWriter
+            AtomicWriter.write_text(
+                raw_output_path,
+                (
+                    "<!-- raw_extracted.md — IMMUTABLE — DO NOT MODIFY —\n"
+                    f"     pdf_id: {pdf_id}\n"
+                    f"     source: {os.path.basename(pdf_path)}\n"
+                    f"     pages: {scan_report.get('pages', '?')}\n"
+                    "-->\n\n"
+                    f"{extracted_text}"
+                ),
+            )
 
             # Record SHA-256 hash
             file_hash = self._sha256(raw_output_path)
@@ -321,8 +328,8 @@ class Phase1bPDFEngine(PipelineBase):
             except Exception:
                 pass
         data.update(updates)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        from core import AtomicWriter
+        AtomicWriter.write_json(path, data)
 
     def _move_to_error(self, pdf_path: str, pdf_id: str, reason: str):
         """Move PDF to Error/ directory with error metadata."""
@@ -336,8 +343,8 @@ class Phase1bPDFEngine(PipelineBase):
             pass
 
         error_meta = os.path.join(error_dir, f"{pdf_id}_error.json")
-        with open(error_meta, "w", encoding="utf-8") as f:
-            json.dump({"pdf_id": pdf_id, "reason": reason}, f, ensure_ascii=False, indent=2)
+        from core import AtomicWriter
+        AtomicWriter.write_json(error_meta, {"pdf_id": pdf_id, "reason": reason})
 
         self.error(f"❌ [Phase 1b] {pdf_id} 已移至 Error/ — {reason}")
 

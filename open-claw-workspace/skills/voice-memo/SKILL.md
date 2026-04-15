@@ -13,7 +13,10 @@ The pipeline runs five discrete, sequential phases — each reading from the pre
 phase's dedicated output directory and writing to its own.
 
 **Data Lineage**:
-`raw_data/` → `01_transcript/` → `02_proofread/` → `03_merged/` → `04_highlighted/` → `05_notion_synthesis/`
+`input/raw_data/` → `output/01_transcript/` → `output/02_proofread/` → `output/03_merged/` → `output/04_highlighted/` → `output/05_notion_synthesis/`
+
+**State / Logs**:
+`state/.pipeline_state.json` · `state/checklist.md` · `logs/system.log`
 
 ## Capabilities / Tools
 
@@ -139,6 +142,7 @@ When the user sends a request via Telegram or Chat, map their intent to the comm
 - **Prompts**: Loaded from `skills/voice-memo/scripts/prompt.md`. Each phase has its own `## Phase N:` section. Edit that file to tune LLM behaviour without touching Python code.
 - **Models & Parameters**: Configured in `voice-memo/config.json`. Each phase has its own `phaseN` key with `active_profile` and `subject_overrides` switching support.
 - **Command Line Overrides**: ALL script actions accept `--subject <subj_name>` to restrict execution to that folder.
-- **State Tracking**: All progress is persisted in `voice-memo/checklist.md` (5 columns: P1–P5). Interrupted runs resume automatically from where they stopped.
+- **State Tracking**: All progress is persisted in `data/voice-memo/state/checklist.md` (5 columns: P1–P5). Interrupted runs resume automatically from where they stopped.
+- **Canonical Layout**: Legacy phase folders remain as compatibility aliases, but new work should target `input/`, `output/`, `state/`, and `logs/`.
 - **Hardware Safety**: Base classes monitor RAM, disk, battery, and temperature. Critical thresholds trigger automatic shutdown to protect hardware.
 - **Progress Display**: All scripts show `[X/Y]` file counters in terminal so you can report progress to the user.

@@ -1,10 +1,24 @@
 # -*- coding: utf-8 -*-
 import sys, os
-# Add scripts directory to sys.path so 'core' can be imported when running standalone
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+
+# --- Boundary-Safe Initialization ---
+_utils_dir = os.path.dirname(os.path.abspath(__file__))
+_scripts_dir = os.path.dirname(_utils_dir)
+_skill_root = os.path.dirname(os.path.dirname(_scripts_dir))  # skills/voice-memo
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _scripts_dir, _utils_dir] + sys.path
 
 import os, signal, psutil, logging, hashlib, glob, time, sys
 from datetime import datetime
+
+from core import ConfigManager
 
 # --- 0. 強制設定系統時區為台灣時間 (Asia/Taipei) ---
 os.environ['TZ'] = 'Asia/Taipei'
@@ -26,7 +40,10 @@ LOG_FILE = os.path.join(BASE_DIR, "system.log")
 PROMPT_FILE = os.path.join(SKILL_SCRIPTS_DIR, "..", "prompt.md")
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 GLOBAL_CHECKLIST = os.path.join(BASE_DIR, "checklist.md")
-OLLAMA_API = "http://host.docker.internal:11434/api/generate"
+_CONFIG = ConfigManager(WORKSPACE_ROOT, "voice-memo")
+OLLAMA_API = _CONFIG.get_nested("runtime", "ollama", "api_url")
+if not OLLAMA_API:
+    raise RuntimeError("voice-memo runtime.ollama.api_url is missing")
 
 # --- 1. 統一日誌系統 ---
 logging.basicConfig(
@@ -58,9 +75,21 @@ def handle_interrupt(signum, frame):
 
 signal.signal(signal.SIGINT, handle_interrupt)
 
-def check_system_health(warning_mb=4000, critical_mb=2048, warning_temp=85, critical_temp=95):
+def check_system_health(warning_mb=None, critical_mb=None, warning_temp=None, critical_temp=None):
     """整合 RAM, CPU, 溫度, 電量, 磁碟監控"""
     global stop_requested
+
+    hardware_cfg = _CONFIG.get_section("hardware", {})
+    ram_cfg = hardware_cfg.get("ram", {}) if isinstance(hardware_cfg, dict) else {}
+    temp_cfg = hardware_cfg.get("temperature", {}) if isinstance(hardware_cfg, dict) else {}
+    battery_cfg = hardware_cfg.get("battery", {}) if isinstance(hardware_cfg, dict) else {}
+    disk_cfg = hardware_cfg.get("disk", {}) if isinstance(hardware_cfg, dict) else {}
+
+    warning_mb = warning_mb if warning_mb is not None else ram_cfg.get("warning_mb")
+    critical_mb = critical_mb if critical_mb is not None else ram_cfg.get("critical_mb")
+    warning_temp = warning_temp if warning_temp is not None else temp_cfg.get("warning_celsius")
+    critical_temp = critical_temp if critical_temp is not None else temp_cfg.get("critical_celsius")
+    disk_min_free_mb = disk_cfg.get("min_free_mb")
     
     available_ram = psutil.virtual_memory().available / (1024 * 1024)
     cpu_usage = psutil.cpu_percent(interval=0.1)
@@ -81,7 +110,7 @@ def check_system_health(warning_mb=4000, critical_mb=2048, warning_temp=85, crit
     if available_ram < critical_mb:
         log_msg(f"💥 [RAM 耗盡] 可用僅 {available_ram:.0f}MB！強制停機！", "error")
         os._exit(1)
-    elif disk_free < 200:
+    elif disk_free < disk_min_free_mb:
         log_msg(f"💾 [空間耗盡] 磁碟空間剩餘 {disk_free:.0f}MB！強制停機！", "error")
         os._exit(1)
     elif not power_plugged and bat_percent < 5:

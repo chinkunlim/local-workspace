@@ -1,12 +1,20 @@
-import requests
+import os
 import time
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional, Tuple, Union
+
+import requests
+
+
+TimeoutType = Union[float, Tuple[float, float]]
 
 class OllamaClient:
-    def __init__(self, api_url: str = "http://127.0.0.1:11434/api/generate", timeout: int = 600, retries: int = 3):
-        self.api_url = api_url
+    def __init__(self, api_url: Optional[str] = None, timeout: TimeoutType = 600, retries: int = 3, backoff_seconds: float = 5.0):
+        self.api_url = api_url or os.environ.get("OLLAMA_API_URL")
+        if not self.api_url:
+            raise ValueError("Ollama API URL is required. Provide it via config or OLLAMA_API_URL.")
         self.timeout = timeout
         self.retries = retries
+        self.backoff_seconds = backoff_seconds
 
     def generate(self, model: str, prompt: str, options: Optional[Dict[str, Any]] = None, logger=None) -> str:
         """Call Ollama generation endpoint with error retries."""
@@ -31,7 +39,7 @@ class OllamaClient:
                 if attempt < self.retries - 1:
                     if logger:
                         logger.warning(f"Ollama 請求失敗 ({e})，正在進行第 {attempt + 2} 次重試...")
-                    time.sleep(5)
+                    time.sleep(self.backoff_seconds * (2 ** attempt))
                 else:
                     if logger:
                         logger.error(f"Ollama 請求徹底失敗: {e}")

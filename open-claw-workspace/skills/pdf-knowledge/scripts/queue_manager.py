@@ -18,18 +18,27 @@ import sys
 import json
 import hashlib
 import time
+import threading
 from typing import List, Optional, Dict
 from datetime import datetime
 from enum import Enum
 
-# --- Workspace root sys.path setup ---
+# --- Boundary-Safe Initialization ---
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.path.abspath(os.path.join(_script_dir, "../../.."))
-if _workspace_root not in sys.path:
-    sys.path.insert(0, _workspace_root)
+_skill_root = os.path.dirname(os.path.dirname(_script_dir))  # skills/pdf-knowledge
+_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
+_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+_workspace_root = os.environ.get(
+    "WORKSPACE_DIR",
+    os.path.dirname(_openclawed_root)  # local-workspace
+)
+
+# Enforce sandbox boundary: only core and this skill
+sys.path = [_core_dir, _script_dir]
 
 from core.pipeline_base import PipelineBase
 from core.resume_manager import ResumeManager
+from core import build_skill_parser
 
 
 class PDFStatus(Enum):
@@ -49,26 +58,31 @@ class ModelMutex:
     """
 
     def __init__(self):
+        self._lock = threading.Lock()
         self._docling_active = False
         self._playwright_active = False
 
     def acquire_docling(self) -> bool:
-        if self._playwright_active:
-            return False  # Cannot start Docling while Playwright is running
-        self._docling_active = True
-        return True
+        with self._lock:
+            if self._playwright_active:
+                return False  # Cannot start Docling while Playwright is running
+            self._docling_active = True
+            return True
 
     def release_docling(self):
-        self._docling_active = False
+        with self._lock:
+            self._docling_active = False
 
     def acquire_playwright(self) -> bool:
-        if self._docling_active:
-            return False  # Cannot start Playwright while Docling is running
-        self._playwright_active = True
-        return True
+        with self._lock:
+            if self._docling_active:
+                return False  # Cannot start Playwright while Docling is running
+            self._playwright_active = True
+            return True
 
     def release_playwright(self):
-        self._playwright_active = False
+        with self._lock:
+            self._playwright_active = False
 
     @property
     def is_busy(self) -> bool:
@@ -97,15 +111,6 @@ class QueueManager(PipelineBase):
         self.model_mutex = ModelMutex()
         self._queue: List[Dict] = []
         self._processed_hashes: set = set()
-        self._load_config()
-
-    def _load_config(self):
-        import yaml
-        config_path = os.path.join(_workspace_root, "skills", "pdf-knowledge", "config", "config.yaml")
-        self._config = {}
-        if os.path.exists(config_path):
-            with open(config_path, "r", encoding="utf-8") as f:
-                self._config = yaml.safe_load(f) or {}
 
     # ------------------------------------------------------------------ #
     #  Startup                                                             #
@@ -138,7 +143,7 @@ class QueueManager(PipelineBase):
             return False
 
         # 3. Chrome Profile confirmation (config check)
-        playwright_cfg = self._config.get("playwright", {})
+        playwright_cfg = self.config_manager.get_section("playwright", {})
         profile = playwright_cfg.get("chrome_profile", "")
         hint = playwright_cfg.get("account_hint", "（未設定）")
 
@@ -146,7 +151,7 @@ class QueueManager(PipelineBase):
             self.warning(
                 "⚠️ [Queue] Chrome Profile 路徑尚未設定！\n"
                 "   請在 skills/pdf-knowledge/config/config.yaml 中填寫:\n"
-                "   playwright.chrome_profile: \"/Users/.../Chrome/Default\""
+                    "   playwright.chrome_profile: \"<your Chrome profile path>\""
             )
             # Non-fatal: Phase 1a/1b/1c/1d can run without Playwright
 
@@ -383,9 +388,7 @@ class QueueManager(PipelineBase):
 # ---------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="PDF Knowledge Queue Manager")
+    parser = build_skill_parser("PDF Knowledge Queue Manager")
     parser.add_argument("--scan", action="store_true", help="只掃描 Inbox，不處理")
     parser.add_argument("--process-all", action="store_true", help="處理所有待辦 PDF")
     parser.add_argument("--process-one", action="store_true", help="只處理下一個 PDF")
