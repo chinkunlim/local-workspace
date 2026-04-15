@@ -1,0 +1,49 @@
+# ==============================================================================
+# security_policy.yaml — Playwright 操作授權邊界
+# ==============================================================================
+# ⚠️  此檔案只有使用者可以修改。AI 代理永遠不得修改此檔案。
+# 任何 Playwright 操作必須先通過 SecurityManager 驗證。
+# ==============================================================================
+
+allowed_actions:
+  navigate:
+    - "gemini.google.com/*"
+    - "gemini.google.com/gems/*"
+    - "gemini.google.com/app/*"
+
+  interact:
+    - "gemini.google.com/app/*"
+
+  download:
+    path: "~/Downloads/"
+    file_types:
+      - ".md"
+      - ".json"
+
+forbidden_actions:
+  navigate:
+    - "*.google.com/settings/*"
+    - "mail.google.com/*"
+    - "drive.google.com/*"
+    - "accounts.google.com/*"
+    - "myaccount.google.com/*"
+    - "contacts.google.com/*"
+    - "calendar.google.com/*"
+    - "photos.google.com/*"
+
+  actions:
+    - "click:logout"
+    - "fill_credentials:*"
+    - "access_cookies:*"
+    - "screenshot_outside_gemini:*"
+
+# ------------------------------------------------------------------------------
+# 使用者注意事項
+# ------------------------------------------------------------------------------
+# 如需允許額外的 URL，請在 allowed_actions.navigate 清單中新增。
+# glob 模式規則：
+#   *                 = 任意字元（不含 /）
+#   **                = 任意字元（含 /）
+#   gemini.google.com/* 匹配 gemini.google.com/app、gemini.google.com/gems 等
+#
+# 禁止的 URL 優先於允許的 URL（即使符合 allowed 清單，若同時符合 forbidden 仍會被攔截）。

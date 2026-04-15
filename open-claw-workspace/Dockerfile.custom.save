@@ -1,0 +1,11 @@
+aw 預設沙盒為基底
+FROM opencl# 使用 Open Claw 預設沙盒為基底
+FROM openclaw-sandbox-common:bookworm-slim
+
+# 1. 提升權限為 root 以允許安裝系統軟體
+USER root
+
+# 2. 安裝系統級的音訊處理工具 ffmpeet install -y ffmpeg
+
+# 安裝 Python 核心處理套件
+RUN pip install --no-cache-dir openai-whisper pydub psutil pypdf requests

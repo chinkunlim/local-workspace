@@ -1,0 +1,64 @@
+# ==============================================================================
+# selectors.yaml — Playwright DOM Selectors 集中管理
+# ==============================================================================
+# 原則：所有 CSS/XPath selectors 集中在此，不散落在 .py 中。
+# Google 改版導致 selector 失效 → 截圖 + 警告 + 暫停（絕不靜默失敗）。
+# ==============================================================================
+#
+# ⚠️  這些 selectors 是在 2026-04 根據 Gemini Web UI 介面記錄的。
+#     Google 可能隨時改版。若 selector 失效，請截圖並更新此檔案。
+#
+# Selector 類型：
+#   css:  標準 CSS selector（優先）
+#   xpath: XPath（當 CSS 無法精確定位時）
+#   text: 文字內容比對（最後手段，脆弱）
+# ==============================================================================
+
+gemini:
+  # 主對話輸入框
+  input_box:
+    css: "div[contenteditable='true'][aria-label]"
+    fallback_xpath: "//div[@role='textbox']"
+
+  # 送出按鈕
+  submit_button:
+    css: "button[aria-label='Send message']"
+    fallback_css: "button[data-testid='send-button']"
+
+  # Thinking 指示器（等待 Gemini 完成思考）
+  thinking_indicator:
+    css: ".thinking-indicator, [aria-label*='thinking'], [aria-label*='Generating']"
+    # 若此元素消失 → Gemini 完成回應
+
+  # 回應容器（最新一條 Gemini 回應）
+  response_container:
+    css: "model-response:last-of-type .markdown"
+    fallback_css: "[data-message-author-role='model']:last-child"
+
+  # Voyager 外掛相關
+  voyager:
+    # Voyager 匯出按鈕（Chrome Extension v1.3.9）
+    export_button:
+      css: "#voyager-export-btn"
+      fallback_text: "Export to Notion"
+
+    # 資料夾選擇下拉
+    folder_dropdown:
+      css: "#voyager-folder-select"
+
+    # 確認匯出按鈕
+    confirm_button:
+      css: "#voyager-confirm-export"
+
+  # Gem 選擇器（切換不同 Expert Gem）
+  gem_selector:
+    gem_list_item:
+      css: "li[data-gem-id]"
+    active_gem:
+      css: "[data-gem-id][aria-selected='true']"
+
+# ------------------------------------------------------------------------------
+# Selector 更新記錄
+# ------------------------------------------------------------------------------
+# 2026-04-15: 初版 selectors（待實際瀏覽器測試驗證）
+# 請在每次確認 selector 有效後，在此補充日期和測試結果。

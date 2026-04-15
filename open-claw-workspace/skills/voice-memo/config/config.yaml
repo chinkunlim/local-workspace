@@ -1,0 +1,84 @@
+# ==============================================================================
+# config.yaml — OpenClaw Voice Memo Skill Configuration
+# ==============================================================================
+
+phase0:
+  active_profile: priority_gemma
+  profiles:
+    priority_gemma:
+      # model: qwen2.5:14b
+      model: gemma3:12b
+      options:
+        num_ctx: 16384
+        temperature: 0.1
+
+phase1:
+  active_profile: apple_silicon_mps
+  profiles:
+    default:
+      engine: faster-whisper
+      model: medium
+      device: cpu
+      compute_type: int8
+      beam_size: 5
+    apple_silicon_mps:
+      engine: mlx-whisper
+      model: mlx-community/whisper-large-v3-mlx
+      device: mps
+
+phase2:
+  active_profile: strict_gemma
+  profiles:
+    strict_gemma:
+      # model: qwen3:14b
+      # model: llama3:8b
+      model: gemma3:12b
+      chunk_size: 3000
+      options:
+        num_ctx: 16384
+        temperature: 0
+        num_predict: 4096
+
+phase3:
+  active_profile: default
+  profiles:
+    default:
+      # model: qwen3:14b
+      # model: gemma4:e2b
+      model: gemma3:12b
+      chunk_size: 4000
+      options:
+        num_ctx: 16384
+        temperature: 0.2
+        num_predict: 4096
+
+phase4:
+  active_profile: default
+  profiles:
+    default:
+      # model: qwen3:8b
+      model: gemma3:12b
+      chunk_size: 3000
+      options:
+        num_ctx: 8192
+        temperature: 0.1
+
+phase5:
+  active_profile: reasoning_deepseek
+  profiles:
+    default:
+      model: gemma3:12b
+      chunk_threshold: 6000
+      map_chunk_size: 4000
+      options:
+        num_ctx: 16384
+        temperature: 0.4
+    reasoning_deepseek:
+      # model: qwen3:14b
+      model: deepseek-r1:14b
+      chunk_threshold: 6000
+      map_chunk_size: 4000
+      options:
+        num_ctx: 32768
+        temperature: 0.6
+        num_predict: 8192

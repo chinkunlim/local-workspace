@@ -1,0 +1,33 @@
+{
+  "_comment": "priority_terms.json — 關鍵術語強制保護清單 (V2.1)",
+  "_note": "只有使用者可以修改此檔案。AI 代理只可建議修改，不可直接寫入（需使用者確認）。",
+  "_usage": "任何 LLM 呼叫前，terminology_builder.py 自動執行 Layer 1 字串替換 + Layer 2 Prompt 注入。",
+
+  "CRITICAL_SUBSTITUTIONS": {
+    "_comment": "Layer 1: 進入 LLM 前，對文字執行強制字串替換（wrong → correct）",
+    "輔料": "輔療",
+    "Fulao": "輔療",
+    "fu liao": "輔療",
+    "輔療 (Fulao)": "輔療",
+    "輔助料": "輔療",
+    "副療": "輔療"
+  },
+
+  "CRITICAL_TERM_PROTECTION": [
+    "_comment_start": "Layer 2: Prompt 中注入術語禁止改寫聲明的術語清單",
+    "輔療",
+    "動物輔助治療",
+    "綠色療癒",
+    "五味屋",
+    "友善雞蛋",
+    "綠色輔療",
+    "生態療癒"
+  ],
+
+  "PROMPT_INJECTION_TEMPLATE": "【術語保護】以下術語在本文件中具有專門含義，禁止任何形式的同義替換或改寫：{terms}。若遇到相近詞彙，請保留原文，不得自行轉換。",
+
+  "_pending_review": [
+    "以下術語待使用者確認是否需要加入保護清單（Q007）",
+    "如有其他「輔療/輔料」類型的高風險術語，請聯繫 AI 代理更新"
+  ]
+}

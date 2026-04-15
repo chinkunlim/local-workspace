@@ -1,0 +1,17 @@
+model_list:
+  - model_name: gemini-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: "AIzaSyD-YM1G3Fb7Vz0uAxzeI4XRg0ZZSsTf80o"
+  - model_name: gemini-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: "AIzaSyDARGJu8fIRWsZSJJx8VZawAAK7EO49iIE"
+  - model_name: gemini-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: "AIzaSyAaHvAln8SmlPxdtLGjtK6x_y5FT_2RCnY"
+router_settings:
+  routing_strategy: least-busy
+  retry_after: 60
+  allowed_fails: 2

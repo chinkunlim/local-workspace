@@ -1,0 +1,141 @@
+# ==============================================================================
+# config.yaml — OpenClaw PDF Knowledge Skill Configuration
+# ==============================================================================
+# 原則：零硬編碼。所有路徑、模型名、閾值全部讀自此檔案。
+# 修改此檔案不需要修改任何 Python 程式碼。
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Paths
+# ------------------------------------------------------------------------------
+paths:
+  # PDF 入匣（監控資料夾）
+  inbox: "${WORKSPACE_DIR}/data/pdf-knowledge/01_Inbox"
+  # 提取結果（IMMUTABLE — raw_extracted.md）
+  processed: "${WORKSPACE_DIR}/data/pdf-knowledge/02_Processed"
+  # Agent Core（trace, resume_state, voyager export, verification）
+  agent_core: "${WORKSPACE_DIR}/data/pdf-knowledge/03_Agent_Core"
+  # 最終知識庫（git repo + content.md + figure_list.md）
+  final: "${WORKSPACE_DIR}/data/pdf-knowledge/05_Final_Knowledge"
+  # PDF 處理失敗隔離
+  error: "${WORKSPACE_DIR}/data/pdf-knowledge/Error"
+  # ChromaDB 向量資料庫
+  vector_db: "${WORKSPACE_DIR}/data/pdf-knowledge/vector_db"
+  # 向量資料庫文件庫
+  library: "${WORKSPACE_DIR}/data/pdf-knowledge/library"
+
+# ------------------------------------------------------------------------------
+# PDF Processing
+# ------------------------------------------------------------------------------
+pdf_processing:
+  # Phase 1a — 輕量診斷
+  diagnostic:
+    min_text_chars_first_page: 50      # 低於此值判定為掃描件
+    max_ram_mb: 50                     # 診斷應不超過 50MB（Docling 的 2%）
+
+  # Phase 1b — Docling 深度提取
+  docling:
+    max_ram_mb: 2560                   # ~2.5GB
+    gc_collect_after: true             # 提取完成後立即 gc.collect()
+    font_fallback_diff_threshold: 0.20 # 字型損壞 fallback 差異閾值（20%）
+
+  # Phase 1c — 向量圖表補充
+  vector_chart:
+    dpi: 150                           # pdftoppm 光柵化 DPI
+    format: "jpeg"
+
+  # Phase 1d — OCR 品質評估
+  ocr:
+    dpi: 200                           # pytesseract 光柵化 DPI（繁中最佳）
+    lang: "chi_tra+eng"                # 繁體中文 + 英文混合
+    confidence_threshold: 0.80         # 低於此值觸發黃色警告
+
+  # Chunking
+  chunking:
+    max_chunk_chars: 8000              # 每個 chunk 最大字元數
+    overlap_chars: 500                 # 前後 overlap（上下文提示）
+    split_priority:
+      - "h2_boundary"                  # 優先在 H2 邊界切割
+      - "paragraph_break"              # 其次在段落空行
+      - "force_truncate"               # 最後強制截斷
+
+# ------------------------------------------------------------------------------
+# Playwright (Browser Agent)
+# ------------------------------------------------------------------------------
+playwright:
+  # ⭐ 首次使用前必須填寫 Chrome Profile 路徑
+  # 查詢方式：在 Chrome 網址列輸入 chrome://version/，找到「個人資料路徑」
+  chrome_profile: "/Users/limchinkun/Library/Application Support/Google/Chrome/Default"
+  account_hint: "（請填入帳號備忘，例如：工作帳號）"
+
+  # Gemini 操作超時設定
+  thinking_timeout_seconds: 480        # 8 分鐘後截圖 + 人工介入提示
+  agent_loop_max_rounds: 10            # 每個 chunk 最大 round 數
+
+# ------------------------------------------------------------------------------
+# LLM Models
+# ------------------------------------------------------------------------------
+models:
+  # Triage + 輔助處理（本機輕量模型）
+  triage: "gemma4:e2b"
+  # Gemini Gems（透過 Playwright 存取）
+  gems:
+    psychology: "psychology_expert"
+    it: "it_expert"
+    curriculum: "curriculum_expert"
+    default: "general_expert"
+
+# ------------------------------------------------------------------------------
+# Hardware Defence (macOS — Apple Silicon 16GB)
+# ------------------------------------------------------------------------------
+hardware:
+  ram:
+    warning_mb: 500
+    critical_mb: 200
+  temperature:
+    warning_celsius: 85
+    critical_celsius: 95
+  battery:
+    low_percent: 15
+    critical_percent: 5
+  disk:
+    min_free_mb: 500
+
+# ------------------------------------------------------------------------------
+# Queue
+# ------------------------------------------------------------------------------
+queue:
+  mode: "serial"                       # 串行（一次一個 PDF，保護記憶體）
+  model_mutex: true                    # Docling 和 Playwright 不能同時執行
+
+# ------------------------------------------------------------------------------
+# Git
+# ------------------------------------------------------------------------------
+git:
+  lfs_extensions:
+    - "*.png"
+    - "*.jpg"
+    - "*.jpeg"
+  auto_commit_format: "{pdf_id} — Phase {phase}: {description}"
+
+# ------------------------------------------------------------------------------
+# Flask Dashboard
+# ------------------------------------------------------------------------------
+flask:
+  host: "127.0.0.1"
+  port: 5001                           # 與 voice-memo (5000) 區分
+  debug: false
+
+# ------------------------------------------------------------------------------
+# Export
+# ------------------------------------------------------------------------------
+export:
+  anki:
+    model_name: "OpenClaw PDF Knowledge"
+    deck_prefix: "OpenClaw::"
+    auto_trigger: false                # 等待 Q006 確認
+
+  marp:
+    trigger_subjects:
+      - "curriculum"
+    slide_theme: "default"

@@ -1,0 +1,19 @@
+# Open Claw Workspace Dependencies
+
+# --- Core Shared ---
+psutil>=6.0.0
+pyyaml>=6.0.1
+tqdm>=4.66.0
+chromadb>=0.5.0
+
+# --- Voice Memo Skill ---
+faster-whisper>=1.0.0
+mlx-whisper>=0.2.0
+pypdf>=4.3.0
+
+# --- PDF Knowledge Skill ---
+flask>=3.0.0
+playwright>=1.47.0
+docling>=2.0.0
+pytesseract>=0.3.13
+Pillow>=10.4.0
