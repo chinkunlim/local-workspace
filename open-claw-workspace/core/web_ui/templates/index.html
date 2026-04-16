@@ -351,6 +351,12 @@
         <button id="btn-pdf" class="btn btn-primary" onclick="startTask('pdf')">
             ▶ 啟動排程
         </button>
+        <button id="btn-pdf-pause" class="btn" onclick="stopTask()" style="margin-top:6px;background:transparent;border:1px solid #d2a8ff;color:#d2a8ff;display:none;">
+            ⏸ 暫停 (安全退出)
+        </button>
+        <button id="btn-pdf-resume" class="btn" onclick="startTask('pdf', true)" style="margin-top:6px;background:transparent;border:1px solid var(--accent);color:var(--accent);">
+            ⏯ 斷點續傳
+        </button>
         <button id="btn-pdf-force" class="btn btn-warning" onclick="startTask('pdf', false, false, true)" style="margin-top:6px;background:transparent;border:1px solid var(--warning);color:var(--warning);">
             🔁 強制重跑全部
         </button>
@@ -538,11 +544,16 @@ async function pollStatus() {
             tnEl.textContent = '';
         }
 
-        document.getElementById('btn-pdf').disabled        = running;
+        document.getElementById('btn-pdf').disabled         = running;
+        document.getElementById('btn-pdf-resume').disabled  = running;
         document.getElementById('btn-pdf-force').disabled   = running;
+        document.getElementById('btn-pdf-pause').style.display = (running && data.system.task_name && data.system.task_name.includes('PDF')) ? 'block' : 'none';
+
         document.getElementById('btn-voice').disabled       = running;
         document.getElementById('btn-voice-resume').disabled= running;
         document.getElementById('btn-voice-force').disabled = running;
+        document.getElementById('btn-voice-pause').style.display = (running && data.system.task_name && data.system.task_name.includes('Voice')) ? 'block' : 'none';
+        
         document.getElementById('btn-stop').disabled        = !running;
     } catch(e) { /* server may be starting */ }
 

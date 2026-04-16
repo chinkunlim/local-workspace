@@ -88,12 +88,13 @@ class QueueManager(PipelineBase):
     Orchestrates the full pipeline: Phase 1a → 1b → 1c → 1d → (later phases).
     """
 
-    def __init__(self):
+    def __init__(self, force_mode: bool = False):
         super().__init__(
             phase_key="phase0",
             phase_name="佇列管理",
             skill_name="pdf-knowledge",
         )
+        self.force_mode = force_mode
         # Utilizing canonical self.dirs from PipelineBase
         self.resume_manager = ResumeManager(self.base_dir)
         self.model_mutex = ModelMutex()
@@ -192,8 +193,8 @@ class QueueManager(PipelineBase):
                 subject = "Default" if rel_path == "." else rel_path.replace(os.sep, "_")
 
                 # Layer 1: Check if already processed
-                if self._is_already_processed(pdf_id, subject):
-                    self.info(f"⏭️ [Queue] {filename} 已完成，跳過")
+                if not self.force_mode and self._is_already_processed(pdf_id, subject):
+                    self.info(f"⏭️ [Queue] {filename} 已完成，跳過 (使用 --force 可強制重跑)")
                     continue
 
                 # Layer 2: Check if already in queue
@@ -203,7 +204,7 @@ class QueueManager(PipelineBase):
 
                 # Layer 3: MD5 hash dedup
                 pdf_hash = self._md5(pdf_path)
-                if pdf_hash in self._processed_hashes:
+                if not self.force_mode and pdf_hash in self._processed_hashes:
                     self.info(f"⏭️ [Queue] {filename} 內容重複（MD5 相同），跳過")
                     continue
 
@@ -260,58 +261,82 @@ class QueueManager(PipelineBase):
 
         try:
             # --- Phase 1a: Diagnostic ---
-            self.info(f"📋 [Queue] Phase 1a: 輕量診斷 ({subject})...")
-            from phases.p01a_diagnostic import Phase1aDiagnostic
-            diag = Phase1aDiagnostic()
-            scan_report = diag.run_diagnostics(pdf_path, pdf_id, subject)
+            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1a"):
+                self.info(f"📋 [Queue] Phase 1a: 輕量診斷 ({subject})...")
+                from phases.p01a_diagnostic import Phase1aDiagnostic
+                diag = Phase1aDiagnostic()
+                scan_report = diag.run_diagnostics(pdf_path, pdf_id, subject)
 
-            if not scan_report.success:
-                raise RuntimeError(f"Phase 1a 失敗: {scan_report.error}")
-            self.state_manager.update_task(subject, item["filename"], "p1a", "✅")
-
-            # Acquire Docling mutex
-            if not self.model_mutex.acquire_docling():
-                self.warning("⚠️ [Queue] Playwright 執行中，Docling 等待...")
-                while self.model_mutex._playwright_active:
-                    time.sleep(10)
-                    if self.stop_requested:
-                        return None
-                self.model_mutex.acquire_docling()
+                if not scan_report.success:
+                    raise RuntimeError(f"Phase 1a 失敗: {scan_report.error}")
+                self.state_manager.update_task(subject, item["filename"], "p1a", "✅")
+            else:
+                self.info(f"📋 [Queue] Phase 1a 已完成，載入快取")
+                from phases.p01a_diagnostic import DiagnosticReport
+                report_path = os.path.join(self.dirs["processed"], subject, pdf_id, "scan_report.json")
+                if os.path.exists(report_path):
+                    with open(report_path, "r", encoding="utf-8") as f:
+                        import json
+                        scan_report = DiagnosticReport(**json.load(f))
+                else:
+                    raise RuntimeError("Phase 1a 完成但找不到 scan_report.json")
 
             # --- Phase 1b: Docling Extraction ---
-            try:
-                self.info(f"📄 [Queue] Phase 1b: Docling 提取 ({subject})...")
-                from phases.p01b_engine import Phase1bPDFEngine
-                engine = Phase1bPDFEngine()
-                raw_path = engine.extract(pdf_path, pdf_id, subject)
-                if raw_path is None:
-                    raise RuntimeError("Phase 1b Docling 提取失敗")
-                self.state_manager.update_task(subject, item["filename"], "p1b", "✅")
-            finally:
-                self.model_mutex.release_docling()
+            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1b"):
+                # Acquire Docling mutex
+                if not self.model_mutex.acquire_docling():
+                    self.warning("⚠️ [Queue] Playwright 執行中，Docling 等待...")
+                    while self.model_mutex._playwright_active:
+                        import time
+                        time.sleep(10)
+                        if self.stop_requested:
+                            return None
+                    self.model_mutex.acquire_docling()
+
+                try:
+                    self.info(f"📄 [Queue] Phase 1b: Docling 提取 ({subject})...")
+                    from phases.p01b_engine import Phase1bPDFEngine
+                    engine = Phase1bPDFEngine()
+                    raw_path = engine.extract(pdf_path, pdf_id, subject)
+                    if raw_path is None:
+                        raise RuntimeError("Phase 1b Docling 提取失敗")
+                    self.state_manager.update_task(subject, item["filename"], "p1b", "✅")
+                finally:
+                    self.model_mutex.release_docling()
+            else:
+                self.info(f"📄 [Queue] Phase 1b 已完成，跳過")
 
             # --- Phase 1c: Vector Chart Extraction ---
-            vector_pages = scan_report.vector_chart_pages
-            if vector_pages:
-                self.info(f"🎨 [Queue] Phase 1c: 向量圖表光柵化 ({len(vector_pages)} 頁)...")
-                from phases.p01c_vector_charts import Phase1cVectorChartExtractor
-                extractor = Phase1cVectorChartExtractor()
-                extractor.extract_vector_charts(pdf_path, pdf_id, subject, vector_pages)
+            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1c"):
+                vector_pages = scan_report.vector_chart_pages
+                if vector_pages:
+                    self.info(f"🎨 [Queue] Phase 1c: 向量圖表光柵化 ({len(vector_pages)} 頁)...")
+                    from phases.p01c_vector_charts import Phase1cVectorChartExtractor
+                    extractor = Phase1cVectorChartExtractor()
+                    extractor.extract_vector_charts(pdf_path, pdf_id, subject, vector_pages)
                 self.state_manager.update_task(subject, item["filename"], "p1c", "✅")
+            else:
+                self.info(f"🎨 [Queue] Phase 1c 已完成，跳過")
 
             # --- Phase 1d: OCR Quality (if scanned) ---
-            if scan_report.is_scanned:
-                self.info(f"🔤 [Queue] Phase 1d: OCR 品質評估...")
-                from phases.p01d_ocr_gate import Phase1dOCRQualityGate
-                gate = Phase1dOCRQualityGate()
-                gate.assess_all_scanned_pages(pdf_path, pdf_id, subject)
+            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1d"):
+                if scan_report.is_scanned:
+                    self.info(f"🔤 [Queue] Phase 1d: OCR 品質評估...")
+                    from phases.p01d_ocr_gate import Phase1dOCRQualityGate
+                    gate = Phase1dOCRQualityGate()
+                    gate.assess_all_scanned_pages(pdf_path, pdf_id, subject)
                 self.state_manager.update_task(subject, item["filename"], "p1d", "✅")
+            else:
+                self.info(f"🔤 [Queue] Phase 1d 已完成，跳過")
 
             # --- Phase 2a: VLM Vision ---
-            self.info(f"👁️ [Queue] Phase 2a: VLM 視覺圖表解析 ({subject})...")
-            from phases.p02a_vlm_vision import Phase2aVLMVision
-            Phase2aVLMVision().run_vision(pdf_id, subject)
-            self.state_manager.update_task(subject, item["filename"], "p2a", "✅")
+            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p2a"):
+                self.info(f"👁️ [Queue] Phase 2a: VLM 視覺圖表解析 ({subject})...")
+                from phases.p02a_vlm_vision import Phase2aVLMVision
+                Phase2aVLMVision().run_vision(pdf_id, subject)
+                self.state_manager.update_task(subject, item["filename"], "p2a", "✅")
+            else:
+                self.info(f"👁️ [Queue] Phase 2a 已完成，跳過")
 
             if getattr(self, "interactive", False):
                 input(f"⏸️ [Interactive] Phase 2a 已完成。請確認 figure_list.md，按 Enter 繼續...")
@@ -367,10 +392,34 @@ class QueueManager(PipelineBase):
     #  Utilities                                                           #
     # ------------------------------------------------------------------ #
 
-    def _is_already_processed(self, pdf_id: str, subject: str = "Default") -> bool:
-        """Check if pdf_id has raw_extracted.md in 02_Processed/<subject>/."""
-        raw_path = os.path.join(self.dirs["processed"], subject, pdf_id, "raw_extracted.md")
-        return os.path.exists(raw_path)
+    def _is_already_processed(self, pdf_id: str, subject: str = "Default", phase_key: str = None) -> bool:
+        """
+        Check if pdf_id has completed processing via StateManager checklist.
+        If phase_key is provided, checks if that specific phase is '✅'.
+        If no phase_key is provided, checks if the final phase 'p2b' is '✅'.
+        """
+        # We need the original filename which we can infer or pass, but StateManager 
+        # stores it by filename. To be exact, we should look up the task.
+        # Since Queue relies on filename, we can search the state checklist for pdf_id.
+        state = self.state_manager.get_checkpoint()
+        if subject not in state or not state[subject]:
+            return False
+            
+        # Find the record matching this pdf_id
+        record = None
+        for fn, details in state[subject].items():
+            if os.path.splitext(fn)[0] == pdf_id:
+                record = details
+                break
+                
+        if not record:
+            return False
+
+        if phase_key:
+            return record.get(phase_key) == "✅"
+            
+        # If no explicit phase requested, full processing means p2b is finished.
+        return record.get("p2b") == "✅"
 
     def _load_processed_hashes(self):
         """Load MD5 hashes of already-processed PDFs from scan_reports."""
@@ -419,14 +468,14 @@ class QueueManager(PipelineBase):
 # ---------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-    parser = build_skill_parser("PDF Knowledge Queue Manager")
+    parser = build_skill_parser("PDF Knowledge Queue Manager", include_force=True, include_resume=True)
     parser.add_argument("--scan", action="store_true", help="只掃描 Inbox，不處理")
     parser.add_argument("--process-all", action="store_true", help="處理所有待辦 PDF")
     parser.add_argument("--process-one", action="store_true", help="只處理下一個 PDF")
     parser.add_argument("--interactive", "-i", action="store_true", help="啟用人工審核停留機制 (Phase 04)")
     args = parser.parse_args()
 
-    qm = QueueManager()
+    qm = QueueManager(force_mode=args.force)
     qm.interactive = args.interactive
 
     if not qm.startup_check():

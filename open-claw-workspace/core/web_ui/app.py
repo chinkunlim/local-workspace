@@ -199,6 +199,10 @@ def api_start():
         cmd = ["python3", _PDF_SCRIPT, "--process-all"]
         if subject:
             cmd += ["--subject", subject]
+        if force:
+            cmd += ["--force"]
+        if resume:
+            cmd += ["--resume"]
         ok = exec_mgr.start_task("PDF Queue Manager", cmd, cwd=_workspace_root)
 
     elif skill == "voice":
