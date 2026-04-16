@@ -1,0 +1,34 @@
+# ==============================================================================
+# global.yaml — OpenClaw Workspace Global Configuration
+# ==============================================================================
+# Shared settings that apply to ALL skills.
+# Individual skill config.yaml can override any of these values.
+# Managed by core/config_manager.py (loaded as fallback layer).
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Hardware Defence (macOS — Apple Silicon 16GB)
+# Applied globally by PipelineBase.check_system_health()
+# ------------------------------------------------------------------------------
+hardware:
+  ram:
+    warning_mb: 500         # Pause processing if free RAM drops below this
+    critical_mb: 200        # Emergency stop if free RAM drops below this
+  temperature:
+    warning_celsius: 85     # Log warning at this CPU temperature
+    critical_celsius: 95    # Emergency stop at this CPU temperature
+  battery:
+    low_percent: 15         # Log warning when battery falls below this
+    critical_percent: 5     # Emergency stop when battery falls below this
+  disk:
+    min_free_mb: 500        # Emergency stop if free disk space is below this
+
+# ------------------------------------------------------------------------------
+# Ollama Runtime (shared endpoint for all LLM calls)
+# ------------------------------------------------------------------------------
+runtime:
+  ollama:
+    api_url: "http://127.0.0.1:11434/api/generate"
+    timeout_seconds: 600
+    retries: 3
+    backoff_seconds: 5.0

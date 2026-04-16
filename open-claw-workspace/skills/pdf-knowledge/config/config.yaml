@@ -93,67 +93,7 @@ models:
     curriculum: "curriculum_expert"
     default: "general_expert"
 
-# ------------------------------------------------------------------------------
-# Hardware Defence (macOS — Apple Silicon 16GB)
-# ------------------------------------------------------------------------------
-hardware:
-  ram:
-    warning_mb: 500
-    critical_mb: 200
-  temperature:
-    warning_celsius: 85
-    critical_celsius: 95
-  battery:
-    low_percent: 15
-    critical_percent: 5
-  disk:
-    min_free_mb: 500
-
-# ------------------------------------------------------------------------------
-# Queue
-# ------------------------------------------------------------------------------
-queue:
-  mode: "serial"                       # 串行（一次一個 PDF，保護記憶體）
-  model_mutex: true                    # Docling 和 Playwright 不能同時執行
-
-# ------------------------------------------------------------------------------
-# Git
-# ------------------------------------------------------------------------------
-git:
-  lfs_extensions:
-    - "*.png"
-    - "*.jpg"
-    - "*.jpeg"
-  auto_commit_format: "{pdf_id} — Phase {phase}: {description}"
-
-# ------------------------------------------------------------------------------
-# Flask Dashboard
-# ------------------------------------------------------------------------------
-flask:
-  host: "127.0.0.1"
-  port: 5001                           # 與 voice-memo (5000) 區分
-  debug: false
-
-# ------------------------------------------------------------------------------
-# Export
-# ------------------------------------------------------------------------------
-export:
-  anki:
-    model_name: "OpenClaw PDF Knowledge"
-    deck_prefix: "OpenClaw::"
-    auto_trigger: false                # 等待 Q006 確認
-
-  marp:
-    trigger_subjects:
-      - "curriculum"
-    slide_theme: "default"
-
-# ------------------------------------------------------------------------------
-# Shared Runtime
-# ------------------------------------------------------------------------------
-runtime:
-  ollama:
-    api_url: "http://127.0.0.1:11434/api/generate"
-    timeout_seconds: 600
-    retries: 3
-    backoff_seconds: 5
+# NOTE: hardware thresholds and runtime (ollama) settings are defined globally in:
+#   open-claw-workspace/core/config/global.yaml
+# They are automatically merged by core/config_manager.py.
+# Override any value here only if this skill needs different thresholds.

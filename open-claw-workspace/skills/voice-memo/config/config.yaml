@@ -112,18 +112,11 @@ runtime:
     retries: 3
     backoff_seconds: 5
 
-hardware:
-  ram:
-    warning_mb: 500
-    critical_mb: 200
-  temperature:
-    warning_celsius: 85
-    critical_celsius: 95
-  battery:
-    low_percent: 15
-    critical_percent: 5
-  disk:
-    min_free_mb: 200
+
+# NOTE: hardware thresholds and runtime (ollama) settings are defined globally in:
+#   open-claw-workspace/core/config/global.yaml
+# Override any value here only if this skill needs different thresholds.
+#   e.g. disk.min_free_mb: 200 was previously lower here for voice-memo.
 
 thresholds:
   phase2_verbatim: 0.85

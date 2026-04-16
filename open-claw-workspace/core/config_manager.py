@@ -16,6 +16,7 @@ class ConfigManager:
         self.skill_name = skill_name
         self.config_dir = Path(self.workspace_root) / "skills" / skill_name / "config"
         self.config_file = self.config_dir / "config.yaml"
+        self.global_config_file = Path(self.workspace_root) / "core" / "config" / "global.yaml"
         self.data = self._load()
 
     def _expand_placeholders(self, value: Any) -> Any:
@@ -28,12 +29,32 @@ class ConfigManager:
         return value
 
     def _load(self) -> Dict[str, Any]:
-        if not self.config_file.exists():
-            return {}
+        # 1. Load global base config
+        merged: Dict[str, Any] = {}
+        if self.global_config_file.exists():
+            with self.global_config_file.open("r", encoding="utf-8") as handle:
+                global_raw = yaml.safe_load(handle) or {}
+            merged = self._expand_placeholders(global_raw)
 
-        with self.config_file.open("r", encoding="utf-8") as handle:
-            raw = yaml.safe_load(handle) or {}
-        return self._expand_placeholders(raw)
+        # 2. Deep-merge skill-specific config on top
+        if self.config_file.exists():
+            with self.config_file.open("r", encoding="utf-8") as handle:
+                skill_raw = yaml.safe_load(handle) or {}
+            skill_data = self._expand_placeholders(skill_raw)
+            merged = self._deep_merge(merged, skill_data)
+
+        return merged
+
+    @staticmethod
+    def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+        """Recursively merge override into base, returning a new dict."""
+        result = dict(base)
+        for key, val in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(val, dict):
+                result[key] = ConfigManager._deep_merge(result[key], val)
+            else:
+                result[key] = val
+        return result
 
     def reload(self) -> Dict[str, Any]:
         self.data = self._load()
