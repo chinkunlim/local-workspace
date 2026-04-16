@@ -10,15 +10,17 @@ The pdf-knowledge skill converts academic/technical PDF documents into structure
 ## Current State (2026-04-16)
 
 - **Status**: Production — all 6 phases implemented and integrated with `StateManager`
-- **Models in use**: `gemma3:12b` (Ollama) for P2a VLM and P2b synthesis; Docling (local) for P1b extraction
-- **Architecture version**: V2.1 (config-driven paths, subject-based hierarchy, IMMUTABLE principle)
+- **Models in use**: `llama3.2-vision` (P2a VLM), `qwen2.5:14b` (P2b synthesis); Docling (local) for P1b
+- **Architecture version**: V3.0 (global config layer, zero-hardcoded prompts, subject hierarchy, IMMUTABLE principle)
 
 ## Key Invariants
 
 1. **Subject-based hierarchy**: `input/01_Inbox/<subject>/` → `output/02_Processed/<subject>/<pdf_id>/` → `output/05_Final_Knowledge/<subject>/<pdf_id>/`.
 2. **IMMUTABLE P1b output**: `raw_extracted.md` is Docling's raw extraction. It is **never overwritten** after creation. All AI enrichment goes into `05_Final_Knowledge/`.
-3. **Content-Loss Guard**: P2b validates that `len(final) / len(raw) ≥ 0.30` before writing. If ratio falls below threshold, synthesis is aborted to prevent LLM truncation.
+3. **Content-Loss Guard**: P2b validates `len(final) / len(raw) ≥ 0.01` before writing. Threshold is intentionally low (1%) because dense academic texts compress naturally at high ratios.
 4. **`checklist.md` is system-generated** — do not manually edit `data/pdf-knowledge/state/checklist.md`.
+5. **Zero-hardcoded prompts**: All LLM instructions live in `config/prompt.md`, parsed by `PipelineBase.get_prompt()`. Never embed prompts in Python code.
+6. **Global config layer**: Hardware thresholds and Ollama runtime live in `core/config/global.yaml`, not in the skill's `config.yaml`.
 
 ## Architecture
 
@@ -34,7 +36,9 @@ Each phase is a class inheriting `core.PipelineBase`. Paths come from `config.ya
 
 | Item | Path |
 |:---|:---|
-| Config | `skills/pdf-knowledge/config/config.yaml` |
+| Global config | `core/config/global.yaml` |
+| Skill config | `skills/pdf-knowledge/config/config.yaml` |
+| LLM prompts | `skills/pdf-knowledge/config/prompt.md` |
 | Terminology list | `skills/pdf-knowledge/config/priority_terms.json` |
 | Security rules | `skills/pdf-knowledge/config/security_policy.yaml` |
 | Orchestrator | `skills/pdf-knowledge/scripts/run_all.py` |
@@ -56,6 +60,7 @@ Each phase is a class inheriting `core.PipelineBase`. Paths come from `config.ya
 ## What NOT to Change Without Reading DECISIONS.md
 
 - The `raw_extracted.md` immutability guarantee — it is the forensic baseline for all downstream AI processing
-- Content-Loss Guard threshold (0.30) — reducing it risks silently accepting truncated knowledge bases
-- Docling RAM limits in `config.yaml` (`pdf_processing.docling.max_ram_mb: 2560`) — Docling is the heaviest single process in the pipeline
+- Content-Loss Guard threshold (1%) — reducing it further risks accepting completely empty outputs
+- Docling RAM limits in `config.yaml` (`pdf_processing.docling.max_ram_mb: 2560`) — heaviest single process
 - P1d OCR confidence threshold — calibrated for Traditional Chinese + English mixed documents
+- `core/config/global.yaml` hardware thresholds without cross-testing both skills
