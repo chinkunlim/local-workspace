@@ -40,6 +40,11 @@
    - Commit all successful, verified changes to the local Git repository immediately with a clear, descriptive commit message.
    - If an upstream remote exists, push to GitHub/remote after committing.
 5. **Enforce Hygiene**: Never leave stale files, duplicated functions, or temporary backups (`.bak`, `.tmp`) lying around.
+6. **Force-Restart All Services After Every Code Change**:
+   - After **any** modification to `core/`, `skills/`, or `core/web_ui/` (including `app.py`, `execution_manager.py`, `templates/index.html`), you **MUST** immediately kill and restart the Flask Dashboard process.
+   - Use `pkill -f "python3 open-claw-workspace/core/web_ui/app.py" && nohup python3 open-claw-workspace/core/web_ui/app.py > /dev/null 2>&1 &` from the `local-workspace/` directory.
+   - Never assume an in-memory process will hot-reload Python source changes. Flask runs in production mode (`debug=False`) — **a restart is always required**.
+   - After restarting, instruct the user to perform a hard browser refresh (`CMD + Shift + R`) to clear cached JS/HTML assets.
 
 ---
 
