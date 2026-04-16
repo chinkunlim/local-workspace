@@ -101,7 +101,7 @@ class Phase5NotionSynthesis(PipelineBase):
             
         return final_note, map_success, tc
 
-    def run(self, force=False, subject=None, resume_from=None):
+    def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log(f"✨ 啟動 Phase 5：Notion 知識合成")
         reduce_tpl = self.get_prompt("Phase 5: 筆記合成指令")
         map_tpl = self.get_prompt("Phase 5 Part A: 分塊摘要提取指令")

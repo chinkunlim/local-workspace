@@ -253,6 +253,8 @@ class PipelineBase:
         prev_phase_key: str = None,
         force: bool = False,
         subject_filter: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
         resume_from: Dict[str, str] = None,
     ) -> List[Dict]:
         """
@@ -304,6 +306,25 @@ class PipelineBase:
             if start_idx > 0:
                 self.log(f"➩️  斷點續傳：已跳過 {start_idx} 個先前完成的任務。")
             all_tasks = all_tasks[start_idx:]
+
+        if file_filter:
+            start_idx = 0
+            for i, t in enumerate(all_tasks):
+                if t["filename"] == file_filter:
+                    start_idx = i
+                    break
+            
+            if single_mode:
+                if start_idx < len(all_tasks) and all_tasks[start_idx]["filename"] == file_filter:
+                    all_tasks = [all_tasks[start_idx]]
+                    self.log(f"🎯  單檔模式：僅執行 {file_filter}")
+                else:
+                    all_tasks = []
+                    self.log(f"❌  單檔模式：找不到目標檔案 {file_filter}", "warn")
+            else:
+                if start_idx > 0:
+                    self.log(f"➩️  指定起點：從 {file_filter} 開始執行。")
+                all_tasks = all_tasks[start_idx:]
 
         return all_tasks
 

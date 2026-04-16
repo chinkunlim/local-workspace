@@ -88,13 +88,16 @@ class QueueManager(PipelineBase):
     Orchestrates the full pipeline: Phase 1a → 1b → 1c → 1d → (later phases).
     """
 
-    def __init__(self, force_mode: bool = False):
+    def __init__(self, force_mode: bool = False, subject_filter: str = None, file_filter: str = None, single_mode: bool = False):
         super().__init__(
             phase_key="phase0",
             phase_name="佇列管理",
             skill_name="pdf-knowledge",
         )
         self.force_mode = force_mode
+        self.subject_filter = subject_filter
+        self.file_filter = file_filter
+        self.single_mode = single_mode
         # Utilizing canonical self.dirs from PipelineBase
         self.resume_manager = ResumeManager(self.base_dir)
         self.model_mutex = ModelMutex()
@@ -222,11 +225,38 @@ class QueueManager(PipelineBase):
                     "encrypted": is_encrypted,
                 })
 
+        # 1. Subject Filter Enforcement
+        if self.subject_filter:
+            new_pdfs = [p for p in new_pdfs if p["subject"] == self.subject_filter]
+
+        # 2. Sort explicitly to ensure ascending alphabetical execution
+        new_pdfs.sort(key=lambda t: (t["subject"], t["filename"]))
+
+        # 3. Targeted execution scope slice
+        if self.file_filter:
+            start_idx = 0
+            found = False
+            for i, p in enumerate(new_pdfs):
+                if p["filename"] == self.file_filter:
+                    start_idx = i
+                    found = True
+                    break
+            
+            if not found:
+                self.log(f"⚠️  --file 指定的檔案 '{self.file_filter}' 不在未處理清單中，將掃描全部 Inbox。", "warn")
+            elif self.single_mode:
+                new_pdfs = [new_pdfs[start_idx]]
+                self.log(f"🎯  單檔模式：僅抽出 [{new_pdfs[0]['subject']}] {self.file_filter}")
+            else:
+                new_pdfs = new_pdfs[start_idx:]
+                if start_idx > 0:
+                    self.log(f"➩️  指定起點：從 {self.file_filter} 之後開始處理（共計 {len(new_pdfs)} 項）。")
+
         self._queue.extend(new_pdfs)
         if new_pdfs:
-            self.info(f"🔍 [Queue] 偵測到 {len(new_pdfs)} 個新 PDF")
+            self.info(f"🔍 [Queue] 偵測 / 篩選出 {len(new_pdfs)} 個新 PDF")
         else:
-            self.info("📭 [Queue] 01_Inbox/ 無新 PDF")
+            self.info("📭 [Queue] 01_Inbox/ 無待處理 PDF")
 
         return new_pdfs
 
@@ -401,7 +431,7 @@ class QueueManager(PipelineBase):
         # We need the original filename which we can infer or pass, but StateManager 
         # stores it by filename. To be exact, we should look up the task.
         # Since Queue relies on filename, we can search the state checklist for pdf_id.
-        state = self.state_manager.get_checkpoint()
+        state = self.state_manager.state
         if subject not in state or not state[subject]:
             return False
             
@@ -475,7 +505,7 @@ if __name__ == "__main__":
     parser.add_argument("--interactive", "-i", action="store_true", help="啟用人工審核停留機制 (Phase 04)")
     args = parser.parse_args()
 
-    qm = QueueManager(force_mode=args.force)
+    qm = QueueManager(force_mode=args.force, subject_filter=getattr(args, 'subject', None), file_filter=getattr(args, 'file', None), single_mode=getattr(args, 'single', False))
     qm.interactive = args.interactive
 
     if not qm.startup_check():

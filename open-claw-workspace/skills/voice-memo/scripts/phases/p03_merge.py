@@ -50,7 +50,7 @@ class Phase3Merge(PipelineBase):
             return "【術語詞庫 — Whisper 聽寫修正對照表】：\n" + "\n".join(lines)
         except Exception: return ""
 
-    def run(self, force=False, subject=None, resume_from=None):
+    def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log(f"🧠 啟動 Phase 3：合併與對話編排模式")
         prompt_tpl = self.get_prompt("Phase 3: 合併與分段指令")
         

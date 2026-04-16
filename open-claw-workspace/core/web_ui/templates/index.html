@@ -348,6 +348,26 @@
                 <div class="stat-lbl">已處理</div>
             </div>
         </div>
+
+        <!-- Subject Selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">🗂️ 科目 (空白 = 全部)</div>
+            <select id="pdf-subject" class="rb-select" style="width:100%;" onchange="loadFiles('pdf')">
+                <option value="">— 全部科目 —</option>
+            </select>
+        </div>
+
+        <!-- File Selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">📂 從此檔案開始 (空白 = 全部)</div>
+            <select id="pdf-file" class="rb-select" style="width:100%;">
+                <option value="">— 全部檔案 —</option>
+            </select>
+            <div style="margin-top:4px; font-size:0.75rem; display: flex; align-items: center;">
+                <input type="checkbox" id="pdf-single" style="margin-right:6px;">
+                <label for="pdf-single" style="color:var(--text-muted); cursor:pointer;">只處理單一檔案不接續執行</label>
+            </div>
+        </div>
         <button id="btn-pdf" class="btn btn-primary" onclick="startTask('pdf')">
             ▶ 啟動排程
         </button>
@@ -376,9 +396,21 @@
         <!-- Subject Selector -->
         <div style="margin-bottom:8px;">
             <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">🗂️ 科目 (空白 = 全部)</div>
-            <select id="vm-subject" class="rb-select" style="width:100%;">
+            <select id="vm-subject" class="rb-select" style="width:100%;" onchange="loadFiles('voice')">
                 <option value="">— 全部科目 —</option>
             </select>
+        </div>
+
+        <!-- File Selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">📂 從此檔案開始 (空白 = 全部)</div>
+            <select id="vm-file" class="rb-select" style="width:100%;">
+                <option value="">— 全部檔案 —</option>
+            </select>
+            <div style="margin-top:4px; font-size:0.75rem; display: flex; align-items: center;">
+                <input type="checkbox" id="vm-single" style="margin-right:6px;">
+                <label for="vm-single" style="color:var(--text-muted); cursor:pointer;">只處理單一檔案不接續執行</label>
+            </div>
         </div>
 
         <!-- Action Buttons -->
@@ -479,11 +511,16 @@ function switchTab(tab) {
 /* ──────────────────────────────────────────────────────────────────────────
    Pipeline Control
 ─────────────────────────────────────────────────────────────────────────── */
-async function loadSubjects() {
+async function loadSubjects(skill) {
     try {
-        const res  = await fetch('/api/subjects');
+        const res  = await fetch(`/api/subjects?skill=${skill}`);
         const data = await res.json();
-        const sel  = document.getElementById('vm-subject');
+        const prefix = skill === 'voice' ? 'vm' : 'pdf';
+        const sel  = document.getElementById(`${prefix}-subject`);
+        
+        // Keep default option intact
+        while(sel.options.length > 1) sel.remove(1);
+        
         data.subjects.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s;
@@ -493,10 +530,37 @@ async function loadSubjects() {
     } catch(e) { /* silent fail */ }
 }
 
+async function loadFiles(skill) {
+    try {
+        const prefix = skill === 'voice' ? 'vm' : 'pdf';
+        const subject = document.getElementById(`${prefix}-subject`).value;
+        const res  = await fetch(`/api/files?skill=${skill}&subject=${encodeURIComponent(subject)}`);
+        const data = await res.json();
+        const sel  = document.getElementById(`${prefix}-file`);
+        
+        // Reset file dropdown
+        while(sel.options.length > 1) sel.remove(1);
+        
+        data.files.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.textContent = f;
+            sel.appendChild(opt);
+        });
+    } catch(e) { /* silent fail */ }
+}
+
 async function startTask(skill, resume = false, force = false, pdfForce = false) {
-    const subject = skill === 'voice' ? (document.getElementById('vm-subject')?.value || '') : '';
+    const prefix = skill === 'voice' ? 'vm' : 'pdf';
+    const subject = document.getElementById(`${prefix}-subject`)?.value || '';
+    const file = document.getElementById(`${prefix}-file`)?.value || '';
+    const single = document.getElementById(`${prefix}-single`)?.checked || false;
+    
     const body    = { skill };
     if (subject) body.subject = subject;
+    if (file) body.file = file;
+    if (single) body.single = true;
+    
     if (force || pdfForce) body.force = true;
     if (resume) body.resume = true;
 
@@ -830,7 +894,8 @@ function escHtml(str) {
 ─────────────────────────────────────────────────────────────────────────── */
 pollStatus();
 pollLogs();
-loadSubjects();
+loadSubjects('voice');
+loadSubjects('pdf');
 </script>
 </body>
 </html>

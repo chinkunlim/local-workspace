@@ -170,12 +170,47 @@ def api_logs():
 
 @app.route("/api/subjects", methods=["GET"])
 def api_subjects():
-    """Return list of subject folders for voice-memo skill."""
-    input_dir = os.path.join(_workspace_root, "data", "voice-memo", "input")
+    """Return list of subject folders for a given skill."""
+    skill = request.args.get("skill", "voice")
+    if skill == "pdf":
+        input_dir = os.path.join(_workspace_root, "data", "pdf-knowledge", "input", "01_Inbox")
+    else:
+        input_dir = os.path.join(_workspace_root, "data", "voice-memo", "input")
+        
     if not os.path.isdir(input_dir):
         return jsonify({"subjects": []})
-    subjects = sorted([d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))])
+    
+    subjects = sorted([d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d)) and not d.startswith(".")])
+    # Handle the fact that root-level files in pdf queue represent the "Default" subject
+    if skill == "pdf":
+        has_root_pdfs = any(f.lower().endswith(".pdf") for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)))
+        if has_root_pdfs and "Default" not in subjects:
+            subjects.insert(0, "Default")
+            
     return jsonify({"subjects": subjects})
+
+@app.route("/api/files", methods=["GET"])
+def api_files():
+    """Return list of files for a specific subject."""
+    skill = request.args.get("skill", "voice")
+    subject = request.args.get("subject", "")
+    
+    if skill == "pdf":
+        input_dir = os.path.join(_workspace_root, "data", "pdf-knowledge", "input", "01_Inbox")
+        if subject and subject != "Default":
+            input_dir = os.path.join(input_dir, subject)
+        target_ext = ".pdf"
+    else:
+        input_dir = os.path.join(_workspace_root, "data", "voice-memo", "input")
+        if subject:
+            input_dir = os.path.join(input_dir, subject)
+        target_ext = ".m4a"
+        
+    if not os.path.isdir(input_dir):
+        return jsonify({"files": []})
+        
+    files = sorted([f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and f.lower().endswith(target_ext)])
+    return jsonify({"files": files})
 
 
 @app.route("/api/start", methods=["POST"])
@@ -192,6 +227,8 @@ def api_start():
     data    = request.get_json(force=True) or {}
     skill   = data.get("skill", "")
     subject = data.get("subject", "").strip()
+    file    = data.get("file", "").strip()
+    single  = bool(data.get("single", False))
     force   = bool(data.get("force", False))
     resume  = bool(data.get("resume", False))
 
@@ -199,6 +236,10 @@ def api_start():
         cmd = ["python3", _PDF_SCRIPT, "--process-all"]
         if subject:
             cmd += ["--subject", subject]
+        if file:
+            cmd += ["--file", file]
+        if single:
+            cmd += ["--single"]
         if force:
             cmd += ["--force"]
         if resume:
@@ -209,6 +250,10 @@ def api_start():
         cmd = ["python3", _VOICE_SCRIPT]
         if subject:
             cmd += ["--subject", subject]
+        if file:
+            cmd += ["--file", file]
+        if single:
+            cmd += ["--single"]
         if force:
             cmd += ["--force"]
         if resume:

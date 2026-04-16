@@ -18,7 +18,7 @@ class Phase1Transcribe(PipelineBase):
     def __init__(self):
         super().__init__(phase_key="p1", phase_name="語音轉錄", logger=None)
         
-    def run(self, force=False, subject=None, resume_from=None):
+    def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log("🚀 啟動 Phase 1：語音轉錄")
         
         # Sandbox HuggingFace to strictly inside the project
@@ -31,7 +31,7 @@ class Phase1Transcribe(PipelineBase):
         model = None
         current_model_name = None
         
-        tasks = self.get_tasks(force=force, subject_filter=subject, resume_from=resume_from)
+        tasks = self.get_tasks(force=force, subject_filter=subject, file_filter=file_filter, single_mode=single_mode, resume_from=resume_from)
         
         if not tasks:
             self.log("📋 Phase 1 沒有待轉錄的音檔。")

@@ -203,7 +203,7 @@ def main():
                     phase_resume = resume_from
                 # 若 checkpoint 是更早的 phase，本 Phase 全量執行
 
-            p_obj.run(force=args.force, subject=args.subject, resume_from=phase_resume)
+            p_obj.run(force=args.force, subject=args.subject, file_filter=args.file, single_mode=args.single, resume_from=phase_resume)
 
             # Phase 完成後重置 resume_from，防止下一 Phase 誤用 checkpoint
             resume_from = None

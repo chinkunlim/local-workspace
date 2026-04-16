@@ -51,7 +51,7 @@ class Phase0Glossary(PipelineBase):
         try: return json.loads(response.strip())
         except json.JSONDecodeError: return {}
 
-    def run(self, force=False, merge=False, subject=None):
+    def run(self, force=False, merge=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log(f"📚 啟動 Phase 0：詞庫自動生成")
         if not self.prompt_tpl:
             self.log("❌ 找不到 Phase 0 的 prompt 指令，請確認 prompt.md 內有對應的段落。", "error")

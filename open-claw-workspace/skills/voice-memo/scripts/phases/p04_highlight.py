@@ -35,7 +35,7 @@ class Phase4Highlight(PipelineBase):
             groups[key].sort(key=lambda t: self._get_lecture_base(t["filename"])[1] or 0)
         return groups
 
-    def run(self, force=False, subject=None, resume_from=None):
+    def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log(f"🧠 啟動 Phase 4：動態上色與重點標記模式 (Anti-Tampering)")
         prompt_tpl = self.get_prompt("Phase 4: 重點標記指令")
         

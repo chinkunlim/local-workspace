@@ -38,7 +38,7 @@ class Phase2Proofread(PipelineBase):
             self.log(f"⚠️ 詞庫載入失敗: {e}", "warn")
             return ""
 
-    def run(self, force=False, subject=None, resume_from=None):
+    def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log(f"🧠 啟動 Phase 2：校對模式")
         prompt_tpl = self.get_prompt("Phase 2: 校對指令")
         
