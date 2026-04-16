@@ -10,9 +10,18 @@ NC='\033[0m' # 無顏色
 
 # 獲取腳本所在目錄的絕對路徑
 
-# 獲取腳本所在目錄的絕對路徑，然後進入 open-claw-workspace
-_LOCAL_WORKSPACE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/open-claw-workspace" && pwd)"
+# Ensure stable path resolution regardless of how the script is invoked (bash, sh, source)
+script_dir="$( cd "$( dirname "$0" )" && pwd )"
+if [ "$script_dir" = "/" ] || [ -z "$script_dir" ] || [ "$script_dir" = "." ]; then
+    script_dir="$PWD"
+fi
+_LOCAL_WORKSPACE="$script_dir"
+
+# Strip trailing open-claw-workspace if user ran it from inside
+if [[ "$_LOCAL_WORKSPACE" == */open-claw-workspace ]]; then
+    _LOCAL_WORKSPACE="$(dirname "$_LOCAL_WORKSPACE")"
+fi
+WORKSPACE_DIR="${_LOCAL_WORKSPACE}/open-claw-workspace"
 export WORKSPACE_DIR
 # Ensure Homebrew binaries (poppler, etc.) are always on PATH regardless of how this script is invoked
 export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
