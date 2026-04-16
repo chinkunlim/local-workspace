@@ -230,7 +230,11 @@ class PipelineBase:
             if line.startswith(f"## {section_title}"):
                 capture = True
                 continue
-            elif re.match(r"^## Phase \d", line) and capture:
+            elif re.match(r"^## .+", line) and capture:
+                # Any new ## heading terminates the current section
+                break
+            elif line.strip() == "---" and capture:
+                # Horizontal rules also act as section separators
                 break
             if capture:
                 prompt_lines.append(line)
