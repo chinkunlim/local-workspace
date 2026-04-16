@@ -63,7 +63,7 @@ class Phase1dOCRQualityGate(PipelineBase):
     # ------------------------------------------------------------------ #
 
     def assess_all_scanned_pages(
-        self, pdf_path: str, pdf_id: str, scanned_pages: Optional[List[int]] = None
+        self, pdf_path: str, pdf_id: str, subject: str, scanned_pages: Optional[List[int]] = None
     ) -> Dict[int, float]:
         """
         Assess OCR quality for all scanned pages.
@@ -71,13 +71,14 @@ class Phase1dOCRQualityGate(PipelineBase):
         Args:
             pdf_path: Path to PDF.
             pdf_id: PDF identifier.
+            subject: Subject folder identifier.
             scanned_pages: List of page numbers to assess. If None, reads from scan_report.json.
 
         Returns:
             Dict mapping page_number → confidence_score (0.0-1.0)
         """
         if scanned_pages is None:
-            scanned_pages = self._get_scanned_pages_from_report(pdf_id)
+            scanned_pages = self._get_scanned_pages_from_report(pdf_id, subject)
 
         if not scanned_pages:
             self.info("📋 [OCR] 無掃描頁面需要品質評估")
@@ -102,7 +103,7 @@ class Phase1dOCRQualityGate(PipelineBase):
                 low_confidence_pages.append(page_num)
 
         # Update scan_report.json
-        self._update_scan_report(pdf_id, page_scores, low_confidence_pages)
+        self._update_scan_report(pdf_id, subject, page_scores, low_confidence_pages)
 
         if low_confidence_pages:
             self.warning(
@@ -194,7 +195,7 @@ class Phase1dOCRQualityGate(PipelineBase):
     #  Output                                                              #
     # ------------------------------------------------------------------ #
 
-    def _get_scanned_pages_from_report(self, pdf_id: str) -> List[int]:
+    def _get_scanned_pages_from_report(self, pdf_id: str, subject: str) -> List[int]:
         """Read scanned page list from scan_report.json."""
         report_path = os.path.join(self.dirs["processed"], subject, pdf_id, "scan_report.json")
         if not os.path.exists(report_path):
@@ -213,6 +214,7 @@ class Phase1dOCRQualityGate(PipelineBase):
     def _update_scan_report(
         self,
         pdf_id: str,
+        subject: str,
         page_scores: Dict[int, float],
         low_confidence_pages: List[int],
     ):

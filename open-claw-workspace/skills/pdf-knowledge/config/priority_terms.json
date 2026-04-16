@@ -14,7 +14,7 @@
   },
 
   "CRITICAL_TERM_PROTECTION": [
-    "_comment_start": "Layer 2: Prompt 中注入術語禁止改寫聲明的術語清單",
+    "_comment_start: Layer 2: Prompt 中注入術語禁止改寫聲明的術語清單",
     "輔療",
     "動物輔助治療",
     "綠色療癒",
