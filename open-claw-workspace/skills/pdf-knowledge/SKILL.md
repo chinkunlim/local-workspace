@@ -1,3 +1,15 @@
+---
+name: pdf-knowledge
+description: Process scanned or structured PDFs using Docling, OCR validation, and VLM extraction to synthesize them into unified markdown study guides.
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "📄"
+      }
+  }
+---
+
 # PDF Knowledge Skill
 
 > **Pipeline**: PDF → Diagnose → Extract → VLM Vision → Synthesize → Markdown KB

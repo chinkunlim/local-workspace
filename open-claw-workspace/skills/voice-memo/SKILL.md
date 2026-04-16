@@ -1,3 +1,15 @@
+---
+name: voice-memo
+description: End-to-end voice processing pipeline. Converts .m4a audio into polished, MLX-Whisper transcribed Notion-ready study material.
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "🎙️"
+      }
+  }
+---
+
 # Voice Memo Skill
 
 > **Pipeline**: M4A → Transcript → Proofread → Merge → Highlight → Notion MD
