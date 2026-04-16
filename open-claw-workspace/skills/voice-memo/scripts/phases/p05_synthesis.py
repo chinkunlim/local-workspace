@@ -112,7 +112,7 @@ class Phase5NotionSynthesis(PipelineBase):
             self.log("⚠️ 找不到 Phase 5 Part A prompt，使用 Reduce 替代", "warn")
             map_tpl = reduce_tpl
 
-        tasks = self.get_tasks(prev_phase_key="p4", force=force, subject_filter=subject, resume_from=resume_from)
+        tasks = self.get_tasks(prev_phase_key="p4", force=force, subject_filter=subject, file_filter=file_filter, single_mode=single_mode, resume_from=resume_from)
         if not tasks: return
 
         self.log(f"📋 共有 {len(tasks)} 個檔案待合成。")

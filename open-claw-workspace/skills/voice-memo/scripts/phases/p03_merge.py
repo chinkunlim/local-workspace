@@ -54,7 +54,7 @@ class Phase3Merge(PipelineBase):
         self.log(f"🧠 啟動 Phase 3：合併與對話編排模式")
         prompt_tpl = self.get_prompt("Phase 3: 合併與分段指令")
         
-        tasks = self.get_tasks(prev_phase_key="p2", force=force, subject_filter=subject, resume_from=resume_from)
+        tasks = self.get_tasks(prev_phase_key="p2", force=force, subject_filter=subject, file_filter=file_filter, single_mode=single_mode, resume_from=resume_from)
         if not tasks:
             self.log("📋 Phase 3 沒有待處理的檔案。")
             return

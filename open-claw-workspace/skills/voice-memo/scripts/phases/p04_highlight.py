@@ -39,7 +39,7 @@ class Phase4Highlight(PipelineBase):
         self.log(f"🧠 啟動 Phase 4：動態上色與重點標記模式 (Anti-Tampering)")
         prompt_tpl = self.get_prompt("Phase 4: 重點標記指令")
         
-        tasks = self.get_tasks(prev_phase_key="p3", force=force, subject_filter=subject, resume_from=resume_from)
+        tasks = self.get_tasks(prev_phase_key="p3", force=force, subject_filter=subject, file_filter=file_filter, single_mode=single_mode, resume_from=resume_from)
         if not tasks:
             self.log("📋 Phase 4 沒有待處理的檔案。")
             return

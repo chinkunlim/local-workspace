@@ -42,7 +42,7 @@ class Phase2Proofread(PipelineBase):
         self.log(f"🧠 啟動 Phase 2：校對模式")
         prompt_tpl = self.get_prompt("Phase 2: 校對指令")
         
-        tasks = self.get_tasks(prev_phase_key="p1", force=force, subject_filter=subject, resume_from=resume_from)
+        tasks = self.get_tasks(prev_phase_key="p1", force=force, subject_filter=subject, file_filter=file_filter, single_mode=single_mode, resume_from=resume_from)
         
         if not tasks:
             self.log("📋 Phase 2 沒有待校對的檔案。")
