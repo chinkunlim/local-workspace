@@ -498,7 +498,7 @@ class QueueManager(PipelineBase):
 # ---------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-    parser = build_skill_parser("PDF Knowledge Queue Manager", include_force=True, include_resume=True)
+    parser = build_skill_parser("PDF Knowledge Queue Manager", include_force=True, include_resume=True, include_subject=True)
     parser.add_argument("--scan", action="store_true", help="只掃描 Inbox，不處理")
     parser.add_argument("--process-all", action="store_true", help="處理所有待辦 PDF")
     parser.add_argument("--process-one", action="store_true", help="只處理下一個 PDF")
