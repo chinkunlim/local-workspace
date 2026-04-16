@@ -53,10 +53,29 @@ else
 fi
 
 # 2. Python Services & Port Cleaning
-echo -e "\n${YELLOW}[2/3] Cleaning up Python services & Ports...${NC}"
+echo -e "\n${YELLOW}[2/4] Cleaning up Python services & Ports...${NC}"
 kill_by_port 4000 "LiteLLM"
+kill_by_port 5001 "Open Claw Dashboard"
 kill_by_port 8080 "Open WebUI"
 kill_by_port 9099 "Pipelines"
+
+# Inbox Daemon (PID-based shutdown)
+INBOX_DAEMON_PID_FILE="${LOG_DIR}/inbox_daemon.pid"
+if [[ -f "${INBOX_DAEMON_PID_FILE}" ]]; then
+    DAEMON_PID=$(cat "${INBOX_DAEMON_PID_FILE}" 2>/dev/null)
+    if [[ -n "${DAEMON_PID}" ]] && kill -0 "${DAEMON_PID}" 2>/dev/null; then
+        kill "${DAEMON_PID}" 2>/dev/null
+        sleep 1
+        if kill -0 "${DAEMON_PID}" 2>/dev/null; then
+            kill -9 "${DAEMON_PID}" 2>/dev/null
+        fi
+        echo -e "   ${GREEN}─── ✅ Inbox Daemon stopped (PID: ${DAEMON_PID})${NC}"
+    fi
+    rm -f "${INBOX_DAEMON_PID_FILE}"
+else
+    # Fallback: pkill by script name
+    pkill -f "core/inbox_daemon.py" 2>/dev/null || true
+fi
 
 # 清理可能的孤兒程序 (安全檢查)
 pkill -f "python3.*pipelines/start.sh" 2>/dev/null || true
@@ -100,6 +119,7 @@ check_status() {
 }
 
 check_status 4000  "LiteLLM   "
+check_status 5001  "OC Dash   "
 check_status 8080  "Open WebUI"
 check_status 9099  "Pipelines "
 check_status 18789 "Open Claw "

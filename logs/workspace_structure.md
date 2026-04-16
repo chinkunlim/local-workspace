@@ -1,5 +1,8 @@
-==================================================
+# AI Ecosystem Workspace Structure
 
+> This outlines the global layout of `local-workspace`, which sits above the `open-claw-workspace` sandbox.
+
+```
 /Users/limchinkun/Desktop/local-workspace
 ├── .claude_profile.md          # 🧠 [全局大腦] 定義硬體環境、AI 開發習慣與溝通規則
 ├── cline-provider.md           # 📖 [速查表] 記錄 VS Code Cline 切換 Ollama/Gemini 的設定參數
@@ -7,79 +10,48 @@
 ├── start.sh                    # 🚀 [一鍵啟動] 啟動 Ollama、LiteLLM、Open WebUI、Pipelines 與 Open Claw
 ├── stop.sh                     # 🛑 [一鍵停止] 乾淨地關閉所有背景服務、殺死 9099 端口並釋放 RAM
 └── watchdog.sh                 # 👁️ [系統守衛] 背景監控 RAM，低於 1.5GB 自動剔除 Ollama 模型防當機
-│
+
 ├── backups/                    # 📦 [備份區] 備份與歷史檔案、測試腳本
 │   ├── Gemini_Cost_Guard.py    # [歷史備份] API 額度守衛的原始開發草稿 (最終運作版已移至 pipelines/pipelines/ 內)
 │   ├── RAM_Safety_Guard.py     # [歷史備份] 記憶體安全守衛的原始開發草稿 (最終運作版已移至 pipelines/pipelines/ 內)
 │   └── generate_tree.py        # [實用工具] 用來掃描整個 local-workspace 目錄並自動生成結構樹狀圖的 Python 腳本
-│
+
 ├── litellm/                    # 🔷 [API 網關] LiteLLM 虛擬環境與密鑰
 │   └── .webui_secret_key
-│
+
 ├── logs/                       # 📋 [日誌區] 系統運行日誌 (排錯時看這裡)
-│   └── workspace_structure.txt
-│
-├── manual/
-│   └── AI_Ecosystem_Master_Plan.docx
-│   └── AI_Master_Guide_Complete_v3.docx
-│   └── AI_Master_Guide_Complete_v4.docx
-│   └── AI_Master_Guide_Complete.docx
-│   └── Perfect_AI_Ecosystem_Plan_Newbie_Safe.docx
-│
+│   └── workspace_structure.md  # 包含本說明的目錄樹狀解說檔
+
+├── manual/                     # 📚 [操作手冊] 歷史說明文件
+│   └── (各種 DOCX 文件)
+
 ├── modelfiles/                 # 🦙 [Ollama 模型] 自訂模型的 System Prompts 藍圖
 │   ├── Modelfile-chinese       # (gemma-chinese) 負責中文文件翻譯與學術整理
 │   ├── Modelfile-coder         # (qwen-coder) 日常寫扣主力
 │   ├── Modelfile-multi         # (qwen-multi) 多語言對話
 │   ├── Modelfile-night         # (deepseek-night) 夜間批次運行的重型模型
 │   └── Modelfile-reason        # (deepseek-reason) 邏輯推理與數學
-│
+
 ├── open-claw-workspace/        # 🦞 [Open Claw 沙盒] Agent 專屬工作區 (與實體機隔離)
-│   ├── .openclaw/              # 系統狀態快取
 │   ├── AGENTS.md               # 系統自動生成的 Agent 設定檔
-│   ├── BOOTSTRAP.md
-│   ├── HEARTBEAT.md
-│   ├── IDENTITY.md
-│   ├── SOUL.md
-│   ├── TOOLS.md
-│   └── USER.md
-│
+│   ├── BOOTSTRAP.md            # 從 0 啟動的說明指南
+│   ├── ...                     # 詳見 open-claw-workspace/docs/STRUCTURE.md
+│   └── docs/
+│       └── STRUCTURE.md        # Open Claw 內部檔案架構
+
 ├── open-webui/                 # 🌐 [WebUI 前端] DATA_DIR 資料庫與快取
 │   ├── webui.db                # [核心資料庫] 儲存聊天紀錄、提示詞與帳號
 │   ├── vector_db/              # [RAG 向量庫] 上傳文件的向量化數據
-│   │   └── chroma.sqlite3
-│   ├── uploads/                # [上傳檔案] 傳給 AI 的原始文件與圖片
 │   └── cache/                  # [快取區]
-│       ├── audio/              # 語音轉文字的音檔暫存
-│       ├── image/              # AI 生成圖片的暫存
-│       └── functions/
-│
+
 ├── pipelines/                  # 🔌 [管線伺服器] Port 9099 的獨立擴展系統
-│   ├── dev.sh                  # 開發環境啟動腳本
 │   ├── start.sh                # 正式啟動腳本
 │   ├── main.py                 # 伺服器主程式
-│   ├── requirements.txt        # 系統依賴套件
-│   ├── examples/               # 官方範例庫 (供學習參考)
 │   └── pipelines/              # 🚨 [自訂管線] 你的腳本實體存放處
 │       ├── Gemini_Cost_Guard.py  # API 額度守衛腳本
-│       ├── RAM_Safety_Guard.py   # 記憶體安全守衛腳本
-│       ├── Gemini_Cost_Guard/    # 儲存該管線 Valves 設定值的資料夾 (valves.json)
-│       ├── RAM_Safety_Guard/     # 儲存該管線 Valves 設定值的資料夾 (valves.json)
-│       └── failed/               # 載入失敗的腳本會被移到這裡
-│
+│       └── RAM_Safety_Guard.py   # 記憶體安全守衛腳本
+
 └── project_dev/                # 🛠️ [開發工作區] 專案的實際產出地點
     ├── projectName1/           # [專案] 農業價格追蹤系統
-    │   ├── CLAUDE.md           # [專案法律] 技術棧、架構規定、編碼風格
-    │   ├── DECISIONS.md        # [架構決策] 記錄技術選型原因
-    │   ├── HANDOFF.md          # [交接斷點] 記錄今天做到哪、明天從哪開始
-    │   ├── PROGRESS.md         # [成就日誌] 按日期記錄已完成的重要功能
-    │   ├── TASKS.md            # [任務看板] 待辦清單 (Todo/Doing/Done)
-    │   └── WALKTHROUGH_LOG.md  # [複雜重構] 記錄跨檔案重構時的邏輯推演
-    │
     └── projectName2/           # [專案] 穿戴式裝置與數位寵物系統
-        ├── CLAUDE.md
-        ├── DECISIONS.md
-        ├── HANDOFF.md
-        ├── PROGRESS.md
-        ├── TASKS.md
-        └── WALKTHROUGH_LOG.md
-==================================================
+```

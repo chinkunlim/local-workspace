@@ -57,10 +57,10 @@ fi
 echo -e "\n${YELLOW}[2/5] Starting LiteLLM (Port 4000)...${NC}"
 if ! nc -z localhost 4000 >/dev/null 2>&1; then
     (
-        cd "${WORKSPACE_DIR}/litellm" || exit
+        cd "${_LOCAL_WORKSPACE}/litellm" || exit
         source .venv/bin/activate
         # 啟動服務並縮排輸出到 Log
-        .venv/bin/litellm --config "${WORKSPACE_DIR}/litellm-config.yaml" --port 4000 > "${LOG_DIR}/litellm.log" 2>&1 &
+        .venv/bin/litellm --config "${_LOCAL_WORKSPACE}/litellm-config.yaml" --port 4000 > "${LOG_DIR}/litellm.log" 2>&1 &
     )
     wait_for_port 4000 "LiteLLM"
 else
@@ -70,7 +70,7 @@ fi
 # 3. Open WebUI
 echo -e "\n${YELLOW}[3/5] Starting Open WebUI (Port 8080)...${NC}"
 if ! nc -z localhost 8080 >/dev/null 2>&1; then
-    DATA_DIR="${WORKSPACE_DIR}/open-webui" uvx --python 3.11 open-webui@latest serve > "${LOG_DIR}/open-webui.log" 2>&1 &
+    DATA_DIR="${_LOCAL_WORKSPACE}/open-webui" uvx --python 3.11 open-webui@latest serve > "${LOG_DIR}/open-webui.log" 2>&1 &
     wait_for_port 8080 "Open WebUI"
 else
     echo -e "   ${BLUE}─── ℹ️ Open WebUI already running${NC}"
@@ -80,7 +80,7 @@ fi
 echo -e "\n${YELLOW}[4/5] Starting Pipelines (Port 9099)...${NC}"
 if ! nc -z localhost 9099 >/dev/null 2>&1; then
     (
-        cd "${WORKSPACE_DIR}/pipelines" || exit
+        cd "${_LOCAL_WORKSPACE}/pipelines" || exit
         source .venv/bin/activate
         sh start.sh > "${LOG_DIR}/pipelines.log" 2>&1 &
     )
@@ -89,13 +89,40 @@ else
     echo -e "   ${BLUE}─── ℹ️ Pipelines already running${NC}"
 fi
 
-# 5. Open Claw
-echo -e "\n${YELLOW}[5/5] Checking Open Claw (Port 18789)...${NC}"
+# 5. Open Claw (API Gateway)
+echo -e "\n${YELLOW}[5/6] Checking Open Claw API (Port 18789)...${NC}"
 if ! nc -z localhost 18789 >/dev/null 2>&1; then
     openclaw gateway > "${LOG_DIR}/openclaw.log" 2>&1 &
-    wait_for_port 18789 "Open Claw"
+    wait_for_port 18789 "Open Claw API"
 else
-    echo -e "   ${BLUE}─── ℹ️ Open Claw is already running${NC}"
+    echo -e "   ${BLUE}─── ℹ️ Open Claw API is already running${NC}"
+fi
+
+# 6. Open Claw Dashboard
+echo -e "\n${YELLOW}[6/7] Starting Open Claw Dashboard (Port 5001)...${NC}"
+if ! nc -z localhost 5001 >/dev/null 2>&1; then
+    (
+        cd "${WORKSPACE_DIR}" || exit
+        python3 open-claw-workspace/core/web_ui/app.py > "${LOG_DIR}/dashboard.log" 2>&1 &
+    )
+    wait_for_port 5001 "Open Claw Dashboard"
+else
+    echo -e "   ${BLUE}─── ℹ️ Open Claw Dashboard already running${NC}"
+fi
+
+# 7. Open Claw Inbox Daemon
+echo -e "\n${YELLOW}[7/7] Starting Inbox Daemon (voice-memo + pdf-knowledge)...${NC}"
+INBOX_DAEMON_PID_FILE="${LOG_DIR}/inbox_daemon.pid"
+if [[ -f "${INBOX_DAEMON_PID_FILE}" ]] && kill -0 "$(cat "${INBOX_DAEMON_PID_FILE}")" 2>/dev/null; then
+    echo -e "   ${BLUE}─── ℹ️ Inbox Daemon already running (PID: $(cat "${INBOX_DAEMON_PID_FILE}"))${NC}"
+else
+    (
+        cd "${WORKSPACE_DIR}" || exit
+        python3 core/inbox_daemon.py > "${LOG_DIR}/inbox_daemon.log" 2>&1 &
+        echo $! > "${INBOX_DAEMON_PID_FILE}"
+    )
+    sleep 1
+    echo -e "   ${GREEN}✓ Inbox Daemon started (PID: $(cat "${INBOX_DAEMON_PID_FILE}"))${NC}"
 fi
 
 # --- 最終狀態彙整表 ---
@@ -106,7 +133,8 @@ printf "  %-20s → ${GREEN}%s${NC}\n" "Open WebUI" "http://localhost:8080"
 printf "  %-20s → ${GREEN}%s${NC}\n" "Ollama" "http://localhost:11434"
 printf "  %-20s → ${GREEN}%s${NC}\n" "Gemini Gate" "http://localhost:4000"
 printf "  %-20s → ${GREEN}%s${NC}\n" "Pipelines" "http://localhost:9099"
-printf "  %-20s → ${GREEN}%s${NC}\n" "Open Claw" "http://127.0.0.1:18789"
+printf "  %-20s → ${GREEN}%s${NC}\n" "Open Claw API" "http://127.0.0.1:18789"
+printf "  %-20s → ${GREEN}%s${NC}\n" "Open Claw UI" "http://localhost:5001"
 echo -e "  ${YELLOW}%-20s → open app → Start Server${NC}" "LM Studio"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
