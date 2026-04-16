@@ -173,7 +173,7 @@ def api_subjects():
     """Return list of subject folders for a given skill."""
     skill = request.args.get("skill", "voice")
     if skill == "pdf":
-        input_dir = os.path.join(_workspace_root, "data", "pdf-knowledge", "input", "01_Inbox")
+        input_dir = os.path.join(_workspace_root, "data", "pdf-knowledge", "input")
     else:
         input_dir = os.path.join(_workspace_root, "data", "voice-memo", "input")
         
@@ -196,7 +196,7 @@ def api_files():
     subject = request.args.get("subject", "")
     
     if skill == "pdf":
-        input_dir = os.path.join(_workspace_root, "data", "pdf-knowledge", "input", "01_Inbox")
+        input_dir = os.path.join(_workspace_root, "data", "pdf-knowledge", "input")
         if subject and subject != "Default":
             input_dir = os.path.join(input_dir, subject)
         target_ext = ".pdf"
@@ -271,6 +271,11 @@ def api_start():
 @app.route("/api/stop", methods=["POST"])
 def api_stop():
     exec_mgr.terminate_task()
+    return jsonify({"success": True})
+
+@app.route("/api/pause", methods=["POST"])
+def api_pause():
+    exec_mgr.pause_task()
     return jsonify({"success": True})
 
 

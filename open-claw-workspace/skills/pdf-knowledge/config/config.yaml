@@ -13,21 +13,20 @@
 # ------------------------------------------------------------------------------
 paths:
   # Canonical directory layout
-  input:  "input"
+  input: "input"
   output: "output"
-  state:  "state"
-  logs:   "logs"
+  state: "state"
+  logs: "logs"
 
   # Phase-specific directories (self.dirs[key] in Phase scripts)
   phases:
-    inbox:      "input"                   # 01 — PDF 入匣
-    processed:  "output/02_Processed"     # 02 — Docling 提取結果 (IMMUTABLE)
-    agent_core: "output/03_Agent_Core"    # 03 — Agent trace / resume state
-    final:      "output/05_Final_Knowledge" # 05 — 最終知識庫
-    error:      "output/Error"            # 錯誤隔離區
-    vector_db:  "output/vector_db"        # ChromaDB 向量資料庫
-    library:    "output/library"          # 知識庫文件彙整
-
+    inbox: "input" # 01 — PDF 入匣
+    processed: "output/02_Processed" # 02 — Docling 提取結果 (IMMUTABLE)
+    agent_core: "output/03_Agent_Core" # 03 — Agent trace / resume state
+    final: "output/05_Final_Knowledge" # 05 — 最終知識庫
+    error: "output/Error" # 錯誤隔離區
+    vector_db: "output/vector_db" # ChromaDB 向量資料庫
+    library: "output/library" # 知識庫文件彙整
 
 # ------------------------------------------------------------------------------
 # PDF Processing
@@ -35,34 +34,34 @@ paths:
 pdf_processing:
   # Phase 1a — 輕量診斷
   diagnostic:
-    min_text_chars_first_page: 50      # 低於此值判定為掃描件
-    max_ram_mb: 50                     # 診斷應不超過 50MB（Docling 的 2%）
+    min_text_chars_first_page: 50 # 低於此值判定為掃描件
+    max_ram_mb: 50 # 診斷應不超過 50MB（Docling 的 2%）
 
   # Phase 1b — Docling 深度提取
   docling:
-    max_ram_mb: 2560                   # ~2.5GB
-    gc_collect_after: true             # 提取完成後立即 gc.collect()
+    max_ram_mb: 2560 # ~2.5GB
+    gc_collect_after: true # 提取完成後立即 gc.collect()
     font_fallback_diff_threshold: 0.20 # 字型損壞 fallback 差異閾值（20%）
 
   # Phase 1c — 向量圖表補充
   vector_chart:
-    dpi: 300                           # pdftoppm 光柵化 DPI (Increased for higher resolution chart extraction)
+    dpi: 300 # pdftoppm 光柵化 DPI (Increased for higher resolution chart extraction)
     format: "jpeg"
 
   # Phase 1d — OCR 品質評估
   ocr:
-    dpi: 200                           # pytesseract 光柵化 DPI（繁中最佳）
-    lang: "chi_tra+eng"                # 繁體中文 + 英文混合
-    confidence_threshold: 0.80         # 低於此值觸發黃色警告
+    dpi: 200 # pytesseract 光柵化 DPI（繁中最佳）
+    lang: "chi_tra+eng" # 繁體中文 + 英文混合
+    confidence_threshold: 0.80 # 低於此值觸發黃色警告
 
   # Chunking
   chunking:
-    max_chunk_chars: 8000              # 每個 chunk 最大字元數
-    overlap_chars: 500                 # 前後 overlap（上下文提示）
+    max_chunk_chars: 8000 # 每個 chunk 最大字元數
+    overlap_chars: 500 # 前後 overlap（上下文提示）
     split_priority:
-      - "h2_boundary"                  # 優先在 H2 邊界切割
-      - "paragraph_break"              # 其次在段落空行
-      - "force_truncate"               # 最後強制截斷
+      - "h2_boundary" # 優先在 H2 邊界切割
+      - "paragraph_break" # 其次在段落空行
+      - "force_truncate" # 最後強制截斷
 
 # ------------------------------------------------------------------------------
 # Playwright (Browser Agent)
@@ -74,8 +73,8 @@ playwright:
   account_hint: "（請填入帳號備忘，例如：工作帳號）"
 
   # Gemini 操作超時設定
-  thinking_timeout_seconds: 480        # 8 分鐘後截圖 + 人工介入提示
-  agent_loop_max_rounds: 10            # 每個 chunk 最大 round 數
+  thinking_timeout_seconds: 480 # 8 分鐘後截圖 + 人工介入提示
+  agent_loop_max_rounds: 10 # 每個 chunk 最大 round 數
 
 # ------------------------------------------------------------------------------
 # Phase 2a: VLM 視覺圖表解析 (Multi-Modal Vision)
@@ -93,7 +92,7 @@ phase2a:
 # Phase 2b: 知識濃縮合成 (Map-Reduce Synthesis)
 # ------------------------------------------------------------------------------
 phase2b:
-  active_profile: reasoning_deepseek
+  active_profile: gemma4e2b
   profiles:
     default:
       model: qwen2.5:14b
@@ -106,6 +105,12 @@ phase2b:
       options:
         num_ctx: 32768
         temperature: 0.6
+        num_predict: 8192
+    gemma4e2b:
+      model: gemma4:e2b
+      options:
+        num_ctx: 32768
+        temperature: 0.3
         num_predict: 8192
 
 # NOTE: hardware thresholds and runtime (ollama) settings are defined globally in:

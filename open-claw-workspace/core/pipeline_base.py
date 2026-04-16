@@ -126,6 +126,11 @@ class PipelineBase:
             self.stop_requested = True
             self.pause_requested = False
 
+            if not sys.stdin.isatty():
+                self.log("\n⏸️ [背景服務模式] 收到暫停信號，將於當前任務完成後自動切斷並保存斷點...", "warn")
+                self.pause_requested = True
+                return
+
             print("\n")
             print("●" * 50)
             print("🛑  收到中斷指令！請選擇：")

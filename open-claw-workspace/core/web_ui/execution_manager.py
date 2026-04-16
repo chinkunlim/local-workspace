@@ -32,6 +32,7 @@ class ExecutionManager:
             # Always inject Homebrew PATH so tools like poppler are discoverable
             env = os.environ.copy()
             env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + env.get("PATH", "")
+            env["PYTHONUNBUFFERED"] = "1"
             
             try:
                 self._process = subprocess.Popen(
@@ -117,3 +118,15 @@ class ExecutionManager:
                 pass
             except Exception as e:
                 self._log_buffer.append(f"❌ [System] 強制退出時發生錯誤: {e}\n")
+
+    def pause_task(self):
+        with self._lock:
+            if not self.is_running():
+                return
+            
+            self._log_buffer.append(f"\n⚠️ [System] 寄出暫停信號 (SIGINT) 給 {self._current_task_name}...\n")
+            try:
+                import signal
+                os.kill(self._process.pid, signal.SIGINT)
+            except Exception as e:
+                self._log_buffer.append(f"❌ [System] 暫停任務時發生錯誤: {e}\n")
