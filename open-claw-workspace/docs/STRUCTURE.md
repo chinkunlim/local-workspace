@@ -175,7 +175,7 @@ Created automatically on first pipeline run. Do not commit.
 data/
 ├── voice-memo/
 │   ├── input/
-│   │   └── raw_data/<subject>/*.m4a    ← Source audio files (drop here)
+│   │   └── <subject>/*.m4a             ← Source audio files (drop here)
 │   ├── output/
 │   │   ├── 01_transcript/<subject>/    ← Phase 1 output
 │   │   ├── 02_proofread/<subject>/     ← Phase 2 output
@@ -190,7 +190,7 @@ data/
 │
 └── pdf-knowledge/
     ├── input/
-    │   └── 01_Inbox/<subject>/*.pdf    ← Source PDF files (drop here, by subject)
+    │   └── <subject>/*.pdf             ← Source PDF files (drop here, by subject)
     ├── output/
     │   ├── 02_Processed/<subject>/<pdf_id>/  ← Docling extraction (IMMUTABLE)
     │   │   ├── raw_extracted.md

@@ -13,14 +13,14 @@
 # ------------------------------------------------------------------------------
 paths:
   # Canonical directory layout
-  input:  "input/01_Inbox"
+  input:  "input"
   output: "output"
   state:  "state"
   logs:   "logs"
 
   # Phase-specific directories (self.dirs[key] in Phase scripts)
   phases:
-    inbox:      "input/01_Inbox"          # 01 — PDF 入匣
+    inbox:      "input"                   # 01 — PDF 入匣
     processed:  "output/02_Processed"     # 02 — Docling 提取結果 (IMMUTABLE)
     agent_core: "output/03_Agent_Core"    # 03 — Agent trace / resume state
     final:      "output/05_Final_Knowledge" # 05 — 最終知識庫

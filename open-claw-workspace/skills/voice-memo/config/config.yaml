@@ -10,14 +10,14 @@
 # ------------------------------------------------------------------------------
 paths:
   # Canonical directory layout
-  input:  "input/raw_data"
+  input:  "input"
   output: "output"
   state:  "state"
   logs:   "logs"
 
   # Phase-specific directories (self.dirs[key] in Phase scripts)
   phases:
-    p0: "input/raw_data"               # 00 — 原始音檔
+    p0: "input"                        # 00 — 原始音檔
     p1: "output/01_transcript"         # 01 — Whisper 轉錄稿
     p2: "output/02_proofread"          # 02 — AI 校對稿
     p3: "output/03_merged"             # 03 — 跨段合併精煉
