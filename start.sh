@@ -103,7 +103,7 @@ echo -e "\n${YELLOW}[6/7] Starting Open Claw Dashboard (Port 5001)...${NC}"
 if ! nc -z localhost 5001 >/dev/null 2>&1; then
     (
         cd "${WORKSPACE_DIR}" || exit
-        python3 open-claw-workspace/core/web_ui/app.py > "${LOG_DIR}/dashboard.log" 2>&1 &
+        python3 core/web_ui/app.py > "${LOG_DIR}/dashboard.log" 2>&1 &
     )
     wait_for_port 5001 "Open Claw Dashboard"
 else
