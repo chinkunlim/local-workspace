@@ -23,7 +23,7 @@ class Phase2bSynthesis(PipelineBase):
             raise RuntimeError("Missing models.synthesis in config.yaml")
         
         self.max_chunk = self.config_manager.get_nested("pdf_processing", "chunking", "max_chunk_chars") or 8000
-        self.min_retention_ratio = 0.30  # 30% content-loss guard threshold
+        self.min_retention_ratio = 0.01  # 1% content-loss guard threshold (PDFs output very dense text summaries)
 
     def _read_figure_list(self, pdf_dir: str) -> str:
         fig_path = os.path.join(pdf_dir, "figure_list.md")

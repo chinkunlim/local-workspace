@@ -55,14 +55,19 @@ class OllamaClient:
                     raise ValueError(f"API 回傳空內容（可能原因：num_predict 耗盡、網路超時、模型載入失敗）")
                 return response_text
             except requests.exceptions.RequestException as e:
+                error_body = ""
+                if hasattr(e, 'response') and e.response is not None:
+                    error_body = f" - Body: {e.response.text}"
+                full_error = f"{e}{error_body}"
+                
                 if attempt < self.retries - 1:
                     if logger:
-                        logger.warning(f"LLM API 請求失敗 ({e})，正在進行第 {attempt + 2} 次重試...")
+                        logger.warning(f"LLM API 請求失敗 ({full_error})，正在進行第 {attempt + 2} 次重試...")
                     time.sleep(self.backoff_seconds * (2 ** attempt))
                 else:
                     if logger:
-                        logger.error(f"LLM API 請求徹底失敗: {e}")
-                    raise
+                        logger.error(f"LLM API 請求徹底失敗: {full_error}")
+                    raise RuntimeError(f"API 請求失敗: {full_error}")
 
     def unload_model(self, model: str, logger=None):
         """Force keep_alive=0 to unload the model from VRAM."""
