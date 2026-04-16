@@ -9,6 +9,7 @@
 ## Table of Contents
 
 0. [AI Agent Workflow & Directives](#0-ai-agent-workflow--directives)
+0.5. [The Antigravity Perfectionist Code (Programming Style)](#05-the-antigravity-perfectionist-code-programming-style)
 1. [Core Design Principles](#1-core-design-principles)
 2. [Directory Structure](#2-directory-structure)
 3. [Skill Development Standards](#3-skill-development-standards)
@@ -39,6 +40,18 @@
    - Commit all successful, verified changes to the local Git repository immediately with a clear, descriptive commit message.
    - If an upstream remote exists, push to GitHub/remote after committing.
 5. **Enforce Hygiene**: Never leave stale files, duplicated functions, or temporary backups (`.bak`, `.tmp`) lying around.
+
+---
+
+## 0.5. The Antigravity Perfectionist Code (Programming Style)
+
+This project strictly adheres to an "OCD / Perfectionist" level of hygiene. Any deviation from these stylistic and structural ideals is considered a failure:
+
+- **100% DRY (Don't Repeat Yourself) & Fused Logic**: Never duplicate utility logic across skills. If two skills need the same function (like CLI prompts or progress tracking), they must be fused, generalized, and elevated strictly to `core/` (e.g. `core/subject_manager.py`). 
+- **Absolute Structural Purity & Symmetry**: Directories and architectures must visibly mirror each other across different skills (`config/`, `docs/`, `scripts/phases/`). If a directory or script is unused, empty, or outdated, it is instantly securely deleted.
+- **Flawless Readability & Elegance**: Code is not just functional; it is beautiful. Adhere to PEP 8 rigidly, enforce strong static typing (`mypy`), format automatically with `Ruff`, provide precise Google-style docstrings, and use emoji-prefixed console logs for pristine UI/UX.
+- **Idempotent & Atomic Execution**: The system must be flawlessly resilient. Files are only authored via `AtomicWriter` to prevent corruption. Everything is interruptible and resumable natively without data loss.
+- **Zero Boundary Leaks**: Open Claw is a sandbox. No absolute macOS path references are allowed. Everything flows cleanly through `core.path_builder.PathBuilder` and `config.yaml`.
 
 ---
 
