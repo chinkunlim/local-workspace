@@ -168,6 +168,16 @@ def api_logs():
     return jsonify(exec_mgr.get_logs(cursor))
 
 
+@app.route("/api/subjects", methods=["GET"])
+def api_subjects():
+    """Return list of subject folders for voice-memo skill."""
+    input_dir = os.path.join(_workspace_root, "data", "voice-memo", "input")
+    if not os.path.isdir(input_dir):
+        return jsonify({"subjects": []})
+    subjects = sorted([d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))])
+    return jsonify({"subjects": subjects})
+
+
 @app.route("/api/start", methods=["POST"])
 def api_start():
     """
@@ -177,11 +187,13 @@ def api_start():
         skill   : "pdf" | "voice"   (required)
         subject : str               (optional — restrict to one subject folder)
         force   : bool              (optional — overwrite completed phases)
+        resume  : bool              (optional — voice-memo: auto-answer resume prompt with C)
     """
     data    = request.get_json(force=True) or {}
     skill   = data.get("skill", "")
     subject = data.get("subject", "").strip()
     force   = bool(data.get("force", False))
+    resume  = bool(data.get("resume", False))
 
     if skill == "pdf":
         cmd = ["python3", _PDF_SCRIPT, "--process-all"]
@@ -195,6 +207,8 @@ def api_start():
             cmd += ["--subject", subject]
         if force:
             cmd += ["--force"]
+        if resume:
+            cmd += ["--resume"]
         ok = exec_mgr.start_task("Voice Memo Pipeline", cmd, cwd=_workspace_root)
 
     else:

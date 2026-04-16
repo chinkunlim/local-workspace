@@ -351,6 +351,9 @@
         <button id="btn-pdf" class="btn btn-primary" onclick="startTask('pdf')">
             ▶ 啟動排程
         </button>
+        <button id="btn-pdf-force" class="btn btn-warning" onclick="startTask('pdf', false, false, true)" style="margin-top:6px;background:transparent;border:1px solid var(--warning);color:var(--warning);">
+            🔁 強制重跑全部
+        </button>
     </div>
 
     <!-- Voice Memo -->
@@ -363,15 +366,31 @@
             <div class="phase-card"><div class="pv" id="vm-p4">—</div><span class="pl">P4 重點</span></div>
             <div class="phase-card"><div class="pv" id="vm-p5">—</div><span class="pl">P5 筆記</span></div>
         </div>
+
+        <!-- Subject Selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">🗂️ 科目 (空白 = 全部)</div>
+            <select id="vm-subject" class="rb-select" style="width:100%;">
+                <option value="">— 全部科目 —</option>
+            </select>
+        </div>
+
+        <!-- Action Buttons -->
         <button id="btn-voice" class="btn btn-primary" onclick="startTask('voice')">
             ▶ 增量更新
         </button>
+        <button id="btn-voice-resume" class="btn" onclick="startTask('voice', true)" style="margin-top:6px;background:transparent;border:1px solid var(--accent);color:var(--accent);">
+            ⏩ 從斷點繼續
+        </button>
+        <button id="btn-voice-force" class="btn" onclick="startTask('voice', false, true)" style="margin-top:6px;background:transparent;border:1px solid var(--warning);color:var(--warning);">
+            🔁 強制重跑
+        </button>
     </div>
 
-    <!-- Stop -->
+    <!-- Stop / Interrupt -->
     <div class="panel" style="border-bottom:none; margin-top:auto;">
         <button id="btn-stop" class="btn btn-danger" onclick="stopTask()" disabled>
-            ⛔ 強制中斷目前任務
+            ⛔ 中斷目前任務
         </button>
     </div>
 </aside>
@@ -454,12 +473,36 @@ function switchTab(tab) {
 /* ──────────────────────────────────────────────────────────────────────────
    Pipeline Control
 ─────────────────────────────────────────────────────────────────────────── */
-async function startTask(skill) {
-    await fetch('/api/start', {
+async function loadSubjects() {
+    try {
+        const res  = await fetch('/api/subjects');
+        const data = await res.json();
+        const sel  = document.getElementById('vm-subject');
+        data.subjects.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            sel.appendChild(opt);
+        });
+    } catch(e) { /* silent fail */ }
+}
+
+async function startTask(skill, resume = false, force = false, pdfForce = false) {
+    const subject = skill === 'voice' ? (document.getElementById('vm-subject')?.value || '') : '';
+    const body    = { skill };
+    if (subject) body.subject = subject;
+    if (force || pdfForce) body.force = true;
+    if (resume) body.resume = true;
+
+    const res = await fetch('/api/start', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({skill})
+        body: JSON.stringify(body)
     });
+    if (!res.ok) {
+        const data = await res.json();
+        alert('⚠️ ' + (data.error || 'Failed to start task'));
+    }
 }
 
 async function stopTask() {
@@ -495,9 +538,12 @@ async function pollStatus() {
             tnEl.textContent = '';
         }
 
-        document.getElementById('btn-pdf').disabled   = running;
-        document.getElementById('btn-voice').disabled = running;
-        document.getElementById('btn-stop').disabled  = !running;
+        document.getElementById('btn-pdf').disabled        = running;
+        document.getElementById('btn-pdf-force').disabled   = running;
+        document.getElementById('btn-voice').disabled       = running;
+        document.getElementById('btn-voice-resume').disabled= running;
+        document.getElementById('btn-voice-force').disabled = running;
+        document.getElementById('btn-stop').disabled        = !running;
     } catch(e) { /* server may be starting */ }
 
     setTimeout(pollStatus, 2000);
@@ -773,6 +819,7 @@ function escHtml(str) {
 ─────────────────────────────────────────────────────────────────────────── */
 pollStatus();
 pollLogs();
+loadSubjects();
 </script>
 </body>
 </html>

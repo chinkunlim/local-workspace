@@ -8,6 +8,7 @@ import subprocess
 import threading
 import collections
 import time
+import os
 import psutil
 
 class ExecutionManager:
@@ -27,6 +28,10 @@ class ExecutionManager:
             self._total_lines_read = 0
             self._current_task_name = task_name
             self._log_buffer.append(f"🟢 [System] 啟動任務: {task_name}\n")
+
+            # Always inject Homebrew PATH so tools like poppler are discoverable
+            env = os.environ.copy()
+            env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + env.get("PATH", "")
             
             try:
                 self._process = subprocess.Popen(
@@ -35,7 +40,8 @@ class ExecutionManager:
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
-                    bufsize=1 # Line buffered
+                    bufsize=1,
+                    env=env
                 )
                 
                 # Start logging thread
