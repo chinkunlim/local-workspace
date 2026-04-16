@@ -56,12 +56,10 @@ class Phase2bSynthesis(PipelineBase):
         self.info(f"📦 [Phase 2b] 原文長度 {len(raw_text):,} 字元，將進行 {len(chunks)} 次 Map 處理 (模型: {self.syn_model})")
         
         # 2. MAP phase
-        map_prompt_template = (
-            "你是一個專業的學術與知識分析師。以下是 PDF 文件的部分原始萃取內容，可能包含換行碎化或 OCR 錯誤。\n"
-            "請為這個區塊提取出核心知識點、重要的定義、數據以及公式推導邏輯。\n"
-            "請將產出結構化為豐富的 Markdown 筆記。\n\n"
-            "【原始內容】:\n{INPUT}"
-        )
+        map_prompt_template = self.get_prompt("Phase 2b Map: Concept Extraction")
+        if not map_prompt_template:
+            self.error("❌ 找不到 Phase 2b Map 的 prompt 指令，請確認 prompt.md 內有對應的段落。")
+            return
         
         map_results = []
         for ci, chunk in enumerate(chunks, 1):
@@ -84,21 +82,16 @@ class Phase2bSynthesis(PipelineBase):
         glossary_injection = gm.get_global_prompt_injection()
         
         # 3. REDUCE phase
+        reduce_prompt_template = self.get_prompt("Phase 2b Reduce: Final Synthesis")
+        if not reduce_prompt_template:
+            self.error("❌ 找不到 Phase 2b Reduce 的 prompt 指令，請確認 prompt.md 內有對應的段落。")
+            return
+            
         reduce_prompt = (
-            "你是一個頂尖的技術筆記整理專家。以下是我透過 AI 逐步解讀一份文件所得出的「各段落重點筆記」，以及一份「圖表清單 (包含 VLM 解讀)」。\n\n"
-            "請將這些材料融合成一份結構完美、排版嚴謹的最終知識庫筆記 (Final Knowledge Base Markdown)。\n"
-            "【要求】\n"
-            "1. 必須具備清晰的階層標題 (H1, H2, H3)。\n"
-            "2. 絕對不要流失核心資訊、數學公式和專有名詞。\n"
-            "3. 如果圖表清單內有重要的圖片資訊，請適度在對應概念的段落提及或引用。\n"
-            "4. 以專業的[繁體中文]撰寫。\n\n"
-            f"{glossary_injection}\n\n"
-            
-            "【圖表清單與解析】:\n"
-            f"{figure_list_txt}\n\n"
-            
-            "【各段落重點筆記】:\n"
-            + "\n\n---\n\n".join(map_results)
+            reduce_prompt_template
+            .replace("{GLOSSARY}", f"{glossary_injection}")
+            .replace("{FIGURES}", f"{figure_list_txt}")
+            .replace("{NOTES}", "\n\n---\n\n".join(map_results))
         )
         
         self.info("🔄 [Phase 2b] Reduce：啟動終極版面合成整合...")

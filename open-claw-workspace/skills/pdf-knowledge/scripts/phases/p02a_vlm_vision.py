@@ -65,13 +65,10 @@ class Phase2aVLMVision(PipelineBase):
             self.error("❌ figure_list.md 缺少必要的 '檔案名稱' 或 'VLM 描述' 欄位。")
             return
 
-        prompt = (
-            "這是一張由學術文獻或是文件中提取出來的圖片（可能為點陣圖表、向量圖、或是排版背景）。\n"
-            "請以「繁體中文」詳細描述圖中的數據趨勢、核心概念或比較重點。\n"
-            "- 若這張圖包含公式，請轉譯成易讀的數學形式 (例如使用 LaTeX 邏輯或詳細拆解變數規則)。\n"
-            "- 若這只是一張為了排版好看的無意義背景、浮水印或是裝飾性圖片，請只回答『[忽略] 裝飾性圖片』。\n"
-            "請直接給出描述，不要加上「從這張圖可以看到」之類的贅字。"
-        )
+        prompt = self.get_prompt("Phase 2a: VLM Vision")
+        if not prompt:
+            self.error("❌ 找不到 Phase 2a 的 prompt 指令，請確認 prompt.md 內有對應的段落。")
+            return
 
         modifications = 0
         for i in range(header_idx + 2, len(lines)):

@@ -46,7 +46,7 @@ pdf_processing:
 
   # Phase 1c — 向量圖表補充
   vector_chart:
-    dpi: 150                           # pdftoppm 光柵化 DPI
+    dpi: 300                           # pdftoppm 光柵化 DPI (Increased for higher resolution chart extraction)
     format: "jpeg"
 
   # Phase 1d — OCR 品質評估
