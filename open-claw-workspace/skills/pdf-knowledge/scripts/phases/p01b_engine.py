@@ -172,7 +172,8 @@ class Phase1bPDFEngine(PipelineBase):
         """Run Docling PDF extraction. Returns markdown text or None."""
         
         # Sandbox HuggingFace models to project directory
-        model_dir = os.path.join(_openclawed_root, "models")
+        openclaw_root = os.path.abspath(os.path.join(self.base_dir, "..", ".."))
+        model_dir = os.path.join(openclaw_root, "models")
         os.makedirs(model_dir, exist_ok=True)
         os.environ["HF_HOME"] = model_dir
         os.environ["HF_HUB_CACHE"] = model_dir

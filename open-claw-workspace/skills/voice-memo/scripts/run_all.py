@@ -5,6 +5,7 @@ V7.0 OOP Architecture — with Checkpoint Resume, Sorted Tasks, Batch Reprocess 
 """
 import os
 import sys
+import requests
 # Workspace Root Resolver
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
@@ -27,7 +28,9 @@ from phases.p04_highlight import Phase4Highlight
 from phases.p05_synthesis import Phase5NotionSynthesis
 from core import ConfigManager, build_skill_parser
 
-_runtime_config = ConfigManager(_workspace_root, "voice-memo")
+# The skills/ directory lives inside open-claw-workspace, not the outer workspace root
+_sandbox_root = os.path.join(_workspace_root, "open-claw-workspace")
+_runtime_config = ConfigManager(_sandbox_root, "voice-memo")
 
 def print_status_dashboard(state_mgr: StateManager):
     """Print the DAG / Cache status."""
@@ -68,8 +71,8 @@ def preflight_check():
     print("✈️  進行啟動前置檢查 (Preflight Check)...")
     fail = False
 
-    raw_dir = os.path.join(base_dir, "raw_data")
-    if not os.path.exists(raw_dir) or not any(f.endswith(".m4a") for r, d, fl in os.walk(raw_dir) for f in fl):
+    input_dir = os.path.join(base_dir, "input")
+    if not os.path.exists(input_dir) or not any(f.endswith(".m4a") for r, d, fl in os.walk(input_dir) for f in fl):
         print("❌ 錯誤：找不到任何 .m4a 來源。")
         fail = True
 
