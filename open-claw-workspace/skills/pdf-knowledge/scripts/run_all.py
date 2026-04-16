@@ -196,30 +196,30 @@ class QueueManager(PipelineBase):
                     self.info(f"⏭️ [Queue] {filename} 已完成，跳過")
                     continue
 
-            # Layer 2: Check if already in queue
-            if any(item["pdf_id"] == pdf_id for item in self._queue):
-                self.info(f"⏭️ [Queue] {filename} 已在佇列中，跳過")
-                continue
+                # Layer 2: Check if already in queue
+                if any(item["pdf_id"] == pdf_id for item in self._queue):
+                    self.info(f"⏭️ [Queue] {filename} 已在佇列中，跳過")
+                    continue
 
-            # Layer 3: MD5 hash dedup
-            pdf_hash = self._md5(pdf_path)
-            if pdf_hash in self._processed_hashes:
-                self.info(f"⏭️ [Queue] {filename} 內容重複（MD5 相同），跳過")
-                continue
+                # Layer 3: MD5 hash dedup
+                pdf_hash = self._md5(pdf_path)
+                if pdf_hash in self._processed_hashes:
+                    self.info(f"⏭️ [Queue] {filename} 內容重複（MD5 相同），跳過")
+                    continue
 
-            # Check for encryption
-            is_encrypted = self._quick_check_encrypted(pdf_path)
+                # Check for encryption
+                is_encrypted = self._quick_check_encrypted(pdf_path)
 
-            new_pdfs.append({
-                "pdf_id": pdf_id,
-                "subject": subject,
-                "pdf_path": pdf_path,
-                "filename": filename,
-                "md5": pdf_hash,
-                "status": PDFStatus.PENDING.value,
-                "added_at": datetime.now().isoformat(),
-                "encrypted": is_encrypted,
-            })
+                new_pdfs.append({
+                    "pdf_id": pdf_id,
+                    "subject": subject,
+                    "pdf_path": pdf_path,
+                    "filename": filename,
+                    "md5": pdf_hash,
+                    "status": PDFStatus.PENDING.value,
+                    "added_at": datetime.now().isoformat(),
+                    "encrypted": is_encrypted,
+                })
 
         self._queue.extend(new_pdfs)
         if new_pdfs:

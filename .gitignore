@@ -1,2 +1,52 @@
+# ==============================================================================
+# Global AI Ecosystem Ignore List (100% DRY)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Open Claw Sandbox Runtime Data
+# ------------------------------------------------------------------------------
 open-claw-workspace/data/
 open-claw-workspace/models/
+open-claw-workspace/logs/
+
+# ------------------------------------------------------------------------------
+# Universal Ignore Patterns
+# ------------------------------------------------------------------------------
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Python bytecode
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Ruff / Mypy caches
+.ruff_cache/
+.mypy_cache/
