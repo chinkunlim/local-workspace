@@ -14,6 +14,8 @@ NC='\033[0m' # 無顏色
 _LOCAL_WORKSPACE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/open-claw-workspace" && pwd)"
 export WORKSPACE_DIR
+# Ensure Homebrew binaries (poppler, etc.) are always on PATH regardless of how this script is invoked
+export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
 export PYTHONPATH="${_LOCAL_WORKSPACE}:${WORKSPACE_DIR}:${PYTHONPATH}"
 LOG_DIR="${WORKSPACE_DIR}/logs"
 mkdir -p "$LOG_DIR"
