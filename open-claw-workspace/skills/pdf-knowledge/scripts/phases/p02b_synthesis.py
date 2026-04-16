@@ -18,9 +18,11 @@ class Phase2bSynthesis(PipelineBase):
             phase_name="知識濃縮合成",
             skill_name="pdf-knowledge"
         )
-        self.syn_model = self.config_manager.get_nested("models", "synthesis")
+        config = self.get_config("phase2b")
+        self.syn_model = config.get("model")
+        self.syn_options = config.get("options", {})
         if not self.syn_model:
-            raise RuntimeError("Missing models.synthesis in config.yaml")
+            raise RuntimeError("Missing model in phase2b config profile")
         
         self.max_chunk = self.config_manager.get_nested("pdf_processing", "chunking", "max_chunk_chars") or 8000
         self.min_retention_ratio = 0.01  # 1% content-loss guard threshold (PDFs output very dense text summaries)
@@ -70,7 +72,12 @@ class Phase2bSynthesis(PipelineBase):
             self.info(f"   🗂  Map [{ci}/{len(chunks)}]：提取關鍵材料...")
             
             try:
-                res = self.llm.generate(model=self.syn_model, prompt=prompt, logger=self)
+                res = self.llm.generate(
+                    model=self.syn_model,
+                    prompt=prompt,
+                    options=self.syn_options,
+                    logger=self
+                )
                 map_results.append(res)
             except Exception as e:
                 self.error(f"❌ Map [{ci}/{len(chunks)}] 失敗: {e}")
@@ -96,7 +103,12 @@ class Phase2bSynthesis(PipelineBase):
         
         self.info("🔄 [Phase 2b] Reduce：啟動終極版面合成整合...")
         try:
-            final_content = self.llm.generate(model=self.syn_model, prompt=reduce_prompt, logger=self)
+            final_content = self.llm.generate(
+                model=self.syn_model,
+                prompt=reduce_prompt,
+                options=self.syn_options,
+                logger=self
+            )
         except Exception as e:
             self.error(f"❌ Reduce 失敗: {e}")
             return

@@ -78,20 +78,35 @@ playwright:
   agent_loop_max_rounds: 10            # 每個 chunk 最大 round 數
 
 # ------------------------------------------------------------------------------
-# LLM Models
+# Phase 2a: VLM 視覺圖表解析 (Multi-Modal Vision)
 # ------------------------------------------------------------------------------
-models:
-  # VLM 多模態視覺圖表解析（處理 [P] 與 [V]）
-  vlm: "llama3.2-vision"
-  # Phase 2+ 知識濃縮合成（降載長文本）
-  synthesis: "qwen2.5:14b"
-  # Triage + 輔助處理（本機輕量模型）
-  triage: "gemma4:e2b"
-  gems:
-    psychology: "psychology_expert"
-    it: "it_expert"
-    curriculum: "curriculum_expert"
-    default: "general_expert"
+phase2a:
+  active_profile: default
+  profiles:
+    default:
+      model: llama3.2-vision
+      options:
+        num_ctx: 16384
+        temperature: 0.1
+
+# ------------------------------------------------------------------------------
+# Phase 2b: 知識濃縮合成 (Map-Reduce Synthesis)
+# ------------------------------------------------------------------------------
+phase2b:
+  active_profile: reasoning_deepseek
+  profiles:
+    default:
+      model: qwen2.5:14b
+      options:
+        num_ctx: 32768
+        temperature: 0.3
+        num_predict: 8192
+    reasoning_deepseek:
+      model: deepseek-r1:14b
+      options:
+        num_ctx: 32768
+        temperature: 0.6
+        num_predict: 8192
 
 # NOTE: hardware thresholds and runtime (ollama) settings are defined globally in:
 #   open-claw-workspace/core/config/global.yaml

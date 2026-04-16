@@ -18,9 +18,11 @@ class Phase2aVLMVision(PipelineBase):
             phase_name="VLM 視覺圖表解析",
             skill_name="pdf-knowledge"
         )
-        self.vlm_model = self.config_manager.get_nested("models", "vlm")
+        config = self.get_config("phase2a")
+        self.vlm_model = config.get("model")
+        self.vlm_options = config.get("options", {})
         if not self.vlm_model:
-            raise RuntimeError("Missing models.vlm in config.yaml")
+            raise RuntimeError("Missing model in phase2a config profile")
 
     def _encode_image(self, image_path: str) -> str:
         with open(image_path, "rb") as image_file:
@@ -93,9 +95,10 @@ class Phase2aVLMVision(PipelineBase):
                     
                     try:
                         res = self.llm.generate(
-                            model=self.vlm_model, 
-                            prompt=prompt, 
-                            images=[b64_image], 
+                            model=self.vlm_model,
+                            prompt=prompt,
+                            images=[b64_image],
+                            options=self.vlm_options,
                             logger=self
                         )
                         safe_res = self._clean_markdown_text(res.strip())
