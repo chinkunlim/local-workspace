@@ -296,7 +296,7 @@ class QueueManager(PipelineBase):
                 self.info(f"🎨 [Queue] Phase 1c: 向量圖表光柵化 ({len(vector_pages)} 頁)...")
                 from phases.p01c_vector_charts import Phase1cVectorChartExtractor
                 extractor = Phase1cVectorChartExtractor()
-                extractor.extract_vector_charts(pdf_path, pdf_id, vector_pages, subject)
+                extractor.extract_vector_charts(pdf_path, pdf_id, subject, vector_pages)
                 self.state_manager.update_task(subject, item["filename"], "p1c", "✅")
 
             # --- Phase 1d: OCR Quality (if scanned) ---

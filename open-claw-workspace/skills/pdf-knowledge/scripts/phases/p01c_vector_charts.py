@@ -58,6 +58,7 @@ class Phase1cVectorChartExtractor(PipelineBase):
         self,
         pdf_path: str,
         pdf_id: str,
+        subject: str,
         page_nums: List[int],
     ) -> List[Dict[str, str]]:
         """
