@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Claw — Central Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- jsdiff: pure JS line/char diff library -->
+    <script src="https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js"></script>
+
+    <style>
+        /* ─── Design Tokens ─────────────────────────────────────── */
+        :root {
+            --bg:          #0d1117;
+            --bg2:         #161b22;
+            --bg3:         #21262d;
+            --border:      #30363d;
+            --text:        #c9d1d9;
+            --text-muted:  #8b949e;
+            --accent:      #58a6ff;
+            --success:     #3fb950;
+            --danger:      #da3633;
+            --warning:     #d29922;
+            --purple:      #bc8cff;
+
+            --diff-del-bg:   #3d1819;
+            --diff-del-hl:   #5a1f1f;
+            --diff-del-fg:   #ff7b7b;
+            --diff-add-bg:   #0a2a12;
+            --diff-add-hl:   #164f22;
+            --diff-add-fg:   #56d364;
+            --diff-meta-bg:  #1d2432;
+            --diff-meta-fg:  #6e7681;
+            --ln-w:           45px;
+            --sidebar-w:      320px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ─── Sidebar ────────────────────────────────────────────── */
+        .sidebar {
+            width: var(--sidebar-w);
+            min-width: var(--sidebar-w);
+            background: var(--bg2);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sidebar-logo .logo-icon { font-size: 1.4rem; }
+        .sidebar-logo .logo-text { font-size: 1rem; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+        .sidebar-logo .logo-ver  { font-size: 0.7rem; color: var(--text-muted); margin-left: auto; font-family: 'JetBrains Mono', monospace; }
+
+        .panel {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .panel-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        /* stat cards */
+        .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .stat-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            text-align: center;
+        }
+        .stat-val { font-size: 1.6rem; font-weight: 700; color: var(--success); font-family: 'JetBrains Mono', monospace; line-height: 1; margin-bottom: 4px; }
+        .stat-lbl { font-size: 0.72rem; color: var(--text-muted); }
+
+        /* voice grid */
+        .phase-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 12px; }
+        .phase-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 4px;
+            text-align: center;
+        }
+        .phase-card .pv { font-size: 1.1rem; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+        .phase-card .pl { font-size: 0.65rem; color: var(--text-muted); display: block; margin-top: 2px; }
+
+        /* buttons */
+        .btn {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            width: 100%; padding: 9px 14px; border-radius: 7px; border: none;
+            font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-primary { background: var(--success); color: #0d1117; }
+        .btn-primary:hover:not(:disabled) { filter: brightness(1.15); }
+        .btn-danger  { background: transparent; color: var(--danger); border: 1px solid var(--danger); margin-top: 8px; }
+        .btn-danger:hover:not(:disabled)  { background: var(--danger); color: white; }
+        .btn:disabled { background: var(--bg3); color: #555; cursor: not-allowed; border-color: transparent; }
+
+        /* ─── Main Content ───────────────────────────────────────── */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        /* tabs */
+        .tab-bar {
+            display: flex;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            padding: 0 20px;
+            gap: 2px;
+        }
+        .tab {
+            padding: 12px 18px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s;
+            user-select: none;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--accent); border-color: var(--accent); }
+
+        .tab-content { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+        .tab-content.active { display: flex; }
+
+        /* status bar */
+        .status-bar {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 20px;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+        }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 10px; border-radius: 20px;
+            font-size: 0.78rem; font-weight: 500;
+            background: var(--bg3); border: 1px solid var(--border);
+        }
+        .status-badge.running {
+            border-color: var(--warning); color: var(--warning);
+            animation: pulse-badge 2s ease infinite;
+        }
+        @keyframes pulse-badge { 0%,100%{box-shadow:0 0 0 0 rgba(210,153,34,.4)} 50%{box-shadow:0 0 0 6px rgba(210,153,34,0)} }
+
+        /* ─── Console ────────────────────────────────────────────── */
+        #console {
+            flex: 1;
+            margin: 16px 20px;
+            background: #000;
+            color: #39ff14;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.83rem;
+            line-height: 1.55;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        /* ─── Review Board ───────────────────────────────────────── */
+        .review-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .rb-select {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            min-width: 140px;
+        }
+        .rb-select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-load {
+            background: var(--accent);
+            color: #0d1117;
+            border: none;
+            padding: 7px 18px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: filter 0.15s;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-load:hover { filter: brightness(1.15); }
+        .btn-load:disabled { background: var(--bg3); color: #555; cursor: not-allowed; }
+
+        .rb-label { font-size: 0.78rem; color: var(--text-muted); }
+
+        .diff-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+        }
+
+        .diff-empty {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        .diff-empty i { font-size: 2rem; }
+
+        /* header bar above the two-pane diff */
+        .diff-header-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            margin-bottom: 4px;
+        }
+        .diff-header-label {
+            padding: 6px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 6px 6px 0 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .diff-header-label.del { color: var(--diff-del-fg); }
+        .diff-header-label.add { color: var(--diff-add-fg); }
+
+        /* diff table: two columns */
+        .diff-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--border);
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.6;
+        }
+        .diff-table td { padding: 0; vertical-align: top; }
+
+        /* line-number gutter */
+        .ln {
+            width: var(--ln-w);
+            min-width: var(--ln-w);
+            text-align: right;
+            padding: 1px 10px 1px 6px;
+            color: var(--diff-meta-fg);
+            background: var(--bg3);
+            user-select: none;
+            font-size: 0.76rem;
+            border-right: 1px solid var(--border);
+        }
+
+        /* code content cell */
+        .lc {
+            padding: 1px 8px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            width: 50%;
+        }
+
+        /* row states */
+        tr.del .ln-left,  tr.del .lc-left  { background: var(--diff-del-bg); }
+        tr.add .ln-right, tr.add .lc-right { background: var(--diff-add-bg); }
+        tr.eq  .ln-left,  tr.eq  .lc-left  { background: var(--bg); }
+        tr.eq  .ln-right, tr.eq  .lc-right { background: var(--bg); }
+        tr.sep td { background: var(--diff-meta-bg); color: var(--diff-meta-fg); text-align:center; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding: 2px 0; font-size:0.76rem; }
+
+        /* word-level highlights within a changed line */
+        .del-word { background: var(--diff-del-hl); color: var(--diff-del-fg); border-radius: 2px; padding: 0 1px; }
+        .add-word { background: var(--diff-add-hl); color: var(--diff-add-fg); border-radius: 2px; padding: 0 1px; }
+
+        /* vertical sep between two panes */
+        .pane-div { width: 1px; background: var(--border); }
+
+        /* ─── Scrollbar ──────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+        /* ─── Responsive ─────────────────────────────────────────── */
+        @media(max-width:900px){
+            .sidebar { width: 260px; min-width: 260px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <span class="logo-icon">🧠</span>
+        <span class="logo-text">Open Claw</span>
+        <span class="logo-ver">v3.0</span>
+    </div>
+
+    <!-- PDF Knowledge -->
+    <div class="panel">
+        <div class="panel-title">📄 PDF Knowledge</div>
+        <div class="stat-row">
+            <div class="stat-card">
+                <div class="stat-val" id="pdf-inbox">—</div>
+                <div class="stat-lbl">Inbox 待查</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" id="pdf-done">—</div>
+                <div class="stat-lbl">已處理</div>
+            </div>
+        </div>
+        <button id="btn-pdf" class="btn btn-primary" onclick="startTask('pdf')">
+            ▶ 啟動排程
+        </button>
+    </div>
+
+    <!-- Voice Memo -->
+    <div class="panel">
+        <div class="panel-title">🎙️ Voice Memo</div>
+        <div class="phase-row">
+            <div class="phase-card"><div class="pv" id="vm-p1">—</div><span class="pl">P1 轉錄</span></div>
+            <div class="phase-card"><div class="pv" id="vm-p2">—</div><span class="pl">P2 校對</span></div>
+            <div class="phase-card"><div class="pv" id="vm-p3">—</div><span class="pl">P3 合併</span></div>
+            <div class="phase-card"><div class="pv" id="vm-p4">—</div><span class="pl">P4 重點</span></div>
+            <div class="phase-card"><div class="pv" id="vm-p5">—</div><span class="pl">P5 筆記</span></div>
+        </div>
+        <button id="btn-voice" class="btn btn-primary" onclick="startTask('voice')">
+            ▶ 增量更新
+        </button>
+    </div>
+
+    <!-- Stop -->
+    <div class="panel" style="border-bottom:none; margin-top:auto;">
+        <button id="btn-stop" class="btn btn-danger" onclick="stopTask()" disabled>
+            ⛔ 強制中斷目前任務
+        </button>
+    </div>
+</aside>
+
+<!-- ═══════════════════════════════ MAIN ═══════════════════════════════════ -->
+<div class="main">
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <div class="tab active" id="tab-console"  onclick="switchTab('console')">💻 Live Console</div>
+        <div class="tab"       id="tab-review"   onclick="switchTab('review')">🔍 Review Board (Diff)</div>
+    </div>
+
+    <!-- Status Bar (shared) -->
+    <div class="status-bar">
+        <span id="sys-status" class="status-badge">🟢 Idle</span>
+        <span id="status-task-name" style="font-size:0.8rem;color:var(--text-muted);"></span>
+    </div>
+
+    <!-- ── Console Tab ── -->
+    <div class="tab-content active" id="pane-console">
+        <div id="console">Welcome to Open Claw v3.0 — Subprocess Execution Manager.
+System initialized. Monitoring for tasks...
+</div>
+    </div>
+
+    <!-- ── Review Board Tab ── -->
+    <div class="tab-content" id="pane-review">
+
+        <!-- Toolbar: selectors -->
+        <div class="review-toolbar">
+            <span class="rb-label">Skill</span>
+            <select id="rb-skill" class="rb-select" onchange="rbOnSkillChange()">
+                <option value="">— 選擇 Skill —</option>
+                <option value="voice-memo">🎙️ Voice Memo</option>
+                <option value="pdf-knowledge">📄 PDF Knowledge</option>
+            </select>
+
+            <span class="rb-label">比較階段</span>
+            <select id="rb-phase" class="rb-select" onchange="rbOnPhaseChange()" disabled>
+                <option value="">— 選擇 Phase —</option>
+            </select>
+
+            <span class="rb-label">科目</span>
+            <select id="rb-subject" class="rb-select" onchange="rbOnSubjectChange()" disabled>
+                <option value="">— 選擇科目 —</option>
+            </select>
+
+            <span class="rb-label">檔案</span>
+            <select id="rb-file" class="rb-select" disabled>
+                <option value="">— 選擇檔案 —</option>
+            </select>
+
+            <button class="btn-load" id="btn-load-diff" onclick="loadDiff()" disabled>載入對比</button>
+        </div>
+
+        <!-- Diff View -->
+        <div class="diff-container" id="diff-container">
+            <div class="diff-empty">
+                <span style="font-size:2.5rem">🔍</span>
+                <span>選擇 Skill、Phase、科目、檔案後，點擊「載入對比」</span>
+                <span style="font-size:0.78rem">支援 Voice Memo P1↔P2↔P3 及 PDF Knowledge Raw↔Final 的逐行差異比對</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════ SCRIPTS ══════════════════════════════════ -->
+<script>
+/* ──────────────────────────────────────────────────────────────────────────
+   Tab switching
+─────────────────────────────────────────────────────────────────────────── */
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('pane-' + tab).classList.add('active');
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Pipeline Control
+─────────────────────────────────────────────────────────────────────────── */
+async function startTask(skill) {
+    await fetch('/api/start', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({skill})
+    });
+}
+
+async function stopTask() {
+    await fetch('/api/stop', { method: 'POST' });
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Status Polling (2 s)
+─────────────────────────────────────────────────────────────────────────── */
+async function pollStatus() {
+    try {
+        const res  = await fetch('/api/status');
+        const data = await res.json();
+
+        document.getElementById('pdf-inbox').textContent = data.pdf.inbox;
+        document.getElementById('pdf-done').textContent  = data.pdf.completed;
+        ['p1','p2','p3','p4','p5'].forEach(p => {
+            const el = document.getElementById('vm-' + p);
+            if (el) el.textContent = data.voice[p];
+        });
+
+        const running = data.system.running;
+        const badge   = document.getElementById('sys-status');
+        const tnEl    = document.getElementById('status-task-name');
+
+        if (running) {
+            badge.className = 'status-badge running';
+            badge.innerHTML = '🔄 Running';
+            tnEl.textContent = data.system.task_name || '';
+        } else {
+            badge.className = 'status-badge';
+            badge.innerHTML = '🟢 Idle';
+            tnEl.textContent = '';
+        }
+
+        document.getElementById('btn-pdf').disabled   = running;
+        document.getElementById('btn-voice').disabled = running;
+        document.getElementById('btn-stop').disabled  = !running;
+    } catch(e) { /* server may be starting */ }
+
+    setTimeout(pollStatus, 2000);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Log Polling (1 s)
+─────────────────────────────────────────────────────────────────────────── */
+let logCursor = 0;
+async function pollLogs() {
+    try {
+        const res  = await fetch(`/api/logs?cursor=${logCursor}`);
+        const data = await res.json();
+        if (data.lines && data.lines.length > 0) {
+            const c = document.getElementById('console');
+            data.lines.forEach(l => c.appendChild(document.createTextNode(l)));
+            c.scrollTop = c.scrollHeight;
+            logCursor = data.cursor;
+        }
+    } catch(e) {}
+    setTimeout(pollLogs, 1000);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Review Board Cascade Selectors
+─────────────────────────────────────────────────────────────────────────── */
+function _rbReset(id, placeholder) {
+    const el = document.getElementById(id);
+    el.innerHTML = `<option value="">${placeholder}</option>`;
+    el.disabled  = true;
+}
+
+async function rbOnSkillChange() {
+    const skill = document.getElementById('rb-skill').value;
+    _rbReset('rb-phase',   '— 選擇比較階段 —');
+    _rbReset('rb-subject', '— 選擇科目 —');
+    _rbReset('rb-file',    '— 選擇檔案 —');
+    document.getElementById('btn-load-diff').disabled = true;
+
+    if (!skill) return;
+
+    const res  = await fetch(`/api/diff/phases?skill=${encodeURIComponent(skill)}`);
+    const data = await res.json();
+    const sel  = document.getElementById('rb-phase');
+    data.phases.forEach(p => {
+        const o = new Option(p.label, p.key);
+        sel.add(o);
+    });
+    sel.disabled = false;
+}
+
+async function rbOnPhaseChange() {
+    const skill = document.getElementById('rb-skill').value;
+    const phase = document.getElementById('rb-phase').value;
+    _rbReset('rb-subject', '— 選擇科目 —');
+    _rbReset('rb-file',    '— 選擇檔案 —');
+    document.getElementById('btn-load-diff').disabled = true;
+
+    if (!phase) return;
+
+    const res  = await fetch(`/api/diff/subjects?skill=${encodeURIComponent(skill)}&phase=${encodeURIComponent(phase)}`);
+    const data = await res.json();
+    const sel  = document.getElementById('rb-subject');
+    data.subjects.forEach(s => {
+        const o = new Option(s, s);
+        sel.add(o);
+    });
+    sel.disabled = (data.subjects.length === 0);
+}
+
+async function rbOnSubjectChange() {
+    const skill   = document.getElementById('rb-skill').value;
+    const phase   = document.getElementById('rb-phase').value;
+    const subject = document.getElementById('rb-subject').value;
+    _rbReset('rb-file', '— 選擇檔案 —');
+    document.getElementById('btn-load-diff').disabled = true;
+
+    if (!subject) return;
+
+    const res  = await fetch(`/api/diff/files?skill=${encodeURIComponent(skill)}&phase=${encodeURIComponent(phase)}&subject=${encodeURIComponent(subject)}`);
+    const data = await res.json();
+    const sel  = document.getElementById('rb-file');
+    data.files.forEach(f => {
+        const o = new Option(f.label, f.id);
+        sel.add(o);
+    });
+    sel.disabled = (data.files.length === 0);
+    document.getElementById('btn-load-diff').disabled = (data.files.length === 0);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Load & Render Diff
+─────────────────────────────────────────────────────────────────────────── */
+async function loadDiff() {
+    const skill   = document.getElementById('rb-skill').value;
+    const phase   = document.getElementById('rb-phase').value;
+    const subject = document.getElementById('rb-subject').value;
+    const file    = document.getElementById('rb-file').value;
+
+    if (!skill || !phase || !subject || !file) return;
+
+    const container = document.getElementById('diff-container');
+    container.innerHTML = '<div class="diff-empty"><span>⏳ 載入中...</span></div>';
+
+    try {
+        const res  = await fetch(`/api/diff?skill=${encodeURIComponent(skill)}&phase=${encodeURIComponent(phase)}&subject=${encodeURIComponent(subject)}&file=${encodeURIComponent(file)}`);
+        if (!res.ok) { throw new Error((await res.json()).error || 'Server error'); }
+        const data = await res.json();
+        renderDiff(container, data.text_a, data.text_b, data.label_a, data.label_b);
+    } catch(e) {
+        container.innerHTML = `<div class="diff-empty"><span>❌ ${e.message}</span></div>`;
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   VSCode-style Side-by-Side Diff Renderer
+─────────────────────────────────────────────────────────────────────────── */
+function renderDiff(container, textA, textB, labelA, labelB) {
+    const linesA = textA.split('\n');
+    const linesB = textB.split('\n');
+
+    // Compute line-level diff using jsdiff
+    const changes = Diff.diffLines(textA, textB);
+
+    // Build aligned row pairs: [{typeA, lineA, typeB, lineB}]
+    const rows = [];
+
+    for (const part of changes) {
+        const lines = part.value.split('\n');
+        // trailing empty string from split — remove
+        if (lines[lines.length - 1] === '') lines.pop();
+
+        if (!part.added && !part.removed) {
+            // context lines — show equal on both sides
+            const MAX_CTX = 4; // show max 4 context lines around changes
+            if (lines.length > MAX_CTX * 2 + 1) {
+                // show first MAX_CTX, separator, last MAX_CTX
+                lines.slice(0, MAX_CTX).forEach(l => rows.push({type: 'eq', a: l, b: l}));
+                rows.push({type: 'sep'});
+                lines.slice(-MAX_CTX).forEach(l => rows.push({type: 'eq', a: l, b: l}));
+            } else {
+                lines.forEach(l => rows.push({type: 'eq', a: l, b: l}));
+            }
+        } else if (part.removed) {
+            lines.forEach(l => rows.push({type: 'del', a: l, b: null}));
+        } else {
+            // added — try to pair with the preceding deletions for inline char diff
+            lines.forEach(l => rows.push({type: 'add', a: null, b: l}));
+        }
+    }
+
+    // Pair del and add rows for inline word-level highlight
+    // Simple algorithm: for consecutive {del, add} blocks, pair them per line
+    const paired = pairDelAdd(rows);
+
+    // Build HTML
+    let html = `
+        <div class="diff-header-row">
+            <div class="diff-header-label del">— ${escHtml(labelA)}</div>
+            <div class="diff-header-label add">+ ${escHtml(labelB)}</div>
+        </div>
+        <table class="diff-table">
+        <colgroup>
+            <col style="width:var(--ln-w)">
+            <col style="width:calc(50% - var(--ln-w))">
+            <col style="width:var(--ln-w)">
+            <col style="width:calc(50% - var(--ln-w))">
+        </colgroup>
+        <tbody>
+    `;
+
+    let lnA = 0, lnB = 0;
+
+    for (const row of paired) {
+        if (row.type === 'sep') {
+            html += `<tr class="sep"><td colspan="4">⋯ 折疊相同內容 ⋯</td></tr>`;
+            continue;
+        }
+
+        if (row.type === 'eq') {
+            lnA++; lnB++;
+            const code = escHtml(row.a);
+            html += `<tr class="eq">
+                <td class="ln ln-left">${lnA}</td>
+                <td class="lc lc-left">${code}</td>
+                <td class="ln ln-right">${lnB}</td>
+                <td class="lc lc-right">${code}</td>
+            </tr>`;
+        } else if (row.type === 'pair') {
+            lnA++; lnB++;
+            const {htmlA, htmlB} = inlineCharDiff(row.a, row.b);
+            html += `<tr class="del">
+                <td class="ln ln-left">${lnA}</td>
+                <td class="lc lc-left">${htmlA}</td>
+                <td class="ln ln-right">${lnB}</td>
+                <td class="lc lc-right add">${htmlB}</td>
+            </tr>`;
+        } else if (row.type === 'del') {
+            lnA++;
+            html += `<tr class="del">
+                <td class="ln ln-left">${lnA}</td>
+                <td class="lc lc-left">${escHtml(row.a)}</td>
+                <td class="ln ln-right"></td>
+                <td class="lc lc-right" style="background:var(--bg2)"></td>
+            </tr>`;
+        } else if (row.type === 'add') {
+            lnB++;
+            html += `<tr class="add">
+                <td class="ln ln-left"></td>
+                <td class="lc lc-left" style="background:var(--bg2)"></td>
+                <td class="ln ln-right">${lnB}</td>
+                <td class="lc lc-right">${escHtml(row.b)}</td>
+            </tr>`;
+        }
+    }
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    container.scrollTop = 0;
+}
+
+/* Pair consecutive del+add rows into 'pair' rows for inline diff */
+function pairDelAdd(rows) {
+    const out = [];
+    let i = 0;
+    while (i < rows.length) {
+        if (rows[i].type === 'del') {
+            const delBlock = [];
+            while (i < rows.length && rows[i].type === 'del') { delBlock.push(rows[i++]); }
+            const addBlock = [];
+            while (i < rows.length && rows[i].type === 'add') { addBlock.push(rows[i++]); }
+            const minLen = Math.min(delBlock.length, addBlock.length);
+            for (let j = 0; j < minLen; j++) {
+                out.push({type: 'pair', a: delBlock[j].a, b: addBlock[j].b});
+            }
+            for (let j = minLen; j < delBlock.length; j++) out.push(delBlock[j]);
+            for (let j = minLen; j < addBlock.length; j++) out.push(addBlock[j]);
+        } else {
+            out.push(rows[i++]);
+        }
+    }
+    return out;
+}
+
+/* Inline character-level diff between two strings */
+function inlineCharDiff(lineA, lineB) {
+    const diffs = Diff.diffWords(lineA, lineB);
+    let htmlA = '', htmlB = '';
+    for (const d of diffs) {
+        const txt = escHtml(d.value);
+        if (!d.added && !d.removed) {
+            htmlA += txt; htmlB += txt;
+        } else if (d.removed) {
+            htmlA += `<span class="del-word">${txt}</span>`;
+        } else {
+            htmlB += `<span class="add-word">${txt}</span>`;
+        }
+    }
+    return {htmlA, htmlB};
+}
+
+function escHtml(str) {
+    return (str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/ /g, '&nbsp;')
+        .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Bootstrap
+─────────────────────────────────────────────────────────────────────────── */
+pollStatus();
+pollLogs();
+</script>
+</body>
+</html>

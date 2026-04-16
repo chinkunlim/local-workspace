@@ -1,72 +1,89 @@
----
-skills:
-  - name: voice-memo
-    description: Five-phase academic voice-memo processing pipeline. Converts raw lecture recordings (.m4a) into polished Notion-ready study notes via transcription, proofreading, merging, highlighting, and synthesis.
-  - name: pdf-knowledge
-    description: Local-first academic PDF knowledge extraction and synthesis system. Ingests PDFs (psychology, IT, curriculum design) and outputs editable, version-controlled, citation-verified Markdown knowledge base.
----
+# Open Claw Skills
 
-# OpenClaw Skills Registry
+> Skills are modular, self-contained AI processing pipelines that share the `core/` framework.
 
-Two active skills are available. Read the intent and dispatch accordingly.
+## Available Skills
 
----
+| Skill | 輸入 | 輸出 | 狀態 |
+|:---|:---|:---|:---:|
+| [voice-memo](voice-memo/SKILL.md) | `.m4a` 語音錄音 | Notion-ready `.md` 知識文件 | ✅ Production |
+| [pdf-knowledge](pdf-knowledge/SKILL.md) | `.pdf` 學術/技術文件 | 結構化 Markdown 知識庫 | ✅ Production |
 
-## 🎙️ Skill 1 — Voice Memo Pipeline
+## Skill 通用結構
 
-> Full details: `skills/voice-memo/SKILL.md`
+每個 skill 遵循以下標準目錄結構：
 
-**Trigger phrases**: 語音轉錄, 校對逐字稿, 合併段落, 標記重點, 生成 Notion 筆記, "transcribe audio", "run pipeline", "proofread", "synthesize notes"
-
-### Quick Dispatch Table
-
-| User Intent | Command |
-| :--- | :--- |
-| *「設定模型」* / *"Configure models"* | `python3 skills/voice-memo/scripts/setup_wizard.py` |
-| *「完整跑一次」* / *"Run the full pipeline"* | `python3 skills/voice-memo/scripts/run_all.py` |
-| *「單獨跑某科目」* / *"Only process [subject]"* | `python3 skills/voice-memo/scripts/run_all.py --subject <科目>` |
-| *「互動模式」* / *"Run with review pauses"* | `python3 skills/voice-memo/scripts/run_all.py --interactive` |
-| *「從第N步繼續」* / *"Resume from Phase N"* | `python3 skills/voice-memo/scripts/run_all.py --from N` |
-| *「全部重跑」* / *"Force reprocess"* | `python3 skills/voice-memo/scripts/run_all.py --force` |
-| *「轉錄相音」* / *"Transcribe"* | `python3 skills/voice-memo/scripts/transcribe_tool.py` |
-| *「校對逐字稿」* / *"Proofread"* | `python3 skills/voice-memo/scripts/proofread_tool.py` |
-| *「合併段落」* / *"Merge"* | `python3 skills/voice-memo/scripts/merge_tool.py` |
-| *「標記重點」* / *"Highlight"* | `python3 skills/voice-memo/scripts/highlight_tool.py` |
-| *「生成 Notion 筆記」* / *"Synthesize"* | `python3 skills/voice-memo/scripts/notion_synthesis.py` |
-
-**All commands must be run from workspace root**:
 ```
-cd /Users/limchinkun/Desktop/local-workspace/open-claw-workspace
+skills/<skill-name>/
+├── SKILL.md              # Quick-start 指南（必要）
+├── config/
+│   └── config.yaml       # 路徑、模型、閾值（必要）
+├── docs/
+│   ├── ARCHITECTURE.md   # 技術架構文件
+│   ├── DECISIONS.md      # 技術決策日誌
+│   └── CLAUDE.md         # AI 協作上下文
+└── scripts/
+    ├── run_all.py         # 入口點 Orchestrator
+    └── phases/
+        └── p<nn>_<name>.py  # Phase 腳本（p01_, p02_ 格式）
 ```
 
----
+## 建立新 Skill 的步驟
 
-## 📚 Skill 2 — PDF Knowledge Extraction
+### 1. 建立目錄
 
-> Full details: `skills/pdf-knowledge/SKILL.md`
+```bash
+mkdir -p skills/my-skill/{config,docs,scripts/phases}
+```
 
-**Trigger phrases**: PDF, 知識提取, 論文, 學術文件, 診斷 PDF, 處理 PDF, "extract PDF", "run PDF pipeline", "OCR", "知識庫", "figure list", "Docling"
+### 2. 設定 `config/config.yaml`
 
-### Quick Dispatch Table
+```yaml
+paths:
+  input:  "input/my_inbox"
+  output: "output"
+  state:  "state"
+  logs:   "logs"
+  phases:
+    phase1: "output/01_result"
+    phase2: "output/02_final"
 
-| User Intent | Command |
-| :--- | :--- |
-| *「開啟 PDF 儀表板」* / *"Open dashboard"* | `python3 skills/pdf-knowledge/scripts/main_app.py` → `http://127.0.0.1:5001` |
-| *「處理所有 PDF」* / *"Process all PDFs"* | `python3 skills/pdf-knowledge/scripts/queue_manager.py --process-all` |
-| *「診斷這個 PDF」* / *"Diagnose PDF"* | `python3 skills/pdf-knowledge/scripts/pdf_diagnostic.py <路徑>` |
-| *「提取 PDF 內容」* / *"Extract PDF"* | `python3 skills/pdf-knowledge/scripts/pdf_engine.py <路徑>` |
-| *「補充向量圖表」* / *"Extract vector charts"* | `python3 skills/pdf-knowledge/scripts/vector_chart_extractor.py <路徑> --from-report` |
-| *「評估 OCR 品質」* / *"Assess OCR quality"* | `python3 skills/pdf-knowledge/scripts/ocr_quality_gate.py <路徑>` |
-| *「有哪些未完成的 PDF」* | `curl http://127.0.0.1:5001/resume` |
-| *「監控 Inbox」* / *"Watch inbox"* | `python3 skills/pdf-knowledge/scripts/inbox_watcher.py` |
+runtime:
+  ollama:
+    api_url: "http://localhost:11434/api/generate"
+    timeout_seconds: 600
+```
 
-**Inbox directory**: `data/pdf-knowledge/01_Inbox/` — 將 PDF 放入此資料夾觸發處理
+### 3. 建立 Phase 腳本
 
----
+```python
+# scripts/phases/p01_process.py
+from core.bootstrap import ensure_core_path
+ensure_core_path(__file__)
 
-## Dispatcher Notes
+from core import PipelineBase
 
-- **Ambiguous intent**: If the user mentions both voice and PDF, ask for clarification.
-- **Skill independence**: Both skills share the same `core/` framework but have completely separate data directories (`data/voice-memo/` vs `data/pdf-knowledge/`).
-- **Security**: PDF skill's Playwright operations are bounded by `skills/pdf-knowledge/config/security_policy.yaml`. Never modify this file.
-- **Core framework**: Located at `core/` in workspace root. Shared by both skills.
+class Phase1Process(PipelineBase):
+    def __init__(self):
+        super().__init__(
+            phase_key="p1",
+            phase_name="我的處理",
+            skill_name="my-skill"
+        )
+        # self.dirs["phase1"] 自動從 config.yaml 解析
+```
+
+### 4. 建立 `run_all.py`
+
+繼承 `PipelineBase`，在 `startup_check()` 後呼叫 `self.state_manager.sync_physical_files()` 初始化進度追蹤。
+
+### 5. 更新 `inbox_daemon.py`
+
+在 `core/inbox_daemon.py` 的 skill 設定中加入新 skill 的 Inbox 監聽路徑。
+
+## 全域規範
+
+- 所有 Phase 腳本第一行：`from core.bootstrap import ensure_core_path; ensure_core_path(__file__)`
+- 所有路徑透過 `self.dirs[key]` 存取，不得 hardcode
+- 輸出必須使用 `core.AtomicWriter` 寫入，避免寫入中斷留下破損檔案
+- 每個 Phase 完成後呼叫 `self.state_manager.update_task(subject, filename, phase_key, "✅")`

@@ -5,32 +5,25 @@ V7.0 OOP Architecture — with Checkpoint Resume, Sorted Tasks, Batch Reprocess 
 """
 import os
 import sys
-
-# --- Boundary-Safe Initialization ---
-# scripts/run_all.py → scripts → skills/voice-memo → open-claw-workspace → local-workspace
-_script_dir = os.path.dirname(os.path.abspath(__file__))
-_skill_root = os.path.dirname(os.path.dirname(_script_dir))  # skills/voice-memo
-_openclawed_root = os.path.dirname(_skill_root)  # open-claw-workspace
-_core_dir = os.path.abspath(os.path.join(_openclawed_root, "core"))
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
 _workspace_root = os.environ.get(
     "WORKSPACE_DIR",
-    os.path.dirname(_openclawed_root)  # local-workspace
+    os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../.."))
 )
 
-# Enforce sandbox boundary: only core and this skill
-sys.path = [_core_dir, _script_dir]
-
 workspace_root = _workspace_root
-base_dir = os.path.join(_openclawed_root, "data", "voice-memo")
+base_dir = os.path.join(_workspace_root, "open-claw-workspace", "data", "voice-memo")
+
 
 # --- Import Core and Phases ---
 from core import StateManager
-from phases.phase0_glossary import Phase0Glossary
-from phases.phase1_transcribe import Phase1Transcribe
-from phases.phase2_proofread import Phase2Proofread
-from phases.phase3_merge import Phase3Merge
-from phases.phase4_highlight import Phase4Highlight
-from phases.phase5_synthesis import Phase5NotionSynthesis
+from phases.p00_glossary import Phase0Glossary
+from phases.p01_transcribe import Phase1Transcribe
+from phases.p02_proofread import Phase2Proofread
+from phases.p03_merge import Phase3Merge
+from phases.p04_highlight import Phase4Highlight
+from phases.p05_synthesis import Phase5NotionSynthesis
 from core import ConfigManager, build_skill_parser
 
 _runtime_config = ConfigManager(_openclawed_root, "voice-memo")

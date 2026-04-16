@@ -61,7 +61,7 @@ class PipelineBase:
         self.path_builder.ensure_directories()
         os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
 
-        self.state_manager = StateManager(self.base_dir)
+        self.state_manager = StateManager(self.base_dir, skill_name=skill_name)
         runtime_cfg = self.config_manager.get_section("runtime", {})
         ollama_cfg = runtime_cfg.get("ollama", {}) if isinstance(runtime_cfg, dict) else {}
         self.llm = OllamaClient(

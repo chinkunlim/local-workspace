@@ -16,7 +16,7 @@ class OllamaClient:
         self.retries = retries
         self.backoff_seconds = backoff_seconds
 
-    def generate(self, model: str, prompt: str, options: Optional[Dict[str, Any]] = None, logger=None) -> str:
+    def generate(self, model: str, prompt: str, options: Optional[Dict[str, Any]] = None, images: Optional[list] = None, logger=None) -> str:
         """Call Ollama generation endpoint with error retries."""
         payload = {
             "model": model,
@@ -25,6 +25,8 @@ class OllamaClient:
         }
         if options:
             payload["options"] = options
+        if images:
+            payload["images"] = images
             
         for attempt in range(self.retries):
             try:

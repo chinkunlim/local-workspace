@@ -9,10 +9,21 @@ from typing import Dict, Any, List, Optional
 from .atomic_writer import AtomicWriter
 
 class StateManager:
-    PHASES = ["p1", "p2", "p3", "p4", "p5"]
+    # Default phases for voice-memo
+    PHASES_VOICE = ["p1", "p2", "p3", "p4", "p5"]
+    # Phase set for pdf-knowledge
+    PHASES_PDF   = ["p1a", "p1b", "p1c", "p1d", "p2a", "p2b"]
+    # Phase labels for checklist rendering
+    PHASE_LABELS_VOICE = {"p1": "P1 (轉錄)", "p2": "P2 (校對)", "p3": "P3 (合併)",
+                          "p4": "P4 (標記)", "p5": "P5 (Notion)" }
+    PHASE_LABELS_PDF   = {"p1a": "P1a (診斷)", "p1b": "P1b (提取)", "p1c": "P1c (向量圖)",
+                          "p1d": "P1d (OCR)",  "p2a": "P2a (VLM)",  "p2b": "P2b (合成)" }
 
-    def __init__(self, base_dir: str):
-        self.base_dir = base_dir
+    def __init__(self, base_dir: str, skill_name: str = "voice-memo"):
+        self.base_dir   = base_dir
+        self.skill_name = skill_name
+        self.PHASES     = self.PHASES_PDF if skill_name == "pdf-knowledge" else self.PHASES_VOICE
+        self._phase_labels = self.PHASE_LABELS_PDF if skill_name == "pdf-knowledge" else self.PHASE_LABELS_VOICE
         canonical_state_dir = os.path.join(base_dir, "state")
         legacy_state_file = os.path.join(base_dir, ".pipeline_state.json")
         legacy_checklist_file = os.path.join(base_dir, "checklist.md")
@@ -232,26 +243,35 @@ class StateManager:
             self._save_state()
 
     def _render_checklist(self):
-        """Render read-only checklist.md"""
+        """Render read-only checklist.md — supports any skill's phase set."""
+        phase_keys   = self.PHASES
+        phase_labels = self._phase_labels
+
+        header_cols = " | ".join(phase_labels.get(p, p.upper()) for p in phase_keys)
+        sep_cols    = " | ".join(":---:" for _ in phase_keys)
+
         with open(self.checklist_file, "w", encoding="utf-8") as f:
-            f.write("# 學習進度 (總表)\n\n")
+            skill_display = {"voice-memo": "學習進度", "pdf-knowledge": "知識庫處理進度"}.get(self.skill_name, "進度")
+            f.write(f"# {skill_display} (總表)\n\n")
             f.write("> 🚨 本檔案由系統 `.pipeline_state.json` 自動映射生成，請勿手動修改。\n")
-            f.write("> 更改 P1 到 P4 目錄下的 `.md` 檔案將會被系統偵測並觸發自動重新運算 (DAG Cascade)。\n\n")
+            f.write("> 更改輸出目錄下的 `.md` 檔案將被系統偵測並觸發自動重新運算 (DAG Cascade)。\n\n")
+
             for subj in sorted(self.state.keys()):
                 f.write(f"## {subj}\n\n")
-                f.write("| 檔案名稱 | P1 (轉錄) | P2 (校對) | P3 (合併) | P4 (標記) | P5 (Notion) | 狀態備註 |\n")
-                f.write("| :--- | :---: | :---: | :---: | :---: | :---: | :--- |\n")
+                f.write(f"| 檔案/ID | {header_cols} | 狀態備註 |\n")
+                f.write(f"| :--- | {sep_cols} | :--- |\n")
+
                 for fname in sorted(self.state[subj].keys()):
-                    v = self.state[subj][fname]
-                    
+                    v     = self.state[subj][fname]
+                    cells = " | ".join(v.get(p, "⏳") for p in phase_keys)
+
                     parts = []
                     if "note" in v and v["note"] and v["note"] != "更新/新增":
                         parts.append(v["note"])
-                    
                     cc = v.get("char_count", {})
                     if cc:
                         parts.append(f"chars:{json.dumps(cc, separators=(',', ':'))}")
-                        
-                    note_str = " | ".join(parts) if parts else v.get("note", "更新/新增")
-                    f.write(f"| {fname} | {v.get('p1','⏳')} | {v.get('p2','⏳')} | {v.get('p3','⏳')} | {v.get('p4','⏳')} | {v.get('p5','⏳')} | {note_str} |\n")
+                    note_str = " | ".join(parts) if parts else (v.get("note") or "—")
+
+                    f.write(f"| {fname} | {cells} | {note_str} |\n")
                 f.write("\n")

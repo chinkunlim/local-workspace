@@ -6,25 +6,28 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# Paths
-# Canonical Structure: input/ | output/ | state/ | logs/
-# All paths relative to: ${WORKSPACE_DIR}/open-claw-workspace/data/pdf-knowledge/
+# Paths (Relative to data/pdf-knowledge/ — managed by core.PathBuilder)
+# All values here are relative to the skill's base_dir.
+# Canonical keys (input, output, state, logs) are required by PipelineBase.
+# Keys under `phases` become self.dirs[key] in every Phase script.
 # ------------------------------------------------------------------------------
 paths:
-  # PDF 入匣（監控資料夾）— canonical: input/01_Inbox
-  inbox: "${WORKSPACE_DIR}/open-claw-workspace/data/pdf-knowledge/input/01_Inbox"
-  # 提取結果（IMMUTABLE — raw_extracted.md）— canonical: output/02_Processed
-  processed: "${WORKSPACE_DIR}/open-claw-workspace/data/pdf-knowledge/output/02_Processed"
-  # Agent Core（trace, resume_state, voyager export, verification）— canonical: output/03_Agent_Core
-  agent_core: "${WORKSPACE_DIR}/open-claw-workspace/data/pdf-knowledge/output/03_Agent_Core"
-  # 最終知識庫（git repo + content.md + figure_list.md）— canonical: output/05_Final_Knowledge
-  final: "${WORKSPACE_DIR}/open-claw-workspace/data/pdf-knowledge/output/05_Final_Knowledge"
-  # PDF 處理失敗隔離 — canonical: output/Error
-  error: "${WORKSPACE_DIR}/open-claw-workspace/data/pdf-knowledge/output/Error"
-  # ChromaDB 向量資料庫 — canonical: output/vector_db
-  vector_db: "${WORKSPACE_DIR}/open-claw-workspace/data/pdf-knowledge/output/vector_db"
-  # 向量資料庫文件庫 — canonical: output/library
-  library: "${WORKSPACE_DIR}/open-claw-workspace/data/pdf-knowledge/output/library"
+  # Canonical directory layout
+  input:  "input/01_Inbox"
+  output: "output"
+  state:  "state"
+  logs:   "logs"
+
+  # Phase-specific directories (self.dirs[key] in Phase scripts)
+  phases:
+    inbox:      "input/01_Inbox"          # 01 — PDF 入匣
+    processed:  "output/02_Processed"     # 02 — Docling 提取結果 (IMMUTABLE)
+    agent_core: "output/03_Agent_Core"    # 03 — Agent trace / resume state
+    final:      "output/05_Final_Knowledge" # 05 — 最終知識庫
+    error:      "output/Error"            # 錯誤隔離區
+    vector_db:  "output/vector_db"        # ChromaDB 向量資料庫
+    library:    "output/library"          # 知識庫文件彙整
+
 
 # ------------------------------------------------------------------------------
 # PDF Processing
@@ -78,9 +81,12 @@ playwright:
 # LLM Models
 # ------------------------------------------------------------------------------
 models:
+  # VLM 多模態視覺圖表解析（處理 [P] 與 [V]）
+  vlm: "llama3.2-vision"
+  # Phase 2+ 知識濃縮合成（降載長文本）
+  synthesis: "qwen2.5:14b"
   # Triage + 輔助處理（本機輕量模型）
   triage: "gemma4:e2b"
-  # Gemini Gems（透過 Playwright 存取）
   gems:
     psychology: "psychology_expert"
     it: "it_expert"

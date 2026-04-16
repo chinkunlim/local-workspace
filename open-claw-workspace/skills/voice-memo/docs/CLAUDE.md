@@ -1,44 +1,58 @@
-# Voice Memo Operational Spec
+# CLAUDE.md — Voice Memo Skill
 
-Version: V7.3
-Last Updated: 2026-04-15
+> AI collaboration context for the `voice-memo` skill.
+> Read this before making any code changes to this skill.
 
-## 1. Objective
-Produce high-fidelity, reviewable academic notes from long-form audio with deterministic phase boundaries and strict output integrity.
+## Skill Summary
 
-## 2. Runtime Contract
-- Executor: local Python
-- LLM endpoint: runtime.ollama.api_url from config
-- Config source: skills/voice-memo/config/config.yaml
-- Prompt source: skills/voice-memo/config/prompt.md (or configured prompt path)
+The voice-memo skill converts `.m4a` lecture recordings into Notion-ready structured knowledge documents through a 5-phase AI pipeline. It is the original and most mature skill in Open Claw.
 
-## 3. Phase Contract
-1. P0: optional glossary drafting
-2. P1: transcript generation
-3. P2: transcript correction with context constraints
-4. P3: segment merge and speaker formatting
-5. P4: emphasis pass with anti-content-loss guard
-6. P5: synthesis into study artifacts
+## Current State (2026-04-16)
 
-## 4. Must-Not Rules
-1. No silent fallback for missing required config.
-2. No skipping checkpoint writes on pause/interrupt paths.
-3. No direct hardcoded model values in code.
-4. No mutation of previous phase outputs without explicit log trace.
+- **Status**: Production — all 5 phases working end-to-end
+- **Model in use**: `gemma3:12b` (Ollama) for P0, P2, P3, P4, P5; MLX Whisper Large v3 for P1
+- **Active subjects**: 助人歷程, 消費者心理學, 物理實驗, 環境與化學, 生理心理學, 社會心理學
+- **Architecture version**: V7.1 (config-driven paths, `core/` bootstrap, OOP phases)
 
-## 5. Operator Interface
-Primary CLI entry:
-- skills/voice-memo/scripts/run_all.py
+## Key Invariants
 
-Key flags:
-- --from
-- --force
-- --resume
-- --interactive
-- --subject
+1. **Subject-based hierarchy**: `input/raw_data/<subject>/` and all output directories follow `<phase_dir>/<subject>/`.
+2. **Phase sequential dependency**: P2 requires P1 ✅; P3 requires P2 ✅; etc. `StateManager` enforces this.
+3. **Audio is never modified** — only read for transcription. All outputs are Markdown files.
+4. **`checklist.md` is system-generated** — do not manually edit.
 
-## 6. Verification Checklist
-1. Preflight succeeds.
-2. Phase logs emitted.
-3. State file updated atomically.
-4. Resume logic deterministic after interruption.
+## Architecture
+
+```
+Phase 0 (Glossary) → Phase 1 (Whisper) → Phase 2 (Proofread) → Phase 3 (Merge) → Phase 4 (Highlight) → Phase 5 (Synthesis)
+```
+
+Each phase is a class inheriting `core.PipelineBase`. Paths come from `config.yaml → PathBuilder → self.dirs[key]`.
+
+## File Locations
+
+| Item | Path |
+|:---|:---|
+| Config | `skills/voice-memo/config/config.yaml` |
+| LLM prompts | `skills/voice-memo/config/prompt.md` |
+| Orchestrator | `skills/voice-memo/scripts/run_all.py` |
+| Phase scripts | `skills/voice-memo/scripts/phases/p0N_*.py` |
+| CLI helpers | `skills/voice-memo/scripts/utils/subject_manager.py` |
+| Architecture doc | `skills/voice-memo/docs/ARCHITECTURE.md` |
+
+## Common Agent Tasks
+
+**Switching models**: Edit `config.yaml` → `phaseN.active_profile` or run `python3 core/cli_config_wizard.py --skill voice-memo`
+
+**Adding a new subject**: Drop audio files into `data/voice-memo/input/raw_data/<subject>/`, then run `python3 skills/voice-memo/scripts/run_all.py --subject <subject>`.
+
+**Debugging a stuck phase**: Check `data/voice-memo/state/.pipeline_state.json` and `data/voice-memo/logs/system.log`.
+
+**Resetting a phase**: Delete the output file and re-run. `StateManager` detects the missing file and resets the task status.
+
+## What NOT to Change Without Reading DECISIONS.md
+
+- P2 chunking strategy (chunk_size and overlap are carefully tuned for 16GB RAM)
+- The MLX Whisper model selection — MPS backend requires specific model format
+- The Verbatim Shield logic in P2 — prevents LLM hallucination of new content
+- Hardware thresholds in `config.yaml` — calibrated for Apple Silicon 16GB

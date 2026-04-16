@@ -2,6 +2,28 @@
 # config.yaml — OpenClaw Voice Memo Skill Configuration
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Paths (Relative to data/voice-memo/ — managed by core.PathBuilder)
+# All values here are relative to the skill's base_dir.
+# Canonical keys (input, output, state, logs) are required by PipelineBase.
+# Keys under `phases` become self.dirs[key] in every Phase script.
+# ------------------------------------------------------------------------------
+paths:
+  # Canonical directory layout
+  input:  "input/raw_data"
+  output: "output"
+  state:  "state"
+  logs:   "logs"
+
+  # Phase-specific directories (self.dirs[key] in Phase scripts)
+  phases:
+    p0: "input/raw_data"               # 00 — 原始音檔
+    p1: "output/01_transcript"         # 01 — Whisper 轉錄稿
+    p2: "output/02_proofread"          # 02 — AI 校對稿
+    p3: "output/03_merged"             # 03 — 跨段合併精煉
+    p4: "output/04_highlighted"        # 04 — 重點標記
+    p5: "output/05_notion_synthesis"   # 05 — Notion 知識合成
+
 phase0:
   active_profile: priority_gemma
   profiles:

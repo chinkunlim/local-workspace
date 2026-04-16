@@ -1,17 +1,127 @@
 # -*- coding: utf-8 -*-
-"""Canonical path construction for OpenClaw skills."""
+"""
+core/path_builder.py — Config-Driven Canonical Path Construction
+================================================================
+Resolves all directory paths for a skill from its config.yaml `paths:` section.
+
+Schema (all values relative to data/<skill_name>/):
+    paths:
+      input:  "input/..."        # canonical input root
+      output: "output"           # canonical output root
+      state:  "state"            # pipeline state JSON + checklist.md
+      logs:   "logs"             # log files
+
+      phases:                    # becomes self.dirs[key] in Phase scripts
+        <key>: "relative/path"
+        ...
+
+Fallback:
+    If config.yaml is missing or has no `paths:` section, PathBuilder
+    falls back to the built-in defaults defined in _DEFAULTS so existing
+    skills without a `paths:` block continue to work.
+
+Zero `if skill_name ==` branches — any new skill only needs a
+`paths:` section in its config.yaml.
+"""
 
 from __future__ import annotations
 
 import os
-from typing import Dict
+from functools import cached_property
+from typing import Dict, Optional
+
+# ---------------------------------------------------------------------------
+# Built-in defaults (used when config.yaml is unavailable).
+# Structured identically to the YAML schema for consistency.
+# ---------------------------------------------------------------------------
+_DEFAULTS: Dict[str, Dict] = {
+    "voice-memo": {
+        "input":  "input/raw_data",
+        "output": "output",
+        "state":  "state",
+        "logs":   "logs",
+        "phases": {
+            "p0": "input/raw_data",
+            "p1": "output/01_transcript",
+            "p2": "output/02_proofread",
+            "p3": "output/03_merged",
+            "p4": "output/04_highlighted",
+            "p5": "output/05_notion_synthesis",
+        },
+    },
+    "pdf-knowledge": {
+        "input":  "input/01_Inbox",
+        "output": "output",
+        "state":  "state",
+        "logs":   "logs",
+        "phases": {
+            "inbox":      "input/01_Inbox",
+            "processed":  "output/02_Processed",
+            "agent_core": "output/03_Agent_Core",
+            "final":      "output/05_Final_Knowledge",
+            "error":      "output/Error",
+            "vector_db":  "output/vector_db",
+            "library":    "output/library",
+        },
+    },
+}
+
+# Generic fallback for unknown skills with no config
+_GENERIC_DEFAULT: Dict[str, str] = {
+    "input": "input", "output": "output",
+    "state": "state", "logs": "logs",
+}
 
 
 class PathBuilder:
+    """
+    Constructs absolute directory paths for an OpenClaw skill.
+
+    Construction is cheap — YAML is loaded lazily on first access via
+    `cached_property`. All derived paths are absolute strings.
+    """
+
     def __init__(self, workspace_root: str, skill_name: str):
         self.workspace_root = os.path.abspath(workspace_root)
         self.skill_name = skill_name
         self.base_dir = os.path.join(self.workspace_root, "data", skill_name)
+
+    # ------------------------------------------------------------------
+    # Config loading (lazy, cached)
+    # ------------------------------------------------------------------
+
+    @cached_property
+    def _raw_paths_cfg(self) -> Dict:
+        """
+        Load and return the `paths:` subtree from config.yaml, or fall
+        back to the built-in defaults for this skill.
+        """
+        cfg_file = self.config_file  # skills/<skill>/config/config.yaml
+        if os.path.exists(cfg_file):
+            try:
+                import yaml
+                with open(cfg_file, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f) or {}
+                paths_block = data.get("paths")
+                if isinstance(paths_block, dict):
+                    return paths_block
+            except Exception:
+                pass  # fall through to defaults
+
+        # Config missing or has no `paths:` — use built-in defaults
+        return _DEFAULTS.get(self.skill_name, _GENERIC_DEFAULT)
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _resolve(self, rel_path: str) -> str:
+        """Join rel_path with base_dir, returning an absolute path."""
+        return os.path.normpath(os.path.join(self.base_dir, rel_path))
+
+    # ------------------------------------------------------------------
+    # Static properties (no YAML needed)
+    # ------------------------------------------------------------------
 
     @property
     def config_dir(self) -> str:
@@ -25,63 +135,64 @@ class PathBuilder:
     def prompt_file(self) -> str:
         return os.path.join(self.config_dir, "prompt.md")
 
-    @property
-    def log_file(self) -> str:
-        return os.path.join(self.canonical_dirs["logs"], "system.log")
-
-    @property
-    def state_file(self) -> str:
-        return os.path.join(self.canonical_dirs["state"], ".pipeline_state.json")
-
-    @property
-    def checklist_file(self) -> str:
-        return os.path.join(self.canonical_dirs["state"], "checklist.md")
+    # ------------------------------------------------------------------
+    # Config-driven path properties
+    # ------------------------------------------------------------------
 
     @property
     def canonical_dirs(self) -> Dict[str, str]:
-        if self.skill_name == "voice-memo":
-            return {
-                "input": os.path.join(self.base_dir, "input", "raw_data"),
-                "output": os.path.join(self.base_dir, "output"),
-                "state": os.path.join(self.base_dir, "state"),
-                "logs": os.path.join(self.base_dir, "logs"),
-            }
-        if self.skill_name == "pdf-knowledge":
-            return {
-                "input": os.path.join(self.base_dir, "input", "01_Inbox"),
-                "output": os.path.join(self.base_dir, "output"),
-                "state": os.path.join(self.base_dir, "state"),
-                "logs": os.path.join(self.base_dir, "logs"),
-            }
+        """
+        Returns the four canonical directories expected by PipelineBase:
+        input, output, state, logs.
+        """
+        cfg = self._raw_paths_cfg
         return {
-            "input": self.base_dir,
-            "output": self.base_dir,
-            "state": self.base_dir,
-            "logs": self.base_dir,
+            key: self._resolve(cfg[key])
+            for key in ("input", "output", "state", "logs")
+            if key in cfg
         }
 
     @property
     def phase_dirs(self) -> Dict[str, str]:
-        if self.skill_name == "voice-memo":
-            return {
-                "p0": os.path.join(self.base_dir, "raw_data"),
-                "p1": os.path.join(self.base_dir, "01_transcript"),
-                "p2": os.path.join(self.base_dir, "02_proofread"),
-                "p3": os.path.join(self.base_dir, "03_merged"),
-                "p4": os.path.join(self.base_dir, "04_highlighted"),
-                "p5": os.path.join(self.base_dir, "05_notion_synthesis"),
-            }
-        if self.skill_name == "pdf-knowledge":
-            return {
-                "inbox": os.path.join(self.base_dir, "01_Inbox"),
-                "processed": os.path.join(self.base_dir, "02_Processed"),
-                "agent_core": os.path.join(self.base_dir, "03_Agent_Core"),
-                "final": os.path.join(self.base_dir, "05_Final_Knowledge"),
-                "error": os.path.join(self.base_dir, "Error"),
-            }
-        return {}
+        """
+        Returns the skill-specific phase directories from `paths.phases`.
+        These become `self.dirs[key]` in every Phase script.
+        """
+        phases_cfg = self._raw_paths_cfg.get("phases", {})
+        return {key: self._resolve(rel) for key, rel in phases_cfg.items()}
+
+    @property
+    def log_file(self) -> str:
+        return os.path.join(self.canonical_dirs.get("logs", self.base_dir), "system.log")
+
+    @property
+    def state_file(self) -> str:
+        return os.path.join(self.canonical_dirs.get("state", self.base_dir), ".pipeline_state.json")
+
+    @property
+    def checklist_file(self) -> str:
+        return os.path.join(self.canonical_dirs.get("state", self.base_dir), "checklist.md")
+
+    # ------------------------------------------------------------------
+    # Directory creation
+    # ------------------------------------------------------------------
 
     def ensure_directories(self) -> None:
-        canonical_values = list(self.canonical_dirs.values())
-        for path in [self.base_dir, *canonical_values, *self.phase_dirs.values()]:
+        """Create all canonical and phase directories if they don't exist."""
+        all_dirs = [
+            self.base_dir,
+            *self.canonical_dirs.values(),
+            *self.phase_dirs.values(),
+        ]
+        for path in all_dirs:
             os.makedirs(path, exist_ok=True)
+
+    # ------------------------------------------------------------------
+    # Debug / introspection
+    # ------------------------------------------------------------------
+
+    def __repr__(self) -> str:
+        return (
+            f"PathBuilder(skill={self.skill_name!r}, "
+            f"base_dir={self.base_dir!r})"
+        )

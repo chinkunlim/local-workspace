@@ -25,6 +25,10 @@ from .error_classifier import ErrorCategory, ClassifiedError, classify_exception
 from .log_manager import build_logger, log_exception
 from .cli import build_skill_parser
 from .data_layout import DataLayoutManager, DataLayoutPlan
+from .diff_engine import DiffEngine, AuditEngine
+from .inbox_daemon import SystemInboxDaemon
+from .cli_config_wizard import main as run_config_wizard
+from .bootstrap import ensure_core_path
 
 __all__ = [
     "PipelineBase",
@@ -46,4 +50,9 @@ __all__ = [
     "build_skill_parser",
     "DataLayoutManager",
     "DataLayoutPlan",
+    "DiffEngine",
+    "AuditEngine",
+    "SystemInboxDaemon",
+    "run_config_wizard",
+    "ensure_core_path",
 ]
