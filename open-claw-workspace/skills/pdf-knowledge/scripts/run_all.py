@@ -23,10 +23,11 @@ from typing import List, Optional, Dict
 from datetime import datetime
 from enum import Enum
 
-import os, sys
-from core.bootstrap import ensure_core_path as _bootstrap
-_bootstrap(__file__)
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
+import os
+import sys
+
+# Workspace Root Resolver
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from core.pipeline_base import PipelineBase
 from core.resume_manager import ResumeManager
@@ -192,8 +193,8 @@ class QueueManager(PipelineBase):
 
                 # Layer 1: Check if already processed
                 if self._is_already_processed(pdf_id, subject):
-                self.info(f"⏭️ [Queue] {filename} 已完成，跳過")
-                continue
+                    self.info(f"⏭️ [Queue] {filename} 已完成，跳過")
+                    continue
 
             # Layer 2: Check if already in queue
             if any(item["pdf_id"] == pdf_id for item in self._queue):

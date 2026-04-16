@@ -11,8 +11,9 @@ import sys
 import json
 import argparse
 
-from core.bootstrap import ensure_core_path as _bootstrap
-_bootstrap(__file__)
+# Workspace Root Resolver
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 _workspace_root = os.environ.get(
     "WORKSPACE_DIR",

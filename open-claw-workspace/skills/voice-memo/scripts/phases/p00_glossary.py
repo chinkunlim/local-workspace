@@ -6,8 +6,9 @@ Refactored to V7.0 OOP Architecture
 import sys, os
 
 import os, sys
-from core.bootstrap import ensure_core_path as _bootstrap
-_bootstrap(__file__)
+# Workspace Root Resolver
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
 _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
 
 import os

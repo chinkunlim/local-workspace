@@ -5,8 +5,9 @@ V7.0 OOP Architecture — with Checkpoint Resume, Sorted Tasks, Batch Reprocess 
 """
 import os
 import sys
-from core.bootstrap import ensure_core_path as _bootstrap
-_bootstrap(__file__)
+# Workspace Root Resolver
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 _workspace_root = os.environ.get(
     "WORKSPACE_DIR",
     os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../.."))
@@ -26,7 +27,7 @@ from phases.p04_highlight import Phase4Highlight
 from phases.p05_synthesis import Phase5NotionSynthesis
 from core import ConfigManager, build_skill_parser
 
-_runtime_config = ConfigManager(_openclawed_root, "voice-memo")
+_runtime_config = ConfigManager(_workspace_root, "voice-memo")
 
 def print_status_dashboard(state_mgr: StateManager):
     """Print the DAG / Cache status."""
@@ -131,7 +132,6 @@ def check_and_resume(sm: StateManager) -> dict:
         return cp
 
 def main():
-    preflight_check()
     parser = build_skill_parser(
         "V7.0 Voice Memo Pipeline 五階段處理",
         include_subject=True,
@@ -144,6 +144,8 @@ def main():
     parser.add_argument("--glossary-merge", action="store_true")
     parser.add_argument("--glossary-force", action="store_true")
     args = parser.parse_args()
+
+    preflight_check()
 
     sm = StateManager(base_dir)
     sm.sync_physical_files()

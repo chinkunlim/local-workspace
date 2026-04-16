@@ -24,8 +24,9 @@ import json
 from flask import Flask, jsonify, request, render_template
 
 # ── Bootstrap (single-line path fix — no hand-rolled sys.path blocks) ────────
-from core.bootstrap import ensure_core_path as _bootstrap
-_bootstrap(__file__)
+# Workspace Root Resolver
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from core.web_ui.execution_manager import ExecutionManager
 from core.path_builder import PathBuilder
