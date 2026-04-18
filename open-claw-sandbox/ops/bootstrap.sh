@@ -26,7 +26,7 @@ brew list tesseract-lang &>/dev/null || brew install tesseract-lang
 
 # 3. 安裝 Python 套件
 echo "🐍 正在安裝 Python 套件..."
-pip3 install -r ops/requirements.txt
+pip3 install -r "${WORKSPACE_DIR}/requirements.txt"
 
 # 4. 初始化 Playwright 瀏覽器 (如果 playwright 已安裝)
 if command -v playwright &> /dev/null; then

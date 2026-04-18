@@ -1,0 +1,70 @@
+# DECISIONS.md — Global Architectural Decision Records
+
+> **Scope:** `local-workspace/` monorepo root
+> **Last Updated:** 2026-04-19
+> **Format:** ADR (Architectural Decision Record)
+
+---
+
+## [2026-04-19] `open-claw-sandbox/` placed at monorepo root (not inside `apps/`)
+
+**Context:** §11.2 of CODING_GUIDELINES_FINAL recommends an `apps/` directory.
+
+**Decision:** Keep `open-claw-sandbox/` directly at root.
+
+**Rationale:**
+- Only one application exists — `apps/` adds structure without value
+- The sandbox has its own mature internal hierarchy (`core/`, `skills/`, `memory/`, `ops/`)
+- `WORKSPACE_DIR` env var is already wired to the sandbox path
+- Migration to `apps/open-claw-sandbox/` is straightforward if a second app is ever added
+
+**Consequence:** The `memory/ARCHITECTURE.md` file documents this exception so AI agents understand the deviation from the standard pattern.
+
+---
+
+## [2026-04-19] Global `ops/check.sh` added at monorepo root
+
+**Context:** §16.5 specifies `ops/check.sh` as the quality gate. The sandbox has its own check script, but there was no root-level script to scan the whole monorepo.
+
+**Decision:** Add `ops/check.sh` at the monorepo root that:
+1. Delegates to `open-claw-sandbox/ops/check.sh` for Python quality
+2. Adds `infra/pipelines/` to the scan scope
+3. Checks shell scripts via shellcheck if available
+
+---
+
+## [2026-04-19] `pipelines/` placed in `infra/` (not `apps/`)
+
+**Context:** Open WebUI Pipelines is technically a runnable service.
+
+**Decision:** Treat it as infrastructure, not an application.
+
+**Rationale:** It is a plugin runtime for the LLM proxy layer — it has no user-facing business logic unique to this project. All other infrastructure services (LiteLLM, Open WebUI) are also in `infra/`.
+
+---
+
+## [2026-04-18] Monorepo §11.2 structure applied to `local-workspace/`
+
+**Context:** Previously, `local-workspace/` had no standard monorepo structure.
+
+**Decision:** Apply §11.2 structure:
+- `infra/` for all infrastructure services
+- `.github/` for CI/CD
+- `tests/` for global test stubs
+- Root-level standard files (CHANGELOG, CONTRIBUTING, SECURITY, .editorconfig, .env.example, pyproject.toml)
+
+---
+
+## [2026-04-18] `open-claw-workspace/` renamed to `open-claw-sandbox/`
+
+**Context:** The original name `open-claw-workspace` was ambiguous — the entire monorepo (`local-workspace/`) is also a "workspace".
+
+**Decision:** Rename to `open-claw-sandbox/` to precisely describe its function: a fully isolated, self-contained sandbox for Open Claw operations.
+
+---
+
+## [2026-04-17] Lifecycle scripts (start.sh, stop.sh, watchdog.sh) moved to `infra/scripts/`
+
+**Context:** Scripts were scattered at the root of `local-workspace/`.
+
+**Decision:** Move to `infra/scripts/` — they are infrastructure operations (starting/stopping services), not application code.
