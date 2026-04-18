@@ -9,7 +9,7 @@
 ## Project Overview
 
 `open-claw-sandbox` is a production-grade local AI automation sandbox running on macOS with 16 GB RAM.
-It orchestrates two skills — **voice-memo** and **pdf-knowledge** — through a shared `core/` framework,
+It orchestrates two skills — **audio-transcriber** and **doc-parser** — through a shared `core/` framework,
 with a Central Dashboard (port 5001) and a background Inbox Daemon for automatic file processing.
 
 **Tech stack:**

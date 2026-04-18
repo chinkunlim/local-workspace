@@ -1094,7 +1094,7 @@ from core.diff_engine import DiffEngine
 | 適用範疇 | 命名法則 | 範例 |
 |:---|:---|:---|
 | **資料目錄** (`data/<skill>/`) | `lower_snake_case` | `input`, `01_processed`, `error` |
-| **Skill 目錄** (`skills/`) | `kebab-case` | `pdf-knowledge`, `voice-memo` |
+| **Skill 目錄** (`skills/`) | `kebab-case` | `doc-parser`, `audio-transcriber` |
 | **Core 模組檔案** | `snake_case` | `pipeline_base.py`, `log_manager.py` |
 | **Phase 腳本檔案** | `snake_case` + 相位前綴 | `p01a_engine.py`, `p02_highlight.py` |
 | **Python 類別** | `PascalCase` | `Phase1aPDFEngine`, `ResumeManager` |

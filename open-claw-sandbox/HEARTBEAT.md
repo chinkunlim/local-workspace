@@ -6,13 +6,13 @@ Run this checklist at the start of any agent session to confirm workspace health
 Respond with `HEARTBEAT_OK` if all checks pass with no action required.
 
 ### 1. Log Health
-- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/voice-memo/logs/system.log`
-- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/pdf-knowledge/logs/system.log`
-- [ ] No unresolved `ERROR` entries in `data/pdf-knowledge/logs/dashboard.log`
+- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/audio-transcriber/logs/system.log`
+- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/doc-parser/logs/system.log`
+- [ ] No unresolved `ERROR` entries in `data/doc-parser/logs/dashboard.log`
 
 ### 2. Resume State
-- [ ] No stale interrupted states in `data/voice-memo/state/.pipeline_state.json`
-- [ ] No unexplained interrupted sessions in `data/pdf-knowledge/state/resume/*/resume_state.json`
+- [ ] No stale interrupted states in `data/audio-transcriber/state/.pipeline_state.json`
+- [ ] No unexplained interrupted sessions in `data/doc-parser/state/resume/*/resume_state.json`
 
 ### 3. Documentation Parity
 - [ ] All recent code changes have corresponding documentation updates
@@ -20,8 +20,8 @@ Respond with `HEARTBEAT_OK` if all checks pass with no action required.
 - [ ] No HANDOFF.md references a state that has since changed
 
 ### 4. Task Status
-- [ ] Review `skills/voice-memo/docs/TASKS.md` for blocking items
-- [ ] Review `skills/pdf-knowledge/docs/TASKS.md` for blocking items
+- [ ] Review `skills/audio-transcriber/docs/TASKS.md` for blocking items
+- [ ] Review `skills/doc-parser/docs/TASKS.md` for blocking items
 
 ### 5. Sandbox Boundary
 - [ ] No new code in skills references paths outside `open-claw-sandbox/`

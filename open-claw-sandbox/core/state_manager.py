@@ -9,9 +9,9 @@ from typing import Dict, Any, List, Optional
 from .atomic_writer import AtomicWriter
 
 class StateManager:
-    # Default phases for voice-memo
+    # Default phases for audio-transcriber
     PHASES_VOICE = ["p1", "p2", "p3", "p4", "p5"]
-    # Phase set for pdf-knowledge
+    # Phase set for doc-parser
     PHASES_PDF   = ["p1a", "p1b", "p1c", "p1d", "p2a", "p2b"]
     # Phase labels for checklist rendering
     PHASE_LABELS_VOICE = {"p1": "P1 (轉錄)", "p2": "P2 (校對)", "p3": "P3 (合併)",
@@ -19,12 +19,12 @@ class StateManager:
     PHASE_LABELS_PDF   = {"p1a": "P1a (診斷)", "p1b": "P1b (提取)", "p1c": "P1c (向量圖)",
                           "p1d": "P1d (OCR)",  "p2a": "P2a (VLM)",  "p2b": "P2b (合成)" }
 
-    def __init__(self, base_dir: str, skill_name: str = "voice-memo"):
+    def __init__(self, base_dir: str, skill_name: str = "audio-transcriber"):
         self.base_dir   = base_dir
         self.skill_name = skill_name
-        self.PHASES     = self.PHASES_PDF if skill_name == "pdf-knowledge" else self.PHASES_VOICE
-        self._phase_labels = self.PHASE_LABELS_PDF if skill_name == "pdf-knowledge" else self.PHASE_LABELS_VOICE
-        self.file_ext   = "*.pdf" if skill_name == "pdf-knowledge" else "*.m4a"
+        self.PHASES     = self.PHASES_PDF if skill_name == "doc-parser" else self.PHASES_VOICE
+        self._phase_labels = self.PHASE_LABELS_PDF if skill_name == "doc-parser" else self.PHASE_LABELS_VOICE
+        self.file_ext   = "*.pdf" if skill_name == "doc-parser" else "*.m4a"
         canonical_state_dir = os.path.join(base_dir, "state")
         legacy_state_file = os.path.join(base_dir, ".pipeline_state.json")
         legacy_checklist_file = os.path.join(base_dir, "checklist.md")
@@ -247,7 +247,7 @@ class StateManager:
         sep_cols    = " | ".join(":---:" for _ in phase_keys)
 
         with open(self.checklist_file, "w", encoding="utf-8") as f:
-            skill_display = {"voice-memo": "學習進度", "pdf-knowledge": "知識庫處理進度"}.get(self.skill_name, "進度")
+            skill_display = {"audio-transcriber": "學習進度", "doc-parser": "知識庫處理進度"}.get(self.skill_name, "進度")
             f.write(f"# {skill_display} (總表)\n\n")
             f.write("> 🚨 本檔案由系統 `.pipeline_state.json` 自動映射生成，請勿手動修改。\n")
             f.write("> 更改輸出目錄下的 `.md` 檔案將被系統偵測並觸發自動重新運算 (DAG Cascade)。\n\n")

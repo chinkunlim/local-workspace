@@ -5,8 +5,8 @@ core/diff_engine.py — Open Claw Universal Diff & Audit Engine
 Provides skill-agnostic text comparison and change-log aggregation.
 
 Replaces:
-    voice-memo/scripts/utils/diff_tool.py
-    voice-memo/scripts/utils/audit_tool.py
+    audio-transcriber/scripts/utils/diff_tool.py
+    audio-transcriber/scripts/utils/audit_tool.py
 
 Design:
     - Zero coupling to any skill.  Callers pass raw file paths.
@@ -138,7 +138,7 @@ class DiffEngine:
             label_b: Human-readable label for file_b.
             strip_log_marker: If provided, everything from this string onward
                               in file_b is stripped before comparison (useful
-                              for voice-memo audit-log footers).
+                              for audio-transcriber audit-log footers).
         """
         r = DiffResult(
             file_a=path_a, file_b=path_b,
@@ -216,7 +216,7 @@ class DiffEngine:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  AuditEngine  (generalised from voice-memo audit_tool)
+#  AuditEngine  (generalised from audio-transcriber audit_tool)
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Matches: * **"原文"** → **"修正後"** — 理由

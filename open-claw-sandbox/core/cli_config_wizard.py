@@ -77,7 +77,7 @@ def prompt_choice(phase_key, profiles, current_active):
 
 def main():
     parser = argparse.ArgumentParser(description="Open Claw CLI Config Wizard")
-    parser.add_argument("--skill", required=True, help="Target skill name (e.g. voice-memo, pdf-knowledge)")
+    parser.add_argument("--skill", required=True, help="Target skill name (e.g. audio-transcriber, doc-parser)")
     args = parser.parse_args()
     
     skill = args.skill

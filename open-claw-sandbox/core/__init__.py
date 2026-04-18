@@ -2,7 +2,7 @@
 """
 OpenClaw Shared Core Framework
 ================================
-Shared by all skills (voice-memo, pdf-knowledge, and future skills).
+Shared by all skills (audio-transcriber, doc-parser, and future skills).
 
 Usage:
     from core.pipeline_base import PipelineBase

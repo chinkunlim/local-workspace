@@ -34,4 +34,4 @@ if command -v playwright &> /dev/null; then
     playwright install chromium
 fi
 
-echo "✅ 環境配置完成！您現在可以正常啟動 Voice Memo 與 PDF Knowledge 技能了。"
+echo "✅ 環境配置完成！您現在可以正常啟動 Audio Transcriber 與 Doc Parser 技能了。"

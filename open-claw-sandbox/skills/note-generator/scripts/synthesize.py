@@ -143,11 +143,11 @@ class NoteGenerator(PipelineBase):
         if not model:
             raise RuntimeError("note-generator synthesize config missing model")
 
-        reduce_tpl = self.get_prompt("Synthesize: 筆記合成指令")
-        map_tpl = self.get_prompt("Synthesize Map: 分塊摘要提取指令")
+        reduce_tpl = self.get_prompt("Phase 5: 筆記合成指令")
+        map_tpl = self.get_prompt("Phase 5 Part A: 分塊摘要提取指令")
         
         if not reduce_tpl:
-            self.error("❌ 找不到 Synthesize: 筆記合成指令 prompt")
+            self.error("❌ 找不到 Phase 5: 筆記合成指令 prompt")
             return ""
         if not map_tpl:
             self.warning("⚠️ 找不到 Map prompt，使用 Reduce 替代")

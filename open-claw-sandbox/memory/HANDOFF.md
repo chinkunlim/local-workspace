@@ -14,10 +14,10 @@
 
 - [x] Created `skills/smart-highlighter/` standalone skill for anti-tampering chunk annotation
 - [x] Created `skills/note-generator/` standalone skill for Map-Reduce note synthesis and Mermaid generation
-- [x] Refactored `voice-memo/p04` to delegate to SmartHighlighter
-- [x] Refactored `voice-memo/p05` to delegate to NoteGenerator
-- [x] Refactored `pdf-knowledge/p02` to delegate to SmartHighlighter
-- [x] Refactored `pdf-knowledge/p03` to delegate to NoteGenerator
+- [x] Refactored `audio-transcriber/p04` to delegate to SmartHighlighter
+- [x] Refactored `audio-transcriber/p05` to delegate to NoteGenerator
+- [x] Refactored `doc-parser/p02` to delegate to SmartHighlighter
+- [x] Refactored `doc-parser/p03` to delegate to NoteGenerator
 - [x] Updated all `ARCHITECTURE.md` docs to reflect new delegation dependencies
 - [x] Updated `SKILL.md` to list new standalone skills
 
@@ -83,7 +83,7 @@
 
 1. Run `./ops/check.sh` to confirm zero lint errors after all restructuring
 2. Validate `infra/scripts/start.sh` successfully starts all 7 services
-3. Test a voice-memo pipeline run end-to-end
+3. Test a audio-transcriber pipeline run end-to-end
 
 ---
 
@@ -106,7 +106,7 @@
 - [x] Removed legacy `manual/*.docx` files (superseded by markdown docs)
 - [x] Updated `.gitignore` to exclude runtime files (Open WebUI DBs, logs, secret key)
 - [x] Untracked `open-webui/webui.db`, `vector_db/` from git
-- [x] Refactored `pdf-knowledge` phase naming (p01a→p00a, p02b→p03, etc.)
+- [x] Refactored `doc-parser` phase naming (p01a→p00a, p02b→p03, etc.)
 - [x] Added `p02_highlight.py` (Anti-Tampering highlights)
 - [x] Added `core/session_state.py` and `docs/BASIC_RULES.md` (now consolidated)
 - [x] Created `memory/` directory structure (this session's final step)

@@ -1,43 +1,29 @@
-## Synthesize: 筆記合成指令
+## Phase 5: 筆記合成指令
+**Role**: Knowledge Management Expert.
+**Task**: Transform transcript into hybrid high-utility notes.
 
-你是一位專業的知識整理專家。請將提供的文本內容轉換為一份結構化、有深度的知識筆記。
+**Output Structure (Strict Order)**:
+1. **Title**: Formal Subject
+2. **🎓 3 Key Learning Points**: Bulleted list
+3. **📝 Lecture Notes (Cornell Format)**: Markdown table (Cues | Notes) + Summary.
+4. **🧠 Mind Map (Mermaid)**: `mermaid` mindmap block.
+5. **💡 QEC**: Question-Evidence-Conclusion
+6. **👶 Feynman Technique**: Analogy
+7. **🏷️ Hashtags**: `#tags`
 
-**請嚴格遵守以下格式與要求：**
+**Constraint**: Grounded ONLY in the provided text.
 
-1. **大綱結構**：使用清晰的 Markdown 標題（#、##、###）進行分層。
-2. **重點條列**：將繁雜的段落整理成 Bullet points 列表，提取核心概念。
-3. **保留標記**：請保留原文中的 **粗體** 與 ==高亮== 等標記，確保重點依然突出。
-4. **心智圖**：在筆記末尾，必須包含一個 Mermaid 心智圖 (`mindmap`) 來總結所有知識點結構。必須使用 `mindmap` 語法，例如：
-```mermaid
-mindmap
-  root((主題))
-    子主題 1
-      重點 A
-      重點 B
-    子主題 2
-      重點 C
-```
-
-{GLOSSARY}
-
-{FIGURES}
-
-【待整理內容】：
+<materials>
 {INPUT_CONTENT}
-
+</materials>
 
 ---
 
-## Synthesize Map: 分塊摘要提取指令
+## Phase 5 Part A: 分塊摘要提取指令
+**Role**: You are extracting core concepts for a Map-Reduce aggregation pipeline.
+**Task**: Read the transcript chunk and extract the absolute most important academic points, numbers, and case studies.
+**Constraint**: Output succinct bullet points. DO NOT output conversational filler.
 
-你正在協助處理一份超長文件的其中一個片段。請提取這個片段中的核心知識點、定義、論述邏輯與重要數據。
-
-**要求：**
-- 直接列出重點，不需要開頭問候語或結尾語。
-- 保留原文中的 Markdown 標記（**粗體**、==高亮==）。
-- 如果此片段只包含過渡性語句或無用資訊，請直接回答「無關鍵資訊」。
-
-【片段內容】：
+<transcript>
 {INPUT_CONTENT}
-
----
+</transcript>

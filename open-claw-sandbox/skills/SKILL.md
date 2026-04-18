@@ -6,8 +6,8 @@
 
 | Skill | 輸入 | 輸出 | 狀態 |
 |:---|:---|:---|:---:|
-| [voice-memo](voice-memo/SKILL.md) | `.m4a` 語音錄音 | Notion-ready `.md` 知識文件 | ✅ Production |
-| [pdf-knowledge](pdf-knowledge/SKILL.md) | `.pdf` 學術/技術文件 | 結構化 Markdown 知識庫 | ✅ Production |
+| [audio-transcriber](audio-transcriber/SKILL.md) | `.m4a` 語音錄音 | Notion-ready `.md` 知識文件 | ✅ Production |
+| [doc-parser](doc-parser/SKILL.md) | `.pdf` 學術/技術文件 | 結構化 Markdown 知識庫 | ✅ Production |
 | [smart-highlighter](smart-highlighter/SKILL.md) | 純文字 Markdown | 重點標記 Markdown (Anti-Tampering) | ✅ Production (Standalone) |
 | [note-generator](note-generator/SKILL.md) | 純文字 Markdown | 結構化 YAML/Mermaid 學習筆記 | ✅ Production (Standalone) |
 

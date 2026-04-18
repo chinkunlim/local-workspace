@@ -1,0 +1,138 @@
+# ==============================================================================
+# config.yaml — OpenClaw Doc Parser Skill Configuration
+# ==============================================================================
+# 原則：零硬編碼。所有路徑、模型名、閾值全部讀自此檔案。
+# 修改此檔案不需要修改任何 Python 程式碼。
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Paths (Relative to data/doc-parser/ — managed by core.PathBuilder)
+# All values here are relative to the skill's base_dir.
+# Canonical keys (input, output, state, logs) are required by PipelineBase.
+# Keys under `phases` become self.dirs[key] in every Phase script.
+# ------------------------------------------------------------------------------
+paths:
+  # Canonical directory layout
+  input: "input"
+  output: "output"
+  state: "state"
+  logs: "logs"
+
+  # Phase-specific directories (self.dirs[key] in Phase scripts)
+  phases:
+    inbox:      "input"                    # 00 — PDF 入匣
+    processed:  "output/01_processed"      # 01 — Docling 提取結果 (raw_extracted.md, images)
+    highlighted: "output/02_highlighted"   # 02 — 重點標記後的文件 (highlighted.md)
+    synthesis:  "output/03_synthesis"      # 03 — 最終知識庫筆記
+    error:      "output/error"             # 錯誤隔離區
+
+# ------------------------------------------------------------------------------
+# PDF Processing
+# ------------------------------------------------------------------------------
+pdf_processing:
+  # Phase 1a — 輕量診斷
+  diagnostic:
+    min_text_chars_first_page: 50 # 低於此值判定為掃描件
+    max_ram_mb: 50 # 診斷應不超過 50MB（Docling 的 2%）
+
+  # Phase 1b — Docling 深度提取
+  docling:
+    max_ram_mb: 2560 # ~2.5GB
+    gc_collect_after: true # 提取完成後立即 gc.collect()
+    font_fallback_diff_threshold: 0.20 # 字型損壞 fallback 差異閾值（20%）
+
+  # Phase 1c — 向量圖表補充
+  vector_chart:
+    dpi: 300 # pdftoppm 光柵化 DPI (Increased for higher resolution chart extraction)
+    format: "jpeg"
+
+  # Phase 1d — OCR 品質評估
+  ocr:
+    dpi: 200 # pytesseract 光柵化 DPI（繁中最佳）
+    lang: "chi_tra+eng" # 繁體中文 + 英文混合
+    confidence_threshold: 0.80 # 低於此值觸發黃色警告
+
+  # Chunking
+  chunking:
+    max_chunk_chars: 8000 # 每個 chunk 最大字元數
+    overlap_chars: 500 # 前後 overlap（上下文提示）
+    split_priority:
+      - "h2_boundary" # 優先在 H2 邊界切割
+      - "paragraph_break" # 其次在段落空行
+      - "force_truncate" # 最後強制截斷
+
+  # Image Content Filter — 過濾 logo、圖示等非內容圖片
+  # 三重條件同時成立才保留圖片（任一不符則跳過）
+  image_filter:
+    min_area_px: 80000       # 最小面積 (px²)，例：283×283 或 200×400
+    min_short_edge_px: 80    # 最短邊最小長度 (px)，過濾橫線與細條
+    max_aspect_ratio: 8.0    # 最大長寬比，過濾橫幅、頁眉、頁腳
+
+# ------------------------------------------------------------------------------
+# Playwright (Browser Agent)
+# ------------------------------------------------------------------------------
+playwright:
+  # ⭐ 首次使用前必須填寫 Chrome Profile 路徑
+  # 查詢方式：在 Chrome 網址列輸入 chrome://version/，找到「個人資料路徑」
+  chrome_profile: "/Users/limchinkun/Library/Application Support/Google/Chrome/Default"
+  account_hint: "（請填入帳號備忘，例如：工作帳號）"
+
+  # Gemini 操作超時設定
+  thinking_timeout_seconds: 480 # 8 分鐘後截圖 + 人工介入提示
+  agent_loop_max_rounds: 10 # 每個 chunk 最大 round 數
+
+# ------------------------------------------------------------------------------
+# Phase 2: 重點標記 (Highlight Key Points)
+# ------------------------------------------------------------------------------
+phase2:
+  active_profile: default
+  profiles:
+    default:
+      model: gemma3:12b
+      options:
+        num_ctx: 16384
+        temperature: 0.1
+      chunk_size: 6000
+      verbatim_threshold: 0.50  # content-loss guard: LLM must retain ≥50% of source
+
+# ------------------------------------------------------------------------------
+# Phase 1d: VLM 視覺圖表解析 (Multi-Modal Vision)
+# ------------------------------------------------------------------------------
+phase1d:
+  active_profile: default
+  profiles:
+    default:
+      model: llama3.2-vision
+      options:
+        num_ctx: 16384
+        temperature: 0.1
+
+# ------------------------------------------------------------------------------
+# Phase 3: 知識濃縮合成 (Map-Reduce Synthesis)
+# ------------------------------------------------------------------------------
+phase3:
+  active_profile: gemma4e2b
+  profiles:
+    default:
+      model: qwen2.5:14b
+      options:
+        num_ctx: 32768
+        temperature: 0.3
+        num_predict: 8192
+    reasoning_deepseek:
+      model: deepseek-r1:14b
+      options:
+        num_ctx: 32768
+        temperature: 0.6
+        num_predict: 8192
+    gemma4e2b:
+      model: gemma4:e2b
+      options:
+        num_ctx: 32768
+        temperature: 0.3
+        num_predict: 8192
+
+# NOTE: hardware thresholds and runtime (ollama) settings are defined globally in:
+#   open-claw-sandbox/core/config/global.yaml
+# They are automatically merged by core/config_manager.py.
+# Override any value here only if this skill needs different thresholds.

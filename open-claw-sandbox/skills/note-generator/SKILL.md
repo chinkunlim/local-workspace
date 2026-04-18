@@ -52,8 +52,8 @@ to the LLM and asks it to correct the code (up to `mermaid_retry_max` times).
 
 | Caller | Phase | Input Source |
 |---|---|---|
-| `voice-memo` | P5 Synthesis | P4 Highlighted Markdown |
-| `pdf-knowledge` | P3 Synthesis | P2 Highlighted Markdown |
+| `audio-transcriber` | P5 Synthesis | P4 Highlighted Markdown |
+| `doc-parser` | P3 Synthesis | P2 Highlighted Markdown |
 
 ## Version
-- v1.0.0 — 2026-04-19: Extracted from voice-memo/p05 and pdf-knowledge/p03
+- v1.0.0 — 2026-04-19: Extracted from audio-transcriber/p05 and doc-parser/p03

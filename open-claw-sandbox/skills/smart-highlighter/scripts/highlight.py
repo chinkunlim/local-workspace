@@ -61,9 +61,9 @@ class SmartHighlighter(PipelineBase):
         if not model_name:
             raise RuntimeError("smart-highlighter highlight config missing model")
             
-        prompt_tpl = self.get_prompt("Highlight: 重點標記指令")
+        prompt_tpl = self.get_prompt("Phase 4: 重點標記指令")
         if not prompt_tpl:
-            self.error("❌ 找不到 prompt 指令，請確認 prompt.md 有「Highlight: 重點標記指令」段落")
+            self.error("❌ 找不到 prompt 指令，請確認 prompt.md 有「Phase 4: 重點標記指令」段落")
             return markdown_text  # Fallback to original
             
         chunks = smart_split(markdown_text, chunk_size)

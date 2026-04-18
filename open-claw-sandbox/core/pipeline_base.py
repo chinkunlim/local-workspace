@@ -11,15 +11,15 @@ PipelineBase — OpenClaw Shared Base Class (V2.3)
 - build_logger 以 DEBUG 層級寫入檔案，INFO 層級印至 console
 
 關鍵升級（V2.2）：
-- 新增 `skill_name` keyword 參數（預設 "voice-memo"，保持向後相容）
+- 新增 `skill_name` keyword 參數（預設 "audio-transcriber"，保持向後相容）
 - `base_dir` 動態對應 `data/{skill_name}/`
-- 所有現有 voice-memo phase 腳本無需修改即可繼續運行
+- 所有現有 audio-transcriber phase 腳本無需修改即可繼續運行
 
-用法（voice-memo，不需改動）:
-    super().__init__("p1", "Transcription")   # skill_name 預設 voice-memo
+用法（audio-transcriber，不需改動）:
+    super().__init__("p1", "Transcription")   # skill_name 預設 audio-transcriber
 
-用法（pdf-knowledge）:
-    super().__init__("phase1a", "PDF Diagnostic", skill_name="pdf-knowledge")
+用法（doc-parser）:
+    super().__init__("phase1a", "PDF Diagnostic", skill_name="doc-parser")
 """
 
 import os
@@ -45,7 +45,7 @@ class PipelineBase:
         self,
         phase_key: str,
         phase_name: str,
-        skill_name: str = "voice-memo",   # ← V2.2 新增，向後相容預設值
+        skill_name: str = "audio-transcriber",   # ← V2.2 新增，向後相容預設值
         logger=None,
     ):
         self.phase_key = phase_key
@@ -293,7 +293,7 @@ class PipelineBase:
         return self.config_manager.get_profile(phase_name.lower().replace(" ", ""), subject_name=subject_name)
 
     # ------------------------------------------------------------------ #
-    #  Task Management (voice-memo pattern; optional for other skills)     #
+    #  Task Management (audio-transcriber pattern; optional for other skills)     #
     # ------------------------------------------------------------------ #
 
     def get_tasks(
@@ -307,7 +307,7 @@ class PipelineBase:
     ) -> List[Dict]:
         """
         收集待處理任務清單。
-        voice-memo 使用，pdf-knowledge 可不使用（改用 queue_manager）。
+        audio-transcriber 使用，doc-parser 可不使用（改用 queue_manager）。
         """
         self.state_manager.sync_physical_files()
         self.state_manager.check_output_hashes(self.dirs)

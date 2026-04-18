@@ -19,7 +19,7 @@ synthesize:
   profiles:
     default:
       model: gemma3:12b
-      chunk_threshold: 6000
+      chunk_threshold: 5000
       map_chunk_size: 4000
       mermaid_retry_max: 2
       content_loss_threshold: 0.01
@@ -29,7 +29,7 @@ synthesize:
 
     reasoning:
       model: deepseek-r1:14b
-      chunk_threshold: 6000
+      chunk_threshold: 5000
       map_chunk_size: 4000
       mermaid_retry_max: 2
       content_loss_threshold: 0.01

@@ -48,20 +48,20 @@ Merge all three into `CODING_GUIDELINES_FINAL.md` v3.0.0. Delete the other two. 
 ## [2026-04-17] MLX-Whisper over Docker for transcription
 
 ### Background
-Earlier voice-memo used a Docker-based Whisper container. Docker adds startup latency and requires a daemon running.
+Earlier audio-transcriber used a Docker-based Whisper container. Docker adds startup latency and requires a daemon running.
 
 ### Decision
 Switch to MLX-Whisper (native Apple Silicon). Zero Docker dependency, lower latency, better integration with macOS power management.
 
 ### Consequence
-Removed all Docker references from voice-memo pipeline and docs.
+Removed all Docker references from audio-transcriber pipeline and docs.
 
 ---
 
 ## [2026-04-15] Shared `core/` framework over per-skill duplication
 
 ### Background
-Early voice-memo had inline logging, path resolution, and state management. Adding pdf-knowledge would duplicate all of this.
+Early audio-transcriber had inline logging, path resolution, and state management. Adding doc-parser would duplicate all of this.
 
 ### Decision
 Extract shared logic into `core/` with `PipelineBase` abstract class. Each skill phase inherits from it.

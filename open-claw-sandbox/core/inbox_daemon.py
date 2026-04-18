@@ -3,7 +3,7 @@
 inbox_daemon.py — Open Claw System-Wide Inbox Monitor
 ======================================================
 Monitors the `inbox` canonical directories for all active skills using Watchdog.
-When a new file arrives (e.g. .m4a for voice-memo, .pdf for pdf-knowledge),
+When a new file arrives (e.g. .m4a for audio-transcriber, .pdf for doc-parser),
 it triggers the target skill's pipeline logic automatically.
 
 Designed to be spawned by the background Execution Manager in Web UI.
@@ -41,7 +41,7 @@ class SystemInboxDaemon:
                 # Use phase alias mapping if available to find precise paths
                 inbox_path = pb.phase_dirs.get("inbox", pb.phase_dirs.get("p0", pb.canonical_dirs["input"]))
                 os.makedirs(inbox_path, exist_ok=True)
-                exts = [".pdf"] if skill == "pdf-knowledge" else [".m4a", ".mp3", ".wav"]
+                exts = [".pdf"] if skill == "doc-parser" else [".m4a", ".mp3", ".wav"]
                 self.monitors.append({
                     "skill": skill,
                     "path": inbox_path,
@@ -103,7 +103,7 @@ class SystemInboxDaemon:
             print("👁️ [Daemon] 監控已停止")
 
 if __name__ == "__main__":
-    daemon = SystemInboxDaemon(["voice-memo", "pdf-knowledge"])
+    daemon = SystemInboxDaemon(["audio-transcriber", "doc-parser"])
     daemon.start()
     try:
         while True:

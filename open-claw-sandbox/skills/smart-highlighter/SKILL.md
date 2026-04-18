@@ -6,7 +6,7 @@ Standalone Markdown annotation skill. Given any Markdown text, applies
 `**bold**`, `==highlight==`, and `` `code` `` markup to key concepts via LLM.
 
 Designed to be reusable across any upstream skill that produces Markdown output
-(voice-memo, pdf-knowledge, web-clipper, etc.).
+(audio-transcriber, doc-parser, web-clipper, etc.).
 
 ## Input Payload
 
@@ -41,8 +41,8 @@ the original chunk is returned unchanged.
 
 | Caller | Phase | Input Source |
 |---|---|---|
-| `voice-memo` | P4 Highlight | `03_merged/<subject>/<lecture>.md` |
-| `pdf-knowledge` | P2 Highlight | `01_Processed/<subject>/<pdf_id>/raw_extracted.md` |
+| `audio-transcriber` | P4 Highlight | `03_merged/<subject>/<lecture>.md` |
+| `doc-parser` | P2 Highlight | `01_Processed/<subject>/<pdf_id>/raw_extracted.md` |
 
 ## Version
-- v1.0.0 — 2026-04-19: Extracted from voice-memo/p04 and pdf-knowledge/p02
+- v1.0.0 — 2026-04-19: Extracted from audio-transcriber/p04 and doc-parser/p02

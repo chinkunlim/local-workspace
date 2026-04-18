@@ -335,9 +335,9 @@
         <span class="logo-ver">v3.0</span>
     </div>
 
-    <!-- PDF Knowledge -->
+    <!-- Doc Parser -->
     <div class="panel">
-        <div class="panel-title">📄 PDF Knowledge</div>
+        <div class="panel-title">📄 Doc Parser</div>
         <div class="stat-row">
             <div class="stat-card">
                 <div class="stat-val" id="pdf-inbox">—</div>
@@ -382,9 +382,9 @@
         </button>
     </div>
 
-    <!-- Voice Memo -->
+    <!-- Audio Transcriber -->
     <div class="panel">
-        <div class="panel-title">🎙️ Voice Memo</div>
+        <div class="panel-title">🎙️ Audio Transcriber</div>
         <div class="phase-row">
             <div class="phase-card"><div class="pv" id="vm-p1">—</div><span class="pl">P1 轉錄</span></div>
             <div class="phase-card"><div class="pv" id="vm-p2">—</div><span class="pl">P2 校對</span></div>
@@ -466,8 +466,8 @@ System initialized. Monitoring for tasks...
             <span class="rb-label">Skill</span>
             <select id="rb-skill" class="rb-select" onchange="rbOnSkillChange()">
                 <option value="">— 選擇 Skill —</option>
-                <option value="voice-memo">🎙️ Voice Memo</option>
-                <option value="pdf-knowledge">📄 PDF Knowledge</option>
+                <option value="audio-transcriber">🎙️ Audio Transcriber</option>
+                <option value="doc-parser">📄 Doc Parser</option>
             </select>
 
             <span class="rb-label">比較階段</span>
@@ -493,7 +493,7 @@ System initialized. Monitoring for tasks...
             <div class="diff-empty">
                 <span style="font-size:2.5rem">🔍</span>
                 <span>選擇 Skill、Phase、科目、檔案後，點擊「載入對比」</span>
-                <span style="font-size:0.78rem">支援 Voice Memo P1↔P2↔P3 及 PDF Knowledge Raw↔Final 的逐行差異比對</span>
+                <span style="font-size:0.78rem">支援 Audio Transcriber P1↔P2↔P3 及 Doc Parser Raw↔Final 的逐行差異比對</span>
             </div>
         </div>
     </div>

@@ -12,8 +12,8 @@ local-workspace/
 ├── open-claw-sandbox/      ← AI automation sandbox (this repo)
 │   ├── core/                 ← Shared framework (all skills depend on this)
 │   ├── skills/               ← Individual skill modules
-│   │   ├── voice-memo/       ← 6-phase audio → Notion pipeline
-│   │   ├── pdf-knowledge/    ← 7-phase PDF → knowledge base pipeline
+│   │   ├── audio-transcriber/       ← 6-phase audio → Notion pipeline
+│   │   ├── doc-parser/    ← 7-phase PDF → knowledge base pipeline
 │   │   ├── smart-highlighter/← Standalone Anti-Tampering annotation core
 │   │   └── note-generator/   ← Standalone Map-Reduce synthesis core
 │   ├── memory/               ← AI collaboration memory (CLAUDE, HANDOFF, TASKS...)
@@ -50,7 +50,7 @@ local-workspace/
 
 ---
 
-## Voice-Memo Skill — 6-Phase Pipeline
+## Audio-Transcriber Skill — 6-Phase Pipeline
 
 ```
 Input: .m4a / .mp3 / .wav file  →  Output: Notion-ready markdown
@@ -63,11 +63,11 @@ Phase 4: Highlight extraction  (key terms, action items)
 Phase 5: Synthesis             (Notion-structured summary)
 ```
 
-**Data paths:** `data/voice-memo/<subject>/` with subdirs: `input/`, `01_transcribed/`, `02_proofread/`, `03_merged/`, `04_highlighted/`, `05_synthesized/`, `logs/`, `state/`
+**Data paths:** `data/audio-transcriber/<subject>/` with subdirs: `input/`, `01_transcribed/`, `02_proofread/`, `03_merged/`, `04_highlighted/`, `05_synthesized/`, `logs/`, `state/`
 
 ---
 
-## PDF-Knowledge Skill — 7-Phase Pipeline
+## Doc-Parser Skill — 7-Phase Pipeline
 
 ```
 Input: PDF file  →  Output: structured knowledge base entry
@@ -81,7 +81,7 @@ Phase 02:  Highlight           (anti-tampering annotation)
 Phase 03:  Synthesis           (Map-Reduce → structured knowledge)
 ```
 
-**Data paths:** `data/pdf-knowledge/<subject>/` with subdirs: `inbox/`, `processed/`, `error/`, `state/`, `logs/`
+**Data paths:** `data/doc-parser/<subject>/` with subdirs: `inbox/`, `processed/`, `error/`, `state/`, `logs/`
 
 **Security rule:** Original PDF files are IMMUTABLE — never modified, only read.
 

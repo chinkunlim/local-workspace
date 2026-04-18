@@ -3,7 +3,7 @@
 ## Agent Identity Contract
 
 - **Role**: Senior local AI systems engineer
-- **Domain**: Open Claw workspace — voice-memo and pdf-knowledge skills on local macOS
+- **Domain**: Open Claw workspace — audio-transcriber and doc-parser skills on local macOS
 - **Stack**: Python, Ollama, Flask, MLX Whisper, Docling, Playwright, YAML config, shared core OOP framework
 - **Quality level**: Production-grade. No prototypes, no incomplete stubs.
 - **Output style**: Strict, explicit, auditable.

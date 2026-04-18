@@ -42,37 +42,37 @@ _workspace_root = os.environ.get(
 )
 
 # ── Path builders ─────────────────────────────────────────────────────────────
-_pb_pdf   = PathBuilder(_workspace_root, "pdf-knowledge")
-_pb_voice = PathBuilder(_workspace_root, "voice-memo")
+_pb_pdf   = PathBuilder(_workspace_root, "doc-parser")
+_pb_voice = PathBuilder(_workspace_root, "audio-transcriber")
 
 _pdf_dirs   = _pb_pdf.phase_dirs
 _voice_dirs = _pb_voice.phase_dirs
 
 # Canonical paths used in diff routes
-PDF_INBOX     = _pdf_dirs.get("inbox",      os.path.join(_workspace_root, "data", "pdf-knowledge",  "input"))
-PDF_PROCESSED = _pdf_dirs.get("processed",  os.path.join(_workspace_root, "data", "pdf-knowledge",  "output", "01_Processed"))
-PDF_SYNTHESIS = _pdf_dirs.get("synthesis",  os.path.join(_workspace_root, "data", "pdf-knowledge",  "output", "03_Synthesis"))
+PDF_INBOX     = _pdf_dirs.get("inbox",      os.path.join(_workspace_root, "data", "doc-parser",  "input"))
+PDF_PROCESSED = _pdf_dirs.get("processed",  os.path.join(_workspace_root, "data", "doc-parser",  "output", "01_Processed"))
+PDF_SYNTHESIS = _pdf_dirs.get("synthesis",  os.path.join(_workspace_root, "data", "doc-parser",  "output", "03_Synthesis"))
 
-VOICE_P1     = _voice_dirs.get("p1", os.path.join(_workspace_root, "data", "voice-memo", "output", "01_transcript"))
-VOICE_P2     = _voice_dirs.get("p2", os.path.join(_workspace_root, "data", "voice-memo", "output", "02_proofread"))
-VOICE_P3     = _voice_dirs.get("p3", os.path.join(_workspace_root, "data", "voice-memo", "output", "03_merged"))
+VOICE_P1     = _voice_dirs.get("p1", os.path.join(_workspace_root, "data", "audio-transcriber", "output", "01_transcript"))
+VOICE_P2     = _voice_dirs.get("p2", os.path.join(_workspace_root, "data", "audio-transcriber", "output", "02_proofread"))
+VOICE_P3     = _voice_dirs.get("p3", os.path.join(_workspace_root, "data", "audio-transcriber", "output", "03_merged"))
 VOICE_STATE  = _pb_voice.state_file
 
 # ── Diff phase map ─────────────────────────────────────────────────────────────
 # Maps (skill, phase_pair_key) → (from_dir, to_dir, label_from, label_to)
 DIFF_PHASE_MAP: dict[str, dict[str, tuple[str, str, str, str]]] = {
-    "voice-memo": {
+    "audio-transcriber": {
         "p1_vs_p2": (VOICE_P1, VOICE_P2, "P1 Raw Transcript", "P2 AI Proofread"),
         "p2_vs_p3": (VOICE_P2, VOICE_P3, "P2 AI Proofread",   "P3 Merged Refined"),
     },
-    "pdf-knowledge": {
+    "doc-parser": {
         "raw_vs_final": (PDF_PROCESSED, PDF_SYNTHESIS, "Raw Extracted", "Synthesis Notes"),
     },
 }
 
 # ── Script paths ───────────────────────────────────────────────────────────────
-_PDF_SCRIPT   = os.path.join(_workspace_root, "skills", "pdf-knowledge", "scripts", "run_all.py")
-_VOICE_SCRIPT = os.path.join(_workspace_root, "skills", "voice-memo",   "scripts", "run_all.py")
+_PDF_SCRIPT   = os.path.join(_workspace_root, "skills", "doc-parser", "scripts", "run_all.py")
+_VOICE_SCRIPT = os.path.join(_workspace_root, "skills", "audio-transcriber",   "scripts", "run_all.py")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -173,9 +173,9 @@ def api_subjects():
     """Return list of subject folders for a given skill."""
     skill = request.args.get("skill", "voice")
     if skill == "pdf":
-        input_dir = os.path.join(_workspace_root, "data", "pdf-knowledge", "input")
+        input_dir = os.path.join(_workspace_root, "data", "doc-parser", "input")
     else:
-        input_dir = os.path.join(_workspace_root, "data", "voice-memo", "input")
+        input_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "input")
         
     if not os.path.isdir(input_dir):
         return jsonify({"subjects": []})
@@ -196,12 +196,12 @@ def api_files():
     subject = request.args.get("subject", "")
     
     if skill == "pdf":
-        input_dir = os.path.join(_workspace_root, "data", "pdf-knowledge", "input")
+        input_dir = os.path.join(_workspace_root, "data", "doc-parser", "input")
         if subject and subject != "Default":
             input_dir = os.path.join(input_dir, subject)
         target_ext = ".pdf"
     else:
-        input_dir = os.path.join(_workspace_root, "data", "voice-memo", "input")
+        input_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "input")
         if subject:
             input_dir = os.path.join(input_dir, subject)
         target_ext = ".m4a"
@@ -222,7 +222,7 @@ def api_start():
         skill   : "pdf" | "voice"   (required)
         subject : str               (optional — restrict to one subject folder)
         force   : bool              (optional — overwrite completed phases)
-        resume  : bool              (optional — voice-memo: auto-answer resume prompt with C)
+        resume  : bool              (optional — audio-transcriber: auto-answer resume prompt with C)
     """
     data    = request.get_json(force=True) or {}
     skill   = data.get("skill", "")
@@ -258,7 +258,7 @@ def api_start():
             cmd += ["--force"]
         if resume:
             cmd += ["--resume"]
-        ok = exec_mgr.start_task("Voice Memo Pipeline", cmd, cwd=_workspace_root)
+        ok = exec_mgr.start_task("Audio Transcriber Pipeline", cmd, cwd=_workspace_root)
 
     else:
         return jsonify({"success": False, "error": "Invalid skill. Use 'pdf' or 'voice'."}), 400
@@ -321,7 +321,7 @@ def api_diff_files():
     from_dir = os.path.join(cfg[0], subject)
     to_dir   = os.path.join(cfg[1], subject)
 
-    if skill == "voice-memo":
+    if skill == "audio-transcriber":
         from_stems = {os.path.splitext(f)[0] for f in os.listdir(from_dir) if f.endswith(".md")} \
                      if os.path.isdir(from_dir) else set()
         to_stems   = {os.path.splitext(f)[0] for f in os.listdir(to_dir)   if f.endswith(".md")} \
@@ -329,7 +329,7 @@ def api_diff_files():
         common = sorted(from_stems & to_stems)
         return jsonify({"files": [{"id": s, "label": s + ".md"} for s in common]})
 
-    if skill == "pdf-knowledge" and phase_pair == "raw_vs_final":
+    if skill == "doc-parser" and phase_pair == "raw_vs_final":
         processed_subj = os.path.join(PDF_PROCESSED, subject)
         final_subj     = os.path.join(PDF_SYNTHESIS, subject)
         p_ids = {d for d in os.listdir(processed_subj) if os.path.isdir(os.path.join(processed_subj, d))} \
@@ -360,11 +360,11 @@ def api_diff():
     label_a = cfg[2]
     label_b = cfg[3]
 
-    if skill == "voice-memo":
+    if skill == "audio-transcriber":
         text_a = _read_text(os.path.join(cfg[0], subject, file_id + ".md"))
         text_b = _read_text(os.path.join(cfg[1], subject, file_id + ".md"))
 
-    elif skill == "pdf-knowledge" and phase_pair == "raw_vs_final":
+    elif skill == "doc-parser" and phase_pair == "raw_vs_final":
         text_a = _read_text(os.path.join(PDF_PROCESSED, subject, file_id, "raw_extracted.md"))
         text_b = _read_text(os.path.join(PDF_SYNTHESIS, subject, file_id, "content.md"))
 

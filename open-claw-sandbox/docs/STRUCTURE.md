@@ -123,7 +123,7 @@ Each skill is fully self-contained. Skills share the `core/` framework but NEVER
 skills/
 ├── SKILL.md                        ← Skill registry + step-by-step guide to creating a new skill
 │
-├── voice-memo/                     ← Audio → Notion Markdown pipeline
+├── audio-transcriber/                     ← Audio → Notion Markdown pipeline
 │   ├── SKILL.md                    ← Quick-start: phases, run commands, config pointers
 │   ├── config/
 │   │   ├── config.yaml             ← Paths (phases section), model profiles, hardware thresholds
@@ -145,11 +145,11 @@ skills/
 │           └── subject_manager.py  ← Voice-memo-specific CLI helpers: ask_reprocess(),
 │                                      should_process_task(), get_target_path()
 │
-└── pdf-knowledge/                  ← PDF → Structured Markdown Knowledge Base pipeline
+└── doc-parser/                  ← PDF → Structured Markdown Knowledge Base pipeline
     ├── SKILL.md                    ← Quick-start: phases, run commands, directory guide
     ├── config/
     │   ├── config.yaml             ← Paths (phases section), model profiles, OCR/Docling thresholds
-    │   ├── priority_terms.json     ← Cross-skill terminology list (shared with voice-memo)
+    │   ├── priority_terms.json     ← Cross-skill terminology list (shared with audio-transcriber)
     │   ├── security_policy.yaml    ← PDF security scanning rules
     │   └── selectors.yaml          ← Data source selector configuration
     ├── docs/
@@ -195,7 +195,7 @@ Created automatically on first pipeline run. Do not commit.
 
 ```
 data/
-├── voice-memo/
+├── audio-transcriber/
 │   ├── input/
 │   │   └── <subject>/*.m4a             ← Source audio files (drop here)
 │   ├── output/
@@ -210,7 +210,7 @@ data/
 │   └── logs/
 │       └── system.log                  ← Skill pipeline log
 │
-└── pdf-knowledge/
+└── doc-parser/
     ├── input/
     │   └── <subject>/*.pdf             ← Source PDF files (drop here, by subject)
     ├── output/
@@ -300,7 +300,7 @@ ops/
 
 ```
 models/
-├── models--mlx-community--whisper-large-v3-mlx/   ← MLX Whisper (voice-memo P1)
+├── models--mlx-community--whisper-large-v3-mlx/   ← MLX Whisper (audio-transcriber P1)
 ├── models--docling-project--docling-layout-heron/  ← Docling layout model (pdf P1b)
 └── models--docling-project--docling-models/        ← Docling recognition models (pdf P1b)
 ```

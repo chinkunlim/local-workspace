@@ -77,11 +77,11 @@ from core import (PipelineBase, StateManager, PathBuilder,
 print('✅ core: all modules OK')
 "
 
-# Smoke-test: voice-memo CLI
-python3 skills/voice-memo/scripts/run_all.py --help
+# Smoke-test: audio-transcriber CLI
+python3 skills/audio-transcriber/scripts/run_all.py --help
 
-# Smoke-test: pdf-knowledge CLI
-python3 skills/pdf-knowledge/scripts/run_all.py --help
+# Smoke-test: doc-parser CLI
+python3 skills/doc-parser/scripts/run_all.py --help
 
 # Smoke-test: dashboard
 python3 core/web_ui/app.py &
@@ -98,8 +98,8 @@ Drop files here to begin processing:
 
 | Skill | Input location |
 |:---|:---|
-| voice-memo | `data/voice-memo/input/raw_data/<subject>/*.m4a` |
-| pdf-knowledge | `data/pdf-knowledge/input/01_Inbox/<subject>/*.pdf` |
+| audio-transcriber | `data/audio-transcriber/input/raw_data/<subject>/*.m4a` |
+| doc-parser | `data/doc-parser/input/01_Inbox/<subject>/*.pdf` |
 
 ---
 

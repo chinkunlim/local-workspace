@@ -27,10 +27,10 @@ Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELI
 |:---|:---|
 | Workspace root | `open-claw-sandbox/` |
 | Shared core framework | `core/` |
-| Voice-memo skill | `skills/voice-memo/` |
-| PDF-knowledge skill | `skills/pdf-knowledge/` |
-| Voice-memo runtime data | `data/voice-memo/` |
-| PDF-knowledge runtime data | `data/pdf-knowledge/` |
+| Voice-memo skill | `skills/audio-transcriber/` |
+| PDF-knowledge skill | `skills/doc-parser/` |
+| Voice-memo runtime data | `data/audio-transcriber/` |
+| PDF-knowledge runtime data | `data/doc-parser/` |
 | Ops & maintenance scripts | `ops/` (sandbox), `../ops/` (global) |
 | Lifecycle scripts | `../infra/scripts/` |
 | Model cache (HuggingFace) | `models/` — set via `HF_HOME` env var |
@@ -66,9 +66,9 @@ Hardware safety thresholds (RAM warning/critical, temperature, battery) are conf
 | Model | Location | Used By |
 |:---|:---|:---|
 | Ollama models (Gemma, Qwen…) | Ollama app data (outside workspace) | All LLM phases |
-| MLX Whisper Large v3 | `models/models--mlx-community--whisper-large-v3-mlx/` | voice-memo P1 |
-| Faster Whisper medium | Downloaded to `models/` on first run | voice-memo P1 fallback |
-| Docling layout/models | `models/models--docling-*/` | pdf-knowledge P1b |
+| MLX Whisper Large v3 | `models/models--mlx-community--whisper-large-v3-mlx/` | audio-transcriber P1 |
+| Faster Whisper medium | Downloaded to `models/` on first run | audio-transcriber P1 fallback |
+| Docling layout/models | `models/models--docling-*/` | doc-parser P1b |
 
 ---
 

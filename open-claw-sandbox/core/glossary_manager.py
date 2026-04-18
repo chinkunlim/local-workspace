@@ -19,7 +19,7 @@ class GlossaryManager:
 
     def sync_all(self, logger=None) -> int:
         """
-        Scan voice-memo state directories for glossary.json files.
+        Scan audio-transcriber state directories for glossary.json files.
         Merge their mappings into the global priority_terms.json.
         Returns the number of new mappings added.
         """

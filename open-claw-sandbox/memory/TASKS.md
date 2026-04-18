@@ -39,8 +39,8 @@
 - [x] 2026-04-18: `ops/migrate_data_layout.py` deleted
 - [x] 2026-04-18: `CODING_GUIDELINES_FINAL.md` v3.0.0 consolidated and published
 - [x] 2026-04-18: `AI_Master_Guide_Final.md` updated to Version 9
-- [x] 2026-04-18: pdf-knowledge phase naming refactored (p01a→p00a, etc.)
+- [x] 2026-04-18: doc-parser phase naming refactored (p01a→p00a, etc.)
 - [x] 2026-04-18: `.gitignore` updated to exclude runtime files
 - [x] 2026-04-15: `core/` shared framework established
-- [x] 2026-04-15: voice-memo refactored to 6-phase MLX-Whisper pipeline
-- [x] 2026-04-15: pdf-knowledge 7-phase pipeline implemented
+- [x] 2026-04-15: audio-transcriber refactored to 6-phase MLX-Whisper pipeline
+- [x] 2026-04-15: doc-parser 7-phase pipeline implemented

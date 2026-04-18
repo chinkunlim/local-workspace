@@ -28,5 +28,5 @@ The following require explicit user approval before execution:
 - Any file deletion
 - Any move or rename of files outside the `open-claw-sandbox/` directory
 - Any external network action (API call, browser automation to non-local endpoint)
-- Any change to `skills/pdf-knowledge/config/security_policy.yaml`
-- Any change to `skills/pdf-knowledge/config/priority_terms.json`
+- Any change to `skills/doc-parser/config/security_policy.yaml`
+- Any change to `skills/doc-parser/config/priority_terms.json`
