@@ -163,3 +163,25 @@ All runtime data (inputs, outputs, state, logs) lives exclusively in `data/<skil
 
 ### Consequence
 `git clean -fd` on `skills/` is safe. Data directory excluded from git.
+
+---
+
+## [2026-04-19] 技術選型：Long-Polling vs WebSocket/Celery
+
+### Decision
+選擇 **Long-Polling**（前端每 3 秒輪詢 `/api/rerun/status`）而非 Flask-SocketIO 或 Celery：
+
+1. **Flask-SocketIO** 需要 `gevent`/`eventlet`，與 Flask 開發 server 不相容，且部署複雜度倍增
+2. **Celery** 需要 Redis broker，增加基礎設施依賴，系統是 local-first 單機執行
+3. **Long-Polling** 在 `ExecutionManager` 已有後台 Worker Thread 的前提下，已足夠；延遲 < 3s 符合使用場景
+
+### Consequence
+`GET /api/rerun/status?task=XXX` 讀取 `.rerun_state.json` 的最新記錄，前端在 RUNNING/QUEUED 狀態下持續輪詢，收到 COMPLETED/FAILED/CANCELLED 後停止。
+
+---
+
+## [2026-04-19] Job Queue RAM 防護：maxsize=5
+
+### Decision
+`queue.Queue(maxsize=5)` — 第 6 個排隊請求返回 False，呼叫方轉換為 HTTP 409。
+單 Worker Thread 確保一次只有一個 LLM subprocess 在執行。

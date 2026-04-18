@@ -80,7 +80,46 @@
             letter-spacing: 0.08em;
             text-transform: uppercase;
             margin-bottom: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
         }
+        .panel-title::after { content: '\25B2'; font-size: 0.6rem; transition: transform 0.2s; }
+        .panel.collapsed .panel-title::after { transform: rotate(180deg); }
+        .panel-body { overflow: hidden; transition: max-height 0.25s ease; max-height: 800px; }
+        .panel.collapsed .panel-body { max-height: 0; }
+
+        /* ─── Queue Tab ──────────────────────────────────────────── */
+        .queue-list { display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; overflow-y: auto; flex: 1; }
+        .queue-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .queue-card.running { border-color: var(--warning); }
+        .queue-card.done    { border-color: var(--success); opacity: 0.7; }
+        .queue-card.failed  { border-color: var(--danger);  opacity: 0.7; }
+        .queue-spinner {
+            width: 14px; height: 14px;
+            border: 2px solid var(--warning);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .queue-name  { font-size: 0.82rem; font-weight: 500; flex: 1; }
+        .queue-badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+        .queue-badge.running  { background: rgba(210,153,34,0.2); color: var(--warning); }
+        .queue-badge.queued   { background: rgba(88,166,255,0.15); color: var(--accent); }
+        .queue-badge.done     { background: rgba(63,185,80,0.15); color: var(--success); }
+        .queue-badge.failed   { background: rgba(218,54,51,0.15); color: var(--danger); }
 
         /* stat cards */
         .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
@@ -518,7 +557,8 @@
     <!-- Tab Bar -->
     <div class="tab-bar">
         <div class="tab active" id="tab-console"  onclick="switchTab('console')">💻 Live Console</div>
-        <div class="tab"       id="tab-review"   onclick="switchTab('review')">🔍 Review Board (Diff)</div>
+        <div class="tab"       id="tab-queue"    onclick="switchTab('queue')">🗂️ Queue</div>
+        <div class="tab"       id="tab-review"   onclick="switchTab('review')">🔍 Review Board</div>
     </div>
 
     <!-- Status Bar (shared) -->
@@ -532,6 +572,18 @@
         <div id="console">Welcome to Open Claw v3.0 — Subprocess Execution Manager.
 System initialized. Monitoring for tasks...
 </div>
+    </div>
+
+    <!-- ── Queue Tab ── -->
+    <div class="tab-content" id="pane-queue">
+        <div class="queue-list" id="queue-list">
+            <div style="color:var(--text-muted);font-size:0.85rem;text-align:center;margin-top:40px;">📭 目前沒有執行中的任務</div>
+        </div>
+        <!-- Recent Re-run History -->
+        <div style="border-top:1px solid var(--border);padding:12px 20px;">
+            <div style="font-size:0.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">📋 最近 Re-run 記錄</div>
+            <div id="rerun-history" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
+        </div>
     </div>
 
     <!-- ── Review Board Tab ── -->
@@ -585,6 +637,123 @@ function switchTab(tab) {
     document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
     document.getElementById('pane-' + tab).classList.add('active');
+    if (tab === 'queue') renderQueueTab();
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Collapsible Panels
+─────────────────────────────────────────────────────────────────────────── */
+function initCollapsiblePanels() {
+    document.querySelectorAll('.panel-title').forEach(title => {
+        const panel = title.closest('.panel');
+        if (!panel) return;
+        // Wrap non-title children in .panel-body if not already done
+        if (!panel.querySelector('.panel-body')) {
+            const body = document.createElement('div');
+            body.className = 'panel-body';
+            [...panel.children].forEach(child => {
+                if (!child.classList.contains('panel-title')) body.appendChild(child);
+            });
+            panel.appendChild(body);
+        }
+        // Restore saved state
+        const key = 'panel_' + (title.textContent.trim().slice(0,20));
+        if (localStorage.getItem(key) === 'collapsed') panel.classList.add('collapsed');
+
+        title.addEventListener('click', () => {
+            panel.classList.toggle('collapsed');
+            localStorage.setItem(key, panel.classList.contains('collapsed') ? 'collapsed' : 'open');
+        });
+    });
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Queue Tab Renderer
+─────────────────────────────────────────────────────────────────────────── */
+async function renderQueueTab() {
+    try {
+        const [qRes, histRes] = await Promise.all([
+            fetch('/api/queue'),
+            fetch('/api/rerun/status?task=__history__').catch(() => null),
+        ]);
+        const q = await qRes.json();
+        const listEl = document.getElementById('queue-list');
+        listEl.innerHTML = '';
+
+        const items = [];
+        if (q.running) items.push({ name: q.running, type: 'running' });
+        (q.pending || []).forEach(n => items.push({ name: n, type: 'queued' }));
+
+        if (items.length === 0) {
+            listEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;margin-top:40px;">📭 目前沒有執行中的任務</div>';
+        } else {
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = `queue-card ${item.type === 'running' ? 'running' : ''}`;
+                card.innerHTML = `
+                    ${item.type === 'running' ? '<div class="queue-spinner"></div>' : '<span style="font-size:1rem">⏳</span>'}
+                    <span class="queue-name">${escHtml(item.name)}</span>
+                    <span class="queue-badge ${item.type}">${item.type === 'running' ? '執行中' : '排隊中'}</span>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
+        // Render recent re-run history from .rerun_state.json via /api/queue extended?
+        // We'll load it via a dedicated call
+        renderRerunHistory();
+    } catch(e) {}
+}
+
+async function renderRerunHistory() {
+    const el = document.getElementById('rerun-history');
+    if (!el) return;
+    try {
+        // Fetch raw history through a lightweight proxy: /api/rerun/status with wildcard isn't
+        // supported, so we read the last queue status which includes the full state
+        // We'll use a special sentinel: GET /api/rerun/status?task= (empty → returns error, skip)
+        // Instead fetch /api/status/skills as a proxy for completion counts
+        // Real history requires direct file read — use /api/queue which has running/pending
+        const res  = await fetch('/api/queue');
+        const data = await res.json();
+        // Build history from rerun_state via the sentinel approach:
+        // The history is stored in data/.rerun_state.json; we expose it via a new helper.
+        // For now show the current running as "live" and note that history requires server read.
+        el.innerHTML = '<span style="font-size:0.78rem;color:var(--text-muted);">歷史記錄需透過 /api/rerun/history 讀取（下版本加入）</span>';
+    } catch(e) {}
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Re-run Status Polling helper
+─────────────────────────────────────────────────────────────────────────── */
+/**
+ * Poll /api/rerun/status every 3s until terminal state (COMPLETED/FAILED/CANCELLED).
+ * Updates the given statusEl DOM element with live feedback.
+ */
+function pollRerunStatus(taskName, statusEl, maxPolls = 120) {
+    let polls = 0;
+    const ICON = { RUNNING: '🔄', QUEUED: '⏳', COMPLETED: '✅', FAILED: '❌', CANCELLED: '⏹️', UNKNOWN: '❓' };
+    const DONE = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
+
+    const tick = async () => {
+        polls++;
+        if (polls > maxPolls) {
+            statusEl.textContent = '⚠️ 超時：未收到完成訊號';
+            statusEl.style.color = 'var(--warning)';
+            return;
+        }
+        try {
+            const res  = await fetch(`/api/rerun/status?task=${encodeURIComponent(taskName)}`);
+            const data = await res.json();
+            const icon = ICON[data.status] || '❓';
+            statusEl.textContent = `${icon} ${data.status}${data.error ? ': ' + data.error : ''}`;
+            statusEl.style.color = data.status === 'COMPLETED' ? 'var(--success)'
+                                 : data.status === 'FAILED'    ? 'var(--danger)'
+                                 : 'var(--warning)';
+            if (!DONE.has(data.status)) setTimeout(tick, 3000);
+        } catch(e) { setTimeout(tick, 3000); }
+    };
+    setTimeout(tick, 1500);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -701,8 +870,10 @@ async function runHighlight() {
         });
         const data = await res.json();
         if (data.success) {
-            statusEl.textContent = '✅ 已排入佇列';
-            statusEl.style.color = 'var(--success)';
+            const taskName = `Smart Highlighter [${skill}/${subject}/${file_id}]`;
+            statusEl.textContent = '✅ 已排入佇列…輪詢狀態中';
+            statusEl.style.color = 'var(--accent)';
+            pollRerunStatus(taskName, statusEl);
         } else {
             statusEl.textContent = `❌ ${data.error || 'Failed'}`;
             statusEl.style.color = 'var(--danger)';
@@ -785,8 +956,10 @@ async function runSynthesize() {
         });
         const data = await res.json();
         if (data.success) {
-            statusEl.textContent = '✅ 已排入佇列';
-            statusEl.style.color = 'var(--success)';
+            const taskName = `Note Generator [${skill}/${subject}/${file_id}]`;
+            statusEl.textContent = '✅ 已排入佇列…輪詢狀態中';
+            statusEl.style.color = 'var(--accent)';
+            pollRerunStatus(taskName, statusEl);
         } else {
             statusEl.textContent = `❌ ${data.error || 'Failed'}`;
             statusEl.style.color = 'var(--danger)';
@@ -1148,6 +1321,16 @@ pollStatus();
 pollLogs();
 loadSubjects('voice');
 loadSubjects('pdf');
+// Collapsible sidebar panels
+document.addEventListener('DOMContentLoaded', () => {
+    initCollapsiblePanels();
+});
+// Auto-refresh Queue tab every 4s when visible
+setInterval(() => {
+    if (document.getElementById('tab-queue')?.classList.contains('active')) {
+        renderQueueTab();
+    }
+}, 4000);
 </script>
 </body>
 </html>

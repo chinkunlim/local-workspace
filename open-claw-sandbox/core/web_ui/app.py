@@ -330,6 +330,51 @@ def api_synthesize():
     return jsonify({"success": False, "error": "Same task already queued."}), 409
 
 
+@app.route("/api/rerun/status", methods=["GET"])
+def api_rerun_status():
+    """
+    Return the latest execution state for a named Re-run task.
+
+    Query params:
+        task : str  — exact task_name string (e.g. "Smart Highlighter [audio-transcriber/Physics/lecture1]")
+
+    Response:
+        { "task": str, "status": "RUNNING"|"COMPLETED"|"FAILED"|"CANCELLED"|"UNKNOWN", "timestamp": str }
+    """
+    task_name = request.args.get("task", "").strip()
+    if not task_name:
+        return jsonify({"status": "UNKNOWN", "error": "Missing task param"}), 400
+
+    # Check live queue first (fastest path)
+    queue_status = exec_mgr.get_queue_status()
+    if queue_status.get("running") == task_name:
+        return jsonify({"task": task_name, "status": "RUNNING", "timestamp": ""})
+    if task_name in (queue_status.get("pending") or []):
+        return jsonify({"task": task_name, "status": "QUEUED", "timestamp": ""})
+
+    # Fall back to persisted state log
+    state_path = os.path.join(_workspace_root, "data", ".rerun_state.json")
+    if not os.path.exists(state_path):
+        return jsonify({"task": task_name, "status": "UNKNOWN", "timestamp": ""})
+
+    try:
+        with open(state_path, "r", encoding="utf-8") as f:
+            records = json.load(f)
+        # Find the most recent record matching the task name
+        for record in reversed(records):
+            if record.get("task") == task_name:
+                return jsonify({
+                    "task":      record["task"],
+                    "status":    record.get("status", "UNKNOWN"),
+                    "timestamp": record.get("timestamp", ""),
+                    "error":     record.get("error", ""),
+                })
+    except Exception:
+        pass
+
+    return jsonify({"task": task_name, "status": "UNKNOWN", "timestamp": ""})
+
+
 @app.route("/api/rerun/files", methods=["GET"])
 def api_rerun_files():
     """

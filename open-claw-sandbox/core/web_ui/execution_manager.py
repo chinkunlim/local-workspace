@@ -35,7 +35,7 @@ class ExecutionManager:
             os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))),
             "data", ".rerun_state.json"
         )
-        self._job_queue: queue.Queue = queue.Queue()
+        self._job_queue: queue.Queue = queue.Queue(maxsize=5)  # RAM safety: max 5 queued tasks
         self._queued_names: list[str] = []   # ordered list for introspection + dedup
         self._worker = threading.Thread(target=self._process_queue, daemon=True)
         self._worker.start()
@@ -50,12 +50,13 @@ class ExecutionManager:
 
         Returns:
             True  — task enqueued successfully.
-            False — rejected because a task with the same name is already
-                    in the queue or currently running.
+            False — rejected (same-name dedup OR queue full at maxsize=5).
         """
         with self._lock:
             if task_name in self._queued_names or self._current_task_name == task_name:
                 return False  # same-skill dedup
+            if self._job_queue.full():
+                return False  # queue full — caller should return HTTP 429
             self._queued_names.append(task_name)
 
         self._log_buffer.append(f"📥 [Queue] 任務加入排隊: {task_name}\n")
