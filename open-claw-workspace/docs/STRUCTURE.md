@@ -1,6 +1,6 @@
 # Open Claw — Workspace Structure
 
-> Last Updated: 2026-04-16
+> Last Updated: 2026-04-18
 > Every file and folder in `open-claw-workspace/` is documented here.
 > Update this file whenever a file is added, removed, or significantly renamed.
 
@@ -10,18 +10,19 @@
 
 ```
 open-claw-workspace/
-├── AGENTS.md             ← Rules and startup context for AI agents operating in this workspace
+├── AGENTS.md             ← Non-negotiable rules and startup context for AI agents
 ├── BOOTSTRAP.md          ← How to bring this workspace to operational state from scratch
 ├── HEARTBEAT.md          ← Known-good state snapshot; updated after each verified stable milestone
 ├── IDENTITY.md           ← Open Claw system identity: mission, boundaries, personality
 ├── SOUL.md               ← Quality and discipline principles (the "why" behind the rules)
 ├── TOOLS.md              ← Local endpoints, key paths, env vars, hardware profile
 ├── USER.md               ← Operator profile: preferences, working style, constraints
-├── STRUCTURE.md          ← This file — annotated map of every file and folder
 │
 ├── pyproject.toml        ← Ruff (linter/formatter) + Mypy (type checker) configuration
+├── requirements.txt      ← All Python dependencies for core + all skills
 ├── .gitignore            ← Excludes data/, models/, logs/, __pycache__, .DS_Store
 ├── .pre-commit-config.yaml ← Pre-commit hooks: Ruff lint+format + file hygiene
+├── .editorconfig         ← Consistent editor settings across all tools and AI agents
 │
 ├── .vscode/
 │   ├── extensions.json   ← Recommended VS Code extensions (Ruff, Mypy, Python, YAML, Markdown)
@@ -30,13 +31,14 @@ open-claw-workspace/
 ├── .openclaw/
 │   └── workspace-state.json  ← Open Claw agent bootstrap state (version + seed timestamp)
 │
-├── core/                 ← Shared framework — all skills import ONLY from here, never from each
+├── memory/               ← AI collaboration memory layer (read by agents at every session start)
+├── core/                 ← Shared framework — all skills import ONLY from here, never from each other
 ├── skills/               ← Self-contained skill pipelines
 ├── data/                 ← Runtime data: pipeline outputs (excluded from git)
 ├── models/               ← HuggingFace model cache (excluded from git)
 ├── logs/                 ← Service runtime logs from start.sh (excluded from git)
-├── docs/                 ← Project-wide documentation
-└── ops/                  ← One-off maintenance scripts (delete after use)
+├── docs/                 ← Project-wide documentation (STRUCTURE, CODING_GUIDELINES_FINAL)
+└── ops/                  ← Automation scripts (bootstrap.sh, check.sh) — delete one-offs after use
 ```
 
 ---
@@ -210,6 +212,31 @@ data/
 
 ---
 
+## `memory/` — AI Collaboration Memory Layer
+
+Read by all AI agents at the **start of every session**, in order.
+Never contains runtime data — only human/agent-curated session state and architecture knowledge.
+
+```
+memory/
+├── CLAUDE.md        ← Project rules, AI behaviour contract, mandatory startup sequence, hardware constraints
+├── ARCHITECTURE.md  ← System full picture: core modules, skill pipelines, service map, data flow
+├── HANDOFF.md       ← Last session: what was completed, current system state, next starting point
+├── TASKS.md         ← Prioritised task list (High / Medium / Low / Done)
+└── DECISIONS.md     ← Architectural Decision Records (ADRs) — why we made each key design choice
+```
+
+**Update rules:**
+| File | Update When |
+|---|---|
+| `CLAUDE.md` | Project rules or hardware constraints change |
+| `ARCHITECTURE.md` | New module, skill, or service added/removed |
+| `HANDOFF.md` | End of every working session |
+| `TASKS.md` | Task status changes (start / complete / add / defer) |
+| `DECISIONS.md` | Any significant architectural decision is made |
+
+---
+
 ## `docs/` — Project-Wide Documentation
 
 ```
@@ -233,16 +260,19 @@ docs/
 
 ---
 
-## `ops/` — Maintenance Scripts
+## `ops/` — Automation Scripts
 
-One-off operational scripts. **Delete after use.**
+Persistent utility scripts live here. **One-off migration scripts must be deleted after use.**
 
 ```
 ops/
-├── check.sh              ← Run all quality checks: Ruff lint + format + Mypy
-│                            Usage: ./ops/check.sh [--fix]
-└── (others as needed)    ← Place one-off migration/fix scripts here, delete when done
+├── bootstrap.sh     ← First-time environment setup: installs pip deps, pre-commit hooks, verifies Ollama
+└── check.sh         ← Full quality gate: Ruff lint + format + Mypy
+                         Usage: ./ops/check.sh
 ```
+
+**Note:** `pyproject.toml`, `.pre-commit-config.yaml`, and `requirements.txt` are at the workspace root
+(not inside `ops/`) so that Ruff, Mypy, and pip work without extra flags.
 
 ---
 

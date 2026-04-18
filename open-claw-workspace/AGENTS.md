@@ -9,12 +9,13 @@ All agents operate within the open-claw-workspace sandbox boundary.
 
 Before making any change, read and apply the following files in order:
 
-1. `docs/CODING_GUIDELINES.md` — engineering contract, naming rules, tooling
-2. `SOUL.md` — quality and discipline principles
-3. `USER.md` — operator profile and preferences
-4. `docs/STRUCTURE.md` — annotated map of every file and folder in this workspace
-5. `skills/<skill>/SKILL.md` — skill quick-start, phases, and CLI reference
-6. `skills/<skill>/docs/ARCHITECTURE.md` — current verified architecture and data flow
+1. `memory/CLAUDE.md` — project rules, AI behaviour contract, hardware constraints
+2. `memory/ARCHITECTURE.md` — system architecture, module map, data flow
+3. `memory/HANDOFF.md` — last session progress and next steps
+4. `memory/TASKS.md` — current task list
+5. `docs/STRUCTURE.md` — annotated map of every file and folder in this workspace
+6. `AGENTS.md` — this file (non-negotiable behaviours and quality bar)
+7. `skills/<skill>/SKILL.md` — skill quick-start, phases, and CLI reference (if executing a skill)
 
 ## 3. Non-Negotiable Behaviors
 
@@ -34,8 +35,8 @@ If code changes affect observable behavior, update corresponding documentation i
 | CLI interface change | `skills/<skill>/SKILL.md` |
 | Data path, phase logic, or core module change | `skills/<skill>/docs/ARCHITECTURE.md` + `docs/STRUCTURE.md` |
 | Architectural decision made | `skills/<skill>/docs/DECISIONS.md` |
-| New pattern or rule established | `docs/CODING_GUIDELINES.md` |
-| New skill or core module added | `docs/STRUCTURE.md`, `skills/SKILL.md` |
+| New pattern or rule established | `docs/CODING_GUIDELINES_FINAL.md` |
+| New skill or core module added | `docs/STRUCTURE.md`, `memory/ARCHITECTURE.md`, `skills/SKILL.md` |
 
 ## 5. External Action Policy
 
@@ -48,8 +49,8 @@ All outputs — code, documentation, and plans — must be:
 - Professional and concise
 - Verifiable by future operators
 - Interoperable across Claude Code, GitHub Copilot, and Google Antigravity
-- Compliant with `docs/CODING_GUIDELINES.md` in full
+- Compliant with `docs/CODING_GUIDELINES_FINAL.md` in full
 
 ## 7. Sandbox Invariant
 
-`open-claw-workspace/` is a fully self-contained sandbox. See `docs/CODING_GUIDELINES.md` Section 5 for the full isolation specification.
+`open-claw-workspace/` is a fully self-contained sandbox. See `docs/CODING_GUIDELINES_FINAL.md` §3.4 for the full isolation specification.
