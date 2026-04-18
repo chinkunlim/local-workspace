@@ -29,6 +29,14 @@
 
 ## ✅ Completed
 
+- [x] 2026-04-19: Antigravity Deep Thought Hotfixes (P0/P1/P2)
+  - P0: inbox_daemon HTTP-first trigger → WebUI Job Queue (OOM 防護)
+  - P0: _wait_and_trigger 300s 超時 + stop_event (殭屍執行緒修復)
+  - P0: debounce 改用 threading.Event 修復 dead code
+  - P0: state_manager fcntl.flock 防止 JSON 並發損毀
+  - P1: ExecutionManager 寫入 .rerun_state.json (消除 Silent Failure)
+  - P2: cli_runner 改用 PathBuilder 路徑解析
+  - start.sh: INFRA_DIR 路徑修正 + Dashboard 60s 超時 + 名稱更新
 - [x] 2026-04-19: Full 4-Skill WebUI+CLI Integration
   - Created `core/cli_runner.py` (SkillRunner Service Layer)
   - Upgraded `execution_manager.py` to Job Queue + same-skill dedup

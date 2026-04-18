@@ -5,6 +5,51 @@
 
 ---
 
+## [2026-04-19] P0: inbox_daemon triggers via HTTP → WebUI API (OOM prevention)
+
+### Decision
+`inbox_daemon._trigger_pipeline()` now sends `POST /api/start` to the WebUI's `ExecutionManager` Job Queue first. Direct `subprocess.Popen` is a fallback-only path used when WebUI is not running (standalone mode). This ensures all Daemon-triggered pipeline runs are RAM-safe and serialised.
+
+### Consequence
+Batch arrivals of N files no longer spawn N concurrent LLM processes. The Queue dedup also prevents double-triggering the same skill.
+
+---
+
+## [2026-04-19] P0: _wait_and_trigger gains 300s timeout + stop_event (zombie thread prevention)
+
+### Decision
+Replaced the infinite `while True` poll loop with a bounded loop (`elapsed < 300s`) and a `threading.Event` stop signal. File-disappeared guard added. Debounce mechanism upgraded from `.cancel()` on `Thread` (dead code) to `Event.set()` on a `threading.Event`.
+
+---
+
+## [2026-04-19] P0: state_manager fcntl.flock on .pipeline_state.json (concurrent write guard)
+
+### Decision
+`_load_state()` acquires `LOCK_SH` and `_save_state()` acquires `LOCK_EX` via a companion `.lock` file. This prevents JSON corruption when a CLI process and a WebUI process write the state file concurrently.
+
+---
+
+## [2026-04-19] P1: ExecutionManager writes .rerun_state.json (Silent Failure elimination)
+
+### Decision
+`_run_job()` writes a lightweight `{task, status, timestamp}` record to `data/.rerun_state.json` at RUNNING, COMPLETED, FAILED, and CANCELLED transitions. The `/api/queue` endpoint can expose this log to the UI.
+
+---
+
+## [2026-04-19] P2: cli_runner uses PathBuilder for path resolution
+
+### Decision
+`resolve_highlight_paths()` and `resolve_synthesize_paths()` now use `PathBuilder.phase_dirs` with hardcoded strings as fallback. This keeps path resolution in sync with each skill's `config.yaml`.
+
+---
+
+## [2026-04-19] start.sh: path resolution fix (INFRA_DIR two-level ascent)
+
+### Decision
+`_LOCAL_WORKSPACE` is now derived as `$(dirname $(dirname $script_dir))` (two levels up from `infra/scripts/`). LiteLLM and Pipelines `cd` to `${INFRA_DIR}/litellm` and `${INFRA_DIR}/pipelines`. Dashboard wait extended to 60s.
+
+---
+
 ## [2026-04-19] WebUI Integration: Re-run Pattern for smart-highlighter & note-generator
 
 ### Background

@@ -3,6 +3,7 @@ import os
 import json
 import hashlib
 import threading
+import fcntl
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
@@ -50,11 +51,15 @@ class StateManager:
             return False
 
     def _load_state(self) -> Dict[str, Dict[str, Any]]:
-        """Load internal state from JSON or return empty structure."""
+        """Load internal state from JSON with shared (read) file lock."""
         if os.path.exists(self.state_file):
             try:
                 with open(self.state_file, "r", encoding="utf-8") as f:
-                    raw = json.load(f)
+                    fcntl.flock(f, fcntl.LOCK_SH)  # Shared read lock
+                    try:
+                        raw = json.load(f)
+                    finally:
+                        fcntl.flock(f, fcntl.LOCK_UN)
                 if isinstance(raw, dict):
                     self._checkpoint = raw.get("_checkpoint")
                     if isinstance(raw.get("_state"), dict):
@@ -65,10 +70,18 @@ class StateManager:
         return {}
 
     def _save_state(self):
-        """Persist state to JSON and re-render checklist.md view."""
+        """Persist state to JSON with exclusive write lock, then re-render checklist."""
         with self._lock:
             payload = self._serialize_state()
-            AtomicWriter.write_json(self.state_file, payload)
+            # Acquire an exclusive process-level lock before writing
+            lock_path = self.state_file + ".lock"
+            os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+            with open(lock_path, "w") as lock_fd:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX)  # Exclusive write lock
+                try:
+                    AtomicWriter.write_json(self.state_file, payload)
+                finally:
+                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
         self._render_checklist()
 
     def _serialize_state(self) -> Dict[str, Any]:

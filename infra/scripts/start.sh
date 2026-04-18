@@ -10,17 +10,14 @@ NC='\033[0m' # 無顏色
 
 # 獲取腳本所在目錄的絕對路徑
 
-# Ensure stable path resolution regardless of how the script is invoked (bash, sh, source)
+# Ensure stable path resolution regardless of how the script is invoked
 script_dir="$( cd "$( dirname "$0" )" && pwd )"
 if [ "$script_dir" = "/" ] || [ -z "$script_dir" ] || [ "$script_dir" = "." ]; then
     script_dir="$PWD"
 fi
-_LOCAL_WORKSPACE="$script_dir"
-
-# Strip trailing open-claw-sandbox if user ran it from inside
-if [[ "$_LOCAL_WORKSPACE" == */open-claw-sandbox ]]; then
-    _LOCAL_WORKSPACE="$(dirname "$_LOCAL_WORKSPACE")"
-fi
+# script_dir = .../local-workspace/infra/scripts
+INFRA_DIR="$(dirname "$script_dir")"          # → .../local-workspace/infra
+_LOCAL_WORKSPACE="$(dirname "$INFRA_DIR")"    # → .../local-workspace
 WORKSPACE_DIR="${_LOCAL_WORKSPACE}/open-claw-sandbox"
 export WORKSPACE_DIR
 # Ensure Homebrew binaries (poppler, etc.) are always on PATH regardless of how this script is invoked
@@ -40,7 +37,7 @@ echo -e "${CYAN}==================================================${NC}"
 wait_for_port() {
     local port=$1
     local service=$2
-    local max_retries=30
+    local max_retries=${3:-30}
     local retry=0
     
     echo -ne "   ${YELLOW}Waiting for $service on port $port...${NC} "
@@ -68,10 +65,10 @@ fi
 echo -e "\n${YELLOW}[2/5] Starting LiteLLM (Port 4000)...${NC}"
 if ! nc -z localhost 4000 >/dev/null 2>&1; then
     (
-        cd "${_LOCAL_WORKSPACE}/litellm" || exit
+        cd "${INFRA_DIR}/litellm" || exit
         source .venv/bin/activate
         # 啟動服務並縮排輸出到 Log
-        .venv/bin/litellm --config "${_LOCAL_WORKSPACE}/litellm-config.yaml" --port 4000 > "${LOG_DIR}/litellm.log" 2>&1 &
+        .venv/bin/litellm --config "${INFRA_DIR}/litellm/config.yaml" --port 4000 > "${LOG_DIR}/litellm.log" 2>&1 &
     )
     wait_for_port 4000 "LiteLLM"
 else
@@ -91,7 +88,7 @@ fi
 echo -e "\n${YELLOW}[4/5] Starting Pipelines (Port 9099)...${NC}"
 if ! nc -z localhost 9099 >/dev/null 2>&1; then
     (
-        cd "${_LOCAL_WORKSPACE}/pipelines" || exit
+        cd "${INFRA_DIR}/pipelines" || exit
         source .venv/bin/activate
         sh start.sh > "${LOG_DIR}/pipelines.log" 2>&1 &
     )
@@ -116,13 +113,13 @@ if ! nc -z localhost 5001 >/dev/null 2>&1; then
         cd "${WORKSPACE_DIR}" || exit
         python3 core/web_ui/app.py > "${LOG_DIR}/dashboard.log" 2>&1 &
     )
-    wait_for_port 5001 "Open Claw Dashboard"
+    wait_for_port 5001 "Open Claw Dashboard" 60
 else
     echo -e "   ${BLUE}─── ℹ️ Open Claw Dashboard already running${NC}"
 fi
 
 # 7. Open Claw Inbox Daemon
-echo -e "\n${YELLOW}[7/7] Starting Inbox Daemon (voice-memo + pdf-knowledge)...${NC}"
+echo -e "\n${YELLOW}[7/7] Starting Inbox Daemon (audio-transcriber + doc-parser)...${NC}"
 INBOX_DAEMON_PID_FILE="${LOG_DIR}/inbox_daemon.pid"
 if [[ -f "${INBOX_DAEMON_PID_FILE}" ]] && kill -0 "$(cat "${INBOX_DAEMON_PID_FILE}")" 2>/dev/null; then
     echo -e "   ${BLUE}─── ℹ️ Inbox Daemon already running (PID: $(cat "${INBOX_DAEMON_PID_FILE}"))${NC}"

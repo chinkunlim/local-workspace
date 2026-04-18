@@ -21,6 +21,17 @@ import sys
 
 _core_dir = os.path.dirname(os.path.abspath(__file__))
 _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(_core_dir, "..")))
+sys.path.insert(0, _core_dir)
+
+from path_builder import PathBuilder
+
+# Cached PathBuilder instances (one per skill)
+_pb_cache: dict[str, PathBuilder] = {}
+
+def _pb(skill: str) -> PathBuilder:
+    if skill not in _pb_cache:
+        _pb_cache[skill] = PathBuilder(_workspace_root, skill)
+    return _pb_cache[skill]
 
 
 class SkillRunner:
@@ -153,25 +164,27 @@ class SkillRunner:
     @staticmethod
     def resolve_highlight_paths(skill: str, subject: str, file_id: str) -> tuple[str, str]:
         """
-        Auto-discover input/output paths for a smart-highlighter Re-run.
+        Auto-discover input/output paths for a smart-highlighter Re-run via PathBuilder.
 
-        For audio-transcriber: input = Phase 3 (03_merged), output = Phase 4 (04_highlighted)
-        For doc-parser:        input = Phase 1 processed raw_extracted.md, output = Phase 2 highlighted
-
-        Returns:
-            (input_path, output_path) absolute paths.
+        audio-transcriber: input = p3 (03_merged), output = p4 (04_highlighted)
+        doc-parser:        input = p1 processed raw_extracted.md, output = p2 highlighted
 
         Raises:
             FileNotFoundError: If the input file does not exist.
         """
-        base = os.path.join(_workspace_root, "data")
+        pb = _pb(skill)
+        dirs = pb.phase_dirs
 
         if skill == "audio-transcriber":
-            input_path = os.path.join(base, "audio-transcriber", "output", "03_merged", subject, f"{file_id}.md")
-            output_path = os.path.join(base, "audio-transcriber", "output", "04_highlighted", subject, f"{file_id}.md")
+            input_path  = os.path.join(dirs.get("p3", os.path.join(_workspace_root, "data", skill, "output", "03_merged")),
+                                        subject, f"{file_id}.md")
+            output_path = os.path.join(dirs.get("p4", os.path.join(_workspace_root, "data", skill, "output", "04_highlighted")),
+                                        subject, f"{file_id}.md")
         elif skill == "doc-parser":
-            input_path = os.path.join(base, "doc-parser", "output", "01_processed", subject, file_id, "raw_extracted.md")
-            output_path = os.path.join(base, "doc-parser", "output", "02_highlighted", subject, file_id, "highlighted.md")
+            input_path  = os.path.join(dirs.get("p1b", os.path.join(_workspace_root, "data", skill, "output", "01_processed")),
+                                        subject, file_id, "raw_extracted.md")
+            output_path = os.path.join(dirs.get("p2a", os.path.join(_workspace_root, "data", skill, "output", "02_highlighted")),
+                                        subject, file_id, "highlighted.md")
         else:
             raise ValueError(f"Unknown skill: {skill!r}")
 
@@ -183,25 +196,27 @@ class SkillRunner:
     @staticmethod
     def resolve_synthesize_paths(skill: str, subject: str, file_id: str) -> tuple[str, str]:
         """
-        Auto-discover input/output paths for a note-generator Re-run.
+        Auto-discover input/output paths for a note-generator Re-run via PathBuilder.
 
-        For audio-transcriber: input = Phase 4 (04_highlighted), output = Phase 5 (05_notion_synthesis)
-        For doc-parser:        input = Phase 2 (02_highlighted), output = Phase 3 (03_synthesis)
-
-        Returns:
-            (input_path, output_path) absolute paths.
+        audio-transcriber: input = p4 (04_highlighted), output = p5 (05_notion_synthesis)
+        doc-parser:        input = p2 (02_highlighted), output = p3 (03_synthesis)
 
         Raises:
             FileNotFoundError: If the input file does not exist.
         """
-        base = os.path.join(_workspace_root, "data")
+        pb = _pb(skill)
+        dirs = pb.phase_dirs
 
         if skill == "audio-transcriber":
-            input_path = os.path.join(base, "audio-transcriber", "output", "04_highlighted", subject, f"{file_id}.md")
-            output_path = os.path.join(base, "audio-transcriber", "output", "05_notion_synthesis", subject, f"{file_id}.md")
+            input_path  = os.path.join(dirs.get("p4", os.path.join(_workspace_root, "data", skill, "output", "04_highlighted")),
+                                        subject, f"{file_id}.md")
+            output_path = os.path.join(dirs.get("p5", os.path.join(_workspace_root, "data", skill, "output", "05_notion_synthesis")),
+                                        subject, f"{file_id}.md")
         elif skill == "doc-parser":
-            input_path = os.path.join(base, "doc-parser", "output", "02_highlighted", subject, file_id, "highlighted.md")
-            output_path = os.path.join(base, "doc-parser", "output", "03_synthesis", subject, file_id, "content.md")
+            input_path  = os.path.join(dirs.get("p2a", os.path.join(_workspace_root, "data", skill, "output", "02_highlighted")),
+                                        subject, file_id, "highlighted.md")
+            output_path = os.path.join(dirs.get("p2b", os.path.join(_workspace_root, "data", skill, "output", "03_synthesis")),
+                                        subject, file_id, "content.md")
         else:
             raise ValueError(f"Unknown skill: {skill!r}")
 

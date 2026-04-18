@@ -16,6 +16,8 @@ import threading
 import queue
 import collections
 import time
+import datetime
+import json
 import os
 import psutil
 
@@ -28,7 +30,11 @@ class ExecutionManager:
         self._current_task_name = None
         self._total_lines_read = 0
 
-        # Job Queue (sequential, RAM-safe)
+        # Lightweight re-run state log (for /api/highlight, /api/synthesize)
+        self._rerun_state_path = os.path.join(
+            os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))),
+            "data", ".rerun_state.json"
+        )
         self._job_queue: queue.Queue = queue.Queue()
         self._queued_names: list[str] = []   # ordered list for introspection + dedup
         self._worker = threading.Thread(target=self._process_queue, daemon=True)
@@ -119,6 +125,32 @@ class ExecutionManager:
             except Exception as e:
                 self._log_buffer.append(f"❌ [System] 強制退出時發生錯誤: {e}\n")
 
+    def _write_rerun_state(self, task_name: str, status: str, error: str = None):
+        """Append a lightweight state record for Re-run tasks to data/.rerun_state.json."""
+        record = {
+            "task": task_name,
+            "status": status,
+            "timestamp": datetime.datetime.now().isoformat(),
+        }
+        if error:
+            record["error"] = error
+        try:
+            os.makedirs(os.path.dirname(self._rerun_state_path), exist_ok=True)
+            existing = []
+            if os.path.exists(self._rerun_state_path):
+                with open(self._rerun_state_path, "r", encoding="utf-8") as f:
+                    existing = json.load(f)
+            existing.append(record)
+            existing = existing[-200:]  # Keep last 200 records
+            # Write via temp file (best-effort atomic)
+            import tempfile
+            fd, tmp = tempfile.mkstemp(dir=os.path.dirname(self._rerun_state_path))
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(existing, fh, ensure_ascii=False, indent=2)
+            os.replace(tmp, self._rerun_state_path)
+        except Exception:
+            pass  # Rerun state logging must never block the pipeline
+
     def pause_task(self):
         with self._lock:
             if not self.is_running():
@@ -160,18 +192,14 @@ class ExecutionManager:
 
         try:
             proc = subprocess.Popen(
-                command,
-                cwd=cwd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                env=env,
+                command, cwd=cwd,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1, env=env,
             )
             with self._lock:
                 self._process = proc
+            self._write_rerun_state(task_name, "RUNNING")
 
-            # Stream stdout into log buffer
             for line in iter(proc.stdout.readline, ""):
                 with self._lock:
                     self._log_buffer.append(line)
@@ -183,14 +211,18 @@ class ExecutionManager:
                 retcode = proc.returncode
                 if retcode == 0:
                     self._log_buffer.append(f"\n✅ [System] {task_name} 執行完畢 (Exit 0)\n")
+                    self._write_rerun_state(task_name, "COMPLETED")
                 elif retcode in (-15, 143):
                     self._log_buffer.append(f"\n⏹️ [System] {task_name} 已被使用者強制中止\n")
+                    self._write_rerun_state(task_name, "CANCELLED")
                 else:
                     self._log_buffer.append(f"\n❌ [System] {task_name} 異常結束 (Exit {retcode})\n")
+                    self._write_rerun_state(task_name, "FAILED", error=f"Exit {retcode}")
 
         except Exception as e:
             with self._lock:
                 self._log_buffer.append(f"❌ [System] 無法啟動進程: {e}\n")
+            self._write_rerun_state(task_name, "FAILED", error=str(e))
         finally:
             with self._lock:
                 self._current_task_name = None
