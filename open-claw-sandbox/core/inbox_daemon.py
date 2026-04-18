@@ -67,8 +67,8 @@ class SystemInboxDaemon:
                         path = event.src_path
                         if path in self.daemon._debounce_timers:
                             self.daemon._debounce_timers[path].cancel()
-                        # Wait 3 seconds for file transfer to complete
-                        timer = threading.Timer(3.0, self.daemon._trigger_pipeline, args=[self.monitor_cfg["skill"], path])
+                        # Use a thread to poll file size instead of a naive timer
+                        timer = threading.Thread(target=self.daemon._wait_and_trigger, args=(self.monitor_cfg["skill"], path))
                         self.daemon._debounce_timers[path] = timer
                         timer.start()
 
@@ -81,6 +81,19 @@ class SystemInboxDaemon:
 
         except ImportError:
             print("⚠️ [Daemon] watchdog 未安裝 (pip install watchdog)，忽略即時監控。")
+
+    def _wait_and_trigger(self, skill: str, filepath: str):
+        prev_size = -1
+        while True:
+            try:
+                current_size = os.path.getsize(filepath)
+                if current_size == prev_size and current_size > 0:
+                    break
+                prev_size = current_size
+                time.sleep(2.0)
+            except OSError:
+                time.sleep(2.0)
+        self._trigger_pipeline(skill, filepath)
 
     def _trigger_pipeline(self, skill: str, filepath: str):
         print(f"\n🚀 [Daemon] 偵測到新檔案: {filepath} ({skill})")
