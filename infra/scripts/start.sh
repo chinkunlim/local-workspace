@@ -64,13 +64,25 @@ fi
 # 2. LiteLLM
 echo -e "\n${YELLOW}[2/5] Starting LiteLLM (Port 4000)...${NC}"
 if ! nc -z localhost 4000 >/dev/null 2>&1; then
-    (
-        cd "${INFRA_DIR}/litellm" || exit
-        source .venv/bin/activate
-        # 啟動服務並縮排輸出到 Log
-        .venv/bin/litellm --config "${INFRA_DIR}/litellm/config.yaml" --port 4000 > "${LOG_DIR}/litellm.log" 2>&1 &
-    )
-    wait_for_port 4000 "LiteLLM"
+    # Find litellm binary: prefer infra/pipelines venv, fallback to system
+    _LITELLM_BIN=""
+    for candidate in \
+        "${INFRA_DIR}/pipelines/.venv/bin/litellm" \
+        "${_LOCAL_WORKSPACE}/.venv/bin/litellm" \
+        "$(which litellm 2>/dev/null)"; do
+        if [ -x "$candidate" ]; then
+            _LITELLM_BIN="$candidate"
+            break
+        fi
+    done
+
+    if [ -z "$_LITELLM_BIN" ]; then
+        echo -e "   ${RED}❌ litellm binary not found — skipping (pip install litellm)${NC}"
+    else
+        echo -e "   ${BLUE}ℹ️ Using: $_LITELLM_BIN${NC}"
+        "$_LITELLM_BIN" --config "${INFRA_DIR}/litellm/config.yaml" --port 4000 > "${LOG_DIR}/litellm.log" 2>&1 &
+        wait_for_port 4000 "LiteLLM"
+    fi
 else
     echo -e "   ${BLUE}─── ℹ️ LiteLLM already running${NC}"
 fi
@@ -89,8 +101,8 @@ echo -e "\n${YELLOW}[4/5] Starting Pipelines (Port 9099)...${NC}"
 if ! nc -z localhost 9099 >/dev/null 2>&1; then
     (
         cd "${INFRA_DIR}/pipelines" || exit
-        source .venv/bin/activate
-        sh start.sh > "${LOG_DIR}/pipelines.log" 2>&1 &
+        # Use the venv's uvicorn directly — no need to `source activate`
+        .venv/bin/uvicorn main:app --host 0.0.0.0 --port 9099 > "${LOG_DIR}/pipelines.log" 2>&1 &
     )
     wait_for_port 9099 "Pipelines"
 else
