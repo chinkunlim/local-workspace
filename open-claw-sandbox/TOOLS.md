@@ -3,7 +3,7 @@
 ## 1. Purpose
 
 Workspace-specific operational environment facts for agents and operators.
-Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELINES.md`.
+Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELINES_FINAL.md`.
 
 ---
 
@@ -12,9 +12,10 @@ Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELI
 | Service | URL | Managed By |
 |:---|:---|:---|
 | Open Claw Dashboard | `http://127.0.0.1:5001` | `core/web_ui/app.py` |
-| Ollama API | `http://127.0.0.1:11434` | External — `local-workspace/start.sh` |
-| LiteLLM / Gemini Gate | `http://127.0.0.1:4000` | External — `local-workspace/start.sh` |
-| Open WebUI | `http://127.0.0.1:8080` | External — `local-workspace/start.sh` |
+| Ollama API | `http://127.0.0.1:11434` | External — `infra/scripts/start.sh` |
+| LiteLLM Proxy | `http://127.0.0.1:4000` | External — `infra/scripts/start.sh` |
+| Open WebUI | `http://127.0.0.1:3000` | External — `infra/scripts/start.sh` |
+| Pipelines | `http://127.0.0.1:9099` | External — `infra/scripts/start.sh` |
 
 > Ollama is the only **skill-runtime** dependency. Its availability is verified by `startup_check()` in each `run_all.py` orchestrator.
 
@@ -30,7 +31,8 @@ Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELI
 | PDF-knowledge skill | `skills/pdf-knowledge/` |
 | Voice-memo runtime data | `data/voice-memo/` |
 | PDF-knowledge runtime data | `data/pdf-knowledge/` |
-| Ops & maintenance scripts | `ops/` |
+| Ops & maintenance scripts | `ops/` (sandbox), `../ops/` (global) |
+| Lifecycle scripts | `../infra/scripts/` |
 | Model cache (HuggingFace) | `models/` — set via `HF_HOME` env var |
 | Structure map | `docs/STRUCTURE.md` |
 

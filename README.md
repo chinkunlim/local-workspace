@@ -1,39 +1,57 @@
 # local-workspace
 
-Local AI operations workspace for OpenClaw, Open WebUI, LiteLLM routing, and skill-oriented automation.
+Local AI operations monorepo — Open Claw automation sandbox, LLM infrastructure, and skill-oriented pipelines.
 
-## 1. What This Workspace Contains
-- open-claw-sandbox: Skill framework and domain pipelines (voice-memo, pdf-knowledge)
-- open-webui: Local UI and vector data runtime
-- litellm: Gateway and model routing
-- pipelines: Additional pipeline server runtime
-- project_dev: Project work logs and handoff packs
+## Structure
 
-## 2. Start and Stop
-- Start all primary services:
-  - ./start.sh
-- Stop all primary services:
-  - ./stop.sh
-- Optional watchdog:
-  - ./watchdog.sh
+```
+local-workspace/
+├── open-claw-sandbox/   ← Open Claw AI automation (voice-memo, pdf-knowledge)
+├── infra/               ← LiteLLM proxy, Open WebUI, Pipelines, lifecycle scripts
+├── docs/                ← Global documentation (CODING_GUIDELINES_FINAL, AI_Master_Guide)
+├── memory/              ← Global AI memory (ARCHITECTURE, DECISIONS)
+├── ops/                 ← Global quality gate (check.sh)
+└── tests/               ← E2E and integration test stubs
+```
 
-## 3. Logging
-Workspace-level logs are stored in logs:
-- startup.log
-- stop.log
-- ram_watchdog.log
-- service-specific logs (litellm.log, open-webui.log, pipelines.log, openclaw.log)
+## Quick Start
 
-Skill-level logs are under data/<skill>/logs in open-claw-sandbox.
+```bash
+# Start all services (Ollama, LiteLLM, Open WebUI, Pipelines, Open Claw Dashboard)
+./infra/scripts/start.sh
 
-## 4. OpenClaw Structure
-See open-claw-sandbox/AGENTS.md and open-claw-sandbox/docs/CODING_GUIDELINES.md for contributor and agent contracts.
+# Stop all services
+./infra/scripts/stop.sh
 
-## 5. Documentation Language Policy
-English is the primary language for technical documentation to maximize clarity across AI tooling and future contributors.
+# RAM watchdog (optional — auto-evicts models when memory is low)
+./infra/scripts/watchdog.sh
 
-## 6. Change Discipline
-When code changes are made in open-claw-sandbox, update:
-- related skill docs in skills/<skill>/docs/*.md
-- open-claw-sandbox/docs/CODING_GUIDELINES.md when standards change
-- handoff and progress artifacts for operational continuity
+# Run full quality check
+./ops/check.sh
+```
+
+## Service Endpoints
+
+| Service | URL |
+|---|---|
+| Open Claw Dashboard | http://127.0.0.1:5001 |
+| Open WebUI | http://127.0.0.1:3000 |
+| LiteLLM Proxy | http://127.0.0.1:4000 |
+| Ollama | http://127.0.0.1:11434 |
+| Pipelines | http://127.0.0.1:9099 |
+
+## Logs
+
+- Service logs: `logs/` (startup.log, openclaw.log, litellm.log, etc.)
+- Skill logs: `open-claw-sandbox/data/<skill>/logs/`
+
+## Documentation
+
+- `docs/CODING_GUIDELINES_FINAL.md` — Single source of truth for all development rules (v3.0.0)
+- `memory/ARCHITECTURE.md` — Full system architecture and design decisions
+- `open-claw-sandbox/AGENTS.md` — AI agent behaviour contract
+- `open-claw-sandbox/docs/STRUCTURE.md` — Annotated file map of the sandbox
+
+## Change Discipline
+
+Any code change must be accompanied by documentation updates in the same commit. See `CONTRIBUTING.md`.
