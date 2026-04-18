@@ -9,7 +9,7 @@
 
 | Section                            | Change                                                                                      |
 | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| **open-claw-workspace 架構**       | ✅ **UPDATED** — 完整重構：新增 `core/` 共享框架、`skills/` 技能目錄、`data/` 運行時資料分離 |
+| **open-claw-sandbox 架構**       | ✅ **UPDATED** — 完整重構：新增 `core/` 共享框架、`skills/` 技能目錄、`data/` 運行時資料分離 |
 | **Voice-Memo Pipeline (Part 11)**  | ✅ **UPDATED** — V3.6.1 → 現行版本：6 個 Phase (P0–P5)，MLX-Whisper，非 Docker 執行          |
 | **PDF Knowledge Skill (Part 11b)** | ✅ **ADDED** — 全新技能：7 個 Phase，Docling 深度提取 + VLM 圖像分析                         |
 | **Open Claw Dashboard (Part 10)**  | ✅ **ADDED** — Flask Web UI (port 5001)，含 Review Board 差異比對                            |
@@ -30,8 +30,8 @@ LiteLLM:            .../local-workspace/litellm/           (.venv here)
 LiteLLM config:     .../local-workspace/litellm-config.yaml
 Watchdog:           .../local-workspace/watchdog.sh        (logs → logs/ram_watchdog.log)
 Open Claw API:      openclaw gateway · port 18789
-Open Claw Dashboard:.../open-claw-workspace/core/web_ui/   · port 5001
-Open Claw Workspace:.../local-workspace/open-claw-workspace/
+Open Claw Dashboard:.../open-claw-sandbox/core/web_ui/   · port 5001
+Open Claw Workspace:.../local-workspace/open-claw-sandbox/
   ├── core/         共享框架（所有 skills 共用）
   ├── skills/
   │   ├── voice-memo/   🎙️ M4A → Notion Markdown（6 Phases）
@@ -39,7 +39,7 @@ Open Claw Workspace:.../local-workspace/open-claw-workspace/
   ├── data/         運行時資料（不進 git）
   └── models/       HuggingFace 模型快取
 All venvs use uv, not pip. Always activate: source .venv/bin/activate
-Python dependencies: pip3 install -r open-claw-workspace/ops/requirements.txt
+Python dependencies: pip3 install -r open-claw-sandbox/ops/requirements.txt
 ```
 
 ---
@@ -66,7 +66,7 @@ Python dependencies: pip3 install -r open-claw-workspace/ops/requirements.txt
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  LAYER 6 — SKILLS (open-claw-workspace)                  │
+│  LAYER 6 — SKILLS (open-claw-sandbox)                  │
 │  voice-memo (P0–P5) · pdf-knowledge (P0a–P3)             │
 │  core/ shared framework · Dashboard :5001                │
 │  Inbox Daemon · Review Board (diff UI)                   │
@@ -98,7 +98,7 @@ Python dependencies: pip3 install -r open-claw-workspace/ops/requirements.txt
 | Open WebUI                   | Router / Command centre — all models in one UI          |
 | LiteLLM                      | API gateway — 3 Gemini accounts as one endpoint         |
 | Cline + MCP Servers          | Agentic execution — file system, GitHub, Docker         |
-| open-claw-workspace          | Skill sandbox — voice-memo + pdf-knowledge pipelines    |
+| open-claw-sandbox          | Skill sandbox — voice-memo + pdf-knowledge pipelines    |
 | core/ framework              | Shared modules: PipelineBase, StateManager, DiffEngine… |
 | Open Claw Dashboard          | Web UI :5001 — status, live logs, Review Board diff     |
 | Inbox Daemon                 | Auto-trigger pipelines when new files appear in Inbox   |
@@ -758,7 +758,7 @@ Run `openclaw configure` and use Manual mode:
 | Provider                | Ollama                                                          | Local model                     |
 | URL                     | `http://127.0.0.1:11434`                                        | No /v1 at end!                  |
 | Default Model           | `ollama/qwen2.5-coder:7b`                                       | Daily model                     |
-| Workspace               | `/Users/limchinkun/Desktop/local-workspace/open-claw-workspace` | Limit AI file access            |
+| Workspace               | `/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox` | Limit AI file access            |
 | Install gateway service | Yes                                                             | Auto-start on boot              |
 
 ### 8.6 Full openclaw config JSON
@@ -811,7 +811,7 @@ Run `openclaw config edit` and paste (replace `limchinkun` with your username):
 
 | ✅ Open Claw CAN access            | ❌ BLOCKED — Cannot access           |
 | --------------------------------- | ----------------------------------- |
-| open-claw-workspace (read+write)  | ~/Documents, ~/Desktop, ~/Downloads |
+| open-claw-sandbox (read+write)  | ~/Documents, ~/Desktop, ~/Downloads |
 | Docker sandbox container only     | ~/.ssh (auto-blocked)               |
 | /workspace/agri (if configured)   | /etc, /sys, /dev (auto-blocked)     |
 | /workspace/thesis (if configured) | Internet (network: none)            |
@@ -859,7 +859,7 @@ Key improvements over original version:
 #!/bin/bash
 WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export WORKSPACE_DIR
-export PYTHONPATH="${WORKSPACE_DIR}:${WORKSPACE_DIR}/open-claw-workspace:${PYTHONPATH}"
+export PYTHONPATH="${WORKSPACE_DIR}:${WORKSPACE_DIR}/open-claw-sandbox:${PYTHONPATH}"
 
 LOG_DIR="${WORKSPACE_DIR}/logs"
 mkdir -p "$LOG_DIR"
@@ -1113,7 +1113,7 @@ All phases are implemented as `PipelineBase` subclasses importing from `core/`. 
 ### 11.1 Directory Structure (Current)
 
 ```
-open-claw-workspace/
+open-claw-sandbox/
 ├── core/                          # Shared framework (all skills import from here)
 │   ├── pipeline_base.py           # Abstract base for all Phase scripts
 │   ├── state_manager.py           # Progress tracking + checklist.md rendering
@@ -1164,11 +1164,11 @@ open-claw-workspace/
 brew install poppler tesseract tesseract-lang
 
 # Python dependencies
-cd ~/Desktop/local-workspace/open-claw-workspace
+cd ~/Desktop/local-workspace/open-claw-sandbox
 pip3 install -r ops/requirements.txt
 
 # Set environment variables (add to ~/.zshrc or local-workspace/start.sh)
-export WORKSPACE_DIR="/Users/limchinkun/Desktop/local-workspace/open-claw-workspace"
+export WORKSPACE_DIR="/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox"
 export HF_HOME="${WORKSPACE_DIR}/models"
 
 # Smoke test
@@ -1178,7 +1178,7 @@ python3 skills/voice-memo/scripts/run_all.py --help
 ### 11.3 Execution Commands
 
 ```bash
-cd ~/Desktop/local-workspace/open-claw-workspace
+cd ~/Desktop/local-workspace/open-claw-sandbox
 
 # Run full pipeline (all subjects)
 python3 skills/voice-memo/scripts/run_all.py
@@ -1306,7 +1306,7 @@ brew install poppler tesseract tesseract-lang
 ### 11b.4 Execution Commands
 
 ```bash
-cd ~/Desktop/local-workspace/open-claw-workspace
+cd ~/Desktop/local-workspace/open-claw-sandbox
 
 # Drop PDF into Inbox first:
 cp textbook.pdf data/pdf-knowledge/input/AI_Papers/

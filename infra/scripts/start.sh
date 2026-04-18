@@ -17,11 +17,11 @@ if [ "$script_dir" = "/" ] || [ -z "$script_dir" ] || [ "$script_dir" = "." ]; t
 fi
 _LOCAL_WORKSPACE="$script_dir"
 
-# Strip trailing open-claw-workspace if user ran it from inside
-if [[ "$_LOCAL_WORKSPACE" == */open-claw-workspace ]]; then
+# Strip trailing open-claw-sandbox if user ran it from inside
+if [[ "$_LOCAL_WORKSPACE" == */open-claw-sandbox ]]; then
     _LOCAL_WORKSPACE="$(dirname "$_LOCAL_WORKSPACE")"
 fi
-WORKSPACE_DIR="${_LOCAL_WORKSPACE}/open-claw-workspace"
+WORKSPACE_DIR="${_LOCAL_WORKSPACE}/open-claw-sandbox"
 export WORKSPACE_DIR
 # Ensure Homebrew binaries (poppler, etc.) are always on PATH regardless of how this script is invoked
 export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"

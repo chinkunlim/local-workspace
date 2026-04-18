@@ -1,6 +1,6 @@
 # AI Ecosystem Workspace Structure
 
-> This outlines the global layout of `local-workspace`, which sits above the `open-claw-workspace` sandbox.
+> This outlines the global layout of `local-workspace`, which sits above the `open-claw-sandbox` sandbox.
 
 ```
 /Users/limchinkun/Desktop/local-workspace
@@ -32,10 +32,10 @@
 │   ├── Modelfile-night         # (deepseek-night) 夜間批次運行的重型模型
 │   └── Modelfile-reason        # (deepseek-reason) 邏輯推理與數學
 
-├── open-claw-workspace/        # 🦞 [Open Claw 沙盒] Agent 專屬工作區 (與實體機隔離)
+├── open-claw-sandbox/        # 🦞 [Open Claw 沙盒] Agent 專屬工作區 (與實體機隔離)
 │   ├── AGENTS.md               # 系統自動生成的 Agent 設定檔
 │   ├── BOOTSTRAP.md            # 從 0 啟動的說明指南
-│   ├── ...                     # 詳見 open-claw-workspace/docs/STRUCTURE.md
+│   ├── ...                     # 詳見 open-claw-sandbox/docs/STRUCTURE.md
 │   └── docs/
 │       └── STRUCTURE.md        # Open Claw 內部檔案架構
 

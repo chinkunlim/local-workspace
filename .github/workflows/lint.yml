@@ -20,13 +20,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip install ruff mypy
-          pip install -r open-claw-workspace/requirements.txt
+          pip install -r open-claw-sandbox/requirements.txt
 
       - name: Ruff lint
-        run: ruff check open-claw-workspace/
+        run: ruff check open-claw-sandbox/
 
       - name: Ruff format check
-        run: ruff format --check open-claw-workspace/
+        run: ruff format --check open-claw-sandbox/
 
       - name: Mypy type check
-        run: mypy open-claw-workspace/core/
+        run: mypy open-claw-sandbox/core/

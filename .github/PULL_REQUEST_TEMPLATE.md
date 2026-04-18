@@ -12,7 +12,7 @@
 <!-- Explain the rationale, not just the mechanics. -->
 
 ## Testing Done
-- [ ] `./open-claw-workspace/ops/check.sh` passes (Ruff + Mypy)
+- [ ] `./open-claw-sandbox/ops/check.sh` passes (Ruff + Mypy)
 - [ ] Pipeline manually tested with sample input
 - [ ] All documentation updated in the same commit
 

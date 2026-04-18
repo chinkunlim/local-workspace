@@ -8,7 +8,7 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 ## [Unreleased]
 
 ### Added
-- `memory/` AI collaboration layer in `open-claw-workspace/`
+- `memory/` AI collaboration layer in `open-claw-sandbox/`
 - `infra/` directory consolidating LiteLLM, Open WebUI, Pipelines, and lifecycle scripts
 - `.github/` with CI lint workflow and issue/PR templates
 - `tests/` directory structure (e2e + integration stubs)
@@ -17,7 +17,7 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 - `.editorconfig` and `pyproject.toml` at repo root
 
 ### Changed
-- `pyproject.toml` and `.pre-commit-config.yaml` moved to `open-claw-workspace/` root
+- `pyproject.toml` and `.pre-commit-config.yaml` moved to `open-claw-sandbox/` root
 - `CODING_GUIDELINES_FINAL.md` v3.0.0 — merged all prior rules documents
 
 ### Removed
@@ -29,7 +29,7 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 ## [0.1.0] — 2026-04-15
 
 ### Added
-- Initial `open-claw-workspace/` sandbox structure
+- Initial `open-claw-sandbox/` sandbox structure
 - `core/` shared framework (PipelineBase, PathBuilder, StateManager, LogManager, etc.)
 - `voice-memo` skill — 6-phase MLX-Whisper pipeline
 - `pdf-knowledge` skill — 7-phase Docling pipeline
