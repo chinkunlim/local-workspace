@@ -115,13 +115,29 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Smart Highlighter Skill")
     parser.add_argument("--subject", default="Default", help="Subject label")
     parser.add_argument("--profile", help="Config profile override")
+    parser.add_argument("--input-file", dest="input_file", help="Input .md file path (file mode)")
+    parser.add_argument("--output-file", dest="output_file", help="Output .md file path (file mode)")
     args = parser.parse_args()
-    
-    # Read from stdin for standalone testing
-    if not sys.stdin.isatty():
+
+    highlighter = SmartHighlighter(profile=args.profile)
+
+    # File mode (WebUI Re-run)
+    if args.input_file:
+        import pathlib
+        input_text = pathlib.Path(args.input_file).read_text(encoding="utf-8")
+        result = highlighter.run(input_text, subject=args.subject)
+        if args.output_file:
+            from core.atomic_writer import AtomicWriter
+            AtomicWriter.write_text(args.output_file, result)
+            print(f"✅ Highlighted output written to: {args.output_file}")
+        else:
+            print(result)
+
+    # Stdin mode (legacy / CLI testing)
+    elif not sys.stdin.isatty():
         input_text = sys.stdin.read()
         if input_text:
-            result = SmartHighlighter(profile=args.profile).run(input_text, subject=args.subject)
+            result = highlighter.run(input_text, subject=args.subject)
             print(result)
     else:
-        print("Please pipe markdown text via stdin. Example: cat doc.md | python highlight.py")
+        print("Usage: cat doc.md | python highlight.py  OR  python highlight.py --input-file doc.md --output-file out.md")

@@ -29,6 +29,11 @@
 
 ## ✅ Completed
 
+- [x] 2026-04-19: Full 4-Skill WebUI+CLI Integration
+  - Created `core/cli_runner.py` (SkillRunner Service Layer)
+  - Upgraded `execution_manager.py` to Job Queue + same-skill dedup
+  - Added `/api/highlight`, `/api/synthesize`, `/api/queue`, `/api/status/skills` routes
+  - Extended `smart-highlighter` and `note-generator` CLI with `--input-file`/`--output-file`
 - [x] 2026-04-19: Extracted `smart-highlighter` and `note-generator` as standalone skills
 - [x] 2026-04-19: 全域 .md 文件更新（README, TOOLS, HANDOFF, TASKS, .claude_profile）
 - [x] 2026-04-19: 全域 `memory/` 目錄建立（monorepo root + sandbox）

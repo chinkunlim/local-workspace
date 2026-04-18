@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from core.web_ui.execution_manager import ExecutionManager
 from core.path_builder import PathBuilder
+from core.cli_runner import SkillRunner
 
 # ── Flask app ─────────────────────────────────────────────────────────────────
 app      = Flask(__name__)
@@ -71,8 +72,21 @@ DIFF_PHASE_MAP: dict[str, dict[str, tuple[str, str, str, str]]] = {
 }
 
 # ── Script paths ───────────────────────────────────────────────────────────────
-_PDF_SCRIPT   = os.path.join(_workspace_root, "skills", "doc-parser", "scripts", "run_all.py")
-_VOICE_SCRIPT = os.path.join(_workspace_root, "skills", "audio-transcriber",   "scripts", "run_all.py")
+_PDF_SCRIPT   = os.path.join(_workspace_root, "skills", "doc-parser",         "scripts", "run_all.py")
+_VOICE_SCRIPT = os.path.join(_workspace_root, "skills", "audio-transcriber",  "scripts", "run_all.py")
+
+# ── Skill alias normaliser ─────────────────────────────────────────────────────
+_SKILL_ALIASES: dict[str, str] = {
+    "voice": "audio-transcriber",
+    "pdf":   "doc-parser",
+    "audio-transcriber": "audio-transcriber",
+    "doc-parser":        "doc-parser",
+    "smart-highlighter": "smart-highlighter",
+    "note-generator":    "note-generator",
+}
+
+def _normalise_skill(raw: str) -> str | None:
+    return _SKILL_ALIASES.get(raw.strip().lower())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -225,47 +239,124 @@ def api_start():
         resume  : bool              (optional — audio-transcriber: auto-answer resume prompt with C)
     """
     data    = request.get_json(force=True) or {}
-    skill   = data.get("skill", "")
+    skill  = _normalise_skill(data.get("skill", ""))
     subject = data.get("subject", "").strip()
     file    = data.get("file", "").strip()
     single  = bool(data.get("single", False))
     force   = bool(data.get("force", False))
     resume  = bool(data.get("resume", False))
 
-    if skill == "pdf":
-        cmd = ["python3", _PDF_SCRIPT, "--process-all"]
-        if subject:
-            cmd += ["--subject", subject]
-        if file:
-            cmd += ["--file", file]
-        if single:
-            cmd += ["--single"]
-        if force:
-            cmd += ["--force"]
-        if resume:
-            cmd += ["--resume"]
-        ok = exec_mgr.start_task("PDF Queue Manager", cmd, cwd=_workspace_root)
+    if skill == "audio-transcriber":
+        cmd = SkillRunner.run_audio_transcriber(subject=subject, file=file, single=single, force=force, resume=resume)
+        ok = exec_mgr.enqueue_task("Audio Transcriber Pipeline", cmd, cwd=_workspace_root)
 
-    elif skill == "voice":
-        cmd = ["python3", _VOICE_SCRIPT]
-        if subject:
-            cmd += ["--subject", subject]
-        if file:
-            cmd += ["--file", file]
-        if single:
-            cmd += ["--single"]
-        if force:
-            cmd += ["--force"]
-        if resume:
-            cmd += ["--resume"]
-        ok = exec_mgr.start_task("Audio Transcriber Pipeline", cmd, cwd=_workspace_root)
+    elif skill == "doc-parser":
+        cmd = SkillRunner.run_doc_parser(subject=subject, file=file, single=single, force=force, resume=resume)
+        ok = exec_mgr.enqueue_task("Doc Parser Pipeline", cmd, cwd=_workspace_root)
 
     else:
-        return jsonify({"success": False, "error": "Invalid skill. Use 'pdf' or 'voice'."}), 400
+        return jsonify({"success": False, "error": f"Invalid skill '{skill}'. Use 'audio-transcriber' or 'doc-parser'."}), 400
 
     if ok:
         return jsonify({"success": True})
-    return jsonify({"success": False, "error": "Another task is already running."}), 409
+    return jsonify({"success": False, "error": "Another task with the same name is already running or queued."}), 409
+
+
+@app.route("/api/highlight", methods=["POST"])
+def api_highlight():
+    """
+    Re-run smart-highlighter on an existing Phase output file.
+
+    Request body (JSON):
+        skill   : "audio-transcriber" | "doc-parser"  (required)
+        subject : str  (required)
+        file_id : str  (required — stem for voice, pdf_id folder for doc-parser)
+    """
+    data    = request.get_json(force=True) or {}
+    skill   = _normalise_skill(data.get("skill", ""))
+    subject = data.get("subject", "").strip()
+    file_id = data.get("file_id", "").strip()
+
+    if skill not in ("audio-transcriber", "doc-parser") or not subject or not file_id:
+        return jsonify({"success": False, "error": "Missing or invalid skill / subject / file_id."}), 400
+
+    try:
+        input_path, output_path = SkillRunner.resolve_highlight_paths(skill, subject, file_id)
+    except FileNotFoundError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+    cmd = SkillRunner.run_smart_highlighter(input_file=input_path, output_file=output_path, subject=subject)
+    task_name = f"Smart Highlighter [{skill}/{subject}/{file_id}]"
+    ok = exec_mgr.enqueue_task(task_name, cmd, cwd=_workspace_root)
+
+    if ok:
+        return jsonify({"success": True, "input": input_path, "output": output_path})
+    return jsonify({"success": False, "error": "Same task already queued."}), 409
+
+
+@app.route("/api/synthesize", methods=["POST"])
+def api_synthesize():
+    """
+    Re-run note-generator on an existing highlighted Phase output file.
+
+    Request body (JSON):
+        skill   : "audio-transcriber" | "doc-parser"  (required)
+        subject : str  (required)
+        file_id : str  (required)
+    """
+    data    = request.get_json(force=True) or {}
+    skill   = _normalise_skill(data.get("skill", ""))
+    subject = data.get("subject", "").strip()
+    file_id = data.get("file_id", "").strip()
+
+    if skill not in ("audio-transcriber", "doc-parser") or not subject or not file_id:
+        return jsonify({"success": False, "error": "Missing or invalid skill / subject / file_id."}), 400
+
+    try:
+        input_path, output_path = SkillRunner.resolve_synthesize_paths(skill, subject, file_id)
+    except FileNotFoundError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+    cmd = SkillRunner.run_note_generator(input_file=input_path, output_file=output_path, subject=subject, label=file_id)
+    task_name = f"Note Generator [{skill}/{subject}/{file_id}]"
+    ok = exec_mgr.enqueue_task(task_name, cmd, cwd=_workspace_root)
+
+    if ok:
+        return jsonify({"success": True, "input": input_path, "output": output_path})
+    return jsonify({"success": False, "error": "Same task already queued."}), 409
+
+
+@app.route("/api/queue", methods=["GET"])
+def api_queue():
+    """Return the current Job Queue status."""
+    return jsonify(exec_mgr.get_queue_status())
+
+
+@app.route("/api/status/skills", methods=["GET"])
+def api_status_skills():
+    """Return a summary of each skill's output file counts."""
+    def _count_md(directory: str) -> int:
+        if not os.path.isdir(directory):
+            return 0
+        return sum(1 for _, _, files in os.walk(directory) for f in files if f.endswith(".md"))
+
+    base = os.path.join(_workspace_root, "data")
+    return jsonify({
+        "audio-transcriber": {
+            "transcripts":   _count_md(os.path.join(base, "audio-transcriber", "output", "01_transcript")),
+            "highlighted":   _count_md(os.path.join(base, "audio-transcriber", "output", "04_highlighted")),
+            "synthesized":   _count_md(os.path.join(base, "audio-transcriber", "output", "05_notion_synthesis")),
+        },
+        "doc-parser": {
+            "processed":  _count_md(os.path.join(base, "doc-parser", "output", "01_processed")),
+            "highlighted": _count_md(os.path.join(base, "doc-parser", "output", "02_highlighted")),
+            "synthesized": _count_md(os.path.join(base, "doc-parser", "output", "03_synthesis")),
+        },
+    })
 
 
 @app.route("/api/stop", methods=["POST"])

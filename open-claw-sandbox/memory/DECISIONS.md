@@ -1,7 +1,44 @@
 # DECISIONS.md — Architectural Decision Records
 
-> **Last Updated:** 2026-04-18
+> **Last Updated:** 2026-04-19
 > **Format:** ADR (Architectural Decision Record)
+
+---
+
+## [2026-04-19] WebUI Integration: Re-run Pattern for smart-highlighter & note-generator
+
+### Background
+`smart-highlighter` and `note-generator` are standalone library-style skills invoked via Python import by the upstream pipeline phases. The question was whether to give them a dedicated WebUI input form or a Re-run mechanism against existing outputs.
+
+### Options
+1. Independent input form: User pastes arbitrary Markdown → triggers skill → output shown in browser
+2. Re-run on existing phase output ✅ — User selects an existing `audio-transcriber`/`doc-parser` output file; system auto-discovers paths and re-triggers the skill against it
+
+### Decision
+Option 2 (Re-run). This avoids duplicating the data-entry UX, respects the existing Data Flow architecture, and requires no new data ingestion infrastructure. Auto-discovery logic is encapsulated in `core/cli_runner.SkillRunner.resolve_highlight_paths()` and `resolve_synthesize_paths()`.
+
+### Consequence
+New routes `POST /api/highlight` and `POST /api/synthesize` accept `skill + subject + file_id` and resolve all paths server-side.
+
+---
+
+## [2026-04-19] ExecutionManager Job Queue with Same-Skill Deduplication
+
+### Background
+The original `ExecutionManager` only supported one concurrent task. Starting a second task would return 409. No queueing existed.
+
+### Decision
+Upgrade to a sequential `queue.Queue` consumed by a background daemon thread. Tasks with the same `task_name` are rejected if already queued or running (deduplication via `_queued_names: list[str]`). One task runs at a time to preserve RAM safety on 16GB machines.
+
+### Consequence
+`POST /api/start`, `/api/highlight`, `/api/synthesize` now all enqueue through the same `ExecutionManager.enqueue_task()`. New `GET /api/queue` exposes queue state to the frontend.
+
+---
+
+## [2026-04-19] core/cli_runner.py as Single Source of Truth for Command Construction
+
+### Decision
+Extracted all subprocess command-list construction into `core/cli_runner.SkillRunner`. Both `app.py` routes and future CLI tools import from it. No command strings are duplicated between WebUI and CLI layers.
 
 ---
 
