@@ -1,0 +1,54 @@
+# ==============================================================================
+# config.yaml — SmartHighlighter Skill Configuration
+# ==============================================================================
+
+# Paths managed by core.PathBuilder (base: data/smart-highlighter/)
+paths:
+  input:  "input"
+  output: "output"
+  state:  "state"
+  logs:   "logs"
+  phases:
+    output: "output"
+
+# ------------------------------------------------------------------------------
+# Highlight profiles
+# ------------------------------------------------------------------------------
+highlight:
+  active_profile: default
+  profiles:
+    default:
+      model: gemma3:12b
+      chunk_size: 3000
+      verbatim_threshold: 0.85   # Anti-Tampering: output must be >= 85% of input length
+      min_chunk_chars: 30        # Skip LLM for very short fragments
+      options:
+        num_ctx: 8192
+        temperature: 0.1
+
+    # Stricter profile for academic transcripts (voice-memo default)
+    strict:
+      model: gemma3:12b
+      chunk_size: 3000
+      verbatim_threshold: 0.95
+      min_chunk_chars: 30
+      options:
+        num_ctx: 8192
+        temperature: 0.05
+
+    # Faster profile for quick annotation
+    fast:
+      model: qwen2.5-coder:7b
+      chunk_size: 4000
+      verbatim_threshold: 0.80
+      min_chunk_chars: 30
+      options:
+        num_ctx: 4096
+        temperature: 0.1
+
+runtime:
+  ollama:
+    api_url: "http://127.0.0.1:11434/api/generate"
+    timeout_seconds: 600
+    retries: 3
+    backoff_seconds: 5

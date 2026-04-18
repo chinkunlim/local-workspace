@@ -29,6 +29,7 @@
 
 ## ✅ Completed
 
+- [x] 2026-04-19: Extracted `smart-highlighter` and `note-generator` as standalone skills
 - [x] 2026-04-19: 全域 .md 文件更新（README, TOOLS, HANDOFF, TASKS, .claude_profile）
 - [x] 2026-04-19: 全域 `memory/` 目錄建立（monorepo root + sandbox）
 - [x] 2026-04-19: 全域 `ops/check.sh` 建立

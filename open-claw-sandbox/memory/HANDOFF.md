@@ -8,9 +8,48 @@
 ## Last Session Summary
 
 **Date:** 2026-04-19
-**Focus:** Global Markdown update pass — align all .md files with Monorepo §11.2 structure
+**Focus:** Skill Extraction & Architecture Refactoring
 
 ### Completed This Session
+
+- [x] Created `skills/smart-highlighter/` standalone skill for anti-tampering chunk annotation
+- [x] Created `skills/note-generator/` standalone skill for Map-Reduce note synthesis and Mermaid generation
+- [x] Refactored `voice-memo/p04` to delegate to SmartHighlighter
+- [x] Refactored `voice-memo/p05` to delegate to NoteGenerator
+- [x] Refactored `pdf-knowledge/p02` to delegate to SmartHighlighter
+- [x] Refactored `pdf-knowledge/p03` to delegate to NoteGenerator
+- [x] Updated all `ARCHITECTURE.md` docs to reflect new delegation dependencies
+- [x] Updated `SKILL.md` to list new standalone skills
+
+---
+
+## Current System State
+
+- **Git:** Clean (Pending commit for skill extraction)
+- **Directory structure:** Added two new standalone skills `smart-highlighter` and `note-generator`
+- **Global ops/:** `ops/check.sh` — ready to run to verify codebase
+
+---
+
+## Next Session Starting Point
+
+1. Run `./ops/check.sh` to confirm zero lint errors after all refactoring
+2. Commit the new code for the Skill Extraction milestone
+
+---
+
+## Known Open Issues
+
+- None currently blocking
+
+---
+
+## Previous Session Summary
+
+**Date:** 2026-04-19
+**Focus:** Global Markdown update pass — align all .md files with Monorepo §11.2 structure
+
+### Completed Previous Session
 
 - [x] Created `memory/` AI reading layer in sandbox (CLAUDE, ARCHITECTURE, HANDOFF, TASKS, DECISIONS)
 - [x] Moved config files to sandbox root (`pyproject.toml`, `.pre-commit-config.yaml`, `requirements.txt`)

@@ -1,6 +1,6 @@
 # Open Claw — Voice Memo Skill Architecture
 
-> Version: V7.1 | Last Updated: 2026-04-16
+> Version: V8.0 | Last Updated: 2026-04-19
 
 ## 1. 概覽
 
@@ -18,10 +18,10 @@ Voice Memo Skill 是 Open Claw 的語音轉錄知識化流水線，負責將 `.m
           ▼ P3: 跨段合併精煉
 03_merged/<subject>/lecture.md
           │
-          ▼ P4: 重點標記
+          ▼ P4: 重點標記 (Delegates to smart-highlighter)
 04_highlighted/<subject>/lecture.md
           │
-          ▼ P5: Notion 知識合成
+          ▼ P5: Notion 知識合成 (Delegates to note-generator)
 05_notion_synthesis/<subject>/lecture.md
 ```
 
@@ -124,17 +124,19 @@ paths:
 
 ---
 
-## 5. 與 Core 的依賴關係
+## 5. 與 Core/Skills 的依賴關係
 
-| Core 模組 | Voice Memo 用途 |
+| Core/Skill 模組 | Voice Memo 用途 |
 |:---|:---|
 | `PipelineBase` | 所有 Phase 類別的基底 |
 | `StateManager(skill_name="voice-memo")` | P1-P5 進度追蹤，phases = `["p1"..."p5"]` |
 | `PathBuilder` | 從 config.yaml `paths.phases` 解析目錄 |
-| `OllamaClient` | P2-P5 LLM 推論 |
+| `OllamaClient` | P2-P3 LLM 推論 |
 | `GlossaryManager` | 術語表同步至 pdf-knowledge |
 | `DiffEngine` | P1↔P2 差異檢視（Web UI Review Board）|
 | `SystemInboxDaemon` | 監聽 `input/raw_data/` 新增音檔 |
+| `SmartHighlighter` | P4 核心標記引擎 (standalone skill) |
+| `NoteGenerator` | P5 核心合成引擎 (standalone skill) |
 
 ---
 

@@ -19,7 +19,9 @@ from core.bootstrap import ensure_core_path as _bootstrap
 _bootstrap(__file__)
 
 from core import PipelineBase, AtomicWriter
-from core.text_utils import smart_split
+
+# Delegate to standalone skill
+from skills.smart_highlighter.scripts.highlight import SmartHighlighter
 
 
 class Phase2Highlight(PipelineBase):
@@ -44,16 +46,6 @@ class Phase2Highlight(PipelineBase):
             phase_name="重點標記",
             skill_name="pdf-knowledge",
         )
-        config = self.get_config("phase2")
-        self.highlight_model: str = config.get("model", "")
-        self.highlight_options: dict = config.get("options", {})
-        self.chunk_size: int = int(config.get("chunk_size", 6000))
-        self.verbatim_threshold: float = float(
-            config.get("verbatim_threshold", self.DEFAULT_VERBATIM_THRESHOLD)
-        )
-        self.min_chunk_chars: int = int(config.get("min_chunk_chars", 30))
-        if not self.highlight_model:
-            raise RuntimeError("pdf-knowledge phase2 config missing model")
 
     def run(self, subject: str, filename: str) -> bool:
         """
@@ -84,65 +76,25 @@ class Phase2Highlight(PipelineBase):
         with open(raw_path, "r", encoding="utf-8") as f:
             raw_text = f.read()
 
-        self.info(f"📖 [Phase 2] 原文長度 {len(raw_text):,} 字元，分塊大小 {self.chunk_size:,} (模型: {self.highlight_model})")
+        self.info(f"📖 [Phase 2] 原文長度 {len(raw_text):,} 字元，委派給 SmartHighlighter")
 
-        # ── Load prompt ────────────────────────────────────────────────────
-        prompt_tpl = self.get_prompt("Phase 2: 重點標記指令")
-        if not prompt_tpl:
-            self.error("❌ [Phase 2] 找不到 prompt 指令，請確認 prompt.md 有「Phase 2: 重點標記指令」段落")
-            return False
-
-        # ── Chunked LLM processing ─────────────────────────────────────────
-        chunks = smart_split(raw_text, self.chunk_size)
-        self.info(f"📦 [Phase 2] 共 {len(chunks)} 個片段待標記")
-
-        highlighted_parts = []
-        for idx, chunk in enumerate(chunks, 1):
-            if self.stop_requested:
-                self.warning("⚠️  [Phase 2] 收到中止信號，停止標記")
-                break
-
-            if len(chunk.strip()) < self.min_chunk_chars:
-                highlighted_parts.append(chunk)
-                continue
-
-            self.info(f"   🖊️  [{idx}/{len(chunks)}] 標記中...")
-            prompt = f"{prompt_tpl}\n\n【原文片段】:\n{chunk}"
-
-            try:
-                result = self.llm.generate(
-                    model=self.highlight_model,
-                    prompt=prompt,
-                    options=self.highlight_options,
-                    logger=self,
-                )
-                # Anti-Tampering guard: if output is too short, use original
-                if len(result.strip()) < len(chunk) * self.verbatim_threshold:
-                    self.warning(
-                        f"   ⚠️  片段 {idx} [防竄改觸發]: LLM 輸出過短 "
-                        f"({len(result.strip())} < {len(chunk) * self.verbatim_threshold:.0f})，還原原文"
-                    )
-                    highlighted_parts.append(chunk)
-                else:
-                    highlighted_parts.append(result.strip())
-            except Exception as e:
-                self.error(f"   ❌ 片段 {idx} 標記失敗: {e}，還原原文")
-                highlighted_parts.append(chunk)
+        # ── Chunked LLM processing (Delegated) ─────────────────────────────
+        highlighter = SmartHighlighter(profile="fast")
+        highlighter.logger = self.logger
+        
+        final_doc = highlighter.run(markdown_text=raw_text, subject=subject)
 
         # ── Write output ───────────────────────────────────────────────────
-        final_doc = "\n\n".join(highlighted_parts)
         header = (
             f"<!-- highlighted.md — Phase 2 重點標記\n"
             f"     pdf_id : {pdf_id}\n"
             f"     subject: {subject}\n"
-            f"     model  : {self.highlight_model}\n"
-            f"     chunks : {len(chunks)}\n"
+            f"     delegated: smart-highlighter\n"
             "-->\n\n"
         )
         AtomicWriter.write_text(out_path, header + final_doc)
         self.info(f"✅ [Phase 2] 重點標記完成: {out_path} ({len(final_doc):,} 字元)")
 
-        self.llm.unload_model(self.highlight_model, logger=self)
         return True
 
 

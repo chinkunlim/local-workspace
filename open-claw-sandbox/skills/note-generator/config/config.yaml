@@ -1,0 +1,46 @@
+# ==============================================================================
+# config.yaml — NoteGenerator Skill Configuration
+# ==============================================================================
+
+# Paths managed by core.PathBuilder (base: data/note-generator/)
+paths:
+  input:  "input"
+  output: "output"
+  state:  "state"
+  logs:   "logs"
+  phases:
+    output: "output"
+
+# ------------------------------------------------------------------------------
+# Synthesize profiles
+# ------------------------------------------------------------------------------
+synthesize:
+  active_profile: reasoning
+  profiles:
+    default:
+      model: gemma3:12b
+      chunk_threshold: 6000
+      map_chunk_size: 4000
+      mermaid_retry_max: 2
+      content_loss_threshold: 0.01
+      options:
+        num_ctx: 16384
+        temperature: 0.4
+
+    reasoning:
+      model: deepseek-r1:14b
+      chunk_threshold: 6000
+      map_chunk_size: 4000
+      mermaid_retry_max: 2
+      content_loss_threshold: 0.01
+      options:
+        num_ctx: 32768
+        temperature: 0.6
+        num_predict: 8192
+
+runtime:
+  ollama:
+    api_url: "http://127.0.0.1:11434/api/generate"
+    timeout_seconds: 600
+    retries: 3
+    backoff_seconds: 5

@@ -16,15 +16,13 @@ _bootstrap(__file__)
 
 # Group 3 — Core imports
 from core import PipelineBase, AtomicWriter
-from core.text_utils import smart_split
+
+# Delegate to standalone skill
+from skills.smart_highlighter.scripts.highlight import SmartHighlighter
 
 class Phase4Highlight(PipelineBase):
     def __init__(self):
         super().__init__(phase_key="p4", phase_name="重點標記", logger=None)
-        threshold = self.config_manager.get_nested("thresholds", "phase4_verbatim")
-        if threshold is None:
-            raise RuntimeError("voice-memo thresholds.phase4_verbatim is missing")
-        self.VERBATIM_THRESHOLD = float(threshold)
         
     def _get_lecture_base(self, fname: str):
         stem = os.path.splitext(fname)[0]
@@ -44,7 +42,6 @@ class Phase4Highlight(PipelineBase):
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log(f"🧠 啟動 Phase 4：動態上色與重點標記模式 (Anti-Tampering)")
-        prompt_tpl = self.get_prompt("Phase 4: 重點標記指令")
         
         tasks = self.get_tasks(prev_phase_key="p3", force=force, subject_filter=subject, file_filter=file_filter, single_mode=single_mode, resume_from=resume_from)
         if not tasks:
@@ -53,21 +50,9 @@ class Phase4Highlight(PipelineBase):
             
         groups = self._group_tasks(tasks)
         self.log(f"📋 共有 {len(tasks)} 個檔案，歸屬於 {len(groups)} 個標記群組。")
-        models_used = set()
-        
         idx = 1
         for (subj, base_name), tasks_in_group in groups.items():
             if self.check_system_health(): break
-            
-            config = self.get_config("phase4", subject_name=subj)
-            model_name = config.get("model")
-            chunk_size = int(config.get("chunk_size"))
-            if not model_name:
-                raise RuntimeError(f"phase4 config missing model for {subj}")
-            if chunk_size <= 0:
-                raise RuntimeError(f"phase4 config chunk_size must be > 0 for {subj}")
-            options = config.get("options", {})
-            models_used.add(model_name)
             
             self.log(f"📦 [{idx}/{len(groups)}] 正在標記：[{subj}] {base_name}.md")
             idx += 1
@@ -86,29 +71,14 @@ class Phase4Highlight(PipelineBase):
                 full_text = body.rstrip().rstrip("-").strip()
                 p3_log_tail = "## 📋 Phase 3 修改日誌" + p3_log_tail
 
-            chunks = smart_split(full_text, chunk_size)
-            highlighted_parts = []
+            # Delegate to SmartHighlighter standalone skill
+            # It inherently knows how to chunk, prompt, and protect content (verbatim_threshold)
+            highlighter = SmartHighlighter(profile="strict")
+            highlighter.logger = self.logger  # Share logger
             
-            pbar, stop_tick, t = self.create_spinner(f"標記 ({base_name})")
-            for c_idx, chunk in enumerate(chunks):
-                if self.check_system_health(): break
-                
-                try:
-                    prompt = f"{prompt_tpl}\n\n【Original Text to Highlight】:\n{chunk}"
-                    res = self.llm.generate(model=model_name, prompt=prompt, options=options)
-                    
-                    if len(res) < len(chunk) * self.VERBATIM_THRESHOLD:
-                        self.log(f"⚠️ 片段 {c_idx+1} [防竄改觸發]: LLM 刪減過多，還原原文", "warn")
-                        highlighted_parts.append(chunk)
-                    else:
-                        highlighted_parts.append(res.strip())
-                except Exception as e:
-                    self.log(f"❌ 片段 {c_idx+1} 標記失敗: {e}", "error")
-                    highlighted_parts.append(chunk)
+            annotated_doc = highlighter.run(markdown_text=full_text, subject=subj)
             
-            self.finish_spinner(pbar, stop_tick, t)
-            
-            final_doc = "\n\n".join(highlighted_parts)
+            final_doc = annotated_doc
             if p3_log_tail: final_doc += f"\n\n---\n\n{p3_log_tail}"
             
             out_path = os.path.join(self.dirs["p4"], subj, f"{base_name}.md")
@@ -128,9 +98,6 @@ class Phase4Highlight(PipelineBase):
                     (next_subj, next_base), next_tasks = remaining_groups[0]
                     self.save_checkpoint(next_tasks[0]["subject"], next_tasks[0]["filename"])
                 break
-
-        for m in models_used:
-            self.llm.unload_model(m, logger=self)
 
 if __name__ == "__main__":
     import argparse

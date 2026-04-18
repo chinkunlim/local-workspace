@@ -13,7 +13,9 @@ local-workspace/
 │   ├── core/                 ← Shared framework (all skills depend on this)
 │   ├── skills/               ← Individual skill modules
 │   │   ├── voice-memo/       ← 6-phase audio → Notion pipeline
-│   │   └── pdf-knowledge/    ← 7-phase PDF → knowledge base pipeline
+│   │   ├── pdf-knowledge/    ← 7-phase PDF → knowledge base pipeline
+│   │   ├── smart-highlighter/← Standalone Anti-Tampering annotation core
+│   │   └── note-generator/   ← Standalone Map-Reduce synthesis core
 │   ├── memory/               ← AI collaboration memory (CLAUDE, HANDOFF, TASKS...)
 │   ├── docs/                 ← Workspace documentation (STRUCTURE, GUIDELINES)
 │   └── ops/                  ← Automation scripts and tooling config

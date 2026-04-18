@@ -163,8 +163,28 @@ skills/
             ├── p01b_engine.py      ← Phase 1b: Docling deep extraction → raw_extracted.md (IMMUTABLE)
             ├── p01c_vector_charts.py ← Phase 1c: Vector chart rasterisation (pdftoppm)
             ├── p01d_ocr_gate.py    ← Phase 1d: OCR quality assessment (scan PDFs only)
-            ├── p02a_vlm_vision.py  ← Phase 2a: VLM visual figure description → figure_list.md
-            └── p02b_synthesis.py   ← Phase 2b: Map-Reduce synthesis → content.md
+            ├── p02a_vlm_vision.py  ← Phase 1d: VLM visual figure description → figure_list.md
+            └── p02b_synthesis.py   ← Phase 3: Map-Reduce synthesis → content.md
+
+├── smart-highlighter/              ← Standalone skill: Highlight raw markdown (Anti-Tampering)
+│   ├── SKILL.md                    ← Quick-start
+│   ├── config/
+│   │   ├── config.yaml             ← Model profiles and chunk sizes
+│   │   └── prompt.md               ← Highlighting instructions
+│   ├── docs/
+│   │   └── ARCHITECTURE.md         ← Standalone skill architecture
+│   └── scripts/
+│       └── highlight.py            ← Main entry point (SmartHighlighter class)
+│
+└── note-generator/                 ← Standalone skill: Synthesize structured Markdown notes
+    ├── SKILL.md                    ← Quick-start
+    ├── config/
+    │   ├── config.yaml             ← Model profiles and chunk sizes
+    │   └── prompt.md               ← Map-Reduce synthesis instructions
+    ├── docs/
+    │   └── ARCHITECTURE.md         ← Standalone skill architecture
+    └── scripts/
+        └── synthesize.py           ← Main entry point (NoteGenerator class)
 ```
 
 ---
