@@ -428,6 +428,82 @@
         </button>
     </div>
 
+    <!-- ══════════════════════════════════════════════════════════════
+         🖊️ Smart Highlighter Re-run Panel
+    ══════════════════════════════════════════════════════════════ -->
+    <div class="panel">
+        <div class="panel-title">🖊️ Smart Highlighter (Re-run)</div>
+
+        <!-- Skill selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">⚙️ Skill</div>
+            <select id="hl-skill" class="rb-select" style="width:100%;" onchange="hlLoadSubjects()">
+                <option value="">— 選擇 Skill —</option>
+                <option value="audio-transcriber">🎙️ Audio Transcriber</option>
+                <option value="doc-parser">📄 Doc Parser</option>
+            </select>
+        </div>
+
+        <!-- Subject selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">🗂️ 科目</div>
+            <select id="hl-subject" class="rb-select" style="width:100%;" onchange="hlLoadFiles()" disabled>
+                <option value="">— 先選擇 Skill —</option>
+            </select>
+        </div>
+
+        <!-- File selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">📂 輸入檔案 (Phase 3/1 輸出)</div>
+            <select id="hl-file" class="rb-select" style="width:100%;" disabled>
+                <option value="">— 先選擇科目 —</option>
+            </select>
+        </div>
+
+        <div id="hl-status" style="font-size:0.75rem;color:var(--text-muted);min-height:18px;margin-bottom:6px;"></div>
+        <button id="btn-highlight" class="btn btn-primary" onclick="runHighlight()" disabled>
+            🖊️ Re-run 標記
+        </button>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         📝 Note Generator Re-run Panel
+    ══════════════════════════════════════════════════════════════ -->
+    <div class="panel">
+        <div class="panel-title">📝 Note Generator (Re-run)</div>
+
+        <!-- Skill selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">⚙️ Skill</div>
+            <select id="ng-skill" class="rb-select" style="width:100%;" onchange="ngLoadSubjects()">
+                <option value="">— 選擇 Skill —</option>
+                <option value="audio-transcriber">🎙️ Audio Transcriber</option>
+                <option value="doc-parser">📄 Doc Parser</option>
+            </select>
+        </div>
+
+        <!-- Subject selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">🗂️ 科目</div>
+            <select id="ng-subject" class="rb-select" style="width:100%;" onchange="ngLoadFiles()" disabled>
+                <option value="">— 先選擇 Skill —</option>
+            </select>
+        </div>
+
+        <!-- File selector -->
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">📂 輸入檔案 (Phase 4/2 已標記輸出)</div>
+            <select id="ng-file" class="rb-select" style="width:100%;" disabled>
+                <option value="">— 先選擇科目 —</option>
+            </select>
+        </div>
+
+        <div id="ng-status" style="font-size:0.75rem;color:var(--text-muted);min-height:18px;margin-bottom:6px;"></div>
+        <button id="btn-synthesize" class="btn btn-primary" onclick="runSynthesize()" disabled>
+            📝 Re-run 筆記
+        </button>
+    </div>
+
     <!-- Stop / Interrupt -->
     <div class="panel" style="border-bottom:none; margin-top:auto;">
         <button id="btn-stop" class="btn btn-danger" onclick="stopTask()" disabled>
@@ -553,7 +629,176 @@ async function loadFiles(skill) {
     } catch(e) { /* silent fail */ }
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Smart Highlighter Re-run Panel
+─────────────────────────────────────────────────────────────────────────── */
+async function hlLoadSubjects() {
+    const skill = document.getElementById('hl-skill').value;
+    const subjectSel = document.getElementById('hl-subject');
+    const fileSel    = document.getElementById('hl-file');
+    const btn        = document.getElementById('btn-highlight');
+
+    subjectSel.innerHTML = '<option value="">— 載入中... —</option>';
+    subjectSel.disabled  = true;
+    fileSel.innerHTML    = '<option value="">— 先選擇科目 —</option>';
+    fileSel.disabled     = true;
+    btn.disabled         = true;
+    document.getElementById('hl-status').textContent = '';
+
+    if (!skill) { subjectSel.innerHTML = '<option value="">— 先選擇 Skill —</option>'; return; }
+
+    try {
+        const res  = await fetch(`/api/rerun/subjects?skill=${encodeURIComponent(skill)}&mode=highlight`);
+        const data = await res.json();
+        subjectSel.innerHTML = '<option value="">— 選擇科目 —</option>';
+        data.subjects.forEach(s => { const o = new Option(s, s); subjectSel.add(o); });
+        subjectSel.disabled = (data.subjects.length === 0);
+        if (data.subjects.length === 0)
+            document.getElementById('hl-status').textContent = '⚠️ 尚無可標記的輸出檔案';
+    } catch(e) { subjectSel.innerHTML = '<option value="">— 載入失敗 —</option>'; }
+}
+
+async function hlLoadFiles() {
+    const skill    = document.getElementById('hl-skill').value;
+    const subject  = document.getElementById('hl-subject').value;
+    const fileSel  = document.getElementById('hl-file');
+    const btn      = document.getElementById('btn-highlight');
+
+    fileSel.innerHTML = '<option value="">— 載入中... —</option>';
+    fileSel.disabled  = true;
+    btn.disabled      = true;
+    document.getElementById('hl-status').textContent = '';
+
+    if (!subject) { fileSel.innerHTML = '<option value="">— 先選擇科目 —</option>'; return; }
+
+    try {
+        const res  = await fetch(`/api/rerun/files?skill=${encodeURIComponent(skill)}&subject=${encodeURIComponent(subject)}&mode=highlight`);
+        const data = await res.json();
+        fileSel.innerHTML = '<option value="">— 選擇檔案 —</option>';
+        data.files.forEach(f => { const o = new Option(f, f); fileSel.add(o); });
+        fileSel.disabled = (data.files.length === 0);
+        fileSel.onchange = () => { btn.disabled = !fileSel.value; };
+        if (data.files.length === 0)
+            document.getElementById('hl-status').textContent = '⚠️ 此科目無 Phase 3/1 輸出';
+    } catch(e) { fileSel.innerHTML = '<option value="">— 載入失敗 —</option>'; }
+}
+
+async function runHighlight() {
+    const skill    = document.getElementById('hl-skill').value;
+    const subject  = document.getElementById('hl-subject').value;
+    const file_id  = document.getElementById('hl-file').value;
+    const statusEl = document.getElementById('hl-status');
+
+    if (!skill || !subject || !file_id) return;
+    statusEl.textContent = '⏳ 排隊中...';
+    statusEl.style.color = 'var(--warning)';
+
+    try {
+        const res  = await fetch('/api/highlight', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ skill, subject, file_id }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            statusEl.textContent = '✅ 已排入佇列';
+            statusEl.style.color = 'var(--success)';
+        } else {
+            statusEl.textContent = `❌ ${data.error || 'Failed'}`;
+            statusEl.style.color = 'var(--danger)';
+        }
+    } catch(e) {
+        statusEl.textContent = '❌ 請求失敗';
+        statusEl.style.color = 'var(--danger)';
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Note Generator Re-run Panel
+─────────────────────────────────────────────────────────────────────────── */
+async function ngLoadSubjects() {
+    const skill = document.getElementById('ng-skill').value;
+    const subjectSel = document.getElementById('ng-subject');
+    const fileSel    = document.getElementById('ng-file');
+    const btn        = document.getElementById('btn-synthesize');
+
+    subjectSel.innerHTML = '<option value="">— 載入中... —</option>';
+    subjectSel.disabled  = true;
+    fileSel.innerHTML    = '<option value="">— 先選擇科目 —</option>';
+    fileSel.disabled     = true;
+    btn.disabled         = true;
+    document.getElementById('ng-status').textContent = '';
+
+    if (!skill) { subjectSel.innerHTML = '<option value="">— 先選擇 Skill —</option>'; return; }
+
+    try {
+        const res  = await fetch(`/api/rerun/subjects?skill=${encodeURIComponent(skill)}&mode=synthesize`);
+        const data = await res.json();
+        subjectSel.innerHTML = '<option value="">— 選擇科目 —</option>';
+        data.subjects.forEach(s => { const o = new Option(s, s); subjectSel.add(o); });
+        subjectSel.disabled = (data.subjects.length === 0);
+        if (data.subjects.length === 0)
+            document.getElementById('ng-status').textContent = '⚠️ 尚無已標記的輸出檔案';
+    } catch(e) { subjectSel.innerHTML = '<option value="">— 載入失敗 —</option>'; }
+}
+
+async function ngLoadFiles() {
+    const skill    = document.getElementById('ng-skill').value;
+    const subject  = document.getElementById('ng-subject').value;
+    const fileSel  = document.getElementById('ng-file');
+    const btn      = document.getElementById('btn-synthesize');
+
+    fileSel.innerHTML = '<option value="">— 載入中... —</option>';
+    fileSel.disabled  = true;
+    btn.disabled      = true;
+    document.getElementById('ng-status').textContent = '';
+
+    if (!subject) { fileSel.innerHTML = '<option value="">— 先選擇科目 —</option>'; return; }
+
+    try {
+        const res  = await fetch(`/api/rerun/files?skill=${encodeURIComponent(skill)}&subject=${encodeURIComponent(subject)}&mode=synthesize`);
+        const data = await res.json();
+        fileSel.innerHTML = '<option value="">— 選擇檔案 —</option>';
+        data.files.forEach(f => { const o = new Option(f, f); fileSel.add(o); });
+        fileSel.disabled = (data.files.length === 0);
+        fileSel.onchange = () => { btn.disabled = !fileSel.value; };
+        if (data.files.length === 0)
+            document.getElementById('ng-status').textContent = '⚠️ 此科目無 Phase 4/2 已標記輸出';
+    } catch(e) { fileSel.innerHTML = '<option value="">— 載入失敗 —</option>'; }
+}
+
+async function runSynthesize() {
+    const skill    = document.getElementById('ng-skill').value;
+    const subject  = document.getElementById('ng-subject').value;
+    const file_id  = document.getElementById('ng-file').value;
+    const statusEl = document.getElementById('ng-status');
+
+    if (!skill || !subject || !file_id) return;
+    statusEl.textContent = '⏳ 排隊中...';
+    statusEl.style.color = 'var(--warning)';
+
+    try {
+        const res  = await fetch('/api/synthesize', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ skill, subject, file_id }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            statusEl.textContent = '✅ 已排入佇列';
+            statusEl.style.color = 'var(--success)';
+        } else {
+            statusEl.textContent = `❌ ${data.error || 'Failed'}`;
+            statusEl.style.color = 'var(--danger)';
+        }
+    } catch(e) {
+        statusEl.textContent = '❌ 請求失敗';
+        statusEl.style.color = 'var(--danger)';
+    }
+}
+
 async function startTask(skill, resume = false, force = false, pdfForce = false) {
+
     const prefix = skill === 'voice' ? 'vm' : 'pdf';
     const subject = document.getElementById(`${prefix}-subject`)?.value || '';
     const file = document.getElementById(`${prefix}-file`)?.value || '';

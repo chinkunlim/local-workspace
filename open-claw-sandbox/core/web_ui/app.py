@@ -330,10 +330,92 @@ def api_synthesize():
     return jsonify({"success": False, "error": "Same task already queued."}), 409
 
 
+@app.route("/api/rerun/files", methods=["GET"])
+def api_rerun_files():
+    """
+    Return file IDs available for Re-run (highlight or synthesize).
+
+    Query params:
+        skill   : "audio-transcriber" | "doc-parser"  (required)
+        subject : str                                  (required)
+        mode    : "highlight" | "synthesize"           (required)
+
+    For highlight mode  → scans the Phase 3 (merged) or Phase 1 (processed) output dir
+    For synthesize mode → scans the Phase 4 (highlighted) or Phase 2 (highlighted) output dir
+    """
+    skill   = _normalise_skill(request.args.get("skill", ""))
+    subject = request.args.get("subject", "").strip()
+    mode    = request.args.get("mode", "highlight").strip()
+
+    if skill not in ("audio-transcriber", "doc-parser") or not subject:
+        return jsonify({"files": [], "error": "Missing skill or subject"}), 400
+
+    base = os.path.join(_workspace_root, "data")
+
+    if skill == "audio-transcriber":
+        scan_dir = os.path.join(
+            base, "audio-transcriber", "output",
+            "03_merged" if mode == "highlight" else "04_highlighted",
+            subject,
+        )
+        # Files are <stem>.md — return stems as file_id
+        if not os.path.isdir(scan_dir):
+            return jsonify({"files": []})
+        files = sorted(
+            os.path.splitext(f)[0]
+            for f in os.listdir(scan_dir)
+            if f.endswith(".md") and not f.startswith(".")
+        )
+    else:  # doc-parser
+        # For doc-parser the file_id is a sub-folder name (pdf_id)
+        scan_dir = os.path.join(
+            base, "doc-parser", "output",
+            "01_processed" if mode == "highlight" else "02_highlighted",
+            subject,
+        )
+        if not os.path.isdir(scan_dir):
+            return jsonify({"files": []})
+        files = sorted(
+            d for d in os.listdir(scan_dir)
+            if os.path.isdir(os.path.join(scan_dir, d)) and not d.startswith(".")
+        )
+
+    return jsonify({"files": files, "skill": skill, "subject": subject, "mode": mode})
+
+
+@app.route("/api/rerun/subjects", methods=["GET"])
+def api_rerun_subjects():
+    """
+    Return subjects that have output files for a given skill + mode.
+    mode: "highlight" | "synthesize"
+    """
+    skill = _normalise_skill(request.args.get("skill", ""))
+    mode  = request.args.get("mode", "highlight").strip()
+
+    if skill not in ("audio-transcriber", "doc-parser"):
+        return jsonify({"subjects": []}), 400
+
+    base = os.path.join(_workspace_root, "data")
+    if skill == "audio-transcriber":
+        scan_dir = os.path.join(
+            base, "audio-transcriber", "output",
+            "03_merged" if mode == "highlight" else "04_highlighted",
+        )
+    else:
+        scan_dir = os.path.join(
+            base, "doc-parser", "output",
+            "01_processed" if mode == "highlight" else "02_highlighted",
+        )
+
+    subjects = _list_subdirs(scan_dir)
+    return jsonify({"subjects": subjects})
+
+
 @app.route("/api/queue", methods=["GET"])
 def api_queue():
     """Return the current Job Queue status."""
     return jsonify(exec_mgr.get_queue_status())
+
 
 
 @app.route("/api/status/skills", methods=["GET"])
