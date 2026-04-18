@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
-import sys, os
+"""
+Phase 4: Highlight Marking (Anti-Tampering)
+Refactored to V7.0 OOP Architecture
+"""
 
-import os, sys
-# Workspace Root Resolver
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
-
+# Group 1 — stdlib
 import os
+import sys
 import re
-from core import PipelineBase
+
+# Group 2 — Internal Core Bootstrap
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
+
+# Group 3 — Core imports
+from core import PipelineBase, AtomicWriter
+from core.text_utils import smart_split
 
 class Phase4Highlight(PipelineBase):
     def __init__(self):
@@ -79,7 +86,7 @@ class Phase4Highlight(PipelineBase):
                 full_text = body.rstrip().rstrip("-").strip()
                 p3_log_tail = "## 📋 Phase 3 修改日誌" + p3_log_tail
 
-            chunks = self.smart_split(full_text, chunk_size)
+            chunks = smart_split(full_text, chunk_size)
             highlighted_parts = []
             
             pbar, stop_tick, t = self.create_spinner(f"標記 ({base_name})")
@@ -106,8 +113,7 @@ class Phase4Highlight(PipelineBase):
             
             out_path = os.path.join(self.dirs["p4"], subj, f"{base_name}.md")
             os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            with open(out_path, "w", encoding="utf-8") as f:
-                f.write(final_doc)
+            AtomicWriter.write_text(out_path, final_doc)
                 
             out_hash = self.state_manager.get_file_hash(out_path)
             for task in tasks_in_group:

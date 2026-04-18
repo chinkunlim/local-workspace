@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
-import sys, os
+"""
+Phase 3: Dialogue Merge and Structuring
+Refactored to V7.0 OOP Architecture
+"""
 
-import os, sys
-# Workspace Root Resolver
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
-
+# Group 1 — stdlib
 import os
+import sys
 import re
-from core import PipelineBase
+
+# Group 2 — Internal Core Bootstrap
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
+
+# Group 3 — Core imports
+from core import PipelineBase, AtomicWriter
+from core.text_utils import smart_split
 
 class Phase3Merge(PipelineBase):
     def __init__(self):
@@ -101,7 +108,7 @@ class Phase3Merge(PipelineBase):
             gloss_block = self._get_glossary(subj)
             if gloss_block: gloss_block += "\n\n"
             
-            chunks = self.smart_split(full_text, chunk_size)
+            chunks = smart_split(full_text, chunk_size)
             formatted = []
             p3_logs = []
             
@@ -156,8 +163,7 @@ class Phase3Merge(PipelineBase):
                 
             out_path = os.path.join(self.dirs["p3"], subj, f"{base_name}.md")
             os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            with open(out_path, "w", encoding="utf-8") as f:
-                f.write(final_doc)
+            AtomicWriter.write_text(out_path, final_doc)
                 
             out_hash = self.state_manager.get_file_hash(out_path)
             for task in tasks_in_group:

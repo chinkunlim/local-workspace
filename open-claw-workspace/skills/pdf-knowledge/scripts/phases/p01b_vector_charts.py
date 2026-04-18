@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-vector_chart_extractor.py — Phase 1c: 向量圖表補充
+vector_chart_extractor.py — Phase 1b: 向量圖表補充
 ===================================================
-對 Phase 1a 診斷標記的向量圖頁面執行 pdftoppm 光柵化，
+對 Phase 0a 診斷標記的向量圖頁面執行 pdftoppm 光柵化，
 確保 matplotlib/Excel/R 等工具生成的統計圖不被遺漏。
 
 設計決策：[D018] — DECISIONS_v2.1.md
@@ -22,24 +22,22 @@ import json
 import subprocess
 from typing import List, Dict, Optional
 
-import os, sys
-# Workspace Root Resolver
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
+# Internal Core Bootstrap
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
 
 from core.pipeline_base import PipelineBase
 
 
-class Phase1cVectorChartExtractor(PipelineBase):
+class Phase1bVectorChartExtractor(PipelineBase):
     """
-    Phase 1c: Vector Chart Rasterization.
-    Rasterizes vector-chart pages identified by Phase 1a diagnostic.
+    Phase 1b: Vector Chart Rasterization.
+    Rasterizes vector-chart pages identified by Phase 0a diagnostic.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
-            phase_key="phase1c",
+            phase_key="phase1b",
             phase_name="向量圖表補充",
             skill_name="pdf-knowledge",
         )
@@ -54,27 +52,34 @@ class Phase1cVectorChartExtractor(PipelineBase):
     #  Public Entry Point                                                  #
     # ------------------------------------------------------------------ #
 
-    def extract_vector_charts(
-        self,
-        pdf_path: str,
-        pdf_id: str,
-        subject: str,
-        page_nums: List[int],
-    ) -> List[Dict[str, str]]:
+    def run(self, subject: str, filename: str) -> bool:
         """
         Rasterize vector-chart pages and add them to figure_list.md.
+        Automatically loads scan_report.json to discover vector_chart_pages.
 
         Args:
-            pdf_path: Absolute path to the source PDF.
-            pdf_id: PDF identifier (determines output directory).
-            page_nums: List of page numbers to rasterize (1-indexed).
+            subject: The subject category folder name.
+            filename: The PDF filename.
 
         Returns:
-            List of dicts with keys: page, src, type
+            bool: True if successful, False if failed.
         """
+        pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
+        pdf_id = os.path.splitext(filename)[0]
+        
+        # Load scan_report.json
+        scan_report_path = os.path.join(self.dirs.get("processed", ""), subject, pdf_id, "scan_report.json")
+        if not os.path.exists(scan_report_path):
+            self.error(f"❌ [VectorChart] 無法找到診斷報告: {scan_report_path}")
+            return False
+            
+        with open(scan_report_path, "r", encoding="utf-8") as f:
+            scan_report = json.load(f)
+            
+        page_nums = scan_report.get("vector_chart_pages", [])
         if not page_nums:
             self.info("📋 [VectorChart] 無向量圖表頁面需要處理")
-            return []
+            return True
 
         processed_dir = os.path.join(self.dirs["processed"], subject, pdf_id)
         assets_dir = os.path.join(processed_dir, "assets")
@@ -98,7 +103,7 @@ class Phase1cVectorChartExtractor(PipelineBase):
             self._update_figure_list(processed_dir, extracted)
 
         self.info(f"🎨 [VectorChart] 完成: {len(extracted)}/{len(page_nums)} 頁")
-        return extracted
+        return True
 
     # ------------------------------------------------------------------ #
     #  Rasterization                                                       #
@@ -206,7 +211,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Phase 1c: Vector Chart Extractor"
+        description="Phase 1b: Vector Chart Extractor"
     )
     parser.add_argument("pdf", help="Path to PDF")
     parser.add_argument("--id", dest="pdf_id", default=None)
@@ -217,7 +222,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     pdf_id = args.pdf_id or os.path.splitext(os.path.basename(args.pdf))[0]
-    extractor = Phase1cVectorChartExtractor()
+    extractor = Phase1bVectorChartExtractor()
 
     page_nums = args.pages
     if args.from_report:

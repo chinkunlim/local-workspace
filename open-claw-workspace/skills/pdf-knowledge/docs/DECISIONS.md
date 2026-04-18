@@ -20,7 +20,7 @@
 
 ## 2026-04-16 — StateManager Integration for pdf-knowledge
 
-**Decision**: Integrate `core.StateManager` with `skill_name="pdf-knowledge"` into the `QueueManager` orchestrator, tracking all 6 phases (P1a–P2b).
+**Decision**: Integrate `core.StateManager` with `skill_name="pdf-knowledge"` into the `QueueManager` orchestrator, tracking all 7 phases (P0a–P3).
 
 **Context**: pdf-knowledge previously had no progress tracking — if a run was interrupted, there was no way to know which PDFs were partially processed.
 
@@ -28,7 +28,7 @@
 
 ---
 
-## 2026-04-15 — Docling for Phase 1b (Deep Extraction)
+## 2026-04-15 — Docling for Phase 1a (Deep Extraction)
 
 **Decision**: Use Docling as the primary PDF extraction engine over PyMuPDF or pdfplumber.
 
@@ -40,13 +40,13 @@
 
 ---
 
-## 2026-04-15 — IMMUTABLE P1b Output (`raw_extracted.md`)
+## 2026-04-15 — IMMUTABLE P1a Output (`raw_extracted.md`)
 
 **Decision**: `raw_extracted.md` is written exactly once by Docling and never overwritten by any subsequent phase.
 
 **Context**: All downstream AI processing (VLM, synthesis) is probabilistic. If the final `content.md` is wrong or corrupted, recovery requires re-running only from P2a, not from the 10–30 minute Docling extraction (P1b).
 
-**Chosen approach**: `AtomicWriter` writes to `raw_extracted.md`. The path is treated as immutable — if the file exists, P1b is skipped entirely. Mutations go only to `05_Final_Knowledge/`.
+**Chosen approach**: `AtomicWriter` writes to `raw_extracted.md`. The path is treated as immutable — if the file exists, P1a is skipped entirely. Mutations go only to `03_Synthesis/`.
 
 ---
 
@@ -64,7 +64,7 @@
 
 ## 2026-04-15 — Content-Loss Guard (30% Threshold)
 
-**Decision**: P2b (`synthesis.py`) aborts write if `len(final_content) / len(raw_text) < 0.30`.
+**Decision**: P3 (`synthesis.py`) aborts write if `len(final_content) / len(raw_text) < 0.30`.
 
 **Context**: During testing, `gemma3:12b` occasionally produced severely truncated summaries when given large context windows. A 3,000-word paper synthesised to 50 words is a silent data-loss failure.
 
@@ -74,20 +74,20 @@
 
 ---
 
-## 2026-04-15 — VLM Vision in Phase 2a (Not Embedded in P2b)
+## 2026-04-15 — VLM Vision in Phase 1d (Not Embedded in P3)
 
-**Decision**: VLM figure description is a separate phase (P2a) from knowledge synthesis (P2b).
+**Decision**: VLM figure description is a separate phase (P1d) from knowledge synthesis (P3).
 
 **Context**: VLM calls for each figure are expensive (2–15s each depending on model). If synthesis fails and must be retried, re-running VLM is wasteful. Conversely, VLM results are the primary input to synthesis — the ordering is logical.
 
-**Chosen approach**: P2a writes VLM results to `figure_list.md`. P2b reads `figure_list.md` alongside `raw_extracted.md`. Each phase is independently resumable.
+**Chosen approach**: P1d writes VLM results to `figure_list.md`. P3 reads `figure_list.md` alongside `raw_extracted.md`. Each phase is independently resumable.
 
 ---
 
-## 2026-04-15 — Two-Pass OCR in Phase 1d (Gate, Not Default)
+## 2026-04-15 — Two-Pass OCR in Phase 1c (Gate, Not Default)
 
-**Decision**: OCR (Tesseract) runs ONLY for PDFs identified as scan-origin in P1a, NOT by default for all PDFs.
+**Decision**: OCR (Tesseract) runs ONLY for PDFs identified as scan-origin in Phase 0a, NOT by default for all PDFs.
 
 **Context**: Running Tesseract on a digital-born PDF adds 30–120 seconds per page with zero benefit — Docling handles digital text extraction perfectly. Universally applying OCR would make the pipeline impractically slow.
 
-**Chosen approach**: P1a classifies PDFs as `digital` or `scan` based on character density of the first page. Only `scan` PDFs proceed to P1d. Digital PDFs skip directly to P2a.
+**Chosen approach**: Phase 0a classifies PDFs as `digital` or `scan` based on character density of the first page. Only `scan` PDFs proceed to Phase 1c. Digital PDFs skip directly to Phase 1d.

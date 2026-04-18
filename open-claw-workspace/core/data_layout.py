@@ -28,9 +28,10 @@ class DataLayoutManager:
 
         if skill_name == "voice-memo":
             canonical_dirs = {
-                "input": os.path.join(base_dir, "input", "raw_data"),
+                "input": os.path.join(base_dir, "input"),
                 "output": os.path.join(base_dir, "output"),
                 "state": os.path.join(base_dir, "state"),
+                "resume": os.path.join(base_dir, "state", "resume"),
                 "logs": os.path.join(base_dir, "logs"),
             }
             legacy_aliases = {
@@ -46,24 +47,21 @@ class DataLayoutManager:
             }
         elif skill_name == "pdf-knowledge":
             canonical_dirs = {
-                "input": os.path.join(base_dir, "input", "01_Inbox"),
+                "input": os.path.join(base_dir, "input"),
                 "output": os.path.join(base_dir, "output"),
                 "state": os.path.join(base_dir, "state"),
+                "resume": os.path.join(base_dir, "state", "resume"),
                 "logs": os.path.join(base_dir, "logs"),
             }
-            legacy_aliases = {
-                os.path.join(base_dir, "01_Inbox"): canonical_dirs["input"],
-                os.path.join(base_dir, "02_Processed"): os.path.join(canonical_dirs["output"], "02_Processed"),
-                os.path.join(base_dir, "03_Agent_Core"): os.path.join(canonical_dirs["output"], "03_Agent_Core"),
-                os.path.join(base_dir, "05_Final_Knowledge"): os.path.join(canonical_dirs["output"], "05_Final_Knowledge"),
-                os.path.join(base_dir, "Error"): os.path.join(canonical_dirs["output"], "Error"),
-                os.path.join(base_dir, "system.log"): os.path.join(canonical_dirs["logs"], "system.log"),
-            }
+            # Migration complete: no legacy aliases needed.
+            # All code now references canonical paths directly.
+            legacy_aliases: Dict[str, str] = {}
         else:
             canonical_dirs = {
                 "input": os.path.join(base_dir, "input"),
                 "output": os.path.join(base_dir, "output"),
                 "state": os.path.join(base_dir, "state"),
+                "resume": os.path.join(base_dir, "state", "resume"),
                 "logs": os.path.join(base_dir, "logs"),
             }
             legacy_aliases = {}

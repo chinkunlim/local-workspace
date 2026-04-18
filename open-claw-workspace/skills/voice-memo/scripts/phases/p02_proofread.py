@@ -1,16 +1,25 @@
 # -*- coding: utf-8 -*-
-import sys, os
+"""
+Phase 2: Context-Aware Proofreading
+Refactored to V7.0 OOP Architecture
+"""
 
-import os, sys
-# Workspace Root Resolver
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
-
+# Group 1 — stdlib
 import os
+import sys
 import re
+
+# Group 2 — Internal Core Bootstrap
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
+
+# Group 3 — third-party
 from pypdf import PdfReader
-from core import PipelineBase
+
+# Group 4 — Core imports
+from core import PipelineBase, AtomicWriter
+from core.text_utils import smart_split
 
 class Phase2Proofread(PipelineBase):
     def __init__(self):
@@ -101,7 +110,7 @@ class Phase2Proofread(PipelineBase):
             with open(in_path, "r", encoding="utf-8") as f:
                 raw_text = f.read()
                 
-            chunks = self.smart_split(raw_text, chunk_size)
+            chunks = smart_split(raw_text, chunk_size)
             full_corrected = []
             full_logs = []
             
@@ -165,8 +174,7 @@ class Phase2Proofread(PipelineBase):
             out_path = os.path.join(self.dirs["p2"], subj, f"{base_name}.md")
             os.makedirs(os.path.dirname(out_path), exist_ok=True)
             
-            with open(out_path, "w", encoding="utf-8") as f:
-                f.write(final_doc)
+            AtomicWriter.write_text(out_path, final_doc)
                 
             out_hash = self.state_manager.get_file_hash(out_path)
             self.state_manager.update_task(subj, fname, "p2", status="✅", 

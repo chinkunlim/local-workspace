@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-PipelineBase — OpenClaw Shared Base Class (V2.2)
+PipelineBase — OpenClaw Shared Base Class (V2.3)
 =================================================
 共用所有 Skill 的 OOP 基底。
+
+關鍵升級（V2.3）：
+- 整合 SessionState 追蹤：所有控制狀態 (RUNNING/PAUSED/STOPPED/
+  FORCE_STOPPED/COMPLETED/FAILED) 持久化寫入 state/session.json
+- error() 方法現在在 log 檔中附加完整 Python traceback (exc_info=True)
+- build_logger 以 DEBUG 層級寫入檔案，INFO 層級印至 console
 
 關鍵升級（V2.2）：
 - 新增 `skill_name` keyword 參數（預設 "voice-memo"，保持向後相容）
@@ -23,12 +29,15 @@ import psutil
 import threading
 from typing import Dict, Any, List, Optional
 
+import logging
+
 from .config_manager import ConfigManager
 from .config_validation import ConfigValidator
 from .path_builder import PathBuilder
 from .state_manager import StateManager
 from .llm_client import OllamaClient
 from .log_manager import build_logger
+from .session_state import SessionState, write_session_state
 
 
 class PipelineBase:
@@ -76,14 +85,22 @@ class PipelineBase:
         self._setup_logging()
         self._setup_signals()
 
+        # Record session start
+        self._write_session_state(SessionState.RUNNING)
+
     # ------------------------------------------------------------------ #
     #  Logging                                                             #
     # ------------------------------------------------------------------ #
 
-    def _setup_logging(self):
-        self.logger = self.logger or build_logger(f"OpenClaw.{self.skill_name}", log_file=self.log_file)
+    def _setup_logging(self) -> None:
+        self.logger = self.logger or build_logger(
+            f"OpenClaw.{self.skill_name}",
+            log_file=self.log_file,
+            file_level=logging.DEBUG,   # Full detail in log file
+            console=False,              # Console output handled by self.log()
+        )
 
-    def log(self, msg: str, level: str = "info"):
+    def log(self, msg: str, level: str = "info") -> None:
         if "tqdm" in sys.modules:
             import tqdm
             tqdm.tqdm.write(msg)
@@ -96,16 +113,38 @@ class PipelineBase:
             elif level == "warn":
                 self.logger.warning(msg)
             elif level == "error":
-                self.logger.error(msg, exc_info=False)
+                # exc_info=True captures the active exception traceback into the log file
+                self.logger.error(msg, exc_info=True)
 
-    def info(self, msg: str):
+    def info(self, msg: str) -> None:
         self.log(msg, level="info")
 
-    def warning(self, msg: str):
+    def warning(self, msg: str) -> None:
         self.log(msg, level="warn")
 
-    def error(self, msg: str):
+    def error(self, msg: str) -> None:
         self.log(msg, level="error")
+
+    # ------------------------------------------------------------------ #
+    #  Session State                                                        #
+    # ------------------------------------------------------------------ #
+
+    def _write_session_state(
+        self,
+        state: SessionState,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Persist the current control state to state/session.json."""
+        try:
+            state_dir = os.path.join(self.base_dir, "state")
+            write_session_state(
+                state_dir,
+                state,
+                context=context,
+                skill_name=self.skill_name,
+            )
+        except Exception:
+            pass  # Session state write must never crash the pipeline
 
     # ------------------------------------------------------------------ #
     #  Signal Handling (Ctrl+C)                                            #
@@ -129,6 +168,7 @@ class PipelineBase:
             if not sys.stdin.isatty():
                 self.log("\n⏸️ [背景服務模式] 收到暫停信號，將於當前任務完成後自動切斷並保存斷點...", "warn")
                 self.pause_requested = True
+                self._write_session_state(SessionState.PAUSED)
                 return
 
             print("\n")
@@ -142,13 +182,16 @@ class PipelineBase:
                 choice = input("    請輸入 (P/S) [Enter 預設 = S]: ").strip().lower()
             except (KeyboardInterrupt, EOFError):
                 print("\n🚨 強制退出。")
+                self._write_session_state(SessionState.FORCE_STOPPED)
                 os._exit(1)
 
             if choice == "p":
                 self.pause_requested = True
+                self._write_session_state(SessionState.PAUSED)
                 print("💾 已選擇暫停，處理完目前檔案後將儲存進度。")
             else:
                 self.pause_requested = False
+                self._write_session_state(SessionState.STOPPED)
                 print("🛑 已選擇停止，處理完目前檔案後將退出（不儲存進度）。")
 
         signal.signal(signal.SIGINT, handle_interrupt)
@@ -332,6 +375,33 @@ class PipelineBase:
                 all_tasks = all_tasks[start_idx:]
 
         return all_tasks
+
+    def process_tasks(
+        self,
+        process_callback,
+        **kwargs
+    ):
+        """
+        Generic task iteration loop with built-in health checks and checkpoints.
+        process_callback should accept: (idx, task, total_tasks) and return True on success.
+        """
+        tasks = self.get_tasks(**kwargs)
+        if not tasks:
+            self.log(f"📋 {self.phase_name} 沒有待處理的檔案。")
+            return
+
+        self.log(f"📋 {self.phase_name} 共有 {len(tasks)} 個檔案待處理。")
+        
+        for idx, task in enumerate(tasks, 1):
+            if self.check_system_health(): break
+            
+            process_callback(idx, task, len(tasks))
+            
+            if self.stop_requested:
+                if self.pause_requested and idx < len(tasks):
+                    next_task = tasks[idx]
+                    self.save_checkpoint(next_task["subject"], next_task["filename"])
+                break
 
     def _batch_select_reprocess(self, done_tasks: List[Dict]) -> Dict[int, Dict]:
         """互動式批量選擇已完成任務是否重跑。"""

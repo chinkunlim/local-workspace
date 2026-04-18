@@ -24,6 +24,7 @@ class StateManager:
         self.skill_name = skill_name
         self.PHASES     = self.PHASES_PDF if skill_name == "pdf-knowledge" else self.PHASES_VOICE
         self._phase_labels = self.PHASE_LABELS_PDF if skill_name == "pdf-knowledge" else self.PHASE_LABELS_VOICE
+        self.file_ext   = "*.pdf" if skill_name == "pdf-knowledge" else "*.m4a"
         canonical_state_dir = os.path.join(base_dir, "state")
         legacy_state_file = os.path.join(base_dir, ".pipeline_state.json")
         legacy_checklist_file = os.path.join(base_dir, "checklist.md")
@@ -33,12 +34,7 @@ class StateManager:
         self.state_file = canonical_state_file if os.path.exists(canonical_state_file) or not os.path.exists(legacy_state_file) else legacy_state_file
         self.checklist_file = canonical_checklist_file if os.path.exists(canonical_checklist_file) or not os.path.exists(legacy_checklist_file) else legacy_checklist_file
 
-        canonical_raw_dir = os.path.join(base_dir, "input", "raw_data")
-        legacy_raw_dir = os.path.join(base_dir, "raw_data")
-        if self._dir_has_files(canonical_raw_dir) or not self._dir_has_files(legacy_raw_dir):
-            self.raw_dir = canonical_raw_dir
-        else:
-            self.raw_dir = legacy_raw_dir
+        self.raw_dir = os.path.join(base_dir, "input")
         self._lock = threading.RLock()
         self._checkpoint: Optional[Dict[str, Any]] = None
         self.state: Dict[str, Dict[str, Any]] = self._load_state()
@@ -104,7 +100,7 @@ class StateManager:
                 
                 subj_audio = os.path.join(self.raw_dir, subj)
                 import glob
-                physical_files = glob.glob(os.path.join(subj_audio, "*.m4a"))
+                physical_files = glob.glob(os.path.join(subj_audio, self.file_ext))
                 
                 for pf in physical_files:
                     fname = os.path.basename(pf)
@@ -113,7 +109,7 @@ class StateManager:
                     
                     if fname not in self.state[subj]:
                         self.state[subj][fname] = {
-                            "p1": "⏳", "p2": "⏳", "p3": "⏳", "p4": "⏳", "p5": "⏳",
+                            **{p: "⏳" for p in self.PHASES},
                             "hash": fhash,
                             "date": mtime,
                             "note": "更新/新增",
@@ -124,10 +120,10 @@ class StateManager:
                         # If raw audio changed, negate everything
                         if self.state[subj][fname].get("hash") != fhash:
                             self.state[subj][fname].update({
-                                "p1": "⏳", "p2": "⏳", "p3": "⏳", "p4": "⏳", "p5": "⏳",
+                                **{p: "⏳" for p in self.PHASES},
                                 "hash": fhash,
                                 "date": mtime,
-                                "note": "音檔已變更"
+                                "note": "原始檔已變更"
                             })
             self._save_state()
 

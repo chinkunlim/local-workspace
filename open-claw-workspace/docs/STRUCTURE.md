@@ -196,7 +196,7 @@ data/
     │   │   ├── raw_extracted.md
     │   │   ├── figure_list.md
     │   │   └── figures/
-    │   ├── 03_Agent_Core/<subject>/<pdf_id>/ ← Agent trace + resume state
+    │   ├── state/resume/<subject>/<pdf_id>/ ← Agent trace + resume state
     │   ├── 05_Final_Knowledge/<subject>/<pdf_id>/content.md ← Final knowledge
     │   ├── Error/                            ← Failed PDFs quarantined here
     │   ├── vector_db/                        ← ChromaDB vector store

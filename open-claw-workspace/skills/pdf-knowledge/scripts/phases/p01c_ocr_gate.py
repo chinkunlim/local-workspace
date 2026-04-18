@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ocr_quality_gate.py — Phase 1d: OCR 品質評估
+ocr_quality_gate.py — Phase 1c: OCR 品質評估
 ============================================
 對掃描件頁面執行 per-word 信心分數評估（pytesseract），
 精確定位哪些段落有 OCR 問題，並在 content.md 插入警告標記。
@@ -24,13 +24,12 @@ import subprocess
 import tempfile
 from typing import List, Dict, Optional
 
-import os, sys
-# Workspace Root Resolver
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
+# Internal Core Bootstrap
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
 
 from core.pipeline_base import PipelineBase
+from core.atomic_writer import AtomicWriter
 
 # OCR settings are required from config.yaml.
 DEFAULT_CONFIDENCE_THRESHOLD = None
@@ -38,15 +37,15 @@ DEFAULT_OCR_DPI = None
 DEFAULT_OCR_LANG = None
 
 
-class Phase1dOCRQualityGate(PipelineBase):
+class Phase1cOCRQualityGate(PipelineBase):
     """
-    Phase 1d: OCR Quality Assessment.
+    Phase 1c: OCR Quality Assessment.
     Evaluates per-word confidence scores for scanned PDF pages.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
-            phase_key="phase1d",
+            phase_key="phase1c",
             phase_name="OCR 品質評估",
             skill_name="pdf-knowledge",
         )
@@ -62,27 +61,25 @@ class Phase1dOCRQualityGate(PipelineBase):
     #  Public Entry Point                                                  #
     # ------------------------------------------------------------------ #
 
-    def assess_all_scanned_pages(
-        self, pdf_path: str, pdf_id: str, subject: str, scanned_pages: Optional[List[int]] = None
-    ) -> Dict[int, float]:
+    def run(self, subject: str, filename: str) -> bool:
         """
         Assess OCR quality for all scanned pages.
 
         Args:
-            pdf_path: Path to PDF.
-            pdf_id: PDF identifier.
-            subject: Subject folder identifier.
-            scanned_pages: List of page numbers to assess. If None, reads from scan_report.json.
+            subject: The subject category folder name.
+            filename: The PDF filename.
 
         Returns:
-            Dict mapping page_number → confidence_score (0.0-1.0)
+            bool: True if successful, False if failed.
         """
-        if scanned_pages is None:
-            scanned_pages = self._get_scanned_pages_from_report(pdf_id, subject)
+        pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
+        pdf_id = os.path.splitext(filename)[0]
+        
+        scanned_pages = self._get_scanned_pages_from_report(pdf_id, subject)
 
         if not scanned_pages:
             self.info("📋 [OCR] 無掃描頁面需要品質評估")
-            return {}
+            return True
 
         self.info(f"🔤 [OCR] 開始評估 {len(scanned_pages)} 個掃描頁面...")
 
@@ -114,7 +111,7 @@ class Phase1dOCRQualityGate(PipelineBase):
             self.info(f"✅ [OCR] 所有頁面信心值 ≥ {self.threshold:.0%}")
 
         gc.collect()
-        return page_scores
+        return True
 
     def assess_page_ocr_quality(self, pdf_path: str, page_num: int) -> float:
         """
@@ -232,7 +229,6 @@ class Phase1dOCRQualityGate(PipelineBase):
             data["ocr_dpi"] = self.dpi
             data["ocr_lang"] = self.lang
 
-            from core import AtomicWriter
             AtomicWriter.write_json(report_path, data)
 
             self.info(f"💾 [OCR] scan_report.json 已更新 (low_confidence_pages: {low_confidence_pages})")
@@ -255,7 +251,7 @@ class Phase1dOCRQualityGate(PipelineBase):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Phase 1d: OCR Quality Gate")
+    parser = argparse.ArgumentParser(description="Phase 1c: OCR Quality Gate")
     parser.add_argument("pdf", help="Path to PDF")
     parser.add_argument("--id", dest="pdf_id", default=None)
     parser.add_argument("--pages", nargs="+", type=int, default=None,
@@ -263,12 +259,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     pdf_id = args.pdf_id or os.path.splitext(os.path.basename(args.pdf))[0]
-    gate = Phase1dOCRQualityGate()
-    scores = gate.assess_all_scanned_pages(args.pdf, pdf_id, args.pages)
+    filename = os.path.basename(args.pdf)
+    
+    gate = Phase1cOCRQualityGate()
+    gate.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
+    success = gate.run("Default", filename)
 
     print(f"\n{'=' * 40}")
-    print("OCR Quality Assessment Results")
+    print(f"OCR Quality Assessment Success: {success}")
     print(f"{'=' * 40}")
-    for page, score in sorted(scores.items()):
-        status = "✅" if score >= gate.threshold else "⚠️ LOW"
-        print(f"  Page {page:3d}: {score:.0%} {status}")

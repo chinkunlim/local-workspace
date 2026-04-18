@@ -49,9 +49,9 @@ _pdf_dirs   = _pb_pdf.phase_dirs
 _voice_dirs = _pb_voice.phase_dirs
 
 # Canonical paths used in diff routes
-PDF_INBOX     = _pdf_dirs.get("inbox",      os.path.join(_workspace_root, "data", "pdf-knowledge",  "input", "01_Inbox"))
-PDF_PROCESSED = _pdf_dirs.get("processed",  os.path.join(_workspace_root, "data", "pdf-knowledge",  "output", "02_Processed"))
-PDF_FINAL     = _pdf_dirs.get("final",      os.path.join(_workspace_root, "data", "pdf-knowledge",  "output", "05_Final_Knowledge"))
+PDF_INBOX     = _pdf_dirs.get("inbox",      os.path.join(_workspace_root, "data", "pdf-knowledge",  "input"))
+PDF_PROCESSED = _pdf_dirs.get("processed",  os.path.join(_workspace_root, "data", "pdf-knowledge",  "output", "01_Processed"))
+PDF_SYNTHESIS = _pdf_dirs.get("synthesis",  os.path.join(_workspace_root, "data", "pdf-knowledge",  "output", "03_Synthesis"))
 
 VOICE_P1     = _voice_dirs.get("p1", os.path.join(_workspace_root, "data", "voice-memo", "output", "01_transcript"))
 VOICE_P2     = _voice_dirs.get("p2", os.path.join(_workspace_root, "data", "voice-memo", "output", "02_proofread"))
@@ -66,7 +66,7 @@ DIFF_PHASE_MAP: dict[str, dict[str, tuple[str, str, str, str]]] = {
         "p2_vs_p3": (VOICE_P2, VOICE_P3, "P2 AI Proofread",   "P3 Merged Refined"),
     },
     "pdf-knowledge": {
-        "raw_vs_final": (PDF_PROCESSED, PDF_FINAL, "Raw Extracted", "Final Knowledge"),
+        "raw_vs_final": (PDF_PROCESSED, PDF_SYNTHESIS, "Raw Extracted", "Synthesis Notes"),
     },
 }
 
@@ -331,7 +331,7 @@ def api_diff_files():
 
     if skill == "pdf-knowledge" and phase_pair == "raw_vs_final":
         processed_subj = os.path.join(PDF_PROCESSED, subject)
-        final_subj     = os.path.join(PDF_FINAL,     subject)
+        final_subj     = os.path.join(PDF_SYNTHESIS, subject)
         p_ids = {d for d in os.listdir(processed_subj) if os.path.isdir(os.path.join(processed_subj, d))} \
                 if os.path.isdir(processed_subj) else set()
         f_ids = {d for d in os.listdir(final_subj)     if os.path.isdir(os.path.join(final_subj,     d))} \
@@ -366,7 +366,7 @@ def api_diff():
 
     elif skill == "pdf-knowledge" and phase_pair == "raw_vs_final":
         text_a = _read_text(os.path.join(PDF_PROCESSED, subject, file_id, "raw_extracted.md"))
-        text_b = _read_text(os.path.join(PDF_FINAL,     subject, file_id, "content.md"))
+        text_b = _read_text(os.path.join(PDF_SYNTHESIS, subject, file_id, "content.md"))
 
     else:
         text_a = text_b = None

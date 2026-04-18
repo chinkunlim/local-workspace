@@ -9,12 +9,13 @@ import glob
 import json
 
 class GlossaryManager:
-    def __init__(self, workspace_root: str):
+    def __init__(self, workspace_root: str, skill_name: str):
         self.workspace_root = workspace_root
+        self.skill_name = skill_name
         
-        # Determine paths
-        self.voice_memo_raw = os.path.join(self.workspace_root, "data", "voice-memo", "input", "raw_data")
-        self.priority_terms_path = os.path.join(self.workspace_root, "skills", "pdf-knowledge", "config", "priority_terms.json")
+        # Determine paths specific to this skill
+        self.skill_input_dir = os.path.join(self.workspace_root, "data", self.skill_name, "input")
+        self.priority_terms_path = os.path.join(self.workspace_root, "skills", self.skill_name, "config", "priority_terms.json")
 
     def sync_all(self, logger=None) -> int:
         """
@@ -36,11 +37,11 @@ class GlossaryManager:
         subs = priority_data.get("CRITICAL_SUBSTITUTIONS", {})
         protection = priority_data.get("CRITICAL_TERM_PROTECTION", [])
         
-        if not os.path.isdir(self.voice_memo_raw):
+        if not os.path.isdir(self.skill_input_dir):
             return 0
 
         added_count = 0
-        search_pattern = os.path.join(self.voice_memo_raw, "*", "glossary.json")
+        search_pattern = os.path.join(self.skill_input_dir, "*", "glossary.json")
         for gfile in glob.glob(search_pattern):
             try:
                 with open(gfile, "r", encoding="utf-8") as f:

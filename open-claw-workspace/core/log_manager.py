@@ -29,27 +29,31 @@ def build_logger(
     log_file: Optional[str] = None,
     level: int = logging.INFO,
     console: bool = False,
+    console_level: Optional[int] = None,
+    file_level: Optional[int] = None,
     max_bytes: int = 5 * 1024 * 1024,
     backup_count: int = 3,
 ) -> logging.Logger:
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(min(level, console_level or level, file_level or level))
     logger.propagate = False
 
     if logger.handlers:
         return logger
 
-    formatter = EmojiFormatter("%(asctime)s [%(levelname)s] %(emoji)s %(message)s")
+    formatter = EmojiFormatter("%(asctime)s [%(levelname)s] %(emoji)s %(name)s:%(lineno)d - %(message)s")
 
     if log_file:
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
         file_handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8")
         file_handler.setFormatter(formatter)
+        file_handler.setLevel(file_level or level)
         logger.addHandler(file_handler)
 
     if console:
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(formatter)
+        stream_handler.setLevel(console_level or level)
         logger.addHandler(stream_handler)
 
     return logger

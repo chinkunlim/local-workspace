@@ -12,7 +12,7 @@ Respond with `HEARTBEAT_OK` if all checks pass with no action required.
 
 ### 2. Resume State
 - [ ] No stale interrupted states in `data/voice-memo/state/.pipeline_state.json`
-- [ ] No unexplained interrupted sessions in `data/pdf-knowledge/output/03_Agent_Core/*/resume_state.json`
+- [ ] No unexplained interrupted sessions in `data/pdf-knowledge/state/resume/*/resume_state.json`
 
 ### 3. Documentation Parity
 - [ ] All recent code changes have corresponding documentation updates

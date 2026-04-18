@@ -38,7 +38,7 @@ class SecurityManager:
 
     Args:
         config_dir: 包含 security_policy.yaml 的資料夾路徑。
-        audit_log_path: security_audit.log 的路徑。若 None，預設為 config_dir/../03_Agent_Core/security_audit.log。
+        audit_log_path: security_audit.log 的路徑。若 None，預設為 config_dir/../logs/security_audit.log。
     """
 
     def __init__(self, config_dir: str, audit_log_path: Optional[str] = None):
@@ -49,7 +49,7 @@ class SecurityManager:
             skill_root = os.path.dirname(config_dir)
             audit_log_path = os.path.join(
                 os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(skill_root, ".."))),
-                "data", "pdf-knowledge", "03_Agent_Core", "security_audit.log"
+                "data", "pdf-knowledge", "logs", "security_audit.log"
             )
         self.audit_log_path = audit_log_path
         os.makedirs(os.path.dirname(audit_log_path), exist_ok=True)

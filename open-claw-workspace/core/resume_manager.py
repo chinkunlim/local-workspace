@@ -44,7 +44,7 @@ class ResumeManager:
     Manages chunk-level resume state for PDF processing.
 
     Each PDF has its own resume_state.json stored in:
-        data/pdf-knowledge/03_Agent_Core/{pdf_id}/resume_state.json
+        data/pdf-knowledge/state/resume/{pdf_id}/resume_state.json
     """
 
     def __init__(self, base_dir: str):
@@ -53,7 +53,7 @@ class ResumeManager:
             base_dir: Root data directory for the skill (e.g. data/pdf-knowledge).
         """
         self.base_dir = base_dir
-        self.agent_core_dir = os.path.join(base_dir, "03_Agent_Core")
+        self.agent_core_dir = os.path.join(base_dir, "state", "resume")
         self._lock = threading.RLock()
 
     # ------------------------------------------------------------------ #
@@ -134,7 +134,7 @@ class ResumeManager:
 
     def get_all_interrupted(self) -> Dict[str, Dict]:
         """
-        Scan 03_Agent_Core/ and return all PDFs with interrupted status.
+        Scan state/resume/ and return all PDFs with interrupted status.
         Used by main_app.py dashboard on startup.
 
         Returns:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-pdf_diagnostic.py — Phase 1a: 輕量 PDF 診斷
+pdf_diagnostic.py — Phase 0a: 輕量 PDF 診斷
 =============================================
 目標：在 Docling（~2.5GB RAM，3-5分鐘）啟動之前，
 用 poppler-utils 在 < 50MB、< 5秒 內完成六項診斷：
@@ -27,13 +27,12 @@ import gc
 from typing import List, Optional
 from dataclasses import dataclass, field, asdict
 
-import os, sys
-# Workspace Root Resolver
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
+# Internal Core Bootstrap
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
 
 from core.pipeline_base import PipelineBase
+from core.atomic_writer import AtomicWriter
 
 
 @dataclass
@@ -75,15 +74,15 @@ class DiagnosticReport:
     success: bool = True
 
 
-class Phase1aDiagnostic(PipelineBase):
+class Phase0aDiagnostic(PipelineBase):
     """
-    Phase 1a: Lightweight PDF Diagnostic
+    Phase 0a: Lightweight PDF Diagnostic
     Inherits PipelineBase with skill_name='pdf-knowledge' (V2.2 keyword arg pattern).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
-            phase_key="phase1a",
+            phase_key="phase0a",
             phase_name="PDF 輕量診斷",
             skill_name="pdf-knowledge",
         )
@@ -98,24 +97,27 @@ class Phase1aDiagnostic(PipelineBase):
     #  Public Entry Point                                                  #
     # ------------------------------------------------------------------ #
 
-    def run_diagnostics(self, pdf_path: str, pdf_id: str, subject: str = "Default") -> DiagnosticReport:
+    def run(self, subject: str, filename: str) -> bool:
         """
         Execute all six diagnostic checks.
         This is the main public API — call this before Docling.
 
         Args:
-            pdf_path: Absolute path to the PDF file.
-            pdf_id: Identifier for this PDF (used for output directory naming).
+            subject: The subject category folder name.
+            filename: The PDF filename (e.g., 'document.pdf').
 
         Returns:
-            DiagnosticReport with all diagnostic results.
+            bool: True if successful, False if failed.
         """
+        pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
+        pdf_id = os.path.splitext(filename)[0]
         report = DiagnosticReport(pdf_path=pdf_path, pdf_id=pdf_id, subject=subject)
 
         if not os.path.exists(pdf_path):
             report.error = f"PDF not found: {pdf_path}"
             report.success = False
-            return report
+            self.error(report.error)
+            return False
 
         self.info(f"📋 [Diagnose] 開始診斷: [{subject}] {os.path.basename(pdf_path)}")
 
@@ -159,7 +161,7 @@ class Phase1aDiagnostic(PipelineBase):
         self._log_summary(report)
 
         gc.collect()
-        return report
+        return report.success
 
     # ------------------------------------------------------------------ #
     #  Diagnostic Steps                                                    #
@@ -324,7 +326,6 @@ class Phase1aDiagnostic(PipelineBase):
         report_dict = asdict(report)
         report_dict.pop("pdf_path", None)  # Don't export full path for security
 
-        from core import AtomicWriter
         AtomicWriter.write_json(report_path, report_dict)
 
         self.info(f"💾 [Diagnose] scan_report.json 已寫入: {report_path}")
@@ -373,7 +374,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Phase 1a: PDF Lightweight Diagnostic (poppler-utils)"
+        description="Phase 0a: PDF Lightweight Diagnostic (poppler-utils)"
     )
     parser.add_argument("pdf", help="Path to the PDF file to diagnose")
     parser.add_argument("--id", dest="pdf_id", default=None,
@@ -381,10 +382,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     pdf_id = args.pdf_id or os.path.splitext(os.path.basename(args.pdf))[0]
-    diag = Phase1aDiagnostic()
-    report = diag.run_diagnostics(args.pdf, pdf_id)
+    filename = os.path.basename(args.pdf)
+    
+    diag = Phase0aDiagnostic()
+    # Mock for CLI standalone run
+    diag.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
+    success = diag.run("Default", filename)
 
     print(f"\n{'=' * 50}")
-    print("Diagnostic Report Summary")
+    print(f"Diagnostic Execution Success: {success}")
     print(f"{'=' * 50}")
-    print(json.dumps(asdict(report), ensure_ascii=False, indent=2))

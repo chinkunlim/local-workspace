@@ -20,13 +20,11 @@ paths:
 
   # Phase-specific directories (self.dirs[key] in Phase scripts)
   phases:
-    inbox: "input" # 01 — PDF 入匣
-    processed: "output/02_Processed" # 02 — Docling 提取結果 (IMMUTABLE)
-    agent_core: "output/03_Agent_Core" # 03 — Agent trace / resume state
-    final: "output/05_Final_Knowledge" # 05 — 最終知識庫
-    error: "output/Error" # 錯誤隔離區
-    vector_db: "output/vector_db" # ChromaDB 向量資料庫
-    library: "output/library" # 知識庫文件彙整
+    inbox:      "input"                    # 00 — PDF 入匣
+    processed:  "output/01_processed"      # 01 — Docling 提取結果 (raw_extracted.md, images)
+    highlighted: "output/02_highlighted"   # 02 — 重點標記後的文件 (highlighted.md)
+    synthesis:  "output/03_synthesis"      # 03 — 最終知識庫筆記
+    error:      "output/error"             # 錯誤隔離區
 
 # ------------------------------------------------------------------------------
 # PDF Processing
@@ -63,6 +61,13 @@ pdf_processing:
       - "paragraph_break" # 其次在段落空行
       - "force_truncate" # 最後強制截斷
 
+  # Image Content Filter — 過濾 logo、圖示等非內容圖片
+  # 三重條件同時成立才保留圖片（任一不符則跳過）
+  image_filter:
+    min_area_px: 80000       # 最小面積 (px²)，例：283×283 或 200×400
+    min_short_edge_px: 80    # 最短邊最小長度 (px)，過濾橫線與細條
+    max_aspect_ratio: 8.0    # 最大長寬比，過濾橫幅、頁眉、頁腳
+
 # ------------------------------------------------------------------------------
 # Playwright (Browser Agent)
 # ------------------------------------------------------------------------------
@@ -77,9 +82,23 @@ playwright:
   agent_loop_max_rounds: 10 # 每個 chunk 最大 round 數
 
 # ------------------------------------------------------------------------------
-# Phase 2a: VLM 視覺圖表解析 (Multi-Modal Vision)
+# Phase 2: 重點標記 (Highlight Key Points)
 # ------------------------------------------------------------------------------
-phase2a:
+phase2:
+  active_profile: default
+  profiles:
+    default:
+      model: gemma3:12b
+      options:
+        num_ctx: 16384
+        temperature: 0.1
+      chunk_size: 6000
+      verbatim_threshold: 0.50  # content-loss guard: LLM must retain ≥50% of source
+
+# ------------------------------------------------------------------------------
+# Phase 1d: VLM 視覺圖表解析 (Multi-Modal Vision)
+# ------------------------------------------------------------------------------
+phase1d:
   active_profile: default
   profiles:
     default:
@@ -89,9 +108,9 @@ phase2a:
         temperature: 0.1
 
 # ------------------------------------------------------------------------------
-# Phase 2b: 知識濃縮合成 (Map-Reduce Synthesis)
+# Phase 3: 知識濃縮合成 (Map-Reduce Synthesis)
 # ------------------------------------------------------------------------------
-phase2b:
+phase3:
   active_profile: gemma4e2b
   profiles:
     default:

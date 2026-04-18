@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-pdf_engine.py — Phase 1b: Docling 深度提取
+pdf_engine.py — Phase 1a: Docling 深度提取
 ==========================================
 在 Phase 1a 診斷通過後，使用 Docling（IBM）執行完整的 PDF 結構提取：
 - 文字（含 Layout Analysis，處理多欄）
@@ -8,7 +8,7 @@ pdf_engine.py — Phase 1b: Docling 深度提取
 - raster 圖片（PyMuPDF / fitz）
 - 參考文獻（reference_injector.py，後續 phase）
 
-Phase 1b 設計決策：
+Phase 1a 設計決策：
 - Docling 完成後立即 gc.collect()（釋放 ~2.5GB 記憶體）
 - 字型損壞 fallback：Docling + pdftoppm OCR 交叉驗證，差異 > 20% 以 OCR 為主
 - raw_extracted.md 永遠 IMMUTABLE（任何 AI 不得修改）
@@ -25,28 +25,27 @@ import hashlib
 import shutil
 from typing import Optional, Dict
 
-import os, sys
-# Workspace Root Resolver
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
+# Internal Core Bootstrap
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
 
 from core.pipeline_base import PipelineBase
 from core.resume_manager import ResumeManager
+from core.atomic_writer import AtomicWriter
 
 
-class Phase1bPDFEngine(PipelineBase):
+class Phase1aPDFEngine(PipelineBase):
     """
-    Phase 1b: Docling Deep Extraction.
-    Reads scan_report.json from Phase 1a to adapt processing strategy.
+    Phase 1a: Docling Deep Extraction.
+    Reads scan_report.json from Phase 0a to adapt processing strategy.
     """
 
     # Font fallback threshold is defined in config.yaml.
     FONT_FALLBACK_DIFF_THRESHOLD = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
-            phase_key="phase1b",
+            phase_key="phase1a",
             phase_name="Docling 深度提取",
             skill_name="pdf-knowledge",
         )
@@ -60,16 +59,22 @@ class Phase1bPDFEngine(PipelineBase):
         if self.font_diff_threshold is None:
             raise RuntimeError("pdf-knowledge config missing pdf_processing.docling.font_fallback_diff_threshold")
 
+        # Image content filter thresholds (from config.yaml pdf_processing.image_filter)
+        img_filter_cfg = self.config_manager.get_nested("pdf_processing", "image_filter") or {}
+        self._img_min_area: int = img_filter_cfg.get("min_area_px", 80_000)
+        self._img_min_short_edge: int = img_filter_cfg.get("min_short_edge_px", 80)
+        self._img_max_aspect: float = img_filter_cfg.get("max_aspect_ratio", 8.0)
+
     # ------------------------------------------------------------------ #
     #  Public Entry Point                                                  #
     # ------------------------------------------------------------------ #
 
-    def extract(self, pdf_path: str, pdf_id: str, subject: str = "Default") -> Optional[str]:
+    def run(self, subject: str, filename: str) -> bool:
         """
         Execute full PDF extraction pipeline.
 
         Steps:
-          1. Load scan_report.json from Phase 1a
+          1. Load scan_report.json from Phase 0a
           2. Check early-exit conditions (encrypted, 0 pages)
           3. Run Docling extraction
           4. Apply font-broken fallback (if needed)
@@ -78,28 +83,30 @@ class Phase1bPDFEngine(PipelineBase):
           7. gc.collect()
 
         Args:
-            pdf_path: Absolute path to PDF.
-            pdf_id: PDF identifier.
+            subject: The subject category folder name.
+            filename: The PDF filename.
 
         Returns:
-            Path to raw_extracted.md, or None on failure.
+            bool: True if successful, False if failed.
         """
-        self.info(f"📄 [Phase 1b] 開始 Docling 提取: {pdf_id}")
+        pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
+        pdf_id = os.path.splitext(filename)[0]
+        self.info(f"📄 [Phase 1a] 開始 Docling 提取: {pdf_id}")
 
         # Load diagnostic report
         scan_report = self._load_scan_report(pdf_id, subject)
         if scan_report is None:
-            self.warning("⚠️ [Phase 1b] 找不到 scan_report.json，建議先執行 Phase 1a 診斷")
+            self.warning("⚠️ [Phase 1a] 找不到 scan_report.json，建議先執行 Phase 0a 診斷")
             scan_report = {}
 
         # Early exit checks
         if scan_report.get("encrypted") and not self._try_empty_password(pdf_path):
             self._move_to_error(pdf_path, pdf_id, "加密 PDF，空密碼解密失敗")
-            return None
+            return False
 
         if scan_report.get("pages", 1) == 0:
             self._move_to_error(pdf_path, pdf_id, "PDF 頁數為 0，可能損壞")
-            return None
+            return False
 
         # Set up output directory
         output_dir = os.path.join(self.dirs["processed"], subject, pdf_id)
@@ -115,7 +122,7 @@ class Phase1bPDFEngine(PipelineBase):
 
             if extracted_text is None:
                 self._move_to_error(pdf_path, pdf_id, "Docling 提取失敗")
-                return None
+                return False
 
             # Font-broken fallback
             if scan_report.get("has_broken_fonts"):
@@ -127,7 +134,6 @@ class Phase1bPDFEngine(PipelineBase):
             extracted_text = self._apply_terminology_protection(extracted_text)
 
             # Write IMMUTABLE raw_extracted.md
-            from core import AtomicWriter
             AtomicWriter.write_text(
                 raw_output_path,
                 (
@@ -148,21 +154,21 @@ class Phase1bPDFEngine(PipelineBase):
                 "phase1b_status": "completed",
             })
 
-            self.info(f"✅ [Phase 1b] raw_extracted.md 已寫入 ({len(extracted_text):,} 字元, hash: {file_hash[:8]}...)")
+            self.info(f"✅ [Phase 1a] raw_extracted.md 已寫入 ({len(extracted_text):,} 字元, hash: {file_hash[:8]}...)")
             self.resume_manager.clear_checkpoint(pdf_id)
-            return raw_output_path
+            return True
 
         except MemoryError:
-            self.error("💥 [Phase 1b] Docling 記憶體耗盡，移至 Error/")
+            self.error("💥 [Phase 1a] Docling 記憶體耗盡，移至 Error/")
             self._move_to_error(pdf_path, pdf_id, "MemoryError during Docling extraction")
-            return None
+            return False
         except Exception as e:
-            self.error(f"❌ [Phase 1b] 提取失敗: {e}")
-            return None
+            self.error(f"❌ [Phase 1a] 提取失敗: {e}")
+            return False
         finally:
             if self.gc_collect_after:
                 gc.collect()
-                self.info("🧹 [Phase 1b] gc.collect() 完成，記憶體已釋放")
+                self.info("🧹 [Phase 1a] gc.collect() 完成，記憶體已釋放")
 
     # ------------------------------------------------------------------ #
     #  Docling                                                             #
@@ -187,7 +193,7 @@ class Phase1bPDFEngine(PipelineBase):
             self.error("❌ Docling 未安裝。請執行: pip install docling")
             return None
 
-        self.info("📄 [Phase 1b] Docling 載入中（~2.5GB RAM，請稍候...）")
+        self.info("📄 [Phase 1a] Docling 載入中（~2.5GB RAM，請稍候...）")
 
         # Create output directory for Docling intermediate files
         docling_output = os.path.join(self.dirs["processed"], subject, pdf_id, "_docling_tmp")
@@ -215,11 +221,18 @@ class Phase1bPDFEngine(PipelineBase):
                 if isinstance(item, PictureItem):
                     img = item.get_image(doc)
                     if img:
+                        if not self._should_keep_image(img):
+                            self.log(
+                                f"🔍 [Phase 1a] 跳過非內容圖片 "
+                                f"({img.width}x{img.height}px)",
+                                "info",
+                            )
+                            continue
                         page_no = item.prov[0].page_no if getattr(item, "prov", None) else 1
                         filename = f"fig_p{page_no}_{item.self_ref.replace('/', '_')}.png"
                         filepath = os.path.join(assets_dir, filename)
                         img.save(filepath)
-                        
+
                         extracted_figures.append({
                             "page": page_no,
                             "src": f"assets/{filename}",
@@ -242,18 +255,61 @@ class Phase1bPDFEngine(PipelineBase):
                     
                 from core import AtomicWriter
                 AtomicWriter.write_text(figure_list_path, "".join(content))
-                self.info(f"📸 [Phase 1b] 提取了 {len(extracted_figures)} 張圖片並建立 figure_list.md")
+                self.info(f"📸 [Phase 1a] 提取了 {len(extracted_figures)} 張圖片並建立 figure_list.md")
 
             markdown_text = doc.export_to_markdown()
-            self.info(f"✅ [Phase 1b] Docling 提取完成 ({len(markdown_text):,} 字元)")
+            self.info(f"✅ [Phase 1a] Docling 提取完成 ({len(markdown_text):,} 字元)")
             return markdown_text
         except Exception as e:
-            self.error(f"❌ [Phase 1b] Docling 失敗: {e}")
+            self.error(f"❌ [Phase 1a] Docling 失敗: {e}")
             return None
         finally:
             # Clean up Docling temp files
             if os.path.exists(docling_output):
                 shutil.rmtree(docling_output, ignore_errors=True)
+
+    # ------------------------------------------------------------------ #
+    #  Image Content Filter                                                #
+    # ------------------------------------------------------------------ #
+
+    def _should_keep_image(self, img: object) -> bool:
+        """Determine whether an extracted image is content (not a logo/icon).
+
+        Applies three heuristic checks configured via config.yaml
+        ``pdf_processing.image_filter``:
+
+        1. **Minimum area**: ``width × height ≥ min_area_px``
+           Eliminates tiny icons and decorative dots.
+        2. **Minimum short edge**: ``min(w, h) ≥ min_short_edge_px``
+           Eliminates extremely thin horizontal rules or narrow side graphics.
+        3. **Aspect ratio guard**: ``max(w, h) / min(w, h) ≤ max_aspect_ratio``
+           Eliminates very wide/tall banners, headers, and footers.
+
+        Args:
+            img: A PIL Image-like object with `.width` and `.height` attributes.
+
+        Returns:
+            True if the image passes all checks and should be kept.
+        """
+        w: int = getattr(img, "width", 0)
+        h: int = getattr(img, "height", 0)
+
+        if w <= 0 or h <= 0:
+            return False
+
+        area = w * h
+        short_edge = min(w, h)
+        long_edge = max(w, h)
+        aspect_ratio = long_edge / short_edge if short_edge > 0 else float("inf")
+
+        if area < self._img_min_area:
+            return False
+        if short_edge < self._img_min_short_edge:
+            return False
+        if aspect_ratio > self._img_max_aspect:
+            return False
+
+        return True
 
     # ------------------------------------------------------------------ #
     #  Font Fallback                                                       #
@@ -272,7 +328,7 @@ class Phase1bPDFEngine(PipelineBase):
 
         Returns the best available text.
         """
-        self.warning("⚠️ [Phase 1b] 字型損壞偵測，啟動 OCR 交叉驗證...")
+        self.warning("⚠️ [Phase 1a] 字型損壞偵測，啟動 OCR 交叉驗證...")
 
         import subprocess
         import tempfile
@@ -306,13 +362,13 @@ class Phase1bPDFEngine(PipelineBase):
 
         if diff_ratio > self.font_diff_threshold:
             self.warning(
-                f"⚠️ [Phase 1b] Docling vs OCR 文字長度差異 {diff_ratio:.0%} > {self.font_diff_threshold:.0%}，"
+                f"⚠️ [Phase 1a] Docling vs OCR 文字長度差異 {diff_ratio:.0%} > {self.font_diff_threshold:.0%}，"
                 f"改用 OCR 結果（{ocr_len:,} 字元）"
             )
             return ocr_text
         else:
             self.info(
-                f"✅ [Phase 1b] Docling 結果可信（差異 {diff_ratio:.0%} ≤ {self.font_diff_threshold:.0%}），保留 Docling 輸出"
+                f"✅ [Phase 1a] Docling 結果可信（差異 {diff_ratio:.0%} ≤ {self.font_diff_threshold:.0%}），保留 Docling 輸出"
             )
             return docling_text
 
@@ -325,14 +381,14 @@ class Phase1bPDFEngine(PipelineBase):
         Apply Layer 1 terminology protection: string substitutions from
         priority_terms.json CRITICAL_SUBSTITUTIONS.
         """
-        terms_path = os.path.join(
-            _workspace_root, "skills", "pdf-knowledge", "config", "priority_terms.json"
+        priority_path = os.path.join(
+            self.workspace_root, "skills", self.skill_name, "config", "priority_terms.json"
         )
-        if not os.path.exists(terms_path):
+        if not os.path.exists(priority_path):
             return text
 
         try:
-            with open(terms_path, encoding="utf-8") as f:
+            with open(priority_path, encoding="utf-8") as f:
                 terms = json.load(f)
 
             substitutions = terms.get("CRITICAL_SUBSTITUTIONS", {})
@@ -357,7 +413,7 @@ class Phase1bPDFEngine(PipelineBase):
     # ------------------------------------------------------------------ #
 
     def _load_scan_report(self, pdf_id: str, subject: str) -> Optional[Dict]:
-        """Load scan_report.json from Phase 1a."""
+        """Load scan_report.json from Phase 0a."""
         path = os.path.join(self.dirs["processed"], subject, pdf_id, "scan_report.json")
         if not os.path.exists(path):
             return None
@@ -396,7 +452,7 @@ class Phase1bPDFEngine(PipelineBase):
         from core import AtomicWriter
         AtomicWriter.write_json(error_meta, {"pdf_id": pdf_id, "reason": reason})
 
-        self.error(f"❌ [Phase 1b] {pdf_id} 已移至 Error/ — {reason}")
+        self.error(f"❌ [Phase 1a] {pdf_id} 已移至 Error/ — {reason}")
 
     @staticmethod
     def _try_empty_password(pdf_path: str) -> bool:
@@ -426,13 +482,13 @@ class Phase1bPDFEngine(PipelineBase):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Phase 1b: Docling PDF Extraction")
+    parser = argparse.ArgumentParser(description="Phase 1a: Docling PDF Extraction")
     parser.add_argument("pdf", help="Path to PDF file")
     parser.add_argument("--id", dest="pdf_id", default=None)
     args = parser.parse_args()
 
     pdf_id = args.pdf_id or os.path.splitext(os.path.basename(args.pdf))[0]
-    engine = Phase1bPDFEngine()
+    engine = Phase1aPDFEngine()
     result = engine.extract(args.pdf, pdf_id)
 
     if result:

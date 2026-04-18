@@ -29,6 +29,7 @@ from .diff_engine import DiffEngine, AuditEngine
 from .inbox_daemon import SystemInboxDaemon
 from .cli_config_wizard import main as run_config_wizard
 from .bootstrap import ensure_core_path
+from .session_state import SessionState, write_session_state, read_session_state
 
 __all__ = [
     "PipelineBase",
@@ -55,4 +56,7 @@ __all__ = [
     "SystemInboxDaemon",
     "run_config_wizard",
     "ensure_core_path",
+    "SessionState",
+    "write_session_state",
+    "read_session_state",
 ]

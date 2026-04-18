@@ -1,28 +1,29 @@
 # -*- coding: utf-8 -*-
-import sys, os
-
-import os, sys
-# Workspace Root Resolver
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
-
+import os
 import base64
 import re
+
+# Internal Core Bootstrap
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
+
+from core.pipeline_base import PipelineBase
+from core.atomic_writer import AtomicWriter
 from core import PipelineBase, AtomicWriter
 
-class Phase2aVLMVision(PipelineBase):
-    def __init__(self):
+class Phase1dVLMVision(PipelineBase):
+    def __init__(self) -> None:
         super().__init__(
-            phase_key="phase2a",
+            phase_key="phase1d",
             phase_name="VLM 視覺圖表解析",
             skill_name="pdf-knowledge"
         )
-        config = self.get_config("phase2a")
+        config = self.get_config("phase1d")
         self.vlm_model = config.get("model")
         self.vlm_options = config.get("options", {})
         if not self.vlm_model:
-            raise RuntimeError("Missing model in phase2a config profile")
+            raise RuntimeError("Missing model in phase1d config profile")
 
     def _encode_image(self, image_path: str) -> str:
         with open(image_path, "rb") as image_file:
@@ -34,15 +35,26 @@ class Phase2aVLMVision(PipelineBase):
         text = text.replace('|', '\\|')
         return text
 
-    def run_vision(self, pdf_id: str, subject: str = "Default"):
-        self.info(f"👁️ [Phase 2a] 啟動 VLM 視覺圖表解析: {pdf_id}")
+    def run(self, subject: str, filename: str) -> bool:
+        """
+        Execute VLM Vision analysis on the PDF's figures.
+
+        Args:
+            subject: The subject category folder name.
+            filename: The PDF filename.
+
+        Returns:
+            bool: True if successful, False if failed.
+        """
+        pdf_id = os.path.splitext(filename)[0]
+        self.info(f"👁️ [Phase 1d] 啟動 VLM 視覺圖表解析: {pdf_id}")
         
-        pdf_dir = os.path.join(self.dirs["processed"], subject, pdf_id)
+        pdf_dir = os.path.join(self.dirs.get("processed", ""), subject, pdf_id)
         figure_list_path = os.path.join(pdf_dir, "figure_list.md")
         
         if not os.path.exists(figure_list_path):
-            self.warning(f"⚠️ [Phase 2a] 找不到 figure_list.md，略過。")
-            return
+            self.warning(f"⚠️ [Phase 1d] 找不到 figure_list.md，略過。")
+            return True
             
         with open(figure_list_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -58,19 +70,19 @@ class Phase2aVLMVision(PipelineBase):
                 
         if header_idx == -1 or not headers:
             self.error("❌ 無法解析 figure_list.md 的表格標題格式。")
-            return
+            return False
 
         try:
             filename_col = headers.index("檔案名稱")
             vlm_col = headers.index("VLM 描述")
         except ValueError:
             self.error("❌ figure_list.md 缺少必要的 '檔案名稱' 或 'VLM 描述' 欄位。")
-            return
+            return False
 
-        prompt = self.get_prompt("Phase 2a: VLM Vision")
+        prompt = self.get_prompt("Phase 1d: VLM Vision")
         if not prompt:
-            self.error("❌ 找不到 Phase 2a 的 prompt 指令，請確認 prompt.md 內有對應的段落。")
-            return
+            self.error("❌ 找不到 Phase 1d 的 prompt 指令，請確認 prompt.md 內有對應的段落。")
+            return False
 
         modifications = 0
         for i in range(header_idx + 2, len(lines)):
@@ -114,17 +126,20 @@ class Phase2aVLMVision(PipelineBase):
 
         if modifications > 0:
             AtomicWriter.write_text(figure_list_path, "".join(lines))
-            self.info(f"💾 [Phase 2a] 成功更新了 {modifications} 張圖片的描述至 figure_list.md")
+            self.info(f"💾 [Phase 1d] 成功更新了 {modifications} 張圖片的描述至 figure_list.md")
         else:
-            self.info("🆗 [Phase 2a] 沒有需要解析的新圖片。")
+            self.info("🆗 [Phase 1d] 沒有需要解析的新圖片。")
             
         self.llm.unload_model(self.vlm_model, logger=self)
+        return True
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("pdf_id", help="The PDF identifier string inside 02_Processed")
+    parser.add_argument("pdf", help="The PDF path")
     args = parser.parse_args()
     
-    phase = Phase2aVLMVision()
-    phase.run_vision(args.pdf_id)
+    filename = os.path.basename(args.pdf)
+    phase = Phase1dVLMVision()
+    success = phase.run("Default", filename)
+    print(f"Success: {success}")

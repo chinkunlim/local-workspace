@@ -2,7 +2,7 @@
 """
 queue_manager.py — Phase 0: 串行 PDF 佇列管理
 ============================================
-管理 01_Inbox/ → 02_Processed/ 的 PDF 處理佇列：
+管理 input/ → output/01_processed/ 的 PDF 處理佇列：
 - 串行處理（ModelMutex：Docling 和 Playwright 不同時執行）
 - `check_system_health()` 前置（RAM/Disk/Temp 防禦）
 - 首次啟動設定引導（Chrome Profile 路徑確認）
@@ -23,11 +23,14 @@ from typing import List, Optional, Dict
 from datetime import datetime
 from enum import Enum
 
+# Internal Core Bootstrap
 import os
 import sys
 
-# Workspace Root Resolver
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+# Temporary path injection just to reach core/bootstrap.py from skills/pdf-knowledge/scripts
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
 
 from core.pipeline_base import PipelineBase
 from core.resume_manager import ResumeManager
@@ -169,7 +172,7 @@ class QueueManager(PipelineBase):
 
     def scan_inbox(self) -> List[Dict]:
         """
-        Scan 01_Inbox/ for PDF files and build the processing queue.
+        Scan input/ for PDF files and build the processing queue.
         Applies three-layer deduplication:
           Layer 1: Already in 02_Processed/ (by pdf_id)
           Layer 2: Already in current queue
@@ -255,8 +258,8 @@ class QueueManager(PipelineBase):
         self._queue.extend(new_pdfs)
         if new_pdfs:
             self.info(f"🔍 [Queue] 偵測 / 篩選出 {len(new_pdfs)} 個新 PDF")
-        else:
-            self.info("📭 [Queue] 01_Inbox/ 無待處理 PDF")
+        if not self._queue:
+            self.info("📭 [Queue] input/ 無待處理 PDF")
 
         return new_pdfs
 
@@ -290,30 +293,28 @@ class QueueManager(PipelineBase):
             return None
 
         try:
-            # --- Phase 1a: Diagnostic ---
-            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1a"):
-                self.info(f"📋 [Queue] Phase 1a: 輕量診斷 ({subject})...")
-                from phases.p01a_diagnostic import Phase1aDiagnostic
-                diag = Phase1aDiagnostic()
-                scan_report = diag.run_diagnostics(pdf_path, pdf_id, subject)
+            # --- Phase 0a: Diagnostic ---
+            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p0a"):
+                self.info(f"📋 [Queue] Phase 0a: 輕量診斷 ({subject})...")
+                from phases.p00a_diagnostic import Phase0aDiagnostic
+                success = Phase0aDiagnostic().run(subject, item["filename"])
 
-                if not scan_report.success:
-                    raise RuntimeError(f"Phase 1a 失敗: {scan_report.error}")
-                self.state_manager.update_task(subject, item["filename"], "p1a", "✅")
+                if not success:
+                    raise RuntimeError("Phase 0a 診斷失敗")
+                self.state_manager.update_task(subject, item["filename"], "p0a", "✅")
             else:
-                self.info(f"📋 [Queue] Phase 1a 已完成，載入快取")
-                from phases.p01a_diagnostic import DiagnosticReport
+                self.info(f"📋 [Queue] Phase 0a 已完成，載入快取")
+                from phases.p00a_diagnostic import DiagnosticReport
                 report_path = os.path.join(self.dirs["processed"], subject, pdf_id, "scan_report.json")
                 if os.path.exists(report_path):
                     with open(report_path, "r", encoding="utf-8") as f:
                         import json
                         scan_report = DiagnosticReport(**json.load(f))
                 else:
-                    raise RuntimeError("Phase 1a 完成但找不到 scan_report.json")
+                    raise RuntimeError("Phase 0a 完成但找不到 scan_report.json")
 
-            # --- Phase 1b: Docling Extraction ---
-            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1b"):
-                # Acquire Docling mutex
+            # --- Phase 1a: Docling Extraction ---
+            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1a"):
                 if not self.model_mutex.acquire_docling():
                     self.warning("⚠️ [Queue] Playwright 執行中，Docling 等待...")
                     while self.model_mutex._playwright_active:
@@ -324,64 +325,71 @@ class QueueManager(PipelineBase):
                     self.model_mutex.acquire_docling()
 
                 try:
-                    self.info(f"📄 [Queue] Phase 1b: Docling 提取 ({subject})...")
-                    from phases.p01b_engine import Phase1bPDFEngine
-                    engine = Phase1bPDFEngine()
-                    raw_path = engine.extract(pdf_path, pdf_id, subject)
-                    if raw_path is None:
-                        raise RuntimeError("Phase 1b Docling 提取失敗")
-                    self.state_manager.update_task(subject, item["filename"], "p1b", "✅")
+                    self.info(f"📄 [Queue] Phase 1a: Docling 提取 ({subject})...")
+                    from phases.p01a_engine import Phase1aPDFEngine
+                    success = Phase1aPDFEngine().run(subject, item["filename"])
+                    if not success:
+                        raise RuntimeError("Phase 1a Docling 提取失敗")
+                    self.state_manager.update_task(subject, item["filename"], "p1a", "✅")
                 finally:
                     self.model_mutex.release_docling()
             else:
-                self.info(f"📄 [Queue] Phase 1b 已完成，跳過")
+                self.info(f"📄 [Queue] Phase 1a 已完成，跳過")
 
-            # --- Phase 1c: Vector Chart Extraction ---
+            # --- Phase 1b: Vector Chart Extraction ---
+            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1b"):
+                # Always call run(), Phase 1b internally reads scan_report.json and skips if empty
+                self.info(f"🎨 [Queue] Phase 1b: 向量圖表補充 ({subject})...")
+                from phases.p01b_vector_charts import Phase1bVectorChartExtractor
+                Phase1bVectorChartExtractor().run(subject, item["filename"])
+                self.state_manager.update_task(subject, item["filename"], "p1b", "✅")
+            else:
+                self.info(f"🎨 [Queue] Phase 1b 已完成，跳過")
+
+            # --- Phase 1c: OCR Quality (if scanned) ---
             if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1c"):
-                vector_pages = scan_report.vector_chart_pages
-                if vector_pages:
-                    self.info(f"🎨 [Queue] Phase 1c: 向量圖表光柵化 ({len(vector_pages)} 頁)...")
-                    from phases.p01c_vector_charts import Phase1cVectorChartExtractor
-                    extractor = Phase1cVectorChartExtractor()
-                    extractor.extract_vector_charts(pdf_path, pdf_id, subject, vector_pages)
+                # Phase 1c internally reads scan_report.json and skips if not scanned
+                self.info(f"🔤 [Queue] Phase 1c: OCR 品質評估 ({subject})...")
+                from phases.p01c_ocr_gate import Phase1cOCRQualityGate
+                Phase1cOCRQualityGate().run(subject, item["filename"])
                 self.state_manager.update_task(subject, item["filename"], "p1c", "✅")
             else:
-                self.info(f"🎨 [Queue] Phase 1c 已完成，跳過")
+                self.info(f"🔤 [Queue] Phase 1c 已完成，跳過")
 
-            # --- Phase 1d: OCR Quality (if scanned) ---
+            # --- Phase 1d: VLM Vision ---
             if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1d"):
-                if scan_report.is_scanned:
-                    self.info(f"🔤 [Queue] Phase 1d: OCR 品質評估...")
-                    from phases.p01d_ocr_gate import Phase1dOCRQualityGate
-                    gate = Phase1dOCRQualityGate()
-                    gate.assess_all_scanned_pages(pdf_path, pdf_id, subject)
+                self.info(f"👁️ [Queue] Phase 1d: VLM 視覺圖表解析 ({subject})...")
+                from phases.p01d_vlm_vision import Phase1dVLMVision
+                Phase1dVLMVision().run(subject, item["filename"])
                 self.state_manager.update_task(subject, item["filename"], "p1d", "✅")
             else:
-                self.info(f"🔤 [Queue] Phase 1d 已完成，跳過")
-
-            # --- Phase 2a: VLM Vision ---
-            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p2a"):
-                self.info(f"👁️ [Queue] Phase 2a: VLM 視覺圖表解析 ({subject})...")
-                from phases.p02a_vlm_vision import Phase2aVLMVision
-                Phase2aVLMVision().run_vision(pdf_id, subject)
-                self.state_manager.update_task(subject, item["filename"], "p2a", "✅")
-            else:
-                self.info(f"👁️ [Queue] Phase 2a 已完成，跳過")
+                self.info(f"👁️ [Queue] Phase 1d 已完成，跳過")
 
             if getattr(self, "interactive", False):
-                input(f"⏸️ [Interactive] Phase 2a 已完成。請確認 figure_list.md，按 Enter 繼續...")
+                input(f"⏸️ [Interactive] Phase 1d 已完成。請確認 figure_list.md，按 Enter 繼續...")
 
-            # --- Phase 2b: Knowledge Synthesis ---
-            self.info(f"🧠 [Queue] Phase 2b: 知識濃縮合成 ({subject})...")
-            from phases.p02b_synthesis import Phase2bSynthesis
+            # --- Phase 2: Highlight ---
+            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p2"):
+                self.info(f"🖊️ [Queue] Phase 2: 重點標記 ({subject})...")
+                from phases.p02_highlight import Phase2Highlight
+                success = Phase2Highlight().run(subject, item["filename"])
+                if not success:
+                    raise RuntimeError("Phase 2 重點標記失敗")
+                self.state_manager.update_task(subject, item["filename"], "p2", "✅")
+            else:
+                self.info(f"🖊️ [Queue] Phase 2 已完成，跳過")
+
+            # --- Phase 3: Synthesis ---
+            self.info(f"🧠 [Queue] Phase 3: 知識濃縮合成 ({subject})...")
+            from phases.p03_synthesis import Phase3Synthesis
             
             synthesis_success = False
             while not synthesis_success:
-                Phase2bSynthesis().run_synthesis(pdf_id, subject)
+                Phase3Synthesis().run(subject, item["filename"])
                 if getattr(self, "interactive", False):
-                    ans = input(f"⏸️ [Interactive] Phase 2b 已完成。請確認 content.md，輸入 'R' 重寫，或按 Enter 繼續: ")
+                    ans = input(f"⏸️ [Interactive] Phase 3 已完成。請確認 content.md，輸入 'R' 重寫，或按 Enter 繼續: ")
                     if ans.strip().upper() == 'R':
-                        self.warning("🔄 使用者介入：重新執行 Phase 2b...")
+                        self.warning("🔄 使用者介入：重新執行 Phase 3...")
                         continue
                 synthesis_success = True
 
@@ -389,7 +397,7 @@ class QueueManager(PipelineBase):
             item["status"] = PDFStatus.COMPLETED.value
             item["completed_at"] = datetime.now().isoformat()
             self._processed_hashes.add(item["md5"])
-            self.state_manager.update_task(subject, item["filename"], "p2b", "✅",
+            self.state_manager.update_task(subject, item["filename"], "p3", "✅",
                                            note_tag="Pipeline 全部完成")
             self.info(f"✅ [Queue] {item['filename']} 處理完成")
 
@@ -426,7 +434,7 @@ class QueueManager(PipelineBase):
         """
         Check if pdf_id has completed processing via StateManager checklist.
         If phase_key is provided, checks if that specific phase is '✅'.
-        If no phase_key is provided, checks if the final phase 'p2b' is '✅'.
+        If no phase_key is provided, checks if the final phase 'p3' is '✅'.
         """
         # We need the original filename which we can infer or pass, but StateManager 
         # stores it by filename. To be exact, we should look up the task.
@@ -448,8 +456,8 @@ class QueueManager(PipelineBase):
         if phase_key:
             return record.get(phase_key) == "✅"
             
-        # If no explicit phase requested, full processing means p2b is finished.
-        return record.get("p2b") == "✅"
+        # If no explicit phase requested, full processing means p3 is finished.
+        return record.get("p3") == "✅"
 
     def _load_processed_hashes(self):
         """Load MD5 hashes of already-processed PDFs from scan_reports."""

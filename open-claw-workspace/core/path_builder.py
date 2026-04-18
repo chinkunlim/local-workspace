@@ -36,12 +36,13 @@ from typing import Dict, Optional
 # ---------------------------------------------------------------------------
 _DEFAULTS: Dict[str, Dict] = {
     "voice-memo": {
-        "input":  "input/raw_data",
+        "input":  "input",
         "output": "output",
         "state":  "state",
+        "resume": "state/resume",
         "logs":   "logs",
         "phases": {
-            "p0": "input/raw_data",
+            "p0": "input",
             "p1": "output/01_transcript",
             "p2": "output/02_proofread",
             "p3": "output/03_merged",
@@ -50,18 +51,17 @@ _DEFAULTS: Dict[str, Dict] = {
         },
     },
     "pdf-knowledge": {
-        "input":  "input/01_Inbox",
+        "input":  "input",
         "output": "output",
         "state":  "state",
+        "resume": "state/resume",
         "logs":   "logs",
         "phases": {
-            "inbox":      "input/01_Inbox",
-            "processed":  "output/02_Processed",
-            "agent_core": "output/03_Agent_Core",
-            "final":      "output/05_Final_Knowledge",
-            "error":      "output/Error",
-            "vector_db":  "output/vector_db",
-            "library":    "output/library",
+            "inbox":      "input",
+            "processed":  "output/01_processed",
+            "highlighted": "output/02_highlighted",
+            "synthesis":  "output/03_synthesis",
+            "error":      "output/error",
         },
     },
 }
@@ -69,7 +69,7 @@ _DEFAULTS: Dict[str, Dict] = {
 # Generic fallback for unknown skills with no config
 _GENERIC_DEFAULT: Dict[str, str] = {
     "input": "input", "output": "output",
-    "state": "state", "logs": "logs",
+    "state": "state", "resume": "state/resume", "logs": "logs",
 }
 
 
@@ -142,14 +142,14 @@ class PathBuilder:
     @property
     def canonical_dirs(self) -> Dict[str, str]:
         """
-        Returns the four canonical directories expected by PipelineBase:
-        input, output, state, logs.
+        Returns the five canonical directories expected by PipelineBase:
+        input, output, state, resume, logs.
         """
         cfg = self._raw_paths_cfg
         return {
-            key: self._resolve(cfg[key])
-            for key in ("input", "output", "state", "logs")
-            if key in cfg
+            key: self._resolve(cfg.get(key, _DEFAULTS.get(self.skill_name, _GENERIC_DEFAULT).get(key)))
+            for key in ("input", "output", "state", "resume", "logs")
+            if cfg.get(key) or _DEFAULTS.get(self.skill_name, _GENERIC_DEFAULT).get(key)
         }
 
     @property

@@ -10,14 +10,14 @@ The pdf-knowledge skill converts academic/technical PDF documents into structure
 ## Current State (2026-04-16)
 
 - **Status**: Production — all 6 phases implemented and integrated with `StateManager`
-- **Models in use**: `llama3.2-vision` (P2a VLM), `qwen2.5:14b` (P2b synthesis); Docling (local) for P1b
+- **Models in use**: `llama3.2-vision` (P1d VLM), `qwen2.5:14b` (P3 synthesis); Docling (local) for P1a
 - **Architecture version**: V3.0 (global config layer, zero-hardcoded prompts, subject hierarchy, IMMUTABLE principle)
 
 ## Key Invariants
 
 1. **Subject-based hierarchy**: `input/01_Inbox/<subject>/` → `output/02_Processed/<subject>/<pdf_id>/` → `output/05_Final_Knowledge/<subject>/<pdf_id>/`.
-2. **IMMUTABLE P1b output**: `raw_extracted.md` is Docling's raw extraction. It is **never overwritten** after creation. All AI enrichment goes into `05_Final_Knowledge/`.
-3. **Content-Loss Guard**: P2b validates `len(final) / len(raw) ≥ 0.01` before writing. Threshold is intentionally low (1%) because dense academic texts compress naturally at high ratios.
+2. **IMMUTABLE P1a output**: `raw_extracted.md` is Docling's raw extraction. It is **never overwritten** after creation. All AI enrichment goes into `05_Final_Knowledge/`.
+3. **Content-Loss Guard**: P3 validates `len(final) / len(raw) ≥ 0.01` before writing. Threshold is intentionally low (1%) because dense academic texts compress naturally at high ratios.
 4. **`checklist.md` is system-generated** — do not manually edit `data/pdf-knowledge/state/checklist.md`.
 5. **Zero-hardcoded prompts**: All LLM instructions live in `config/prompt.md`, parsed by `PipelineBase.get_prompt()`. Never embed prompts in Python code.
 6. **Global config layer**: Hardware thresholds and Ollama runtime live in `core/config/global.yaml`, not in the skill's `config.yaml`.
@@ -25,9 +25,9 @@ The pdf-knowledge skill converts academic/technical PDF documents into structure
 ## Architecture
 
 ```
-P1a (Diagnose) → P1b (Docling Extract) → P1c (Vector Charts) → P1d (OCR Gate)
+P0a (Diagnose) → P1a (Docling Extract) → P1b (Vector Charts) → P1c (OCR Gate)
                                                                        ↓
-                                         P2b (Synthesis) ← P2a (VLM Vision)
+                                         P3 (Synthesis) ← P1d (VLM Vision)
 ```
 
 Each phase is a class inheriting `core.PipelineBase`. Paths come from `config.yaml → PathBuilder → self.dirs[key]`.
@@ -62,5 +62,5 @@ Each phase is a class inheriting `core.PipelineBase`. Paths come from `config.ya
 - The `raw_extracted.md` immutability guarantee — it is the forensic baseline for all downstream AI processing
 - Content-Loss Guard threshold (1%) — reducing it further risks accepting completely empty outputs
 - Docling RAM limits in `config.yaml` (`pdf_processing.docling.max_ram_mb: 2560`) — heaviest single process
-- P1d OCR confidence threshold — calibrated for Traditional Chinese + English mixed documents
+- P1c OCR confidence threshold — calibrated for Traditional Chinese + English mixed documents
 - `core/config/global.yaml` hardware thresholds without cross-testing both skills

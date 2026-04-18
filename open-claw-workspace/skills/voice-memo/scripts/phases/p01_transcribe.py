@@ -3,16 +3,18 @@
 Phase 1: High-Precision Audio Transcription
 Refactored to V7.0 OOP Architecture
 """
-import sys, os
 
-import os, sys
-# Workspace Root Resolver
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
-
+# Group 1 — stdlib
 import os
-from core import PipelineBase
+import sys
+
+# Group 2 — Internal Core Bootstrap
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
+
+# Group 3 — Core imports
+from core import PipelineBase, AtomicWriter
 
 class Phase1Transcribe(PipelineBase):
     def __init__(self):
@@ -120,10 +122,8 @@ class Phase1Transcribe(PipelineBase):
                     end_m, end_s = int(end_val // 60), int(end_val % 60)
                     ts_text += f"[{start_m:02d}:{start_s:02d}] - [{end_m:02d}:{end_s:02d}] {text_val.strip()}\n"
                     
-                with open(pure_out_path, "w", encoding="utf-8") as f:
-                    f.write(pure_text)
-                with open(ts_out_path, "w", encoding="utf-8") as f:
-                    f.write(ts_text)
+                AtomicWriter.write_text(pure_out_path, pure_text)
+                AtomicWriter.write_text(ts_out_path, ts_text)
                     
                 # DAG 追蹤: 紀錄輸出的 hash
                 out_hash = self.state_manager.get_file_hash(pure_out_path)

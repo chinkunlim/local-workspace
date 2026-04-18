@@ -3,17 +3,19 @@
 Phase 0: Automatic Glossary Generation
 Refactored to V7.0 OOP Architecture
 """
-import sys, os
 
-import os, sys
-# Workspace Root Resolver
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")))
-
+# Group 1 — stdlib
 import os
+import sys
 import json
 import glob
+
+# Group 2 — Internal Core Bootstrap
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
+from core.bootstrap import ensure_core_path as _bootstrap
+_bootstrap(__file__)
+
+# Group 3 — Core imports
 from core import PipelineBase
 
 class Phase0Glossary(PipelineBase):
