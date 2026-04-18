@@ -50,3 +50,25 @@ htmlcov/
 # Ruff / Mypy caches
 .ruff_cache/
 .mypy_cache/
+
+# ------------------------------------------------------------------------------
+# Open WebUI Runtime Data (databases change on every session)
+# ------------------------------------------------------------------------------
+open-webui/vector_db/
+open-webui/webui.db
+open-webui/webui.db-shm
+open-webui/webui.db-wal
+
+# ------------------------------------------------------------------------------
+# Local Workspace Runtime Files
+# ------------------------------------------------------------------------------
+logs/
+*.log
+.webui_secret_key
+gemini_quota.json
+
+# ------------------------------------------------------------------------------
+# Scratch / One-off Test Files
+# ------------------------------------------------------------------------------
+test_exec.py
+
