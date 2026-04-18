@@ -5,9 +5,9 @@
 # ------------------------------------------------------------------------------
 # Open Claw Sandbox Runtime Data
 # ------------------------------------------------------------------------------
-open-claw-workspace/data/
-open-claw-workspace/models/
-open-claw-workspace/logs/
+open-claw-sandbox/data/
+open-claw-sandbox/models/
+open-claw-sandbox/logs/
 
 # ------------------------------------------------------------------------------
 # Universal Ignore Patterns
@@ -54,10 +54,10 @@ htmlcov/
 # ------------------------------------------------------------------------------
 # Open WebUI Runtime Data (databases change on every session)
 # ------------------------------------------------------------------------------
-open-webui/vector_db/
-open-webui/webui.db
-open-webui/webui.db-shm
-open-webui/webui.db-wal
+infra/open-webui/vector_db/
+infra/open-webui/webui.db
+infra/open-webui/webui.db-shm
+infra/open-webui/webui.db-wal
 
 # ------------------------------------------------------------------------------
 # Local Workspace Runtime Files
