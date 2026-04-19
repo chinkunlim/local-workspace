@@ -108,26 +108,39 @@ class SystemInboxDaemon:
                         print(f"ℹ️ [Daemon] 未知格式，忽略: {filepath}")
                         return
 
-                    # Smart PDF Routing
+                    # Smart PDF Routing — case-insensitive; underscore-prefixed patterns
+                    # are suffix matches; CJK patterns match anywhere in the name.
                     target_dir = os.path.join(_workspace_root, "data", target_skill, "input", subject)
+                    is_audio_ref = False
                     if ext == ".pdf":
-                        is_audio_ref = any(basename_noext.endswith(suffix) for suffix in self.daemon.audio_ref_suffixes)
+                        name_lower = basename_noext.lower()
+                        for suffix in self.daemon.audio_ref_suffixes:
+                            s = suffix.lower()
+                            if s.startswith("_"):           # Underscore patterns → suffix match
+                                if name_lower.endswith(s):
+                                    is_audio_ref = True
+                                    break
+                            else:                           # CJK / word patterns → contains match
+                                if s in name_lower:
+                                    is_audio_ref = True
+                                    break
+
                         if is_audio_ref:
                             target_skill = "audio-transcriber"
                             target_dir = os.path.join(_workspace_root, "data", target_skill, "output", "00_glossary", subject)
-                            print(f"🔍 [Daemon] 偵測到參考文獻後綴，重新路由至音檔詞庫區")
+                            print(f"🔍 [Daemon] 偵測到參考文獻規則，路由至音檔詞庫區: {filename}")
+                        else:
+                            print(f"📄 [Daemon] 一般文獻，路由至 doc-parser 解析: {filename}")
 
                     os.makedirs(target_dir, exist_ok=True)
                     target_path = os.path.join(target_dir, filename)
-                    
+
                     try:
                         os.rename(filepath, target_path)
-                        print(f"🚚 [Daemon] 路由檔案: [{subject}] {filename} -> {target_skill}")
-                        
-                        # Only trigger pipeline if it went to input (don't trigger if it just went to glossary reference)
-                        if "input" in target_dir:
-                            # Pass subject to trigger by replacing filepath logic in trigger?
-                            # Wait, schedule_trigger uses filepath to trigger pipeline. Let's just pass target_path
+                        print(f"🚚 [Daemon] 已移動: [{subject}] {filename} → {target_skill}")
+
+                        # Only trigger pipeline for files that landed in input/
+                        if os.sep + "input" + os.sep in target_dir + os.sep:
                             self.daemon._schedule_trigger(target_skill, target_path)
                     except Exception as e:
                         print(f"❌ [Daemon] 無法移動檔案 {filename}: {e}")

@@ -1,20 +1,59 @@
 {
+  "_comment": "Open Claw Inbox Routing Configuration",
+  "_docs": "Edit 'audio_reference_suffixes' to add/remove patterns that identify a PDF as a reference for audio proofreading. All other PDFs go to doc-parser. Patterns match against the filename (without extension), case-insensitive. Prefix '_' patterns are suffix matches. Full-word patterns match anywhere in the name.",
+
   "routing_rules": {
-    "voice_memo": [".m4a", ".mp3", ".wav"],
+    "voice_memo":    [".m4a", ".mp3", ".wav", ".ogg", ".aac", ".flac", ".opus"],
     "pdf_knowledge": [".pdf"],
-    "compiler": [".md", ".txt"]
+    "compiler":      [".md", ".txt", ".rtf"]
   },
+
   "audio_reference_suffixes": [
     "_ref",
+    "_refs",
     "_slides",
+    "_slide",
     "_coursework",
+    "_handout",
+    "_handouts",
+    "_notes",
+    "_lecturenotes",
+    "_textbook",
+    "_chapter",
+    "_ch",
+    "_reading",
+    "_readings",
+    "_worksheet",
+    "_material",
+    "_materials",
+    "_supplement",
+    "_appendix",
+    "_transcript",
+    "_guide",
+    "_book",
     "课件",
     "課件",
+    "讲义",
+    "講義",
     "参考",
     "參考",
-    "講義",
-    "讲义",
-    "_audio"
+    "参考书",
+    "參考書",
+    "课本",
+    "課本",
+    "教材",
+    "教科書",
+    "笔记",
+    "筆記",
+    "补充",
+    "補充",
+    "讲稿",
+    "講稿",
+    "作業",
+    "作业"
   ],
-  "default_subject": "Default"
+
+  "default_subject": "Default",
+
+  "_note_on_matching": "A file named 'L1_slides.pdf' matches '_slides', so it goes to audio-transcriber as reference. A file named '論文_心理學.pdf' has no matching suffix, so it goes to doc-parser for full parsing."
 }
