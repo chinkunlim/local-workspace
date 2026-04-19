@@ -120,25 +120,13 @@ else
     echo -e "   ${BLUE}─── ℹ️ Pipelines already running${NC}"
 fi
 
-# 5. Open Claw (API Gateway)
-echo -e "\n${YELLOW}[5/6] Checking Open Claw API (Port 18789)...${NC}"
+# 6. Open Claw API Gateway
+echo -e "\n${YELLOW}[6/7] Checking Open Claw API (Port 18789)...${NC}"
 if ! nc -z localhost 18789 >/dev/null 2>&1; then
     openclaw gateway > "${LOG_DIR}/openclaw.log" 2>&1 &
     wait_for_port 18789 "Open Claw API"
 else
     echo -e "   ${BLUE}─── ℹ️ Open Claw API is already running${NC}"
-fi
-
-# 6. Open Claw Dashboard
-echo -e "\n${YELLOW}[6/7] Starting Open Claw Dashboard (Port 5001)...${NC}"
-if ! nc -z localhost 5001 >/dev/null 2>&1; then
-    (
-        cd "${WORKSPACE_DIR}" || exit
-        python3 core/web_ui/app.py > "${LOG_DIR}/dashboard.log" 2>&1 &
-    )
-    wait_for_port 5001 "Open Claw Dashboard" 60
-else
-    echo -e "   ${BLUE}─── ℹ️ Open Claw Dashboard already running${NC}"
 fi
 
 # 7. Open Claw Inbox Daemon
@@ -165,7 +153,6 @@ printf "  %-20s → ${GREEN}%s${NC}\n" "Ollama" "http://localhost:11434"
 printf "  %-20s → ${GREEN}%s${NC}\n" "Gemini Gate" "http://localhost:4000"
 printf "  %-20s → ${GREEN}%s${NC}\n" "Pipelines" "http://localhost:9099"
 printf "  %-20s → ${GREEN}%s${NC}\n" "Open Claw API" "http://127.0.0.1:18789"
-printf "  %-20s → ${GREEN}%s${NC}\n" "Open Claw UI" "http://localhost:5001"
 echo -e "  ${YELLOW}%-20s → open app → Start Server${NC}" "LM Studio"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 

@@ -55,7 +55,6 @@ fi
 # 2. Python Services & Port Cleaning
 echo -e "\n${YELLOW}[2/4] Cleaning up Python services & Ports...${NC}"
 kill_by_port 4000 "LiteLLM"
-kill_by_port 5001 "Open Claw Dashboard"
 kill_by_port 8080 "Open WebUI"
 kill_by_port 9099 "Pipelines"
 
@@ -132,7 +131,6 @@ check_status() {
 }
 
 check_status 4000  "LiteLLM   "
-check_status 5001  "OC Dash   "
 check_status 8080  "Open WebUI"
 check_status 9099  "Pipelines "
 check_status 18789 "Open Claw "
