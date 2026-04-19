@@ -13,9 +13,8 @@
 
 ## 🟡 Medium Priority
 
-- [ ] Verify Dashboard Review Board renders latest diff records correctly
-- [ ] Confirm `logs/inbox_daemon.log` shows uninterrupted file-trigger events
 - [ ] Add `tests/` directory structure per §11.2 (E2E + integration test stubs)
+- [ ] Verify `note_generator` import alias matches actual skill directory name
 
 ---
 
@@ -28,6 +27,15 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-04-19: Phase 6 Final Cleanup & Stabilization
+  - Removed Flask Web UI — now fully Open Claw native
+  - Fixed critical SyntaxError + duplicate method + wrong output path in `p05_synthesis.py`
+  - Upgraded inbox_daemon to recursive subject-folder routing with triple PDF modes
+  - Created `core/inbox_config.json` with 42 routing rules + inline descriptions
+  - Created `inbox-manager` skill with CLI for rule management
+  - Full MD documentation update pass
+  - GitHub sync
 
 - [x] 2026-04-19: Antigravity Deep Thought Hotfixes (P0/P1/P2)
   - P0: inbox_daemon HTTP-first trigger → WebUI Job Queue (OOM 防護)

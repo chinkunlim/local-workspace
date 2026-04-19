@@ -8,39 +8,45 @@
 ## Last Session Summary
 
 **Date:** 2026-04-19
-**Focus:** Skill Extraction & Architecture Refactoring
+**Focus:** Phase 6 Finalization — Inbox Smart Routing & Doc Cleanup
 
 ### Completed This Session
 
-- [x] Created `skills/smart-highlighter/` standalone skill for anti-tampering chunk annotation
-- [x] Created `skills/note-generator/` standalone skill for Map-Reduce note synthesis and Mermaid generation
-- [x] Refactored `audio-transcriber/p04` to delegate to SmartHighlighter
-- [x] Refactored `audio-transcriber/p05` to delegate to NoteGenerator
-- [x] Refactored `doc-parser/p02` to delegate to SmartHighlighter
-- [x] Refactored `doc-parser/p03` to delegate to NoteGenerator
-- [x] Updated all `ARCHITECTURE.md` docs to reflect new delegation dependencies
-- [x] Updated `SKILL.md` to list new standalone skills
+- [x] Removed standalone Flask Web UI (`core/web_ui/`) — now fully Open Claw native
+- [x] Upgraded `inbox_daemon.py` to support recursive subject-folder routing
+- [x] Created `core/inbox_config.json` with 42 pre-configured routing rules
+- [x] Implemented triple routing modes: `audio_ref`, `doc_parser`, `both`
+- [x] Created `skills/inbox-manager/` skill with CLI `query.py` for rule management
+- [x] Fixed critical `SyntaxError` in `p05_synthesis.py` (missing for-loop wrapper)
+- [x] Fixed `p05_synthesis.py` incorrect output path (`data/raw` → `data/wiki`)
+- [x] Fixed duplicate `_clean_content` method in `p05_synthesis.py`
+- [x] Updated all stale MD files: README, ARCHITECTURE, USER_MANUAL, HANDOFF, TASKS
+- [x] All Python files pass AST syntax + UTF-8 encoding header checks
 
 ---
 
 ## Current System State
 
-- **Git:** Clean (Pending commit for skill extraction)
-- **Directory structure:** Added two new standalone skills `smart-highlighter` and `note-generator`
-- **Global ops/:** `ops/check.sh` — ready to run to verify codebase
+- **Git:** Clean (synced with origin/main)
+- **Architecture:** Factory-Storefront with inbox-manager skill for rule management
+- **inbox_daemon:** Recursive subject-folder routing, triple PDF modes (audio_ref / doc_parser / both)
+- **Web UI:** Removed — all operations via Open Claw native interface or Telegram
+- **Obsidian Vault:** `open-claw-sandbox/data/wiki/`
+- **Code Quality:** All Python files pass syntax + encoding checks
 
 ---
 
 ## Next Session Starting Point
 
-1. Run `./ops/check.sh` to confirm zero lint errors after all refactoring
-2. Commit the new code for the Skill Extraction milestone
+1. Test a full end-to-end run: drop a `.m4a` into `data/raw/認知心理學/` and observe pipeline
+2. Rebuild ChromaDB index with `python skills/telegram-kb-agent/scripts/indexer.py`
+3. Test Telegram query via Open Claw
 
 ---
 
 ## Known Open Issues
 
-- None currently blocking
+- `note_generator` module import path in `p05_synthesis.py` uses underscore (`note_generator`) — confirm module directory naming matches
 
 ---
 

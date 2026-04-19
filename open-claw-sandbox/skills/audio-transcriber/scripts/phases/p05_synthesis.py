@@ -8,7 +8,6 @@ Refactored to V7.0 OOP Architecture
 import os
 import sys
 import re
-import datetime
 
 # Group 2 — Internal Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
@@ -30,26 +29,27 @@ class Phase5NotionSynthesis(PipelineBase):
             content = content.split("## 📋 Phase 3 修改日誌", 1)[0].rstrip().rstrip("-").strip()
         return re.sub(r'==(.+?)==', r'\1', content, flags=re.DOTALL)
 
-    def _clean_content(self, content: str) -> str:
-        if "## 📋 Phase 3 修改日誌" in content:
-            content = content.split("## 📋 Phase 3 修改日誌", 1)[0].rstrip().rstrip("-").strip()
-        return re.sub(r'==(.+?)==', r'\1', content, flags=re.DOTALL)
-
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log(f"✨ 啟動 Phase 5：Notion 知識合成")
 
         tasks = self.get_tasks(prev_phase_key="p4", force=force, subject_filter=subject, file_filter=file_filter, single_mode=single_mode, resume_from=resume_from)
-        if not tasks: return
+        if not tasks:
+            return
 
         self.log(f"📋 共有 {len(tasks)} 個檔案待合成。")
-            
+
+        for idx, task in enumerate(tasks, 1):
+            if self.check_system_health():
+                break
+
+            subj, fname = task["subject"], task["filename"]
             base_name = os.path.splitext(fname)[0]
             m = re.match(r'^(.+)-(\d+)$', base_name)
             lecture_base = m.group(1) if m else base_name
 
             in_path = os.path.join(self.dirs["p4"], subj, f"{lecture_base}.md")
             out_path = os.path.join(self.dirs["p5"], subj, f"{lecture_base}.md")
-            
+
             if not os.path.exists(in_path):
                 self.log(f"⚠️ 找不到來源：{in_path}", "warn")
                 continue
@@ -76,10 +76,13 @@ class Phase5NotionSynthesis(PipelineBase):
                 
                 self.log(f"✅ [{idx}/{len(tasks)}] 筆記完成：{lecture_base}.md")
 
-                # Send to universal inbox for knowledge compiler
-                raw_inbox_path = os.path.abspath(os.path.join(self.base_dir, "..", "..", "data", "raw", f"{lecture_base}_audio.md"))
-                AtomicWriter.write_text(raw_inbox_path, final_doc)
-                self.log(f"📤 [{idx}/{len(tasks)}] 已自動投遞至全局收件匣: {raw_inbox_path}")
+                # Publish to wiki (Obsidian Vault) via knowledge-compiler's input
+                wiki_dir = os.path.abspath(os.path.join(self.base_dir, "..", "..", "data", "wiki"))
+                os.makedirs(wiki_dir, exist_ok=True)
+                wiki_path = os.path.join(wiki_dir, subj, f"{lecture_base}.md")
+                os.makedirs(os.path.dirname(wiki_path), exist_ok=True)
+                AtomicWriter.write_text(wiki_path, final_doc)
+                self.log(f"📚 [{idx}/{len(tasks)}] 已發布至 Obsidian Vault: {wiki_path}")
 
                 # 暫停機制：每個任務完成後檢查是否要 checkpoint
                 if self.stop_requested:

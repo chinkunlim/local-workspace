@@ -8,8 +8,10 @@
 
 ### 📥 1.1 `data/raw/` (大一統收件匣 / Universal Inbox)
 *   **角色**：唯一的「人類/外部輸入點」。
-*   **規則**：不管是你手動複製檔案、透過 Telegram 傳送、或是從 Web 上傳的未處理原始檔（如 `.pdf`, `.m4a`），**全部都統一放進這裡**。
-*   **後續處理**：`core/inbox_daemon.py` 會 24 小時監控這個資料夾。當發現新檔案時，它會自動將 `.m4a` 搬移到 `audio-transcriber/input/Default/`，將 `.pdf` 搬移到 `doc-parser/input/Default/`。
+*   **規則**：不管是手動複製檔案、透過 Telegram 傳送、或是從 Web 上傳的未處理原始檔（如 `.pdf`, `.m4a`），**全部都統一放進這裡**。
+*   **科目層級**：在 `data/raw/` 內建立以「科目名稱」命名的子資料夾（例如 `data/raw/認知心理學/`），`inbox_daemon` 會自動保留此層級。
+*   **PDF 智慧分流**：`inbox_daemon` 會根據 `core/inbox_config.json` 內定義的規則判斷 PDF 路由模式：`audio_ref`（僅供語音校對）、`doc_parser`（獨立解析）、`both`（同時執行兩者）。
+*   **後續處理**：`core/inbox_daemon.py` 會 24 小時監控這個資料夾，發現新檔案後自動分發。
 
 ### ⚙️ 1.2 `data/<skill>/input/` (技能緩衝區 / Skill Buffer)
 *   **角色**：機器專用的待辦事項區。
@@ -29,29 +31,31 @@
 
 ## 2. 技能生態系總覽 (Skill Ecosystem)
 
-目前系統中有 6 個核心技能，它們互相串聯形成一套完整的知識生產線：
+目前系統中有 **8 個核心技能**，它們互相串聯形成一套完整的知識生產線：
 
 ```mermaid
 graph TD
-    A[Human / Telegram] -->|Upload .pdf / .m4a| B(data/raw/)
-    B -->|inbox_daemon.py| C(Audio Transcriber)
-    B -->|inbox_daemon.py| D(Doc Parser)
-    
-    C -->|Output MD| E[Knowledge Compiler]
-    D -->|Output MD| E
-    
+    A[Human / Telegram] -->|Upload .pdf / .m4a| B(data/raw/Subject/)
+    B -->|inbox_daemon.py&#10;audio_ref| C(Audio Transcriber)
+    B -->|inbox_daemon.py&#10;doc_parser| D(Doc Parser)
+    B -->|inbox_daemon.py&#10;both = copy to both| C
+    B -->|inbox_daemon.py&#10;both = move to both| D
+
+    C -->|output/05_synthesis/| E[Knowledge Compiler]
+    D -->|output/03_synthesis/| E
+
     E -->|Publish| F[(data/wiki/)]
-    
+
     F <-->|Obsidian| G[Human Read & Edit]
-    
+
     F -->|Read| H(Interactive Reader / Note Generator / Smart Highlighter)
     H -->|Write Back / Overwrite| F
-    
+
     F -->|Indexer| I[(ChromaDB)]
     I -->|RAG| J(Telegram KB Agent)
     I -->|RAG Compare| K(Academic Edu Assistant)
-    
-    J -->|Answer| L[Telegram]
+
+    J -->|Answer| L[Telegram / Open Claw]
     K -->|Compare Report & Anki CSV| L
 ```
 
@@ -59,14 +63,15 @@ graph TD
 
 | 技能 (Skill) | 角色 | Input 來源 | Output 去向 | 說明 |
 | :--- | :--- | :--- | :--- | :--- |
-| **audio-transcriber** | 工廠 | `data/raw/` 轉送至 `input/` | `output/05_notion_synthesis/` | 將語音轉成結構化筆記 (半成品) |
-| **doc-parser** | 工廠 | `data/raw/` 轉送至 `input/` | `output/03_synthesis/` | 將 PDF 轉成結構化筆記 (半成品) |
-| **knowledge-compiler** | 物流 | 掃描上述工廠的最終 `output` | `data/wiki/` | 建立雙向連結並上架至展示區 |
+| **audio-transcriber** | 工廠 | `data/raw/Subject/` 轉送至 `input/Subject/` | `output/05_notion_synthesis/Subject/` | 將語音轉成結構化筆記 |
+| **doc-parser** | 工廠 | `data/raw/Subject/` 轉送至 `input/Subject/` | `output/03_synthesis/Subject/` | 將 PDF 轉成結構化筆記 |
+| **knowledge-compiler** | 物流 | 屃描上述工廠的最終 `output` | `data/wiki/` | 建立雙向連結並上架至展示區 |
 | **note-generator** | 學者 | `data/wiki/` | `data/wiki/` | 二次加工：讀取展示區筆記並生成總結筆記 |
 | **smart-highlighter** | 學者 | `data/wiki/` | `data/wiki/` | 二次加工：讀取展示區筆記並原地標記重點 |
 | **interactive-reader** | 學者 | `data/wiki/` | `data/wiki/` | 原地覆寫解析 Markdown 內的 `> [AI:]` 標籤 |
 | **telegram-kb-agent** | 客服 | `data/wiki/` (建索引) | RAG 文字回覆 | 透過 ChromaDB 提供行動端問答 |
 | **academic-edu-assistant** | 學者 | ChromaDB 向量庫 | `output/01_comparison/` & `02_anki/` | 動態跨檔案比較並產生 Anki 卡片 |
+| **inbox-manager** | 工具 | `core/inbox_config.json` | 終端機輸出 | 查詢/新增/刪除 PDF 路由規則 |
 
 ## 4. 關於 Open Claw 與 Telegram 的整合
 

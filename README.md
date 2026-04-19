@@ -17,7 +17,7 @@ local-workspace/
 ## Quick Start
 
 ```bash
-# Start all services (Ollama, LiteLLM, Open WebUI, Pipelines, Open Claw Dashboard)
+# Start all services (Ollama, LiteLLM, Open WebUI, Pipelines, Open Claw API)
 ./infra/scripts/start.sh
 
 # Stop all services
@@ -34,11 +34,11 @@ local-workspace/
 
 | Service | URL |
 |---|---|
-| Open Claw Dashboard | http://127.0.0.1:5001 |
 | Open WebUI | http://127.0.0.1:3000 |
 | LiteLLM Proxy | http://127.0.0.1:4000 |
 | Ollama | http://127.0.0.1:11434 |
 | Pipelines | http://127.0.0.1:9099 |
+| Open Claw API | http://127.0.0.1:18789 |
 
 ## Logs
 
