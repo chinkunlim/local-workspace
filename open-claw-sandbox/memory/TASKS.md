@@ -1,6 +1,6 @@
 # TASKS.md — Task List
 
-> **Last Updated:** 2026-04-18
+> **Last Updated:** 2026-04-19
 > **Maintained by:** Current working agent — update on every state change
 
 ---
@@ -14,7 +14,6 @@
 ## 🟡 Medium Priority
 
 - [ ] Add `tests/` directory structure per §11.2 (E2E + integration test stubs)
-- [ ] Verify `note_generator` import alias matches actual skill directory name
 
 ---
 
@@ -27,6 +26,15 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-04-19: Pre-flight Execution Sandbox — 12/12 import checks PASSED
+  - Renamed `note-generator` → `note_generator`, `smart-highlighter` → `smart_highlighter`
+  - Created missing `__init__.py` for skills/, note_generator/, smart_highlighter/ packages
+  - Fixed `core/cli_runner.py` and `core/inbox_daemon.py` bare imports → `from core.path_builder`
+  - Fixed `doc-parser/p03_synthesis.py` infinite re-ingestion loop (raw → wiki)
+  - Added `watchdog>=4.0.0` and `requests>=2.31.0` to requirements.txt
+  - Removed stale `flask` from requirements.txt (Web UI removed)
+  - Installed watchdog 6.0.0 into active Python environment
 
 - [x] 2026-04-19: Phase 6 Final Cleanup & Stabilization
   - Removed Flask Web UI — now fully Open Claw native

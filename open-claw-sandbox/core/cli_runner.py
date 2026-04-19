@@ -21,9 +21,11 @@ import sys
 
 _core_dir = os.path.dirname(os.path.abspath(__file__))
 _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(_core_dir, "..")))
-sys.path.insert(0, _core_dir)
+# Ensure workspace root is on sys.path so `from core.xxx` always resolves
+if _workspace_root not in sys.path:
+    sys.path.insert(0, _workspace_root)
 
-from path_builder import PathBuilder
+from core.path_builder import PathBuilder
 
 # Cached PathBuilder instances (one per skill)
 _pb_cache: dict[str, PathBuilder] = {}

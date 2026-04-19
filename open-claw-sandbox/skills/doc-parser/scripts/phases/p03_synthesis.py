@@ -90,11 +90,13 @@ class Phase3Synthesis(PipelineBase):
         # Write output successfully
         AtomicWriter.write_text(final_path, final_content)
         self.info(f"✅ [Phase 3] 知識合成完成！已寫入 {final_path}")
-        
-        # Send to universal inbox for knowledge compiler
-        raw_inbox_path = os.path.abspath(os.path.join(self.base_dir, "..", "..", "data", "raw", f"{pdf_id}_doc.md"))
-        AtomicWriter.write_text(raw_inbox_path, final_content)
-        self.info(f"📤 [Phase 3] 已自動投遞至全局收件匣: {raw_inbox_path}")
+
+        # Publish final note to wiki (Obsidian Vault) — NOT to raw/ to avoid re-ingestion loop
+        wiki_dir = os.path.abspath(os.path.join(self.base_dir, "..", "..", "data", "wiki", subject, pdf_id))
+        os.makedirs(wiki_dir, exist_ok=True)
+        wiki_path = os.path.join(wiki_dir, "content.md")
+        AtomicWriter.write_text(wiki_path, final_content)
+        self.info(f"📚 [Phase 3] 已發布至 Obsidian Vault: {wiki_path}")
         
         return True
         

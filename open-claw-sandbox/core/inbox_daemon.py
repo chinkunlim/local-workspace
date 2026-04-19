@@ -30,14 +30,16 @@ _workspace_root = os.environ.get(
     "WORKSPACE_DIR",
     os.path.dirname(_core_dir)
 )
-sys.path.insert(0, _core_dir)
+# Ensure workspace root is on sys.path so `from core.xxx` always resolves
+if _workspace_root not in sys.path:
+    sys.path.insert(0, _workspace_root)
 
-from path_builder import PathBuilder
+from core.path_builder import PathBuilder
 
 # Constants
 _WAIT_TIMEOUT_SEC = 300   # 5 min: abort if file never stabilises
 _POLL_INTERVAL_SEC = 2.0
-_WEBUI_API_URL = os.environ.get("OPENCLAW_DASHBOARD_URL", "http://127.0.0.1:5001")
+_WEBUI_API_URL = os.environ.get("OPENCLAW_API_URL", "http://127.0.0.1:18789")
 
 
 class SystemInboxDaemon:

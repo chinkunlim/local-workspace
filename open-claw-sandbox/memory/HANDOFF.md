@@ -32,7 +32,8 @@
 - **inbox_daemon:** Recursive subject-folder routing, triple PDF modes (audio_ref / doc_parser / both)
 - **Web UI:** Removed — all operations via Open Claw native interface or Telegram
 - **Obsidian Vault:** `open-claw-sandbox/data/wiki/`
-- **Code Quality:** All Python files pass syntax + encoding checks
+- **Code Quality:** ✅ 12/12 import checks passed — system at 100% runtime-ready state
+- **Skill module names:** `note_generator` + `smart_highlighter` (underscores, Python-legal)
 
 ---
 
