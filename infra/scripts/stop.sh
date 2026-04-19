@@ -80,6 +80,19 @@ fi
 # 清理可能的孤兒程序 (安全檢查)
 pkill -f "python3.*pipelines/start.sh" 2>/dev/null || true
 
+# 2.5 Caffeinate (防休眠) 清理
+CAFFEINATE_PID_FILE="${LOG_DIR}/caffeinate.pid"
+if [[ -f "${CAFFEINATE_PID_FILE}" ]]; then
+    CAFFEINATE_PID=$(cat "${CAFFEINATE_PID_FILE}" 2>/dev/null)
+    if [[ -n "${CAFFEINATE_PID}" ]] && kill -0 "${CAFFEINATE_PID}" 2>/dev/null; then
+        kill -9 "${CAFFEINATE_PID}" 2>/dev/null
+        echo -e "   ${GREEN}─── ✅ Caffeinate (Prevent Sleep) disabled${NC}"
+    fi
+    rm -f "${CAFFEINATE_PID_FILE}"
+else
+    pkill -x "caffeinate" 2>/dev/null || true
+fi
+
 # 3. Ollama
 echo -e "\n${YELLOW}[3/3] Unloading Ollama models & app...${NC}"
 if nc -z localhost 11434 >/dev/null 2>&1 || pgrep -x "ollama" > /dev/null; then

@@ -1,0 +1,21 @@
+paths:
+  input: "input"
+  output: "output"
+  state: "state"
+  logs: "logs"
+
+bot:
+  # If left empty, the bot will auto-load from ~/.openclaw/openclaw.json
+  token: ""
+  allowed_users: ["8428257816"]
+
+rag:
+  embed_model: "nomic-embed-text"
+  generate_model: "qwen2.5-coder:7b"
+  chunk_size: 1000
+  chunk_overlap: 200
+  top_k: 3
+
+runtime:
+  ollama:
+    api_url: "http://127.0.0.1:11434/api"

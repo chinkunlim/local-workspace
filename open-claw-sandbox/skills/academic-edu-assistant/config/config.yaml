@@ -1,0 +1,18 @@
+paths:
+  input: "input"
+  output: "output"
+  state: "state"
+  logs: "logs"
+  phases:
+    p0: "input"
+    p1: "output/01_comparison"
+    p2: "output/02_anki"
+
+models:
+  # Using the global model mapping defined in core configurations
+  # Deepseek-r1 or qwen2.5-coder are good for reasoning and logic
+  default: "qwen2.5-coder:7b"
+  
+options:
+  chunk_size: 4000
+  temperature: 0.2

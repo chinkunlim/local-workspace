@@ -33,6 +33,17 @@ echo -e "${CYAN}==================================================${NC}"
 echo -e "${CYAN}          🚀 Starting AI Ecosystem              ${NC}"
 echo -e "${CYAN}==================================================${NC}"
 
+# 0. 防止 Mac 休眠 (caffeinate)
+echo -ne "${YELLOW}[0/6] Enabling caffeinate (Prevent Sleep)...${NC} "
+CAFFEINATE_PID_FILE="${LOG_DIR}/caffeinate.pid"
+if [[ -f "${CAFFEINATE_PID_FILE}" ]] && kill -0 "$(cat "${CAFFEINATE_PID_FILE}")" 2>/dev/null; then
+    echo -e "${BLUE}ℹ️ Already running (PID: $(cat "${CAFFEINATE_PID_FILE}"))${NC}"
+else
+    caffeinate -d -i -m -u > /dev/null 2>&1 &
+    echo $! > "${CAFFEINATE_PID_FILE}"
+    echo -e "${GREEN}✅ Enabled (PID: $(cat "${CAFFEINATE_PID_FILE}"))${NC}"
+fi
+
 # 自定義等待特定端口的函數 (智慧且動態的取代 sleep)
 wait_for_port() {
     local port=$1

@@ -8,10 +8,10 @@ it triggers the target skill's pipeline via the WebUI API (with direct subproces
 fallback when the WebUI is not running).
 
 Design:
+  - Watches the global `data/raw` directory.
+  - Routes files to specific skills based on extension (.m4a -> voice-memo, .pdf -> pdf-knowledge).
   - File stability via size-polling (2s interval) with 300s timeout guard.
   - Same-file debounce via threading.Event (cancellable).
-  - Routes triggers through ExecutionManager's Job Queue via HTTP POST /api/start
-    to respect RAM-safety limits and prevent OOM from concurrent LLM processes.
 """
 
 import os
@@ -41,26 +41,25 @@ _WEBUI_API_URL = os.environ.get("OPENCLAW_DASHBOARD_URL", "http://127.0.0.1:5001
 
 
 class SystemInboxDaemon:
-    def __init__(self, skills: List[str]):
-        self.skills = skills
-        self.monitors = []
+    def __init__(self):
         self._observer = None
         # Maps filepath → threading.Event (to cancel a pending poll thread)
         self._debounce_events: dict[str, threading.Event] = {}
         self._lock = threading.Lock()
 
-        # Configure tracking paths
-        for skill in skills:
-            pb = PathBuilder(_workspace_root, skill)
-            if "input" in pb.canonical_dirs:
-                inbox_path = pb.phase_dirs.get("inbox", pb.phase_dirs.get("p0", pb.canonical_dirs["input"]))
-                os.makedirs(inbox_path, exist_ok=True)
-                exts = [".pdf"] if skill == "doc-parser" else [".m4a", ".mp3", ".wav"]
-                self.monitors.append({
-                    "skill": skill,
-                    "path": inbox_path,
-                    "extensions": exts,
-                })
+        # Configure global raw path
+        self.raw_path = os.path.join(_workspace_root, "data", "raw")
+        os.makedirs(self.raw_path, exist_ok=True)
+        
+        # Routing rules based on file extension
+        self.routing_rules = {
+            ".m4a": "voice-memo",
+            ".mp3": "voice-memo",
+            ".wav": "voice-memo",
+            ".pdf": "pdf-knowledge",
+            ".md":  "knowledge-compiler",
+            ".txt": "knowledge-compiler"
+        }
 
     def start(self):
         try:
@@ -68,21 +67,34 @@ class SystemInboxDaemon:
             from watchdog.events import FileSystemEventHandler
 
             class InboxHandler(FileSystemEventHandler):
-                def __init__(self, daemon: "SystemInboxDaemon", monitor_cfg: dict):
+                def __init__(self, daemon: "SystemInboxDaemon"):
                     self.daemon = daemon
-                    self.monitor_cfg = monitor_cfg
 
                 def on_created(self, event):
                     if event.is_directory:
                         return
                     ext = os.path.splitext(event.src_path)[1].lower()
-                    if ext in self.monitor_cfg["extensions"]:
-                        self.daemon._schedule_trigger(self.monitor_cfg["skill"], event.src_path)
+                    target_skill = self.daemon.routing_rules.get(ext)
+                    if target_skill:
+                        # Move file to the target skill's input directory
+                        filename = os.path.basename(event.src_path)
+                        target_dir = os.path.join(_workspace_root, "data", target_skill, "input")
+                        os.makedirs(target_dir, exist_ok=True)
+                        target_path = os.path.join(target_dir, filename)
+                        
+                        try:
+                            # Use rename for atomic move on same filesystem
+                            os.rename(event.src_path, target_path)
+                            print(f"🚚 [Daemon] 路由檔案: {filename} -> {target_skill}/input")
+                            self.daemon._schedule_trigger(target_skill, target_path)
+                        except Exception as e:
+                            print(f"❌ [Daemon] 無法移動檔案 {filename}: {e}")
+                    else:
+                        print(f"ℹ️ [Daemon] 未知格式，忽略: {event.src_path}")
 
             self._observer = Observer()
-            for m in self.monitors:
-                print(f"👁️ [Daemon] 監控啟動: [{m['skill']}] -> {m['path']} (副檔名: {m['extensions']})")
-                self._observer.schedule(InboxHandler(self, m), m["path"], recursive=True)
+            print(f"👁️ [Daemon] 監控啟動: 全局收件匣 -> {self.raw_path}")
+            self._observer.schedule(InboxHandler(self), self.raw_path, recursive=False)
             self._observer.start()
 
         except ImportError:
@@ -194,7 +206,7 @@ class SystemInboxDaemon:
 
 
 if __name__ == "__main__":
-    daemon = SystemInboxDaemon(["audio-transcriber", "doc-parser"])
+    daemon = SystemInboxDaemon()
     daemon.start()
     try:
         while True:

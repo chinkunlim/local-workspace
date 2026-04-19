@@ -72,3 +72,5 @@ gemini_quota.json
 # ------------------------------------------------------------------------------
 test_exec.py
 
+open-webui/
+infra/scripts/open-webui/

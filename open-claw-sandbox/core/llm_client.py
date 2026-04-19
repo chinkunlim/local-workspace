@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import time
 from typing import Any, Dict, Optional, Tuple, Union
@@ -50,7 +51,7 @@ class OllamaClient:
                     response_text = res.json().get('choices', [{}])[0].get('message', {}).get('content', '')
                 else:
                     response_text = res.json().get('response', '')
-                
+                    
                 if not response_text or not response_text.strip():
                     raise ValueError(f"API 回傳空內容（可能原因：num_predict 耗盡、網路超時、模型載入失敗）")
                 return response_text

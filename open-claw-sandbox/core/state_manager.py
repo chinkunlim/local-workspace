@@ -14,18 +14,52 @@ class StateManager:
     PHASES_VOICE = ["p1", "p2", "p3", "p4", "p5"]
     # Phase set for doc-parser
     PHASES_PDF   = ["p1a", "p1b", "p1c", "p1d", "p2a", "p2b"]
+    # Phase set for knowledge-compiler
+    PHASES_COMPILER = ["p1"]
+    # Phase set for interactive-reader
+    PHASES_READER = ["p1"]
+    # Phase set for telegram-kb-agent
+    PHASES_AGENT = ["p1"]
+    # Phase set for academic-edu-assistant
+    PHASES_ACADEMIC = ["p1", "p2"]
+
     # Phase labels for checklist rendering
     PHASE_LABELS_VOICE = {"p1": "P1 (轉錄)", "p2": "P2 (校對)", "p3": "P3 (合併)",
                           "p4": "P4 (標記)", "p5": "P5 (Notion)" }
     PHASE_LABELS_PDF   = {"p1a": "P1a (診斷)", "p1b": "P1b (提取)", "p1c": "P1c (向量圖)",
                           "p1d": "P1d (OCR)",  "p2a": "P2a (VLM)",  "p2b": "P2b (合成)" }
+    PHASE_LABELS_COMPILER = {"p1": "P1 (編譯與雙向連結)"}
+    PHASE_LABELS_READER = {"p1": "P1 (互動標籤處理)"}
+    PHASE_LABELS_AGENT = {"p1": "P1 (向量庫服務)"}
+    PHASE_LABELS_ACADEMIC = {"p1": "P1 (RAG 交叉比對)", "p2": "P2 (Anki 生成)"}
 
     def __init__(self, base_dir: str, skill_name: str = "audio-transcriber"):
         self.base_dir   = base_dir
         self.skill_name = skill_name
-        self.PHASES     = self.PHASES_PDF if skill_name == "doc-parser" else self.PHASES_VOICE
-        self._phase_labels = self.PHASE_LABELS_PDF if skill_name == "doc-parser" else self.PHASE_LABELS_VOICE
-        self.file_ext   = "*.pdf" if skill_name == "doc-parser" else "*.m4a"
+        if skill_name == "doc-parser":
+            self.PHASES = self.PHASES_PDF
+            self._phase_labels = self.PHASE_LABELS_PDF
+            self.file_ext = "*.pdf"
+        elif skill_name == "knowledge-compiler":
+            self.PHASES = self.PHASES_COMPILER
+            self._phase_labels = self.PHASE_LABELS_COMPILER
+            self.file_ext = "*.md"
+        elif skill_name == "interactive-reader":
+            self.PHASES = self.PHASES_READER
+            self._phase_labels = self.PHASE_LABELS_READER
+            self.file_ext = "*.md"
+        elif skill_name == "telegram-kb-agent":
+            self.PHASES = self.PHASES_AGENT
+            self._phase_labels = self.PHASE_LABELS_AGENT
+            self.file_ext = "*.md"
+        elif skill_name == "academic-edu-assistant":
+            self.PHASES = self.PHASES_ACADEMIC
+            self._phase_labels = self.PHASE_LABELS_ACADEMIC
+            self.file_ext = "*.md"
+        else:
+            self.PHASES = self.PHASES_VOICE
+            self._phase_labels = self.PHASE_LABELS_VOICE
+            self.file_ext = "*.m4a"
         canonical_state_dir = os.path.join(base_dir, "state")
         legacy_state_file = os.path.join(base_dir, ".pipeline_state.json")
         legacy_checklist_file = os.path.join(base_dir, "checklist.md")
@@ -35,7 +69,12 @@ class StateManager:
         self.state_file = canonical_state_file if os.path.exists(canonical_state_file) or not os.path.exists(legacy_state_file) else legacy_state_file
         self.checklist_file = canonical_checklist_file if os.path.exists(canonical_checklist_file) or not os.path.exists(legacy_checklist_file) else legacy_checklist_file
 
-        self.raw_dir = os.path.join(base_dir, "input")
+        if skill_name == "interactive-reader":
+            # Interactive reader directly monitors and mutates the wiki
+            self.raw_dir = os.path.abspath(os.path.join(base_dir, "..", "wiki"))
+        else:
+            self.raw_dir = os.path.join(base_dir, "input")
+            
         self._lock = threading.RLock()
         self._checkpoint: Optional[Dict[str, Any]] = None
         self.state: Dict[str, Dict[str, Any]] = self._load_state()
@@ -106,14 +145,22 @@ class StateManager:
             if not os.path.exists(self.raw_dir):
                 return
             
-            subjects = [d for d in os.listdir(self.raw_dir) if os.path.isdir(os.path.join(self.raw_dir, d))]
-            for subj in subjects:
+            if self.skill_name == "interactive-reader":
+                # Flat directory in data/wiki
+                subjects_dirs = [("Wiki", self.raw_dir)]
+            else:
+                subjects_dirs = [
+                    (d, os.path.join(self.raw_dir, d)) 
+                    for d in os.listdir(self.raw_dir) 
+                    if os.path.isdir(os.path.join(self.raw_dir, d))
+                ]
+                
+            for subj, subj_path in subjects_dirs:
                 if subj not in self.state:
                     self.state[subj] = {}
                 
-                subj_audio = os.path.join(self.raw_dir, subj)
                 import glob
-                physical_files = glob.glob(os.path.join(subj_audio, self.file_ext))
+                physical_files = glob.glob(os.path.join(subj_path, self.file_ext))
                 
                 for pf in physical_files:
                     fname = os.path.basename(pf)
@@ -260,7 +307,7 @@ class StateManager:
         sep_cols    = " | ".join(":---:" for _ in phase_keys)
 
         with open(self.checklist_file, "w", encoding="utf-8") as f:
-            skill_display = {"audio-transcriber": "學習進度", "doc-parser": "知識庫處理進度"}.get(self.skill_name, "進度")
+            skill_display = {"audio-transcriber": "學習進度", "doc-parser": "知識庫處理進度", "knowledge-compiler": "知識庫編譯進度", "interactive-reader": "互動閱讀處理進度", "telegram-kb-agent": "行動知識庫進度", "academic-edu-assistant": "學術助手進度"}.get(self.skill_name, "進度")
             f.write(f"# {skill_display} (總表)\n\n")
             f.write("> 🚨 本檔案由系統 `.pipeline_state.json` 自動映射生成，請勿手動修改。\n")
             f.write("> 更改輸出目錄下的 `.md` 檔案將被系統偵測並觸發自動重新運算 (DAG Cascade)。\n\n")

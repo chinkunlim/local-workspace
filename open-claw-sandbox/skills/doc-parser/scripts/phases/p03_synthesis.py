@@ -90,6 +90,12 @@ class Phase3Synthesis(PipelineBase):
         # Write output successfully
         AtomicWriter.write_text(final_path, final_content)
         self.info(f"✅ [Phase 3] 知識合成完成！已寫入 {final_path}")
+        
+        # Send to universal inbox for knowledge compiler
+        raw_inbox_path = os.path.abspath(os.path.join(self.base_dir, "..", "..", "data", "raw", f"{pdf_id}_doc.md"))
+        AtomicWriter.write_text(raw_inbox_path, final_content)
+        self.info(f"📤 [Phase 3] 已自動投遞至全局收件匣: {raw_inbox_path}")
+        
         return True
         
 if __name__ == "__main__":

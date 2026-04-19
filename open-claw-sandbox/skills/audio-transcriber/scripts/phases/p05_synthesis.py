@@ -76,6 +76,11 @@ class Phase5NotionSynthesis(PipelineBase):
                 
                 self.log(f"✅ [{idx}/{len(tasks)}] 筆記完成：{lecture_base}.md")
 
+                # Send to universal inbox for knowledge compiler
+                raw_inbox_path = os.path.abspath(os.path.join(self.base_dir, "..", "..", "data", "raw", f"{lecture_base}_audio.md"))
+                AtomicWriter.write_text(raw_inbox_path, final_doc)
+                self.log(f"📤 [{idx}/{len(tasks)}] 已自動投遞至全局收件匣: {raw_inbox_path}")
+
                 # 暫停機制：每個任務完成後檢查是否要 checkpoint
                 if self.stop_requested:
                     if self.pause_requested and idx < len(tasks):
