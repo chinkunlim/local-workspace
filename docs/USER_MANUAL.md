@@ -53,9 +53,12 @@ cd ~/Desktop/local-workspace
 ## 📝 3. 核心情境與操作指南
 
 ### 情境 A：我上完課錄了音，或是下載了一份 PDF，該怎麼處理？
-1. 將你的 `.m4a` 或 `.pdf` 檔案，直接拖曳到 `data/raw/` 資料夾中。
-2. 就這樣！系統會自動開始在背景進行處理。
-3. 如果你想查看進度，可以打開 Open Claw 的操作介面，它會顯示各個管線的執行狀態。
+1. 在 `data/raw/` 建立以「科目名稱」命名的資料夾（例如 `data/raw/認知心理學/`）。
+2. 將你的 `.m4a` 或 `.pdf` 檔案，直接拖曳進去。系統的 `inbox_daemon` 會自動：
+   * 把 `.m4a` 送到 `audio-transcriber` 的該科目底下處理。
+   * 把 `.pdf` 送到 `doc-parser` 的該科目底下解析。
+3. **【進階：語音參考文獻】** 如果你丟進去的 PDF 不是要獨立產生筆記，而是為了「幫助語音轉錄時校對專有名詞」，請在檔名加上後綴，例如 `L1_ref.pdf` 或 `L1_slides.pdf`。系統會自動辨識並把它送去給 `audio-transcriber` 參考！
+   *(備註：所有的後綴判斷規則，以及附檔名的路由設定，都寫在 `open-claw-sandbox/core/inbox_config.json` 裡，你可以隨時打開它自由新增！)*
 
 ### 情境 B：我想閱讀、複習已經整理好的知識
 1. 下載並安裝 [Obsidian](https://obsidian.md/)。

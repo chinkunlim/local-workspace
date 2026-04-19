@@ -43,7 +43,6 @@ _WEBUI_API_URL = os.environ.get("OPENCLAW_DASHBOARD_URL", "http://127.0.0.1:5001
 class SystemInboxDaemon:
     def __init__(self):
         self._observer = None
-        # Maps filepath → threading.Event (to cancel a pending poll thread)
         self._debounce_events: dict[str, threading.Event] = {}
         self._lock = threading.Lock()
 
@@ -51,15 +50,32 @@ class SystemInboxDaemon:
         self.raw_path = os.path.join(_workspace_root, "data", "raw")
         os.makedirs(self.raw_path, exist_ok=True)
         
-        # Routing rules based on file extension
-        self.routing_rules = {
-            ".m4a": "voice-memo",
-            ".mp3": "voice-memo",
-            ".wav": "voice-memo",
-            ".pdf": "pdf-knowledge",
-            ".md":  "knowledge-compiler",
-            ".txt": "knowledge-compiler"
-        }
+        # Load Config
+        self.config_path = os.path.join(_core_dir, "inbox_config.json")
+        self._load_config()
+
+    def _load_config(self):
+        self.routing_rules = {}
+        self.audio_ref_suffixes = []
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    
+                    # Flatten routing rules to {ext: skill}
+                    # Map old names to new names if necessary
+                    rules = cfg.get("routing_rules", {})
+                    for ext in rules.get("voice_memo", []): self.routing_rules[ext] = "audio-transcriber"
+                    for ext in rules.get("pdf_knowledge", []): self.routing_rules[ext] = "doc-parser"
+                    for ext in rules.get("compiler", []): self.routing_rules[ext] = "knowledge-compiler"
+                    
+                    self.audio_ref_suffixes = cfg.get("audio_reference_suffixes", [])
+            except Exception as e:
+                print(f"❌ [Daemon] 讀取 inbox_config.json 失敗: {e}")
+                
+        # Fallback if empty
+        if not self.routing_rules:
+            self.routing_rules = {".m4a": "audio-transcriber", ".mp3": "audio-transcriber", ".pdf": "doc-parser"}
 
     def start(self):
         try:
@@ -73,28 +89,52 @@ class SystemInboxDaemon:
                 def on_created(self, event):
                     if event.is_directory:
                         return
-                    ext = os.path.splitext(event.src_path)[1].lower()
-                    target_skill = self.daemon.routing_rules.get(ext)
-                    if target_skill:
-                        # Move file to the target skill's input directory
-                        filename = os.path.basename(event.src_path)
-                        target_dir = os.path.join(_workspace_root, "data", target_skill, "input")
-                        os.makedirs(target_dir, exist_ok=True)
-                        target_path = os.path.join(target_dir, filename)
                         
-                        try:
-                            # Use rename for atomic move on same filesystem
-                            os.rename(event.src_path, target_path)
-                            print(f"🚚 [Daemon] 路由檔案: {filename} -> {target_skill}/input")
+                    self.daemon._load_config() # Reload config on fly
+                    
+                    filepath = event.src_path
+                    filename = os.path.basename(filepath)
+                    ext = os.path.splitext(filename)[1].lower()
+                    basename_noext = os.path.splitext(filename)[0]
+                    
+                    # Extract Subject from relative path
+                    rel_path = os.path.relpath(filepath, self.daemon.raw_path)
+                    parts = rel_path.split(os.sep)
+                    subject = parts[0] if len(parts) > 1 else "Default"
+                    
+                    target_skill = self.daemon.routing_rules.get(ext)
+                    
+                    if not target_skill:
+                        print(f"ℹ️ [Daemon] 未知格式，忽略: {filepath}")
+                        return
+
+                    # Smart PDF Routing
+                    target_dir = os.path.join(_workspace_root, "data", target_skill, "input", subject)
+                    if ext == ".pdf":
+                        is_audio_ref = any(basename_noext.endswith(suffix) for suffix in self.daemon.audio_ref_suffixes)
+                        if is_audio_ref:
+                            target_skill = "audio-transcriber"
+                            target_dir = os.path.join(_workspace_root, "data", target_skill, "output", "00_glossary", subject)
+                            print(f"🔍 [Daemon] 偵測到參考文獻後綴，重新路由至音檔詞庫區")
+
+                    os.makedirs(target_dir, exist_ok=True)
+                    target_path = os.path.join(target_dir, filename)
+                    
+                    try:
+                        os.rename(filepath, target_path)
+                        print(f"🚚 [Daemon] 路由檔案: [{subject}] {filename} -> {target_skill}")
+                        
+                        # Only trigger pipeline if it went to input (don't trigger if it just went to glossary reference)
+                        if "input" in target_dir:
+                            # Pass subject to trigger by replacing filepath logic in trigger?
+                            # Wait, schedule_trigger uses filepath to trigger pipeline. Let's just pass target_path
                             self.daemon._schedule_trigger(target_skill, target_path)
-                        except Exception as e:
-                            print(f"❌ [Daemon] 無法移動檔案 {filename}: {e}")
-                    else:
-                        print(f"ℹ️ [Daemon] 未知格式，忽略: {event.src_path}")
+                    except Exception as e:
+                        print(f"❌ [Daemon] 無法移動檔案 {filename}: {e}")
 
             self._observer = Observer()
-            print(f"👁️ [Daemon] 監控啟動: 全局收件匣 -> {self.raw_path}")
-            self._observer.schedule(InboxHandler(self), self.raw_path, recursive=False)
+            print(f"👁️ [Daemon] 監控啟動 (遞迴支援多科目): 全局收件匣 -> {self.raw_path}")
+            self._observer.schedule(InboxHandler(self), self.raw_path, recursive=True)
             self._observer.start()
 
         except ImportError:
