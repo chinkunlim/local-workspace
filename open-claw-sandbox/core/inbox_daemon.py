@@ -56,24 +56,23 @@ class SystemInboxDaemon:
 
     def _load_config(self):
         self.routing_rules = {}
-        self.audio_ref_suffixes = []
+        self.pdf_routing_rules = []   # list of {pattern, routing}
         if os.path.exists(self.config_path):
             try:
                 with open(self.config_path, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
-                    
-                    # Flatten routing rules to {ext: skill}
-                    # Map old names to new names if necessary
+
                     rules = cfg.get("routing_rules", {})
-                    for ext in rules.get("voice_memo", []): self.routing_rules[ext] = "audio-transcriber"
+                    for ext in rules.get("voice_memo", []):    self.routing_rules[ext] = "audio-transcriber"
                     for ext in rules.get("pdf_knowledge", []): self.routing_rules[ext] = "doc-parser"
-                    for ext in rules.get("compiler", []): self.routing_rules[ext] = "knowledge-compiler"
-                    
-                    self.audio_ref_suffixes = cfg.get("audio_reference_suffixes", [])
+                    for ext in rules.get("compiler", []):      self.routing_rules[ext] = "knowledge-compiler"
+
+                    # New structured pdf_routing_rules
+                    self.pdf_routing_rules = cfg.get("pdf_routing_rules", [])
+
             except Exception as e:
                 print(f"❌ [Daemon] 讀取 inbox_config.json 失敗: {e}")
-                
-        # Fallback if empty
+
         if not self.routing_rules:
             self.routing_rules = {".m4a": "audio-transcriber", ".mp3": "audio-transcriber", ".pdf": "doc-parser"}
 
@@ -108,29 +107,48 @@ class SystemInboxDaemon:
                         print(f"ℹ️ [Daemon] 未知格式，忽略: {filepath}")
                         return
 
-                    # Smart PDF Routing — case-insensitive; underscore-prefixed patterns
-                    # are suffix matches; CJK patterns match anywhere in the name.
+                    # Smart PDF Routing using structured rules
                     target_dir = os.path.join(_workspace_root, "data", target_skill, "input", subject)
-                    is_audio_ref = False
+                    routing_mode = None   # None means default → doc-parser only
+
                     if ext == ".pdf":
                         name_lower = basename_noext.lower()
-                        for suffix in self.daemon.audio_ref_suffixes:
-                            s = suffix.lower()
-                            if s.startswith("_"):           # Underscore patterns → suffix match
-                                if name_lower.endswith(s):
-                                    is_audio_ref = True
+                        for rule in self.daemon.pdf_routing_rules:
+                            p = rule.get("pattern", "").lower()
+                            if p.startswith("_"):      # suffix match
+                                if name_lower.endswith(p):
+                                    routing_mode = rule.get("routing", "audio_ref")
                                     break
-                            else:                           # CJK / word patterns → contains match
-                                if s in name_lower:
-                                    is_audio_ref = True
+                            else:                      # contains match (CJK etc.)
+                                if p in name_lower:
+                                    routing_mode = rule.get("routing", "audio_ref")
                                     break
 
-                        if is_audio_ref:
-                            target_skill = "audio-transcriber"
-                            target_dir = os.path.join(_workspace_root, "data", target_skill, "output", "00_glossary", subject)
-                            print(f"🔍 [Daemon] 偵測到參考文獻規則，路由至音檔詞庫區: {filename}")
-                        else:
-                            print(f"📄 [Daemon] 一般文獻，路由至 doc-parser 解析: {filename}")
+                    if routing_mode == "audio_ref":
+                        # Send only to audio-transcriber glossary area
+                        target_skill = "audio-transcriber"
+                        target_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "output", "00_glossary", subject)
+                        print(f"🔍 [Daemon] 語音參考檔: [{subject}] {filename}")
+
+                    elif routing_mode == "both":
+                        # Copy to BOTH doc-parser/input and audio-transcriber/glossary
+                        import shutil
+                        audio_ref_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "output", "00_glossary", subject)
+                        doc_input_dir = os.path.join(_workspace_root, "data", "doc-parser", "input", subject)
+                        os.makedirs(audio_ref_dir, exist_ok=True)
+                        os.makedirs(doc_input_dir, exist_ok=True)
+                        try:
+                            shutil.copy2(filepath, os.path.join(audio_ref_dir, filename))
+                            os.rename(filepath, os.path.join(doc_input_dir, filename))
+                            print(f"📦 [Daemon] 雙路由: [{subject}] {filename} → audio_ref + doc-parser")
+                            self.daemon._schedule_trigger("doc-parser", os.path.join(doc_input_dir, filename))
+                        except Exception as e:
+                            print(f"❌ [Daemon] 雙路由失敗 {filename}: {e}")
+                        return   # Done, skip the single-path logic below
+
+                    else:
+                        # Default: doc-parser
+                        print(f"📄 [Daemon] 一般文獻 → doc-parser: [{subject}] {filename}")
 
                     os.makedirs(target_dir, exist_ok=True)
                     target_path = os.path.join(target_dir, filename)
@@ -138,8 +156,6 @@ class SystemInboxDaemon:
                     try:
                         os.rename(filepath, target_path)
                         print(f"🚚 [Daemon] 已移動: [{subject}] {filename} → {target_skill}")
-
-                        # Only trigger pipeline for files that landed in input/
                         if os.sep + "input" + os.sep in target_dir + os.sep:
                             self.daemon._schedule_trigger(target_skill, target_path)
                     except Exception as e:
