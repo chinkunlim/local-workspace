@@ -69,8 +69,7 @@ class SystemInboxDaemon:
                     for ext in rules.get("pdf_knowledge", []): self.routing_rules[ext] = "doc-parser"
                     for ext in rules.get("compiler", []):      self.routing_rules[ext] = "knowledge-compiler"
 
-                    # New structured pdf_routing_rules
-                    self.pdf_routing_rules = cfg.get("pdf_routing_rules", [])
+                    # Remove structured pdf_routing_rules as they violate sandbox boundaries
 
             except Exception as e:
                 print(f"❌ [Daemon] 讀取 inbox_config.json 失敗: {e}")
@@ -96,48 +95,9 @@ class SystemInboxDaemon:
             print(f"ℹ️ [Daemon] 未知格式，忽略: {filepath}")
             return
 
-        # Smart PDF Routing using structured rules
+        # Strict Sandbox Routing
         target_dir = os.path.join(_workspace_root, "data", target_skill, "input", subject)
-        routing_mode = None   # None means default → doc-parser only
-
-        if ext == ".pdf":
-            name_lower = basename_noext.lower()
-            for rule in self.pdf_routing_rules:
-                p = rule.get("pattern", "").lower()
-                if p.startswith("_"):      # suffix match
-                    if name_lower.endswith(p):
-                        routing_mode = rule.get("routing", "audio_ref")
-                        break
-                else:                      # contains match (CJK etc.)
-                    if p in name_lower:
-                        routing_mode = rule.get("routing", "audio_ref")
-                        break
-
-        if routing_mode == "audio_ref":
-            # Send only to audio-transcriber glossary area
-            target_skill = "audio-transcriber"
-            target_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "output", "00_glossary", subject)
-            print(f"🔍 [Daemon] 語音參考檔: [{subject}] {filename}")
-
-        elif routing_mode == "both":
-            # Copy to BOTH doc-parser/input and audio-transcriber/glossary
-            import shutil
-            audio_ref_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "output", "00_glossary", subject)
-            doc_input_dir = os.path.join(_workspace_root, "data", "doc-parser", "input", subject)
-            os.makedirs(audio_ref_dir, exist_ok=True)
-            os.makedirs(doc_input_dir, exist_ok=True)
-            try:
-                shutil.copy2(filepath, os.path.join(audio_ref_dir, filename))
-                os.rename(filepath, os.path.join(doc_input_dir, filename))
-                print(f"📦 [Daemon] 雙路由: [{subject}] {filename} → audio_ref + doc-parser")
-                self._schedule_trigger("doc-parser", os.path.join(doc_input_dir, filename))
-            except Exception as e:
-                print(f"❌ [Daemon] 雙路由失敗 {filename}: {e}")
-            return   # Done, skip the single-path logic below
-
-        else:
-            # Default: doc-parser
-            print(f"📄 [Daemon] 一般文獻 → doc-parser: [{subject}] {filename}")
+        print(f"📄 [Daemon] 路由派發: [{subject}] {filename} → {target_skill}")
 
         os.makedirs(target_dir, exist_ok=True)
         target_path = os.path.join(target_dir, filename)
