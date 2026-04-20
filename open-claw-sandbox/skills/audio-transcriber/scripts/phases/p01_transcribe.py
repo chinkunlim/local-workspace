@@ -109,6 +109,85 @@ def vad_preprocess(
 
 
 # ---------------------------------------------------------------------------
+# Language Pre-detection (run on ORIGINAL audio, before VAD)
+# ---------------------------------------------------------------------------
+
+def detect_audio_language(
+    audio_path: str,
+    model_name: str,
+    tmp_dir: str,
+    log_fn=None,
+) -> str | None:
+    """
+    在 VAD 前處理之前，先用原始音檔的前 30 秒跑一次 Whisper 語言偵測。
+
+    Why before VAD:
+        VAD 會改變送進 Whisper 的「前 30 秒」內容，導致語言偵測不穩定
+        （例如原本是英文的音檔，VAD 後首段變成靜音後的中段，被誤判為 Hebrew）。
+        在原始音檔上偵測，結果最穩定。
+
+    Args:
+        audio_path: 原始音檔路徑（VAD 前）
+        model_name: Whisper model 名稱（mlx-whisper 用）
+        tmp_dir:    暫存目錄
+        log_fn:     日誌回呼（可選）
+
+    Returns:
+        語言代碼字串（如 "en"、"zh"、"ja"）；偵測失敗時回傳 None
+    """
+    def _log(msg):
+        if log_fn:
+            log_fn(msg)
+
+    try:
+        from pydub import AudioSegment
+    except ImportError:
+        _log("⚠️  pydub 未安裝，跳過語言預偵測。")
+        return None
+
+    try:
+        audio = AudioSegment.from_file(audio_path)
+    except Exception as e:
+        _log(f"⚠️  語言預偵測：無法載入音檔（{e}），跳過。")
+        return None
+
+    # 取前 30 秒（Whisper 語言偵測視窗）
+    clip_ms   = min(30_000, len(audio))
+    clip      = audio[:clip_ms].set_channels(1).set_frame_rate(16000)
+
+    os.makedirs(tmp_dir, exist_ok=True)
+    lang_clip_path = os.path.join(tmp_dir, "_lang_detect.wav")
+
+    try:
+        clip.export(lang_clip_path, format="wav")
+        import mlx_whisper
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = mlx_whisper.transcribe(
+                lang_clip_path,
+                path_or_hf_repo=model_name,
+                verbose=False,
+            )
+        detected = result.get("language", None)
+        if detected:
+            _log(f"🔍 語言預偵測（原始音檔前 {clip_ms//1000}s）：偵測為 [{detected}]")
+        else:
+            _log("⚠️  語言預偵測：未能取得語言資訊。")
+        return detected
+
+    except Exception as e:
+        _log(f"⚠️  語言預偵測失敗: {e}")
+        return None
+    finally:
+        if os.path.exists(lang_clip_path):
+            try:
+                os.remove(lang_clip_path)
+            except OSError:
+                pass
+
+
+# ---------------------------------------------------------------------------
 # Layer 2a: Segment-level Repetition Detection
 # ---------------------------------------------------------------------------
 
@@ -333,9 +412,9 @@ class Phase1Transcribe(PipelineBase):
             rep_compress_ratio         = float(ah.get("repetition_compress_ratio", 0.3))
             retry_temperature          = float(ah.get("retry_temperature", 0.2))
 
-            # 語言設定（治療 Hebrew 誤判的根本解法）
-            language       = config.get("language", None)          # None = Whisper 自動偵測（不建議）
-            initial_prompt = config.get("initial_prompt", None)    # 錨定首段解碼方向
+            # 語言設定
+            lang_mode = config.get("language_detection_mode", "auto").lower()
+            forced_language = config.get("language", None)  # 對應 mode=manual
 
             # Re-load model if profile changes between subjects
             if model is not None and current_model_name != model_name:
@@ -371,7 +450,24 @@ class Phase1Transcribe(PipelineBase):
                     self.log(f"🧠 備妥 Whisper ({engine}) {model_name}...")
 
             try:
-                # ── Layer 1: VAD 前處理 ──────────────────────────────────
+                # ── 語言偵測：在 VAD 前先用原始音檔偵測 ──────────────
+                language = None
+                if lang_mode == "manual":
+                    language = forced_language
+                    if language:
+                        self.log(f"🌐 語言：手動指定 [{language}]")
+                elif lang_mode == "auto":
+                    self.log("🔍 語言預偵測：分析原始音檔前 30 秒...")
+                    language = detect_audio_language(
+                        audio_path=audio_path,
+                        model_name=model_name,
+                        tmp_dir=tmp_dir,
+                        log_fn=self.log,
+                    )
+                else:  # none
+                    self.log("⚠️  語言偵測模式：none，完全依賴 Whisper 內建辨識")
+
+                # ── Layer 1: VAD 前處理 ───────────────────────────
                 cleaned_path = audio_path
                 if vad_enabled:
                     self.log(f"🔇 Layer 1: VAD 前處理中（閾值 {vad_silence_dbfs} dBFS）...")
@@ -393,17 +489,16 @@ class Phase1Transcribe(PipelineBase):
                     import mlx_whisper
                     import warnings
                     if language:
-                        self.log(f"🌐 語言設定：強制使用 [{language}]（停用自動偵測）")
+                        self.log(f"🌐 轉錄語言：[{language}]")
                     pbar, stop_tick, t = self.create_spinner(f"轉錄處理 ({fname})")
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         result = mlx_whisper.transcribe(
                             cleaned_path,
                             path_or_hf_repo=model_name,
-                            # 語言強制指定（防止誤判為 Hebrew）
+                            # 語言：自動偵測結果或手動指定（均可防止 Hebrew 誤判）
                             decode_options={"language": language} if language else {},
-                            # 首段語言錨定 prompt
-                            initial_prompt=initial_prompt,
+                            initial_prompt=None,
                             # Layer 0: 原生防禦參數（v0.4.3 已支援）
                             condition_on_previous_text=condition_on_prev_text,
                             compression_ratio_threshold=compression_ratio_thresh,
@@ -419,8 +514,7 @@ class Phase1Transcribe(PipelineBase):
                     segments_gen, info = model.transcribe(
                         cleaned_path,
                         beam_size=beam_size,
-                        language=language,               # 語言強制指定（防止誤判）
-                        initial_prompt=initial_prompt,   # 首段語言錨定
+                        language=language,               # 自動偵測結果或手動指定（防止誤判）
                         vad_filter=True,
                         condition_on_previous_text=condition_on_prev_text,
                     )
