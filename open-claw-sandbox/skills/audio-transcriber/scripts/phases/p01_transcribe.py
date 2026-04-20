@@ -278,6 +278,91 @@ def retry_segment(
 
 
 # ---------------------------------------------------------------------------
+# Language Detection (before VAD)
+# ---------------------------------------------------------------------------
+
+def detect_audio_language(
+    audio_path: str,
+    engine: str,
+    model,
+    model_name: str,
+    clip_duration_sec: float = 30.0,
+    log_fn=None,
+) -> str | None:
+    """
+    對原始音檔的前 clip_duration_sec 秒做快速語言偵測。
+    必須在 VAD 前執行，避免 VAD fallback 後静音片段干擾語言判斷。
+
+    Args:
+        audio_path:        原始音檔路徑（VAD 前）
+        engine:            "mlx-whisper" 或 "faster-whisper"
+        model:             已載入的 faster-whisper model（mlx-whisper 傳 None）
+        model_name:        model 名稱（mlx-whisper 用）
+        clip_duration_sec: 用於偵測的片段長度（預設 30s）
+        log_fn:            日誌回呼函數
+
+    Returns:
+        語言代碼字串（如 'zh'、'en'）或 None（偵測失敗）
+    """
+    def _log(msg):
+        if log_fn:
+            log_fn(msg)
+
+    tmp_path = None
+    try:
+        from pydub import AudioSegment
+        audio   = AudioSegment.from_file(audio_path)
+        clip_ms = int(clip_duration_sec * 1000)
+        clip    = audio[:min(clip_ms, len(audio))]
+        clip    = clip.set_channels(1).set_frame_rate(16000)
+
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            tmp_path = f.name
+        clip.export(tmp_path, format="wav")
+
+    except Exception as e:
+        _log(f"⚠️  語言偵測前置處理失敗: {e}")
+        return None
+
+    try:
+        detected_lang = None
+
+        if engine == "mlx-whisper":
+            import mlx_whisper
+            # 對 30s 片段做完整轉錄（速度快），取出 result["language"]
+            det_result    = mlx_whisper.transcribe(
+                tmp_path,
+                path_or_hf_repo=model_name,
+                condition_on_previous_text=False,
+                verbose=False,
+            )
+            detected_lang = det_result.get("language")
+
+        elif engine == "faster-whisper" and model is not None:
+            # faster-whisper 有專用的 detect_language() 效率高
+            lang_probs    = model.detect_language(tmp_path)
+            detected_lang = lang_probs[0][0] if lang_probs else None
+
+        if detected_lang:
+            _log(f"🌐 語言偵測結果：[{detected_lang}]（將以此語言錦定轉錄）")
+        else:
+            _log("⚠️  語言偵測無法取得結果，將使用 Whisper 自動判斷。")
+
+        return detected_lang
+
+    except Exception as e:
+        _log(f"⚠️  語言偵測失敗: {e}")
+        return None
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+
+# ---------------------------------------------------------------------------
 # Phase 1 Orchestrator
 # ---------------------------------------------------------------------------
 
@@ -339,6 +424,10 @@ class Phase1Transcribe(PipelineBase):
             vad_silence_dbfs           = int(ah.get("vad_silence_thresh_dbfs", -35))
             vad_padding_ms             = int(ah.get("vad_padding_ms", 300))
             vad_max_removal_ratio      = float(ah.get("vad_max_removal_ratio", 0.90))
+            # Language detection
+            lang_detect_enabled        = bool(ah.get("language_detection_enabled", True))
+            lang_detect_clip_sec       = float(ah.get("language_detection_clip_sec", 30.0))
+            force_language             = ah.get("force_language", None) or None  # e.g. 'zh', None = auto
             # Layer 2
             rep_enabled                = bool(ah.get("repetition_detection_enabled", True))
             rep_ngram                  = int(ah.get("repetition_ngram_size", 4))
@@ -380,6 +469,19 @@ class Phase1Transcribe(PipelineBase):
                     self.log(f"🧠 備妥 Whisper ({engine}) {model_name}...")
 
             try:
+                # ── 語言偵測（在 VAD 前對原始音檔執行） ────────────────────
+                detected_lang = force_language
+                if not detected_lang and lang_detect_enabled:
+                    self.log(f"🌐 語言偵測中（前 {lang_detect_clip_sec:.0f}s）...")
+                    detected_lang = detect_audio_language(
+                        audio_path=audio_path,
+                        engine=engine,
+                        model=model,
+                        model_name=model_name,
+                        clip_duration_sec=lang_detect_clip_sec,
+                        log_fn=self.log,
+                    )
+
                 # ── Layer 1: VAD 前處理 ──────────────────────────────────
                 cleaned_path = audio_path
                 if vad_enabled:
@@ -399,6 +501,9 @@ class Phase1Transcribe(PipelineBase):
                 ts_text   = ""
                 segments  = []
 
+                # 將偵測到的語言碼包裝到 decode_options
+                lang_opts = {"language": detected_lang} if detected_lang else {}
+
                 if engine == "mlx-whisper":
                     import mlx_whisper
                     import warnings
@@ -413,6 +518,8 @@ class Phase1Transcribe(PipelineBase):
                             compression_ratio_threshold=compression_ratio_thresh,
                             no_speech_threshold=no_speech_thresh,
                             hallucination_silence_threshold=hallucination_silence_sec,
+                            # 鎖定語言（防止静音段誤判語言）
+                            decode_options=lang_opts,
                             verbose=False,
                         )
                     self.finish_spinner(pbar, stop_tick, t)
