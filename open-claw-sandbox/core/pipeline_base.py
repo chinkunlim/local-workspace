@@ -403,7 +403,7 @@ class PipelineBase:
                     self.save_checkpoint(next_task["subject"], next_task["filename"])
                 break
 
-    def _batch_select_reprocess(self, done_tasks: List[Dict]) -> Dict[int, Dict]:
+    def _batch_select_reprocess(self, done_tasks: List[Dict]) -\u003e Dict[int, Dict]:
         """互動式批量選擇已完成任務是否重跑。"""
         selected: set = set()
 
@@ -415,7 +415,8 @@ class PipelineBase:
                 mark = "●" if (i - 1) in selected else "○"
                 print(f"  [{i:>2}] {mark} {task['subject']} / {task['filename']}")
             print("-" * 56)
-            print("   輸入指令：數字 (1,3) = 切換選取 | A = 全選 | S/Enter = 全部跳過")
+            print("   ● = 重新生成  ○ = 跳過（保留舊結果）")
+            print("   輸入指令：數字 (如 1,3,5) = 標記後直接執行 | A = 全部重新生成 | Enter = 全部跳過")
             print("-" * 56)
 
         render_list()
@@ -427,10 +428,8 @@ class PipelineBase:
                 print("   [已跳過全部已完成檔案]")
                 return {}
 
-            if raw == "s":
-                print(f"   ⏭️  已選擇跳過全部 {len(done_tasks)} 個已完成檔案。")
-                return {}
-            elif raw == "":
+            # Enter（空白）: 若有選取就確認，否則跳過全部
+            if raw == "":
                 if not selected:
                     print(f"   ⏭️  未選取任何項目，跳過全部 {len(done_tasks)} 個已完成檔案。")
                     return {}
@@ -438,11 +437,20 @@ class PipelineBase:
                     chosen = {i: done_tasks[i] for i in sorted(selected)}
                     print(f"   ✅ 確認重新處理 {len(chosen)} 個檔案。")
                     return chosen
+
+            # S: 明確跳過全部
+            elif raw == "s":
+                print(f"   ⏭️  已選擇跳過全部 {len(done_tasks)} 個已完成檔案。")
+                return {}
+
+            # A: 全選後立即確認
             elif raw == "a":
                 selected = set(range(len(done_tasks)))
                 render_list()
                 print(f"   ✅ 已全選，將重新處理全部 {len(done_tasks)} 個已完成檔案。")
                 return {i: done_tasks[i] for i in sorted(selected)}
+
+            # 數字輸入：選取後立即執行（一步到位）
             else:
                 tokens = raw.replace(",", " ").split()
                 valid = True
@@ -453,11 +461,11 @@ class PipelineBase:
                         if 0 <= idx < len(done_tasks):
                             parsed.append(idx)
                         else:
-                            print(f"   ⚠️  編號 {tok} 超出範圍，請重新輸入。")
+                            print(f"   ⚠️  編號 {tok} 超出範圍（1–{len(done_tasks)}），請重新輸入。")
                             valid = False
                             break
                     else:
-                        print(f"   ⚠️  無法辨識指令：{tok}。請輸入數字、A 或 S/Enter。")
+                        print(f"   ⚠️  無法辨識指令：{tok}。請輸入數字、A 或 Enter。")
                         valid = False
                         break
 
@@ -467,7 +475,15 @@ class PipelineBase:
                             selected.discard(idx)
                         else:
                             selected.add(idx)
-                    render_list()
+                    # 輸入數字後直接確認（一步式）
+                    chosen = {i: done_tasks[i] for i in sorted(selected)}
+                    if chosen:
+                        print(f"   ✅ 確認重新處理 {len(chosen)} 個檔案：")
+                        for i, t in chosen.items():
+                            print(f"      [{i+1}] {t['subject']} / {t['filename']}")
+                    else:
+                        print(f"   ⏭️  所有選取已取消，跳過全部 {len(done_tasks)} 個已完成檔案。")
+                    return chosen
 
     # ------------------------------------------------------------------ #
     #  Checkpoint (delegates to StateManager)                             #
