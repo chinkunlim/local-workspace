@@ -333,6 +333,10 @@ class Phase1Transcribe(PipelineBase):
             rep_compress_ratio         = float(ah.get("repetition_compress_ratio", 0.3))
             retry_temperature          = float(ah.get("retry_temperature", 0.2))
 
+            # 語言設定（治療 Hebrew 誤判的根本解法）
+            language       = config.get("language", None)          # None = Whisper 自動偵測（不建議）
+            initial_prompt = config.get("initial_prompt", None)    # 錨定首段解碼方向
+
             # Re-load model if profile changes between subjects
             if model is not None and current_model_name != model_name:
                 model = None
@@ -388,12 +392,18 @@ class Phase1Transcribe(PipelineBase):
                 if engine == "mlx-whisper":
                     import mlx_whisper
                     import warnings
+                    if language:
+                        self.log(f"🌐 語言設定：強制使用 [{language}]（停用自動偵測）")
                     pbar, stop_tick, t = self.create_spinner(f"轉錄處理 ({fname})")
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         result = mlx_whisper.transcribe(
                             cleaned_path,
                             path_or_hf_repo=model_name,
+                            # 語言強制指定（防止誤判為 Hebrew）
+                            decode_options={"language": language} if language else {},
+                            # 首段語言錨定 prompt
+                            initial_prompt=initial_prompt,
                             # Layer 0: 原生防禦參數（v0.4.3 已支援）
                             condition_on_previous_text=condition_on_prev_text,
                             compression_ratio_threshold=compression_ratio_thresh,
@@ -409,6 +419,8 @@ class Phase1Transcribe(PipelineBase):
                     segments_gen, info = model.transcribe(
                         cleaned_path,
                         beam_size=beam_size,
+                        language=language,               # 語言強制指定（防止誤判）
+                        initial_prompt=initial_prompt,   # 首段語言錨定
                         vad_filter=True,
                         condition_on_previous_text=condition_on_prev_text,
                     )

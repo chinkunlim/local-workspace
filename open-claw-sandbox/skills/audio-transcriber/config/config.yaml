@@ -37,6 +37,11 @@ phase0:
 
 phase1:
   active_profile: apple_silicon_mps
+  # 語言設定：強制指定避免 Whisper 自動偵測誤判（Hebrew / Japanese 混淆問題）
+  # 若音檔含英文混中文（教授偶爾英文術語），保留 zh 即可，Whisper 會自動處理夾雜英文
+  language: "zh"          # zh = 普通話/中文；如需台灣腔中文效果相同，無需改為 zh-TW
+  initial_prompt: "以下是一段繁體中文的課堂講義或課程錄音。"  # 錨定語言方向，防止首段誤判
+
   profiles:
     default:
       engine: faster-whisper
