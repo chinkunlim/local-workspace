@@ -70,9 +70,11 @@ phase1:
     vad_max_removal_ratio: 0.90         # 移除率上限：超過 90% 視為閾值誤判，fallback 回原始音檔
 
     # Language Detection — 在 VAD 前偵測語言，鎖定後轉錄，防止靜音段誤判
-    language_detection_enabled: true
-    language_detection_clip_sec: 30.0   # 取前 30 秒做快速語言偵測
-    force_language:                     # 強制指定語言（如 'zh'）；留空 = 自動偵測
+    # 注意：自動偵測在高靜音比例音檔上不可靠（會誤判成 English/Hebrew）
+    # 若所有錄音確定為中文，使用 force_language 直接鎖定，效能最佳
+    language_detection_enabled: false       # 已關閉：音檔靜音過多，自動偵測不可靠
+    language_detection_clip_sec: 30.0
+    force_language: "zh"                    # 直接鎖定中文，跳過偵測子進程（消除 MallocStackLogging）
 
     # Layer 2 — Segment 重複偵測 + 局部重試
     repetition_detection_enabled: true

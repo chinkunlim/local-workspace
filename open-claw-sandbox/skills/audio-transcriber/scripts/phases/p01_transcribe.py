@@ -345,12 +345,20 @@ def detect_audio_language(
                 lang = None
                 if engine == "mlx-whisper":
                     import mlx_whisper
-                    det  = mlx_whisper.transcribe(
-                        tmp_path,
-                        path_or_hf_repo=model_name,
-                        condition_on_previous_text=False,
-                        verbose=False,
-                    )
+                    # 壓制子進程 stderr（MallocStackLogging 等 macOS 雜訊）
+                    with open(os.devnull, "w") as _dn:
+                        _old = os.dup(2)
+                        os.dup2(_dn.fileno(), 2)
+                        try:
+                            det = mlx_whisper.transcribe(
+                                tmp_path,
+                                path_or_hf_repo=model_name,
+                                condition_on_previous_text=False,
+                                verbose=False,
+                            )
+                        finally:
+                            os.dup2(_old, 2)
+                            os.close(_old)
                     lang = det.get("language")
                 elif engine == "faster-whisper" and model is not None:
                     lang_probs = model.detect_language(tmp_path)
@@ -522,20 +530,26 @@ class Phase1Transcribe(PipelineBase):
                     import mlx_whisper
                     import warnings
                     pbar, stop_tick, t = self.create_spinner(f"轉錄處理 ({fname})")
-                    with warnings.catch_warnings():
+                    # 重定向 stderr → /dev/null，壓制 macOS MallocStackLogging 雜訊
+                    with open(os.devnull, "w") as _devnull, \
+                         warnings.catch_warnings():
                         warnings.simplefilter("ignore")
-                        result = mlx_whisper.transcribe(
-                            cleaned_path,
-                            path_or_hf_repo=model_name,
-                            # Layer 0: 原生防禦參數（v0.4.3 已支援）
-                            condition_on_previous_text=condition_on_prev_text,
-                            compression_ratio_threshold=compression_ratio_thresh,
-                            no_speech_threshold=no_speech_thresh,
-                            hallucination_silence_threshold=hallucination_silence_sec,
-                            # 鎖定語言：直接展開為 kwargs（VAR_KEYWORD）
-                            **lang_kwargs,
-                            verbose=False,
-                        )
+                        _old_fd = os.dup(2)
+                        os.dup2(_devnull.fileno(), 2)
+                        try:
+                            result = mlx_whisper.transcribe(
+                                cleaned_path,
+                                path_or_hf_repo=model_name,
+                                condition_on_previous_text=condition_on_prev_text,
+                                compression_ratio_threshold=compression_ratio_thresh,
+                                no_speech_threshold=no_speech_thresh,
+                                hallucination_silence_threshold=hallucination_silence_sec,
+                                **lang_kwargs,
+                                verbose=False,
+                            )
+                        finally:
+                            os.dup2(_old_fd, 2)
+                            os.close(_old_fd)
                     self.finish_spinner(pbar, stop_tick, t)
                     segments = result.get("segments", [])
 
