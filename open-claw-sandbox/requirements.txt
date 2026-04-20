@@ -12,6 +12,7 @@ watchdog>=4.0.0         # inbox_daemon filesystem monitoring
 faster-whisper>=1.0.0
 mlx-whisper>=0.2.0
 pypdf>=4.3.0
+pydub>=0.25.1           # VAD 靜音切除 + 局部音軌切割（需系統安裝 ffmpeg）
 
 # --- Doc Parser Skill ---
 playwright>=1.47.0
