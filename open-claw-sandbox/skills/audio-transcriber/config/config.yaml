@@ -33,7 +33,7 @@ phase0:
       model: gemma4:e4b
       options:
         num_ctx: 16384
-        temperature: 0.1
+        temperature: 0
 
 phase1:
   active_profile: apple_silicon_mps
@@ -73,7 +73,7 @@ phase3:
       chunk_size: 4000
       options:
         num_ctx: 16384
-        temperature: 0.2
+        temperature: 0
         num_predict: 4096
 
 

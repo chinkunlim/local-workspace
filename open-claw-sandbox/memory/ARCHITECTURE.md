@@ -122,8 +122,9 @@ Phase 03:  Synthesis            (delegated to skills/note_generator/ → data/wi
 | LiteLLM | 4000 | OpenAI-compatible proxy for model routing |
 | Open WebUI | 3000 | Chat UI; connects to LiteLLM + Pipelines |
 | Pipelines | 9099 | Open WebUI pipeline runners |
-| Open Claw API | 18789 | Intent engine; dispatches all skill invocations |
+| Open Claw CLI | — | Native intent engine; dispatches all skill invocations |
 | Inbox Daemon | — | `core/inbox_daemon.py` (background thread) |
+| Task Queue | — | `core/task_queue.py` (serialises skill runs, prevents OOM) |
 | RAM Watchdog | — | `infra/scripts/watchdog.sh` |
 
 ---
@@ -131,23 +132,25 @@ Phase 03:  Synthesis            (delegated to skills/note_generator/ → data/wi
 ## Data Flow
 
 ```
-User (Telegram / CLI / file drop)
+User (Telegram / CLI / Open WebUI Custom Tool)
     │
     └─► data/raw/<Subject>/
             │
             └─► inbox_daemon.py  (watchdog, recursive, hot-config)
                     │
-                    ├─► audio-transcriber/input/<Subject>/   ─► 6-phase pipeline
-                    └─► doc-parser/input/<Subject>/          ─► 7-phase pipeline
-                                │                                     │
-                                └─────────── data/wiki/ ──────────────┘
-                                                │
-                                    ┌───────────┴───────────┐
-                                    │                       │
-                                Obsidian               ChromaDB index
-                                (human review)         (RAG queries via
-                                                    telegram-kb-agent /
-                                                   academic-edu-assistant)
+                    ├─► task_queue.py ─► audio-transcriber/input/<Subject>/   ─► 6-phase pipeline
+                    └─► task_queue.py ─► doc-parser/input/<Subject>/          ─► 7-phase pipeline
+                                 │                                     │
+                                 └─────────── data/wiki/ ──────────────┘
+                                                 │
+                                                 ├─► knowledge_pusher.py ─► Open WebUI Knowledge API
+                                                 │
+                                     ┌───────────┴───────────┐
+                                     │                       │
+                                 Obsidian               ChromaDB index
+                                 (human review)         (RAG queries via
+                                                     telegram-kb-agent /
+                                                    academic-edu-assistant)
 ```
 
 ---

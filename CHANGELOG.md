@@ -7,8 +7,18 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ## [Unreleased]
 
+### Added
+- **core**: `task_queue.py` implemented as a single-threaded queue to replace concurrent subprocesses, preventing OOM.
+- **core**: `knowledge_pusher.py` to push generated notes to Open WebUI Knowledge API.
+- **infra**: `open_claw_tool.py` custom tool for Open WebUI to natively trigger Open Claw pipelines.
+- **core**: Obsidian Watchdog added to `inbox_daemon.py` to listen for `status: rewrite` and automatically enqueue files for `note_generator`.
+
 ### Changed
+- **core**: `inbox_daemon.py` removed legacy HTTP POST to the retired Flask WebUI. Now fully uses local `task_queue.py`.
 - **core**: `inbox_daemon.py` now strictly adheres to sandbox input isolation. Removed hardcoded `pdf_routing_rules` that previously bypassed boundaries and wrote directly to cross-skill `output/` directories.
+- **skills**: All `temperature` configs in extraction layers (`audio-transcriber`, `doc-parser`) and `smart_highlighter` forcefully set to `0` to prevent hallucinations.
+- **skills**: `audio-transcriber` Phase 3 prompt stripped of formatting logic to strictly perform lossless merging.
+- **skills**: `note_generator` synthesis map temperature lowered to `0.1` and `0.2` to prevent hallucination during map-reduce.
 - **skills**: Purged highlight and synthesis prompts/configs from `audio-transcriber` and `doc-parser` to enforce pure extraction logic.
 - **skills**: Migrated and integrated the purged highlighting and Map-Reduce synthesis prompts into `smart_highlighter` and `note_generator`.
 

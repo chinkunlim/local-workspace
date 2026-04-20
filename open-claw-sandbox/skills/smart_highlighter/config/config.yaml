@@ -24,7 +24,7 @@ highlight:
       min_chunk_chars: 30        # Skip LLM for very short fragments
       options:
         num_ctx: 8192
-        temperature: 0.1
+        temperature: 0
 
     # Stricter profile for academic transcripts (audio-transcriber default)
     strict:
@@ -34,7 +34,7 @@ highlight:
       min_chunk_chars: 30
       options:
         num_ctx: 8192
-        temperature: 0.05
+        temperature: 0
 
     # Faster profile for quick annotation
     fast:
@@ -44,7 +44,7 @@ highlight:
       min_chunk_chars: 30
       options:
         num_ctx: 4096
-        temperature: 0.1
+        temperature: 0
 
 runtime:
   ollama:

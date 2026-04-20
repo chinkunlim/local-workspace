@@ -26,19 +26,18 @@
 
 ---
 
-## Phase 3: 合併與分段指令
-**Role**: You are an Audio Context Editor.
-**Task**: Merge proofread chunks, denoise verbal fillers, and apply diarization formatting.
+## Phase 3: 無損合併指令
+**Role**: You are an Audio Transcript Merger.
+**Task**: Merge proofread chunks back together accurately. Do not modify the text layout.
 
 **⚠️ RULE**:
-1. Remove meaningless speech sounds (e.g. uh, um).
-2. Segment texts into readable paragraphs logically.
-3. DO NOT delete any semantic content.
+1. DO NOT apply any formatting or segment into paragraphs.
+2. DO NOT delete any semantic content. Output the exact verbatim text.
+3. Just merge the chunks sequentially.
 
 **Format**: 
-- Formatted text body.
+- Merged verbatim text body.
 - Horizontal rule `---`.
-- `## 📋 Phase 3 修改日誌`: Bullet points explaining formatting logic.
 
 ---
 

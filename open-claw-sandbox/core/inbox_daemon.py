@@ -20,8 +20,8 @@ import time
 import json
 import threading
 import subprocess
-import urllib.request
-import urllib.error
+from core.task_queue import task_queue
+from core.cli_runner import SkillRunner
 from typing import List, Optional
 
 # Path Resolution
@@ -39,7 +39,6 @@ from core.path_builder import PathBuilder
 # Constants
 _WAIT_TIMEOUT_SEC = 300   # 5 min: abort if file never stabilises
 _POLL_INTERVAL_SEC = 2.0
-_WEBUI_API_URL = os.environ.get("OPENCLAW_API_URL", "http://127.0.0.1:18789")
 
 
 class SystemInboxDaemon:
@@ -132,10 +131,24 @@ class SystemInboxDaemon:
                     if event.is_directory:
                         return
                     self.daemon._process_file(event.src_path)
+                    
+            class OutputWatchdogHandler(FileSystemEventHandler):
+                def __init__(self, daemon: "SystemInboxDaemon"):
+                    self.daemon = daemon
+                def on_modified(self, event):
+                    if event.is_directory or not event.src_path.endswith(".md"):
+                        return
+                    self.daemon._check_rewrite_status(event.src_path)
 
             self._observer = Observer()
             print(f"👁️ [Daemon] 監控啟動 (遞迴支援多科目): 全局收件匣 -> {self.raw_path}")
             self._observer.schedule(InboxHandler(self), self.raw_path, recursive=True)
+            
+            data_path = os.path.join(_workspace_root, "data")
+            if os.path.exists(data_path):
+                self._observer.schedule(OutputWatchdogHandler(self), data_path, recursive=True)
+                print(f"👁️ [Daemon] 監控啟動 (Obsidian Watchdog): 輸出資料夾 -> {data_path}")
+                
             self._observer.start()
 
         except ImportError:
@@ -198,41 +211,61 @@ class SystemInboxDaemon:
 
     def _trigger_pipeline(self, skill: str, filepath: str):
         """
-        Route trigger through WebUI's ExecutionManager Job Queue (via HTTP POST).
-        Falls back to direct subprocess.Popen only when WebUI is not running.
-        This prevents OOM from N concurrent LLM processes on large batch arrivals.
+        Route trigger through the single-threaded Task Queue to prevent OOM.
         """
         print(f"\n🚀 [Daemon] 偵測到新檔案: {filepath} ({skill})")
-
-        # --- Primary path: route through WebUI Job Queue ---
-        try:
-            payload = json.dumps({"skill": skill}).encode("utf-8")
-            req = urllib.request.Request(
-                f"{_WEBUI_API_URL}/api/start",
-                data=payload,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                body = json.loads(resp.read())
-                if body.get("success"):
-                    print(f"✅ [Daemon] 已通過 WebUI API 排入佇列: {skill}")
-                    return
-                else:
-                    print(f"⚠️ [Daemon] WebUI API 拒絕: {body.get('error', '?')} — 改為直接啟動")
-        except (urllib.error.URLError, OSError):
-            print(f"ℹ️ [Daemon] WebUI 未運行，改為直接啟動行程...")
-
-        # --- Fallback: direct subprocess (standalone mode without WebUI) ---
-        script_path = os.path.join(_workspace_root, "skills", skill, "scripts", "run_all.py")
-        if os.path.exists(script_path):
-            print(f"👉 呼叫: python3 {script_path} --process-all")
-            subprocess.Popen(
-                [sys.executable, script_path, "--process-all"],
-                cwd=os.path.join(_workspace_root, "skills", skill),
-            )
+        
+        cwd = os.path.join(_workspace_root, "skills", skill)
+        
+        if skill == "audio-transcriber":
+            cmd = SkillRunner.run_audio_transcriber()
+        elif skill == "doc-parser":
+            cmd = SkillRunner.run_doc_parser()
         else:
-            print(f"❌ 找不到執行腳本: {script_path}")
+            script_path = os.path.join(cwd, "scripts", "run_all.py")
+            cmd = [sys.executable, script_path, "--process-all"]
+
+        task_queue.enqueue(f"{skill} Pipeline", cmd, cwd)
+
+    def _check_rewrite_status(self, filepath: str):
+        """Watch for YAML `status: rewrite` to trigger note_generator."""
+        # Simple debounce check using the file lock mechanism
+        with self._lock:
+            if filepath in self._debounce_events:
+                return
+                
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                head = f.read(500)
+                if "status: rewrite" in head:
+                    print(f"\n🔄 [Watchdog] 偵測到重寫請求: {filepath}")
+                    
+                    # 1. Update status to 'processing' to avoid infinite loops
+                    new_content = head.replace("status: rewrite", "status: processing")
+                    with open(filepath, "r+", encoding="utf-8") as fw:
+                        fw.seek(0)
+                        fw.write(new_content)
+                        
+                    # 2. Extract Subject and infer target
+                    rel_path = os.path.relpath(filepath, os.path.join(_workspace_root, "data"))
+                    parts = rel_path.split(os.sep)
+                    skill = parts[0] if len(parts) > 0 else "note-generator"
+                    subject = parts[3] if len(parts) > 3 else "Default"
+                    
+                    # 3. Enqueue the task
+                    cmd = SkillRunner.run_note_generator(
+                        input_file=filepath,
+                        output_file=filepath.replace(".md", "_rewrite.md"), # simple example output
+                        subject=subject
+                    )
+                    task_queue.enqueue(f"Note Generator (Rewrite)", cmd, os.path.join(_workspace_root, "skills", "note-generator"))
+                    
+                    # Prevent multiple triggers
+                    with self._lock:
+                        self._debounce_events[filepath] = threading.Event()
+                        
+        except Exception:
+            pass
 
     def stop(self):
         if self._observer:

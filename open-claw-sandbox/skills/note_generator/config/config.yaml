@@ -25,7 +25,7 @@ synthesize:
       content_loss_threshold: 0.01
       options:
         num_ctx: 16384
-        temperature: 0.4
+        temperature: 0.1
 
     reasoning:
       model: deepseek-r1:14b
@@ -35,7 +35,7 @@ synthesize:
       content_loss_threshold: 0.01
       options:
         num_ctx: 32768
-        temperature: 0.6
+        temperature: 0.2
         num_predict: 8192
 
 runtime:

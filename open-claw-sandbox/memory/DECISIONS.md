@@ -5,10 +5,40 @@
 
 ---
 
+## [2026-04-20] P0: Task Queue 取代直接 Subprocess (防 OOM)
+
+### Decision
+`inbox_daemon.py` 放棄 HTTP POST 到 WebUI API 的冗餘機制，改為將任務寫入 `core/task_queue.py` 的本機 Python Queue。由單一 Worker 線程同步執行任務。
+
+### Consequence
+徹底消除瞬間湧入多個檔案時引發的 Ollama OOM 崩潰。保證 Pipeline 循序執行。
+
+---
+
+## [2026-04-20] P0: 萃取層溫度強制歸零 (防幻覺)
+
+### Decision
+所有萃取層 (`audio-transcriber`, `doc-parser`) 與純粹標記層 (`smart_highlighter`) 的 LLM profile config `temperature` 一律強制設為 `0`。
+
+### Consequence
+確保原始知識萃取與 Markdown 標記 100% 不變更語意、不丟失資料、不產生幻覺。高溫模型僅限於 `note_generator` 的推理階段。
+
+---
+
+## [2026-04-20] P1: Open WebUI 雙向接力
+
+### Decision
+新增 `knowledge_pusher.py` 將筆記推入 Open WebUI 知識庫，並在 `infra/open-webui/custom_tools/` 提供 Open Claw 觸發工具腳本，另加入 Obsidian 監控機制 (`status: rewrite`) 作為本機反向觸發點。
+
+### Consequence
+形成雙向閉環：WebUI 可呼叫 Open Claw，Open Claw 處理完能主動推送回 WebUI 知識庫。
+
+---
+
 ## [2026-04-19] P0: inbox_daemon triggers via HTTP → WebUI API (OOM prevention)
 
 ### Decision
-`inbox_daemon._trigger_pipeline()` now sends `POST /api/start` to the WebUI's `ExecutionManager` Job Queue first. Direct `subprocess.Popen` is a fallback-only path used when WebUI is not running (standalone mode). This ensures all Daemon-triggered pipeline runs are RAM-safe and serialised.
+(已過時，被 2026-04-20 取代) `inbox_daemon._trigger_pipeline()` now sends `POST /api/start` to the WebUI's `ExecutionManager` Job Queue first. Direct `subprocess.Popen` is a fallback-only path used when WebUI is not running (standalone mode). This ensures all Daemon-triggered pipeline runs are RAM-safe and serialised.
 
 ### Consequence
 Batch arrivals of N files no longer spawn N concurrent LLM processes. The Queue dedup also prevents double-triggering the same skill.
