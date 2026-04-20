@@ -18,18 +18,19 @@ paths:
   # Phase-specific directories (self.dirs[key] in Phase scripts)
   phases:
     p0: "input" # 00 — 原始音檔
+    p0_ref: "output/00_glossary" # 00 — 參考講義與詞庫
     p1: "output/01_transcript" # 01 — Whisper 轉錄稿
     p2: "output/02_proofread" # 02 — AI 校對稿
     p3: "output/03_merged" # 03 — 跨段合併精煉
-    p4: "output/04_highlighted" # 04 — 重點標記
-    p5: "output/05_notion_synthesis" # 05 — Notion 知識合成
+
 
 phase0:
   active_profile: priority_gemma
   profiles:
     priority_gemma:
       # model: qwen2.5:14b
-      model: gemma3:12b
+      # model: gemma3:12b
+      model: gemma4:e4b
       options:
         num_ctx: 16384
         temperature: 0.1
@@ -54,7 +55,8 @@ phase2:
     strict_gemma:
       # model: qwen3:14b
       # model: llama3:8b
-      model: gemma3:12b
+      # model: gemma3:12b
+      model: gemma4:e4b
       chunk_size: 3000
       options:
         num_ctx: 16384
@@ -66,44 +68,15 @@ phase3:
   profiles:
     default:
       # model: qwen3:14b
-      # model: gemma4:e2b
-      model: gemma3:12b
+      # model: gemma3:12b
+      model: gemma4:e2b
       chunk_size: 4000
       options:
         num_ctx: 16384
         temperature: 0.2
         num_predict: 4096
 
-phase4:
-  active_profile: default
-  profiles:
-    default:
-      # model: qwen3:8b
-      model: gemma3:12b
-      chunk_size: 3000
-      options:
-        num_ctx: 8192
-        temperature: 0.1
 
-phase5:
-  active_profile: reasoning_deepseek
-  profiles:
-    default:
-      model: gemma3:12b
-      chunk_threshold: 6000
-      map_chunk_size: 4000
-      options:
-        num_ctx: 16384
-        temperature: 0.4
-    reasoning_deepseek:
-      # model: qwen3:14b
-      model: deepseek-r1:14b
-      chunk_threshold: 6000
-      map_chunk_size: 4000
-      options:
-        num_ctx: 32768
-        temperature: 0.6
-        num_predict: 8192
 
 runtime:
   ollama:
@@ -120,8 +93,6 @@ runtime:
 thresholds:
   phase2_verbatim: 0.85
   phase3_verbatim: 0.70
-  phase4_verbatim: 0.95
 context:
   phase2_lookback_chars: 200
   phase3_lookback_chars: 150
-  phase5_mermaid_retry_max: 2

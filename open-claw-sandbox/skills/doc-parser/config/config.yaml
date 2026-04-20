@@ -22,8 +22,7 @@ paths:
   phases:
     inbox:      "input"                    # 00 — PDF 入匣
     processed:  "output/01_processed"      # 01 — Docling 提取結果 (raw_extracted.md, images)
-    highlighted: "output/02_highlighted"   # 02 — 重點標記後的文件 (highlighted.md)
-    synthesis:  "output/03_synthesis"      # 03 — 最終知識庫筆記
+
     error:      "output/error"             # 錯誤隔離區
 
 # ------------------------------------------------------------------------------
@@ -81,19 +80,7 @@ playwright:
   thinking_timeout_seconds: 480 # 8 分鐘後截圖 + 人工介入提示
   agent_loop_max_rounds: 10 # 每個 chunk 最大 round 數
 
-# ------------------------------------------------------------------------------
-# Phase 2: 重點標記 (Highlight Key Points)
-# ------------------------------------------------------------------------------
-phase2:
-  active_profile: default
-  profiles:
-    default:
-      model: gemma3:12b
-      options:
-        num_ctx: 16384
-        temperature: 0.1
-      chunk_size: 6000
-      verbatim_threshold: 0.50  # content-loss guard: LLM must retain ≥50% of source
+
 
 # ------------------------------------------------------------------------------
 # Phase 1d: VLM 視覺圖表解析 (Multi-Modal Vision)
@@ -107,30 +94,7 @@ phase1d:
         num_ctx: 16384
         temperature: 0.1
 
-# ------------------------------------------------------------------------------
-# Phase 3: 知識濃縮合成 (Map-Reduce Synthesis)
-# ------------------------------------------------------------------------------
-phase3:
-  active_profile: gemma4e2b
-  profiles:
-    default:
-      model: qwen2.5:14b
-      options:
-        num_ctx: 32768
-        temperature: 0.3
-        num_predict: 8192
-    reasoning_deepseek:
-      model: deepseek-r1:14b
-      options:
-        num_ctx: 32768
-        temperature: 0.6
-        num_predict: 8192
-    gemma4e2b:
-      model: gemma4:e2b
-      options:
-        num_ctx: 32768
-        temperature: 0.3
-        num_predict: 8192
+
 
 # NOTE: hardware thresholds and runtime (ollama) settings are defined globally in:
 #   open-claw-sandbox/core/config/global.yaml
