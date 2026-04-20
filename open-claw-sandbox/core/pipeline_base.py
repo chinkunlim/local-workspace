@@ -403,7 +403,7 @@ class PipelineBase:
                     self.save_checkpoint(next_task["subject"], next_task["filename"])
                 break
 
-    def _batch_select_reprocess(self, done_tasks: List[Dict]) -\u003e Dict[int, Dict]:
+    def _batch_select_reprocess(self, done_tasks: List[Dict]) -> Dict[int, Dict]:
         """互動式批量選擇已完成任務是否重跑。"""
         selected: set = set()
 
