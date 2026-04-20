@@ -78,6 +78,87 @@ class SystemInboxDaemon:
         if not self.routing_rules:
             self.routing_rules = {".m4a": "audio-transcriber", ".mp3": "audio-transcriber", ".pdf": "doc-parser"}
 
+    def _process_file(self, filepath: str):
+        self._load_config() # Reload config on fly
+        
+        filename = os.path.basename(filepath)
+        ext = os.path.splitext(filename)[1].lower()
+        basename_noext = os.path.splitext(filename)[0]
+        
+        # Extract Subject from relative path
+        rel_path = os.path.relpath(filepath, self.raw_path)
+        parts = rel_path.split(os.sep)
+        subject = parts[0] if len(parts) > 1 else "Default"
+        
+        target_skill = self.routing_rules.get(ext)
+        
+        if not target_skill:
+            print(f"ℹ️ [Daemon] 未知格式，忽略: {filepath}")
+            return
+
+        # Smart PDF Routing using structured rules
+        target_dir = os.path.join(_workspace_root, "data", target_skill, "input", subject)
+        routing_mode = None   # None means default → doc-parser only
+
+        if ext == ".pdf":
+            name_lower = basename_noext.lower()
+            for rule in self.pdf_routing_rules:
+                p = rule.get("pattern", "").lower()
+                if p.startswith("_"):      # suffix match
+                    if name_lower.endswith(p):
+                        routing_mode = rule.get("routing", "audio_ref")
+                        break
+                else:                      # contains match (CJK etc.)
+                    if p in name_lower:
+                        routing_mode = rule.get("routing", "audio_ref")
+                        break
+
+        if routing_mode == "audio_ref":
+            # Send only to audio-transcriber glossary area
+            target_skill = "audio-transcriber"
+            target_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "output", "00_glossary", subject)
+            print(f"🔍 [Daemon] 語音參考檔: [{subject}] {filename}")
+
+        elif routing_mode == "both":
+            # Copy to BOTH doc-parser/input and audio-transcriber/glossary
+            import shutil
+            audio_ref_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "output", "00_glossary", subject)
+            doc_input_dir = os.path.join(_workspace_root, "data", "doc-parser", "input", subject)
+            os.makedirs(audio_ref_dir, exist_ok=True)
+            os.makedirs(doc_input_dir, exist_ok=True)
+            try:
+                shutil.copy2(filepath, os.path.join(audio_ref_dir, filename))
+                os.rename(filepath, os.path.join(doc_input_dir, filename))
+                print(f"📦 [Daemon] 雙路由: [{subject}] {filename} → audio_ref + doc-parser")
+                self._schedule_trigger("doc-parser", os.path.join(doc_input_dir, filename))
+            except Exception as e:
+                print(f"❌ [Daemon] 雙路由失敗 {filename}: {e}")
+            return   # Done, skip the single-path logic below
+
+        else:
+            # Default: doc-parser
+            print(f"📄 [Daemon] 一般文獻 → doc-parser: [{subject}] {filename}")
+
+        os.makedirs(target_dir, exist_ok=True)
+        target_path = os.path.join(target_dir, filename)
+
+        try:
+            os.rename(filepath, target_path)
+            print(f"🚚 [Daemon] 已移動: [{subject}] {filename} → {target_skill}")
+            if os.sep + "input" + os.sep in target_dir + os.sep:
+                self._schedule_trigger(target_skill, target_path)
+        except Exception as e:
+            print(f"❌ [Daemon] 無法移動檔案 {filename}: {e}")
+
+    def scan_all(self):
+        """Manually trigger scan for all files in raw_path."""
+        print(f"🔄 [Daemon] 正在掃描現有檔案: {self.raw_path}")
+        for root, dirs, files in os.walk(self.raw_path):
+            for filename in sorted(files):
+                if filename.startswith("."): continue
+                filepath = os.path.join(root, filename)
+                self._process_file(filepath)
+
     def start(self):
         try:
             from watchdog.observers import Observer
@@ -90,78 +171,7 @@ class SystemInboxDaemon:
                 def on_created(self, event):
                     if event.is_directory:
                         return
-                        
-                    self.daemon._load_config() # Reload config on fly
-                    
-                    filepath = event.src_path
-                    filename = os.path.basename(filepath)
-                    ext = os.path.splitext(filename)[1].lower()
-                    basename_noext = os.path.splitext(filename)[0]
-                    
-                    # Extract Subject from relative path
-                    rel_path = os.path.relpath(filepath, self.daemon.raw_path)
-                    parts = rel_path.split(os.sep)
-                    subject = parts[0] if len(parts) > 1 else "Default"
-                    
-                    target_skill = self.daemon.routing_rules.get(ext)
-                    
-                    if not target_skill:
-                        print(f"ℹ️ [Daemon] 未知格式，忽略: {filepath}")
-                        return
-
-                    # Smart PDF Routing using structured rules
-                    target_dir = os.path.join(_workspace_root, "data", target_skill, "input", subject)
-                    routing_mode = None   # None means default → doc-parser only
-
-                    if ext == ".pdf":
-                        name_lower = basename_noext.lower()
-                        for rule in self.daemon.pdf_routing_rules:
-                            p = rule.get("pattern", "").lower()
-                            if p.startswith("_"):      # suffix match
-                                if name_lower.endswith(p):
-                                    routing_mode = rule.get("routing", "audio_ref")
-                                    break
-                            else:                      # contains match (CJK etc.)
-                                if p in name_lower:
-                                    routing_mode = rule.get("routing", "audio_ref")
-                                    break
-
-                    if routing_mode == "audio_ref":
-                        # Send only to audio-transcriber glossary area
-                        target_skill = "audio-transcriber"
-                        target_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "output", "00_glossary", subject)
-                        print(f"🔍 [Daemon] 語音參考檔: [{subject}] {filename}")
-
-                    elif routing_mode == "both":
-                        # Copy to BOTH doc-parser/input and audio-transcriber/glossary
-                        import shutil
-                        audio_ref_dir = os.path.join(_workspace_root, "data", "audio-transcriber", "output", "00_glossary", subject)
-                        doc_input_dir = os.path.join(_workspace_root, "data", "doc-parser", "input", subject)
-                        os.makedirs(audio_ref_dir, exist_ok=True)
-                        os.makedirs(doc_input_dir, exist_ok=True)
-                        try:
-                            shutil.copy2(filepath, os.path.join(audio_ref_dir, filename))
-                            os.rename(filepath, os.path.join(doc_input_dir, filename))
-                            print(f"📦 [Daemon] 雙路由: [{subject}] {filename} → audio_ref + doc-parser")
-                            self.daemon._schedule_trigger("doc-parser", os.path.join(doc_input_dir, filename))
-                        except Exception as e:
-                            print(f"❌ [Daemon] 雙路由失敗 {filename}: {e}")
-                        return   # Done, skip the single-path logic below
-
-                    else:
-                        # Default: doc-parser
-                        print(f"📄 [Daemon] 一般文獻 → doc-parser: [{subject}] {filename}")
-
-                    os.makedirs(target_dir, exist_ok=True)
-                    target_path = os.path.join(target_dir, filename)
-
-                    try:
-                        os.rename(filepath, target_path)
-                        print(f"🚚 [Daemon] 已移動: [{subject}] {filename} → {target_skill}")
-                        if os.sep + "input" + os.sep in target_dir + os.sep:
-                            self.daemon._schedule_trigger(target_skill, target_path)
-                    except Exception as e:
-                        print(f"❌ [Daemon] 無法移動檔案 {filename}: {e}")
+                    self.daemon._process_file(event.src_path)
 
             self._observer = Observer()
             print(f"👁️ [Daemon] 監控啟動 (遞迴支援多科目): 全局收件匣 -> {self.raw_path}")
@@ -277,10 +287,20 @@ class SystemInboxDaemon:
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Open Claw Inbox Daemon")
+    parser.add_argument("--scan-only", action="store_true", help="僅手動掃描並歸檔現有檔案，不啟動常駐監控")
+    args = parser.parse_args()
+
     daemon = SystemInboxDaemon()
-    daemon.start()
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        daemon.stop()
+    if args.scan_only:
+        print("🚀 [Daemon] 執行手動歸檔模式 (Scan Only)...")
+        daemon.scan_all()
+    else:
+        daemon.start()
+        daemon.scan_all() # Initial scan on startup
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            daemon.stop()

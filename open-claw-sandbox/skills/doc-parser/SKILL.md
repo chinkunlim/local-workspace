@@ -12,7 +12,7 @@ metadata:
 
 # Doc Parser Skill
 
-> **Pipeline**: PDF → Diagnose → Extract → VLM Vision → Synthesize → Markdown KB
+> **Pipeline**: PDF → Diagnose → Extract → VLM Vision
 
 ## Quick Start
 
@@ -30,7 +30,7 @@ cat data/doc-parser/state/checklist.md
 open http://localhost:5001
 ```
 
-## 七個 Phase
+## 五個 Phase
 
 | Phase | 腳本 | 功能 |
 |:---:|:---|:---|
@@ -39,8 +39,6 @@ open http://localhost:5001
 | P1b | `p01b_vector_charts.py` | 向量圖表光柵化 (pdftoppm) |
 | P1c | `p01c_ocr_gate.py` | OCR 品質評估（掃描件才觸發） |
 | P1d | `p01d_vlm_vision.py` | VLM 圖像自動描述 |
-| P2  | `p02_highlight.py` | LLM 原文重點標記 (Anti-Tampering) → highlighted.md |
-| P3  | `p03_synthesis.py` | Map-Reduce 知識合成 → content.md |
 
 ## 常用指令
 
@@ -61,8 +59,6 @@ python3 core/cli_config_wizard.py --skill doc-parser
 |:---|:---|
 | `input/<subject>/` | PDF 入匣，放新文件至此 |
 | `output/01_Processed/<subject>/<id>/` | Docling 原始提取（**勿修改**）|
-| `output/02_Highlighted/<subject>/<id>/` | 重點標記後的文件 |
-| `output/03_Synthesis/<subject>/<id>/` | 最終知識庫 Markdown |
 | `state/checklist.md` | 自動生成的進度追蹤表 |
 
 ## 設定檔位置

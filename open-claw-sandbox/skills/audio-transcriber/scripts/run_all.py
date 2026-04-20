@@ -36,8 +36,6 @@ from phases.p00_glossary import Phase0Glossary
 from phases.p01_transcribe import Phase1Transcribe
 from phases.p02_proofread import Phase2Proofread
 from phases.p03_merge import Phase3Merge
-from phases.p04_highlight import Phase4Highlight
-from phases.p05_synthesis import Phase5NotionSynthesis
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +118,7 @@ class VoiceMemoOrchestrator(PipelineBase):
 
     def _print_status_dashboard(self) -> None:
         """Print phase completion counters from StateManager."""
-        counters = {f"p{i}": {"done": 0, "total": 0} for i in range(1, 6)}
+        counters = {f"p{i}": {"done": 0, "total": 0} for i in range(1, 4)}
 
         for subj_data in self._state_manager.state.values():
             for _fname, record in subj_data.items():
@@ -133,8 +131,6 @@ class VoiceMemoOrchestrator(PipelineBase):
             "p1": "P1 轉錄",
             "p2": "P2 校對",
             "p3": "P3 合併",
-            "p4": "P4 重點",
-            "p5": "P5 筆記",
         }
         print("\n" + "=" * 36)
         print("     📊 V8.0 狀態與 DAG 追蹤面板")
@@ -235,25 +231,25 @@ class VoiceMemoOrchestrator(PipelineBase):
                 subject=args.subject,
             )
 
-        phases = {
-            1: Phase1Transcribe(),
-            2: Phase2Proofread(),
-            3: Phase3Merge(),
-            4: Phase4Highlight(),
-            5: Phase5NotionSynthesis(),
+        phases_classes = {
+            1: Phase1Transcribe,
+            2: Phase2Proofread,
+            3: Phase3Merge,
         }
 
         completed_normally = False
+        any_stopped = False
         try:
-            for p_num in range(args.start_phase, 6):
-                if p_num not in phases:
+            for p_num in range(args.start_phase, 4):
+                if p_num not in phases_classes:
                     continue
                 print(f"\n{'=' * 50}")
                 print(f"🚀 開始執行 Phase {p_num}...")
                 print(f"{'=' * 50}")
 
-                p_obj = phases[p_num]
+                p_obj = phases_classes[p_num]()
                 if p_obj.stop_requested:
+                    any_stopped = True
                     break
 
                 # Pass checkpoint only to the matching phase
@@ -288,7 +284,7 @@ class VoiceMemoOrchestrator(PipelineBase):
                 self._state_manager = StateManager(self.base_dir, skill_name="audio-transcriber")
                 self._print_status_dashboard()
 
-                if args.interactive and p_num < 5:
+                if args.interactive and p_num < 3:
                     if sys.stdin.isatty():
                         print(f"✋ Phase {p_num} 已完成。請按 [Enter] 繼續...")
                         input()
@@ -305,7 +301,7 @@ class VoiceMemoOrchestrator(PipelineBase):
             )
             print(f"💥 未預期錯誤: {exc}")
 
-        if completed_normally and not any(p.stop_requested for p in phases.values()):
+        if completed_normally and not any_stopped:
             self._write_session_state(SessionState.COMPLETED)
             self._state_manager.clear_checkpoint()
 
@@ -326,7 +322,7 @@ class VoiceMemoOrchestrator(PipelineBase):
 
 def main() -> None:
     parser = build_skill_parser(
-        "V8.0 Audio Transcriber Pipeline 五階段處理",
+        "V8.0 Audio Transcriber Pipeline 三階段處理",
         include_subject=True,
         include_force=True,
         include_resume=True,

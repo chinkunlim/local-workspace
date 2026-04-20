@@ -10,19 +10,19 @@
 # ------------------------------------------------------------------------------
 paths:
   # Canonical directory layout
-  input:  "input"
+  input: "input"
   output: "output"
-  state:  "state"
-  logs:   "logs"
+  state: "state"
+  logs: "logs"
 
   # Phase-specific directories (self.dirs[key] in Phase scripts)
   phases:
-    p0: "input"                        # 00 — 原始音檔
-    p1: "output/01_transcript"         # 01 — Whisper 轉錄稿
-    p2: "output/02_proofread"          # 02 — AI 校對稿
-    p3: "output/03_merged"             # 03 — 跨段合併精煉
-    p4: "output/04_highlighted"        # 04 — 重點標記
-    p5: "output/05_notion_synthesis"   # 05 — Notion 知識合成
+    p0: "input" # 00 — 原始音檔
+    p1: "output/01_transcript" # 01 — Whisper 轉錄稿
+    p2: "output/02_proofread" # 02 — AI 校對稿
+    p3: "output/03_merged" # 03 — 跨段合併精煉
+    p4: "output/04_highlighted" # 04 — 重點標記
+    p5: "output/05_notion_synthesis" # 05 — Notion 知識合成
 
 phase0:
   active_profile: priority_gemma
@@ -111,7 +111,6 @@ runtime:
     timeout_seconds: 600
     retries: 3
     backoff_seconds: 5
-
 
 # NOTE: hardware thresholds and runtime (ollama) settings are defined globally in:
 #   open-claw-sandbox/core/config/global.yaml

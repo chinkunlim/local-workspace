@@ -12,7 +12,7 @@ metadata:
 
 # Audio Transcriber Skill
 
-> **Pipeline**: M4A → Transcript → Proofread → Merge → Highlight → Notion MD
+> **Pipeline**: M4A → Transcript → Proofread → Merge
 
 ## Quick Start
 
@@ -30,7 +30,7 @@ cat data/audio-transcriber/state/checklist.md
 open http://localhost:5001
 ```
 
-## 五個 Phase
+## 三個 Phase
 
 | Phase | 腳本 | 功能 |
 |:---:|:---|:---|
@@ -38,8 +38,6 @@ open http://localhost:5001
 | P1 | `p01_transcribe.py` | MLX-Whisper 高精度轉錄 |
 | P2 | `p02_proofread.py` | LLM 智能校對 + 術語保護 |
 | P3 | `p03_merge.py` | 跨段合併精煉 |
-| P4 | `p04_highlight.py` | 重點概念標記 |
-| P5 | `p05_synthesis.py` | Notion-ready 知識合成 |
 
 ## 常用指令
 
@@ -60,5 +58,5 @@ python3 core/cli_config_wizard.py --skill audio-transcriber
 ## 設定檔位置
 
 - **主設定**: `config/config.yaml` — 模型選擇、路徑、閾值
-- **LLM 指令**: `config/prompt.md` — Phase 2–5 的 System Prompt
+- **LLM 指令**: `config/prompt.md` — Phase 2–3 的 System Prompt
 - **詳細文件**: `docs/ARCHITECTURE.md`

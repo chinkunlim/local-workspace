@@ -368,36 +368,13 @@ class QueueManager(PipelineBase):
             if getattr(self, "interactive", False):
                 input(f"⏸️ [Interactive] Phase 1d 已完成。請確認 figure_list.md，按 Enter 繼續...")
 
-            # --- Phase 2: Highlight ---
-            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p2"):
-                self.info(f"🖊️ [Queue] Phase 2: 重點標記 ({subject})...")
-                from phases.p02_highlight import Phase2Highlight
-                success = Phase2Highlight().run(subject, item["filename"])
-                if not success:
-                    raise RuntimeError("Phase 2 重點標記失敗")
-                self.state_manager.update_task(subject, item["filename"], "p2", "✅")
-            else:
-                self.info(f"🖊️ [Queue] Phase 2 已完成，跳過")
 
-            # --- Phase 3: Synthesis ---
-            self.info(f"🧠 [Queue] Phase 3: 知識濃縮合成 ({subject})...")
-            from phases.p03_synthesis import Phase3Synthesis
-            
-            synthesis_success = False
-            while not synthesis_success:
-                Phase3Synthesis().run(subject, item["filename"])
-                if getattr(self, "interactive", False):
-                    ans = input(f"⏸️ [Interactive] Phase 3 已完成。請確認 content.md，輸入 'R' 重寫，或按 Enter 繼續: ")
-                    if ans.strip().upper() == 'R':
-                        self.warning("🔄 使用者介入：重新執行 Phase 3...")
-                        continue
-                synthesis_success = True
 
             # Done
             item["status"] = PDFStatus.COMPLETED.value
             item["completed_at"] = datetime.now().isoformat()
             self._processed_hashes.add(item["md5"])
-            self.state_manager.update_task(subject, item["filename"], "p3", "✅",
+            self.state_manager.update_task(subject, item["filename"], "p1d", "✅",
                                            note_tag="Pipeline 全部完成")
             self.info(f"✅ [Queue] {item['filename']} 處理完成")
 
@@ -456,8 +433,8 @@ class QueueManager(PipelineBase):
         if phase_key:
             return record.get(phase_key) == "✅"
             
-        # If no explicit phase requested, full processing means p3 is finished.
-        return record.get("p3") == "✅"
+        # If no explicit phase requested, full processing means p1d is finished.
+        return record.get("p1d") == "✅"
 
     def _load_processed_hashes(self):
         """Load MD5 hashes of already-processed PDFs from scan_reports."""

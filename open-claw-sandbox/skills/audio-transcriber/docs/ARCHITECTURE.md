@@ -14,15 +14,8 @@ Audio Transcriber Skill 是 Open Claw 的語音轉錄知識化流水線，負責
           │
           ▼ P2: LLM 校對 + 術語保護
 02_proofread/<subject>/lecture.md
-          │
           ▼ P3: 跨段合併精煉
 03_merged/<subject>/lecture.md
-          │
-          ▼ P4: 重點標記 (Delegates to smart-highlighter)
-04_highlighted/<subject>/lecture.md
-          │
-          ▼ P5: Notion 知識合成 (Delegates to note-generator)
-05_notion_synthesis/<subject>/lecture.md
 ```
 
 ---
@@ -45,9 +38,7 @@ skills/audio-transcriber/
     │   ├── p00_glossary.py     # Phase 0: 術語表初始化
     │   ├── p01_transcribe.py   # Phase 1: 音頻轉錄 (Whisper/MLX)
     │   ├── p02_proofread.py    # Phase 2: LLM 智能校對
-    │   ├── p03_merge.py        # Phase 3: 跨段合併精煉
-    │   ├── p04_highlight.py    # Phase 4: 重點標記
-    │   └── p05_synthesis.py    # Phase 5: Notion 合成輸出
+    │   └── p03_merge.py        # Phase 3: 跨段合併精煉
     └── utils/
         └── subject_manager.py  # 語音特有 CLI 互動 (reprocess prompts)
 ```
@@ -85,8 +76,6 @@ paths:
     p1: "output/01_transcript"
     p2: "output/02_proofread"
     p3: "output/03_merged"
-    p4: "output/04_highlighted"
-    p5: "output/05_notion_synthesis"
 ```
 
 ### 3.3 狀態追蹤
@@ -111,15 +100,14 @@ paths:
                                                   │
                                             觸發 run_all.py
                                                   │
-                                    ┌─────────────┼─────────────┐
+                                     ┌─────────────┼─────────────┐
                                    P0            P1             P2
                                (術語表)        (轉錄)         (校對)
                                                   │
-                                    ┌─────────────┼─────────────┐
-                                   P3            P4             P5
-                               (合併)          (標記)         (合成)
+                                                  P3
+                                                (合併)
                                                   │
-                                       [output/05_notion_synthesis/]
+                                        [output/03_merged/]
 ```
 
 ---
@@ -129,14 +117,12 @@ paths:
 | Core/Skill 模組 | Audio Transcriber 用途 |
 |:---|:---|
 | `PipelineBase` | 所有 Phase 類別的基底 |
-| `StateManager(skill_name="audio-transcriber")` | P1-P5 進度追蹤，phases = `["p1"..."p5"]` |
+| `StateManager(skill_name="audio-transcriber")` | P1-P3 進度追蹤，phases = `["p1"..."p3"]` |
 | `PathBuilder` | 從 config.yaml `paths.phases` 解析目錄 |
 | `OllamaClient` | P2-P3 LLM 推論 |
 | `GlossaryManager` | 術語表同步至 doc-parser |
 | `DiffEngine` | P1↔P2 差異檢視（Web UI Review Board）|
 | `SystemInboxDaemon` | 監聽 `input/raw_data/` 新增音檔 |
-| `SmartHighlighter` | P4 核心標記引擎 (standalone skill) |
-| `NoteGenerator` | P5 核心合成引擎 (standalone skill) |
 
 ---
 

@@ -139,8 +139,7 @@ skills/
 │       │   ├── p01_transcribe.py   ← Phase 1: MLX-Whisper / Faster-Whisper transcription
 │       │   ├── p02_proofread.py    ← Phase 2: LLM chunk-by-chunk proofreading + term guard
 │       │   ├── p03_merge.py        ← Phase 3: Cross-chunk merge and refinement
-│       │   ├── p04_highlight.py    ← Phase 4: Key-concept highlighting
-│       │   └── p05_synthesis.py    ← Phase 5: Notion-ready knowledge synthesis
+
 │       └── utils/
 │           └── subject_manager.py  ← Voice-memo-specific CLI helpers: ask_reprocess(),
 │                                      should_process_task(), get_target_path()
@@ -159,12 +158,11 @@ skills/
     └── scripts/
         ├── run_all.py              ← QueueManager orchestrator: batch PDF queue processor
         └── phases/
-            ├── p01a_diagnostic.py  ← Phase 1a: Lightweight PDF diagnostic (scan vs digital)
-            ├── p01b_engine.py      ← Phase 1b: Docling deep extraction → raw_extracted.md (IMMUTABLE)
-            ├── p01c_vector_charts.py ← Phase 1c: Vector chart rasterisation (pdftoppm)
-            ├── p01d_ocr_gate.py    ← Phase 1d: OCR quality assessment (scan PDFs only)
-            ├── p02a_vlm_vision.py  ← Phase 1d: VLM visual figure description → figure_list.md
-            └── p02b_synthesis.py   ← Phase 3: Map-Reduce synthesis → content.md
+            ├── p00a_diagnostic.py  ← Phase 0a: Lightweight PDF diagnostic (scan vs digital)
+            ├── p01a_engine.py      ← Phase 1a: Docling deep extraction → raw_extracted.md (IMMUTABLE)
+            ├── p01b_vector_charts.py ← Phase 1b: Vector chart rasterisation (pdftoppm)
+            ├── p01c_ocr_gate.py    ← Phase 1c: OCR quality assessment (scan PDFs only)
+            └── p01d_vlm_vision.py  ← Phase 1d: VLM visual figure description → figure_list.md
 
 ├── smart-highlighter/              ← Standalone skill: Highlight raw markdown (Anti-Tampering)
 │   ├── SKILL.md                    ← Quick-start
@@ -202,8 +200,7 @@ data/
 │   │   ├── 01_transcript/<subject>/    ← Phase 1 output
 │   │   ├── 02_proofread/<subject>/     ← Phase 2 output
 │   │   ├── 03_merged/<subject>/        ← Phase 3 output
-│   │   ├── 04_highlighted/<subject>/   ← Phase 4 output
-│   │   └── 05_notion_synthesis/<subject>/ ← Phase 5 final output
+
 │   ├── state/
 │   │   ├── .pipeline_state.json        ← Source of truth for task progress
 │   │   └── checklist.md               ← Human-readable progress table (auto-generated)

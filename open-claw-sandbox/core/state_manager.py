@@ -11,9 +11,9 @@ from .atomic_writer import AtomicWriter
 
 class StateManager:
     # Default phases for audio-transcriber
-    PHASES_VOICE = ["p1", "p2", "p3", "p4", "p5"]
+    PHASES_VOICE = ["p1", "p2", "p3"]
     # Phase set for doc-parser
-    PHASES_PDF   = ["p1a", "p1b", "p1c", "p1d", "p2a", "p2b"]
+    PHASES_PDF   = ["p0a", "p1a", "p1b", "p1c", "p1d"]
     # Phase set for knowledge-compiler
     PHASES_COMPILER = ["p1"]
     # Phase set for interactive-reader
@@ -24,10 +24,9 @@ class StateManager:
     PHASES_ACADEMIC = ["p1", "p2"]
 
     # Phase labels for checklist rendering
-    PHASE_LABELS_VOICE = {"p1": "P1 (轉錄)", "p2": "P2 (校對)", "p3": "P3 (合併)",
-                          "p4": "P4 (標記)", "p5": "P5 (Notion)" }
-    PHASE_LABELS_PDF   = {"p1a": "P1a (診斷)", "p1b": "P1b (提取)", "p1c": "P1c (向量圖)",
-                          "p1d": "P1d (OCR)",  "p2a": "P2a (VLM)",  "p2b": "P2b (合成)" }
+    PHASE_LABELS_VOICE = {"p1": "P1 (轉錄)", "p2": "P2 (校對)", "p3": "P3 (合併)"}
+    PHASE_LABELS_PDF   = {"p0a": "P0a (診斷)", "p1a": "P1a (提取)", "p1b": "P1b (向量圖)",
+                          "p1c": "P1c (OCR評估)", "p1d": "P1d (VLM視覺)"}
     PHASE_LABELS_COMPILER = {"p1": "P1 (編譯與雙向連結)"}
     PHASE_LABELS_READER = {"p1": "P1 (互動標籤處理)"}
     PHASE_LABELS_AGENT = {"p1": "P1 (向量庫服務)"}
