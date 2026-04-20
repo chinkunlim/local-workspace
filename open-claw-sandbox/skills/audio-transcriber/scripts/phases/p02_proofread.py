@@ -35,7 +35,8 @@ class Phase2Proofread(PipelineBase):
         
     def _get_glossary(self, subject: str) -> str:
         import json
-        glossary_path = os.path.join(self.dirs["p0"], subject, "glossary.json")
+        ref_dir = self.dirs.get("p0_ref", os.path.join(self.base_dir, "output", "00_glossary"))
+        glossary_path = os.path.join(ref_dir, subject, "glossary.json")
         if not os.path.exists(glossary_path): return ""
         try:
             with open(glossary_path, "r", encoding="utf-8") as f: gloss = json.load(f)
@@ -80,7 +81,8 @@ class Phase2Proofread(PipelineBase):
             # --- Load Extra Context ---
             glossary_text = self._get_glossary(subj)
             pdf_text = ""
-            pdf_path = os.path.join(self.dirs["p0"], subj, f"{base_name}.pdf")
+            ref_dir = self.dirs.get("p0_ref", os.path.join(self.base_dir, "output", "00_glossary"))
+            pdf_path = os.path.join(ref_dir, subj, f"{base_name}.pdf")
             
             if os.path.exists(pdf_path):
                 try:
@@ -93,7 +95,7 @@ class Phase2Proofread(PipelineBase):
                 m = re.match(r'^(.+)-(\d+)$', base_name)
                 if m:
                     lecture_base = m.group(1)
-                    shared_pdf = os.path.join(self.dirs["p0"], subj, f"{lecture_base}.pdf")
+                    shared_pdf = os.path.join(ref_dir, subj, f"{lecture_base}.pdf")
                     if os.path.exists(shared_pdf):
                         try:
                             reader = PdfReader(shared_pdf)

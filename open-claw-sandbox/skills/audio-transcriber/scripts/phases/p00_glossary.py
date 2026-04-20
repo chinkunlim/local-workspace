@@ -59,12 +59,15 @@ class Phase0Glossary(PipelineBase):
             self.log("❌ 找不到 Phase 0 的 prompt 指令，請確認 prompt.md 內有對應的段落。", "error")
             return
             
-        raw_dir = self.dirs["p0"]
-        if not os.path.isdir(raw_dir): 
-            self.log("❌ 找不到 raw_data 目錄", "error")
+        ref_dir = self.dirs.get("p0_ref", os.path.join(self.base_dir, "output", "00_glossary"))
+        os.makedirs(ref_dir, exist_ok=True)
+        
+        p1_dir = self.dirs["p1"]
+        if not os.path.isdir(p1_dir): 
+            self.log("❌ 找不到 Phase 1 轉錄稿目錄", "error")
             return
         
-        all_subs = [d for d in os.listdir(raw_dir) if os.path.isdir(os.path.join(raw_dir, d))]
+        all_subs = [d for d in os.listdir(p1_dir) if os.path.isdir(os.path.join(p1_dir, d))]
         target_subjects = [subject] if subject else None
         subs = [s for s in target_subjects if s in all_subs] if target_subjects else all_subs
         
@@ -85,7 +88,8 @@ class Phase0Glossary(PipelineBase):
             options = config.get("options", {})
             models_used.add(model_name)
             
-            out_path = os.path.join(raw_dir, subj, "glossary.json")
+            out_path = os.path.join(ref_dir, subj, "glossary.json")
+            os.makedirs(os.path.dirname(out_path), exist_ok=True)
             existing = {}
             if os.path.exists(out_path):
                 try:
