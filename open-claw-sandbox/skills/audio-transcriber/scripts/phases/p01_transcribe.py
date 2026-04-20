@@ -496,9 +496,8 @@ class Phase1Transcribe(PipelineBase):
                         result = mlx_whisper.transcribe(
                             cleaned_path,
                             path_or_hf_repo=model_name,
-                            # 語言：自動偵測結果或手動指定（均可防止 Hebrew 誤判）
-                            decode_options={"language": language} if language else {},
-                            initial_prompt=None,
+                            # language 直接作為 **kwargs 傳入（decode_options 是 **kwargs 展開）
+                            **({"language": language} if language else {}),
                             # Layer 0: 原生防禦參數（v0.4.3 已支援）
                             condition_on_previous_text=condition_on_prev_text,
                             compression_ratio_threshold=compression_ratio_thresh,
