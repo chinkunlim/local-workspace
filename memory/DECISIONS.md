@@ -22,6 +22,19 @@
 
 ---
 
+## [2026-04-20] Strict I/O Routing & Extraction Layer Purge
+
+**Context:** The `inbox_daemon.py` was bypassing sandbox boundaries by directly writing `.pdf` files to `audio-transcriber/output/` based on `pdf_routing_rules`, causing routing leakage. Furthermore, `audio-transcriber` and `doc-parser` still contained processing prompts (highlighting, synthesis) that belong to `smart_highlighter` and `note_generator`.
+
+**Decision:**
+1. **Strict I/O Routing**: `inbox_daemon.py` now strictly routes files based on extension (`.m4a`/`.mp3` to `audio-transcriber/input/`, `.pdf` to `doc-parser/input/`). Cross-skill `output/` writes are strictly forbidden.
+2. **Extraction Layer Purge**: Removed Phase 4 (highlight) and Phase 5 (synthesis) from `audio-transcriber`, and Phase 2 (highlight) and Phase 3 (synthesis) from `doc-parser`.
+3. **Prompt Migration**: Integrated all highlighting rules into `smart_highlighter` and all synthesis Map-Reduce rules into `note_generator`.
+
+**Rationale:** Enforces the single-responsibility principle. Extraction skills should only extract high-fidelity Markdown. Processing skills handle formatting and synthesis.
+
+---
+
 ## [2026-04-19] Global `ops/check.sh` added at monorepo root
 
 **Context:** §16.5 specifies `ops/check.sh` as the quality gate. The sandbox has its own check script, but there was no root-level script to scan the whole monorepo.

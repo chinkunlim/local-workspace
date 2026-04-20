@@ -57,6 +57,13 @@ local-workspace/                    ← Monorepo root (git repo)
 
 Open WebUI Pipelines is infrastructure (a plugin runner for the LLM proxy), not an application with user-facing logic. It belongs with the other infrastructure services in `infra/`.
 
+### Strict Extraction vs Processing Boundaries
+
+Skills are strictly divided into **Extraction** and **Processing** layers.
+- **Extraction Skills** (`audio-transcriber`, `doc-parser`): Responsible ONLY for generating high-fidelity Markdown from raw files. They must not perform summarization, highlighting, or formatting.
+- **Processing Skills** (`smart_highlighter`, `note_generator`): Responsible for taking raw Markdown and applying stylistic highlights, generating Cornell notes, or mapping core concepts.
+- **I/O Routing**: The `inbox_daemon` routes files purely by extension into a skill's `input/` directory. Direct writing to another skill's `output/` directory is strictly forbidden.
+
 ---
 
 ## Service Map

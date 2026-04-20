@@ -7,6 +7,11 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ## [Unreleased]
 
+### Changed
+- **core**: `inbox_daemon.py` now strictly adheres to sandbox input isolation. Removed hardcoded `pdf_routing_rules` that previously bypassed boundaries and wrote directly to cross-skill `output/` directories.
+- **skills**: Purged highlight and synthesis prompts/configs from `audio-transcriber` and `doc-parser` to enforce pure extraction logic.
+- **skills**: Migrated and integrated the purged highlighting and Map-Reduce synthesis prompts into `smart_highlighter` and `note_generator`.
+
 ---
 
 ## [0.9.0] — 2026-04-19
