@@ -63,7 +63,7 @@ graph TD
 
 | 技能 (Skill) | 角色 | Input 來源 | Output 去向 | 說明 |
 | :--- | :--- | :--- | :--- | :--- |
-| **audio-transcriber** | 工廠 | `data/raw/Subject/` 轉送至 `input/Subject/` | `output/05_notion_synthesis/Subject/` | 將語音轉成結構化筆記 |
+| **audio-transcriber** | 工廠 | `data/raw/Subject/` 轉送至 `input/Subject/` | `output/03_merged/Subject/` | 將語音轉成結構化筆記 (具備抗幻覺防禦) |
 | **doc-parser** | 工廠 | `data/raw/Subject/` 轉送至 `input/Subject/` | `output/03_synthesis/Subject/` | 將 PDF 轉成結構化筆記 |
 | **knowledge-compiler** | 物流 | 屃描上述工廠的最終 `output` | `data/wiki/` | 建立雙向連結並上架至展示區 |
 | **note-generator** | 學者 | `data/wiki/` | `data/wiki/` | 二次加工：讀取展示區筆記並生成總結筆記 |

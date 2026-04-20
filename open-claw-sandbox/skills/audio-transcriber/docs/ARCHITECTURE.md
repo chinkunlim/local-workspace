@@ -1,6 +1,6 @@
 # Open Claw — Audio Transcriber Skill Architecture
 
-> Version: V8.0 | Last Updated: 2026-04-19
+> Version: V8.1 | Last Updated: 2026-04-20
 
 ## 1. 概覽
 
@@ -9,7 +9,12 @@ Audio Transcriber Skill 是 Open Claw 的語音轉錄知識化流水線，負責
 ```
 01_raw_data/<subject>/lecture.m4a
           │
-          ▼ P1: Whisper / MLX 轉錄
+          ▼ P1: Whisper / MLX 轉錄 (V8.1 三層抗幻覺防禦)
+            ├─ Layer 0: Native API 防禦 (condition_on_previous_text=False)
+            ├─ Layer 1: VAD 前處理 (pydub 靜音切除 + 移除率安全閥)
+            ├─ 語言偵測: 多片段多數投票 (可透過 force_language 關閉)
+            └─ Layer 2: 局部重試 (N-gram/zlib 重複率偵測)
+          │
 01_transcript/<subject>/lecture.md
           │
           ▼ P2: LLM 校對 + 術語保護
@@ -45,7 +50,18 @@ skills/audio-transcriber/
 
 ---
 
-## 3. 核心架構原則
+## 3. 核心架構原則與抗幻覺機制 (V8.1)
+
+### 3.0 三層抗幻覺防禦 (Triple-Layer Anti-Hallucination Defense)
+
+針對 Whisper 在高噪音/長靜音環境下容易產生的「無限重複迴圈 (Hallucination Loop)」，Phase 1 導入了三層防禦：
+
+1. **Layer 0 (原生層)**: 啟用 `condition_on_previous_text=False` 與 `hallucination_silence_threshold` 等 MLX/Whisper 內建防禦參數。
+2. **Layer 1 (輸入層 - VAD)**: 使用 `pydub.silence` 在轉錄前切除靜音。設有 `vad_max_removal_ratio` (預設 90%) 作為安全閥，若切除過多將 Fallback 回原始音檔。
+3. **Layer 2 (後處理層 - 重複偵測)**: 使用 N-gram 與 zlib 壓縮率掃描生成的 Segments。若偵測到重複幻覺，自動以較高的 Temperature 針對該 Segment 執行局部重試 (`retry_segment`)。
+4. **語言偵測**: 採取「前中後 3 片段多數決投票」，避免單一片段靜音導致語言誤判（可於 `config.yaml` 透過 `force_language` 覆寫以加速）。
+
+---
 
 ### 3.1 繼承關係
 

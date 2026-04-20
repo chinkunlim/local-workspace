@@ -79,3 +79,34 @@
 **Chosen approach**: Chunk at `chunk_size=4000` characters, refine each independently, merge with a lightweight consolidation prompt. A `Content-Loss Guard` verifies the final output is ≥40% of the combined chunks.
 
 **Trade-off**: 2× LLM calls vs single-pass. Accepted — correctness over speed.
+
+---
+
+## 2026-04-20 — V8.1: Triple-Layer Anti-Hallucination Defense
+
+**Decision**: Implement a robust three-layer defense system in Phase 1 (`p01_transcribe.py`) to prevent Whisper's classic "hallucination loops" (repeating the same phrase infinitely) in high-noise/silence environments.
+
+**Context**: Whisper often hallucinates when encountering long segments of silence or persistent background noise, looping text endlessly and ignoring subsequent speech.
+
+**Chosen approach**:
+1. **Layer 0 (Native Defense)**: Expose MLX-Whisper native parameters (`condition_on_previous_text=False`, `compression_ratio_threshold`, `no_speech_threshold`, `hallucination_silence_threshold`).
+2. **Layer 1 (Pre-processing VAD)**: Use `pydub.silence` to aggressively strip silence before passing audio to Whisper. Added a `vad_max_removal_ratio` (default 90%) safety fallback — if VAD strips >90% of the audio, it's likely a false positive (threshold too aggressive), so it falls back to the original audio.
+3. **Layer 2 (Post-processing Repetition Detection)**: Analyze each transcribed segment for n-gram repetition (e.g., repeating 4-grams) and zlib compression ratios. If a segment is flagged, perform a localized `retry_segment` with a slight temperature bump.
+
+**Impact**: Effectively eliminates infinite loops in academic recordings with long pauses.
+
+---
+
+## 2026-04-20 — Multi-Clip Language Detection & Stderr Suppression
+
+**Decision**: Upgrade language detection to sample 3 non-overlapping clips (start, middle, end) and use majority voting. Redirect subprocess stderr to `/dev/null` during `mlx_whisper.transcribe()`.
+
+**Context**: 
+1. If an audio file started with 30s of silence, Whisper would misidentify the language as English or Hebrew, causing the entire subsequent transcription to fail.
+2. Every `mlx_whisper` subprocess execution triggered `MallocStackLogging` macOS system warnings, spamming the console.
+
+**Chosen approach**:
+1. `detect_audio_language` now divides the audio into 3 equal parts, takes a short clip from each, detects the language, and uses `collections.Counter` for majority voting. Can be bypassed entirely via `force_language` in `config.yaml` for a ~90s speedup per file.
+2. Wraps `mlx_whisper.transcribe()` in `os.dup2` to redirect `fd 2` to `os.devnull`, cleanly suppressing OS-level `libmalloc` warnings without affecting Python exceptions.
+
+**Trade-off**: Multi-clip detection adds overhead (3 separate Whisper invocations). Mitigated by offering the `force_language` config option for homogenous datasets.

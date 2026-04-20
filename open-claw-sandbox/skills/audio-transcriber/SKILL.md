@@ -35,7 +35,7 @@ open http://localhost:5001
 | Phase | 腳本 | 功能 |
 |:---:|:---|:---|
 | P0 | `p00_glossary.py` | 術語表初始化，防止 LLM 生造詞 |
-| P1 | `p01_transcribe.py` | MLX-Whisper 高精度轉錄 |
+| P1 | `p01_transcribe.py` | MLX-Whisper 高精度轉錄 (內建三層抗幻覺防禦、VAD 與多片段語言偵測) |
 | P2 | `p02_proofread.py` | LLM 智能校對 + 術語保護 |
 | P3 | `p03_merge.py` | 跨段合併精煉 |
 
