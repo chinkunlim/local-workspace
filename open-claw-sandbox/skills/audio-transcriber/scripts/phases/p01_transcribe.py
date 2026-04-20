@@ -36,6 +36,7 @@ def vad_preprocess(
     min_silence_len_ms: int = 1500,
     silence_thresh_dbfs: int = -35,
     padding_ms: int = 300,
+    max_removal_ratio: float = 0.90,
     log_fn=None,
 ) -> str:
     """
@@ -47,10 +48,12 @@ def vad_preprocess(
         min_silence_len_ms: 超過此長度的靜音才切除（ms）
         silence_thresh_dbfs: 靜音判斷閾值 dBFS（有背景噪音用 -35，安靜室內用 -40）
         padding_ms:         切除靜音時前後保留的 buffer（ms）
+        max_removal_ratio:  VAD 移除上限比例（超過此值代表閾值設太高、誤判語音，
+                            自動 fallback 回原始音檔）
         log_fn:             日誌回呼函數（可選）
 
     Returns:
-        cleaned_wav_path: 去靜音後的 .wav 絕對路徑；若全靜音或套件未安裝則回傳原路徑
+        cleaned_wav_path: 去靜音後的 .wav 絕對路徑；若全靜音、過度移除或套件未安裝則回傳原路徑
     """
     def _log(msg):
         if log_fn:
@@ -95,6 +98,15 @@ def vad_preprocess(
     original_duration = len(audio) / 1000
     cleaned_duration  = len(cleaned_audio) / 1000
     silence_ratio     = 1.0 - (cleaned_duration / original_duration)
+
+    # ── 安全閥：移除率超過上限，代表閾值過高誤判語音，fallback 回原始音檔 ──
+    if silence_ratio > max_removal_ratio:
+        _log(
+            f"⚠️  VAD 移除率 {silence_ratio:.1%} 超過上限 {max_removal_ratio:.0%}，"
+            f"閾值可能過高（誤判語音為靜音）— fallback 回原始音檔。"
+        )
+        return audio_path
+
     _log(
         f"🔇 VAD 前處理完成：移除 {silence_ratio:.1%} 靜音，"
         f"{original_duration:.1f}s → {cleaned_duration:.1f}s"
@@ -106,85 +118,6 @@ def vad_preprocess(
     cleaned_audio.export(cleaned_path, format="wav")
 
     return cleaned_path
-
-
-# ---------------------------------------------------------------------------
-# Language Pre-detection (run on ORIGINAL audio, before VAD)
-# ---------------------------------------------------------------------------
-
-def detect_audio_language(
-    audio_path: str,
-    model_name: str,
-    tmp_dir: str,
-    log_fn=None,
-) -> str | None:
-    """
-    在 VAD 前處理之前，先用原始音檔的前 30 秒跑一次 Whisper 語言偵測。
-
-    Why before VAD:
-        VAD 會改變送進 Whisper 的「前 30 秒」內容，導致語言偵測不穩定
-        （例如原本是英文的音檔，VAD 後首段變成靜音後的中段，被誤判為 Hebrew）。
-        在原始音檔上偵測，結果最穩定。
-
-    Args:
-        audio_path: 原始音檔路徑（VAD 前）
-        model_name: Whisper model 名稱（mlx-whisper 用）
-        tmp_dir:    暫存目錄
-        log_fn:     日誌回呼（可選）
-
-    Returns:
-        語言代碼字串（如 "en"、"zh"、"ja"）；偵測失敗時回傳 None
-    """
-    def _log(msg):
-        if log_fn:
-            log_fn(msg)
-
-    try:
-        from pydub import AudioSegment
-    except ImportError:
-        _log("⚠️  pydub 未安裝，跳過語言預偵測。")
-        return None
-
-    try:
-        audio = AudioSegment.from_file(audio_path)
-    except Exception as e:
-        _log(f"⚠️  語言預偵測：無法載入音檔（{e}），跳過。")
-        return None
-
-    # 取前 30 秒（Whisper 語言偵測視窗）
-    clip_ms   = min(30_000, len(audio))
-    clip      = audio[:clip_ms].set_channels(1).set_frame_rate(16000)
-
-    os.makedirs(tmp_dir, exist_ok=True)
-    lang_clip_path = os.path.join(tmp_dir, "_lang_detect.wav")
-
-    try:
-        clip.export(lang_clip_path, format="wav")
-        import mlx_whisper
-        import warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            result = mlx_whisper.transcribe(
-                lang_clip_path,
-                path_or_hf_repo=model_name,
-                verbose=False,
-            )
-        detected = result.get("language", None)
-        if detected:
-            _log(f"🔍 語言預偵測（原始音檔前 {clip_ms//1000}s）：偵測為 [{detected}]")
-        else:
-            _log("⚠️  語言預偵測：未能取得語言資訊。")
-        return detected
-
-    except Exception as e:
-        _log(f"⚠️  語言預偵測失敗: {e}")
-        return None
-    finally:
-        if os.path.exists(lang_clip_path):
-            try:
-                os.remove(lang_clip_path)
-            except OSError:
-                pass
 
 
 # ---------------------------------------------------------------------------
@@ -405,16 +338,13 @@ class Phase1Transcribe(PipelineBase):
             vad_min_silence_ms         = int(ah.get("vad_min_silence_len_ms", 1500))
             vad_silence_dbfs           = int(ah.get("vad_silence_thresh_dbfs", -35))
             vad_padding_ms             = int(ah.get("vad_padding_ms", 300))
+            vad_max_removal_ratio      = float(ah.get("vad_max_removal_ratio", 0.90))
             # Layer 2
             rep_enabled                = bool(ah.get("repetition_detection_enabled", True))
             rep_ngram                  = int(ah.get("repetition_ngram_size", 4))
             rep_threshold              = float(ah.get("repetition_threshold", 0.45))
             rep_compress_ratio         = float(ah.get("repetition_compress_ratio", 0.3))
             retry_temperature          = float(ah.get("retry_temperature", 0.2))
-
-            # 語言設定
-            lang_mode = config.get("language_detection_mode", "auto").lower()
-            forced_language = config.get("language", None)  # 對應 mode=manual
 
             # Re-load model if profile changes between subjects
             if model is not None and current_model_name != model_name:
@@ -450,33 +380,17 @@ class Phase1Transcribe(PipelineBase):
                     self.log(f"🧠 備妥 Whisper ({engine}) {model_name}...")
 
             try:
-                # ── 語言偵測：在 VAD 前先用原始音檔偵測 ──────────────
-                language = None
-                if lang_mode == "manual":
-                    language = forced_language
-                    if language:
-                        self.log(f"🌐 語言：手動指定 [{language}]")
-                elif lang_mode == "auto":
-                    self.log("🔍 語言預偵測：分析原始音檔前 30 秒...")
-                    language = detect_audio_language(
-                        audio_path=audio_path,
-                        model_name=model_name,
-                        tmp_dir=tmp_dir,
-                        log_fn=self.log,
-                    )
-                else:  # none
-                    self.log("⚠️  語言偵測模式：none，完全依賴 Whisper 內建辨識")
-
-                # ── Layer 1: VAD 前處理 ───────────────────────────
+                # ── Layer 1: VAD 前處理 ──────────────────────────────────
                 cleaned_path = audio_path
                 if vad_enabled:
-                    self.log(f"🔇 Layer 1: VAD 前處理中（閾值 {vad_silence_dbfs} dBFS）...")
+                    self.log(f"🔇 Layer 1: VAD 前處理中（閾值 {vad_silence_dbfs} dBFS，上限移除率 {vad_max_removal_ratio:.0%}）...")
                     cleaned_path = vad_preprocess(
                         audio_path=audio_path,
                         tmp_dir=tmp_dir,
                         min_silence_len_ms=vad_min_silence_ms,
                         silence_thresh_dbfs=vad_silence_dbfs,
                         padding_ms=vad_padding_ms,
+                        max_removal_ratio=vad_max_removal_ratio,
                         log_fn=self.log,
                     )
 
@@ -488,16 +402,12 @@ class Phase1Transcribe(PipelineBase):
                 if engine == "mlx-whisper":
                     import mlx_whisper
                     import warnings
-                    if language:
-                        self.log(f"🌐 轉錄語言：[{language}]")
                     pbar, stop_tick, t = self.create_spinner(f"轉錄處理 ({fname})")
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         result = mlx_whisper.transcribe(
                             cleaned_path,
                             path_or_hf_repo=model_name,
-                            # language 直接作為 **kwargs 傳入（decode_options 是 **kwargs 展開）
-                            **({"language": language} if language else {}),
                             # Layer 0: 原生防禦參數（v0.4.3 已支援）
                             condition_on_previous_text=condition_on_prev_text,
                             compression_ratio_threshold=compression_ratio_thresh,
@@ -513,7 +423,6 @@ class Phase1Transcribe(PipelineBase):
                     segments_gen, info = model.transcribe(
                         cleaned_path,
                         beam_size=beam_size,
-                        language=language,               # 自動偵測結果或手動指定（防止誤判）
                         vad_filter=True,
                         condition_on_previous_text=condition_on_prev_text,
                     )

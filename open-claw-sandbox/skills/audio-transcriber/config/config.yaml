@@ -37,14 +37,6 @@ phase0:
 
 phase1:
   active_profile: apple_silicon_mps
-  # 語言設定
-  # language_detection_mode 選項：
-  #   auto   ：在 VAD 前先用原始音檔前 30 秒偵測語言，再將結果传給轉錄（建議）
-  #   manual ：強制使用下方 language 欄位指定的語言（如 zh、en）
-  #   none   ：完全依賴 Whisper 內建偵測（不建議，容易誤判）
-  language_detection_mode: "auto"
-  # language: "zh"   # 当 mode=manual 時才底下這行
-
   profiles:
     default:
       engine: faster-whisper
@@ -75,6 +67,7 @@ phase1:
     vad_min_silence_len_ms: 1500        # 超過 1500ms 才切除靜音
     vad_silence_thresh_dbfs: -35        # -35dBFS 適合有背景噪音的環境
     vad_padding_ms: 300                 # 切除靜音時前後保留 300ms buffer
+    vad_max_removal_ratio: 0.90         # 移除率上限：超過 90% 視為閾值誤判，fallback 回原始音檔
 
     # Layer 2 — Segment 重複偵測 + 局部重試
     repetition_detection_enabled: true
