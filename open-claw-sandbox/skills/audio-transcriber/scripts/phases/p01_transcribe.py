@@ -666,31 +666,30 @@ class Phase1Transcribe(PipelineBase):
                         except OSError:
                             pass
 
-        finally:
-            # ── 釋放模型與記憶體 ──────────────────────────────────────────
-            self.log("🧹 [Phase 1] 正在卸載轉錄模型並釋放記憶體...")
-            if model is not None:
-                del model
-            
-            import gc
-            gc.collect()
+        # ── 釋放模型與記憶體 ──────────────────────────────────────────
+        self.log("🧹 [Phase 1] 正在卸載轉錄模型並釋放記憶體...")
+        if model is not None:
+            del model
+        
+        import gc
+        gc.collect()
 
-            # 清理 MLX / PyTorch 快取
-            if engine == "mlx-whisper":
-                try:
-                    import mlx.core as mx
-                    mx.metal.clear_cache()
-                except Exception:
-                    pass
-            elif engine == "faster-whisper":
-                try:
-                    import torch
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
-                except Exception:
-                    pass
-            
-            self.log("✅ [Phase 1] 記憶體釋放完成。")
+        # 清理 MLX / PyTorch 快取
+        if engine == "mlx-whisper":
+            try:
+                import mlx.core as mx
+                mx.metal.clear_cache()
+            except Exception:
+                pass
+        elif engine == "faster-whisper":
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except Exception:
+                pass
+        
+        self.log("✅ [Phase 1] 記憶體釋放完成。")
 
 
 if __name__ == "__main__":
