@@ -501,60 +501,93 @@ class QueueManager(PipelineBase):
 # ---------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-    parser = build_skill_parser(
-        "Doc Parser Queue Manager",
-        include_force=True,
-        include_resume=True,
-        include_subject=True,
-        include_process_all=True,
-        include_interactive=True,
-    )
-    parser.add_argument("--scan", action="store_true", help="只掃描 Inbox，不處理")
-    parser.add_argument("--process-one", action="store_true", help="只處理下一個 PDF")
-    args = parser.parse_args()
+    try:
+        parser = build_skill_parser(
+            "Doc Parser Queue Manager",
+            include_force=True,
+            include_resume=True,
+            include_subject=True,
+            include_process_all=True,
+            include_interactive=True,
+        )
+        parser.add_argument("--scan", action="store_true", help="只掃描 Inbox，不處理")
+        parser.add_argument("--process-one", action="store_true", help="只處理下一個 PDF")
+        args = parser.parse_args()
 
-    qm = QueueManager(
-        force_mode=args.force,
-        subject_filter=getattr(args, "subject", None),
-        file_filter=getattr(args, "file", None),
-        single_mode=getattr(args, "single", False),
-    )
-    qm.interactive = args.interactive
+        qm = QueueManager(
+            force_mode=args.force,
+            subject_filter=getattr(args, "subject", None),
+            file_filter=getattr(args, "file", None),
+            single_mode=getattr(args, "single", False),
+        )
+        qm.interactive = args.interactive
 
-    if not qm.startup_check():
-        sys.exit(1)
+        if not qm.startup_check():
+            sys.exit(1)
 
-    qm.scan_inbox()
+        qm.scan_inbox()
 
-    if args.scan:
-        qm.state_manager.print_dashboard()
-        print(f"\n佇列狀態: {len(qm._queue)} 個 PDF")
-        for item in qm._queue:
-            print(f"  {item['status']:10s} {item['filename']}")
+        if args.scan:
+            qm.state_manager.print_dashboard()
+            print(f"\n佇列狀態: {len(qm._queue)} 個 PDF")
+            for item in qm._queue:
+                print(f"  {item['status']:10s} {item['filename']}")
 
-    elif args.process_one:
-        result = qm.process_next()
-        if result:
-            print(f"\n✅ 已處理: {result['filename']} ({result['status']})")
-        else:
-            print("\n📭 佇列為空")
-
-    elif args.process_all:
-        qm.process_all()
-
-    else:
-        # 互動式選單 (當沒有帶入任何執行參數時)
-        qm.state_manager.print_dashboard()
-        pending = [i for i in qm._queue if i["status"] == PDFStatus.PENDING.value]
-        if pending:
-            from core.cli_menu import batch_select_tasks
-
-            chosen_dict = batch_select_tasks(pending, header="待處理的 PDF")
-            if not chosen_dict:
-                print("\n已退出。")
+        elif args.process_one:
+            result = qm.process_next()
+            if result:
+                print(f"\n✅ 已處理: {result['filename']} ({result['status']})")
             else:
-                # 覆寫佇列為所選的檔案
-                qm._queue = list(chosen_dict.values())
-                qm.process_all()
+                print("\n📭 佇列為空")
+
+        elif args.process_all:
+            qm.process_all()
+
         else:
-            print("\n📭 目前沒有需要處理的 PDF。")
+            # 互動式選單 (當沒有帶入任何執行參數時)
+            qm.state_manager.print_dashboard()
+            pending = [i for i in qm._queue if i["status"] == PDFStatus.PENDING.value]
+            if pending:
+                from core.cli_menu import batch_select_tasks
+
+                chosen_dict = batch_select_tasks(pending, header="待處理的 PDF")
+                if not chosen_dict:
+                    print("\n已退出。")
+                else:
+                    # 覆寫佇列為所選的檔案
+                    qm._queue = list(chosen_dict.values())
+                    qm.process_all()
+            else:
+                print("\n📭 目前沒有需要處理的 PDF。")
+        print("🏁 Pipeline 執行完畢。")
+        try:
+            import subprocess
+
+            subprocess.run(
+                [
+                    "osascript",
+                    "-e",
+                    'display notification "Pipeline 執行完畢" with title "Open-Claw"',
+                ],
+                check=False,
+            )
+        except Exception:
+            pass
+    except KeyboardInterrupt:
+        print("\n🛑 使用者手動中斷執行 (KeyboardInterrupt)")
+        try:
+            import subprocess
+
+            subprocess.run(
+                [
+                    "osascript",
+                    "-e",
+                    'display notification "Execution Interrupted" with title "Open-Claw"',
+                ],
+                check=False,
+            )
+        except Exception:
+            pass
+        import sys
+
+        sys.exit(130)

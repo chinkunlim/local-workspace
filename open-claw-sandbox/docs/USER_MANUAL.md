@@ -75,3 +75,9 @@ When you have processed multiple papers via the `doc-parser`, you can synthesize
 5. **Prompt Execution**: Issue your synthesis command:
    > "Extract a Literature Matrix comparing the methodologies and constraints of the attached papers. Structure the output as a Markdown table."
 6. **Result**: The deterministic model will analyze the perfectly parsed, un-hallucinated intermediate representations and yield a production-grade comparison matrix.
+
+## 全域通知與儀表板標準化 (Universal Notification & Unified Dashboard)
+
+在最新版本的 Open Claw 生態系中，所有的 Skill（包含語音轉錄、文件解析、知識編譯等）都已經實作了**全域標準化介面**：
+1. **統一的儀表板**：所有模組在啟動時，皆會渲染統一格式的「📊 [技能名稱] 狀態與 DAG 追蹤面板」，讓您能在終端機中獲得完全一致的操作體驗。
+2. **優雅中斷與通知**：您隨時可以透過 `Ctrl+C` 中斷正在執行的任務。系統會攔截 `KeyboardInterrupt`，不僅安全儲存當前狀態，還會透過 macOS 原生系統發送「Execution Interrupted」推播通知；當任務正常跑完時，也會發送「Pipeline 執行完畢」通知。

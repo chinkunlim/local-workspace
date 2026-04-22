@@ -73,4 +73,37 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+        print("🏁 Pipeline 執行完畢。")
+        try:
+            import subprocess
+
+            subprocess.run(
+                [
+                    "osascript",
+                    "-e",
+                    'display notification "Pipeline 執行完畢" with title "Open-Claw"',
+                ],
+                check=False,
+            )
+        except Exception:
+            pass
+    except KeyboardInterrupt:
+        print("\n🛑 使用者手動中斷執行 (KeyboardInterrupt)")
+        try:
+            import subprocess
+
+            subprocess.run(
+                [
+                    "osascript",
+                    "-e",
+                    'display notification "Execution Interrupted" with title "Open-Claw"',
+                ],
+                check=False,
+            )
+        except Exception:
+            pass
+        import sys
+
+        sys.exit(130)

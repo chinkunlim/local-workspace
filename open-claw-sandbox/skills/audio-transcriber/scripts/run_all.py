@@ -261,6 +261,23 @@ class VoiceMemoOrchestrator(PipelineBase):
 
         except SystemExit:
             pass
+        except KeyboardInterrupt:
+            self._write_session_state(SessionState.STOPPED, context={"error": "KeyboardInterrupt"})
+            print("\n🛑 使用者手動中斷執行 (KeyboardInterrupt)")
+            try:
+                import subprocess
+
+                subprocess.run(
+                    [
+                        "osascript",
+                        "-e",
+                        'display notification "Execution Interrupted" with title "Open-Claw"',
+                    ],
+                    check=False,
+                )
+            except Exception:
+                pass
+            sys.exit(130)
         except Exception as exc:
             self._write_session_state(
                 SessionState.FAILED,
@@ -280,7 +297,7 @@ class VoiceMemoOrchestrator(PipelineBase):
                 [
                     "osascript",
                     "-e",
-                    'display notification "V8.0 Pipeline 執行完畢" with title "Open-Claw"',
+                    'display notification "Pipeline 執行完畢" with title "Open-Claw"',
                 ],
                 check=False,
             )

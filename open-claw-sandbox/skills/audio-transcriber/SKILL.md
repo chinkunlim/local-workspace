@@ -63,3 +63,7 @@ python3 core/cli_config_wizard.py --skill audio-transcriber
 - **主設定**: `config/config.yaml` — 模型選擇、路徑、閾值
 - **LLM 指令**: `config/prompt.md` — Phase 2–3 的 System Prompt
 - **詳細文件**: `docs/ARCHITECTURE.md`
+
+## 全域標準化
+
+- **全域標準化介面 (Global Standardization)**: 採用統一的 CLI 狀態與 DAG 追蹤面板，支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷保護。

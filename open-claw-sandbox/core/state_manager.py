@@ -312,9 +312,16 @@ class StateManager:
 
         lines = []
         skill_display = {
-            "audio-transcriber": "V8.0 狀態與 DAG 追蹤面板",
+            "audio-transcriber": "語音轉錄狀態與 DAG 追蹤面板",
             "doc-parser": "文件解析狀態與 DAG 追蹤面板",
-        }.get(self.skill_name, "狀態與 DAG 追蹤面板")
+            "academic-edu-assistant": "學術教育助手狀態與 DAG 追蹤面板",
+            "inbox-manager": "收件匣管理狀態與 DAG 追蹤面板",
+            "interactive-reader": "互動式閱讀狀態與 DAG 追蹤面板",
+            "knowledge-compiler": "知識編譯狀態與 DAG 追蹤面板",
+            "note_generator": "筆記生成狀態與 DAG 追蹤面板",
+            "smart_highlighter": "智能高亮狀態與 DAG 追蹤面板",
+            "telegram-kb-agent": "Telegram 知識庫代理狀態與 DAG 追蹤面板",
+        }.get(self.skill_name, f"{self.skill_name} 狀態與 DAG 追蹤面板")
 
         lines.append("=" * 36)
         lines.append(f"     📊 {skill_display}")

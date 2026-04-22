@@ -47,3 +47,7 @@ python skills/inbox-manager/scripts/query.py --remove "_ppt"
 | `audio_ref` | PDF sent to audio-transcriber as proofreading reference |
 | `doc_parser` | PDF sent to doc-parser for full Markdown parsing |
 | `both` | PDF copied to BOTH destinations simultaneously |
+
+## 全域標準化
+
+- **全域標準化介面 (Global Standardization)**: 採用統一的 CLI 狀態與 DAG 追蹤面板，支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷保護。

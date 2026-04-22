@@ -15,6 +15,7 @@ All notable changes to the Open Claw ecosystem will be documented in this file.
 - **Structured Telemetry**: Integrated `JsonFormatter` into `core/log_manager.py`. Toggled via `OPENCLAW_LOG_JSON=1`, enabling seamless upstream log aggregation for headless operations.
 - **Deterministic Exception Tracking**: Enforced `exc_info=True` across all critical exception handlers in `SystemInboxDaemon` and `StateManager` to eradicate silent fault swallowing.
 - **Automated Validation**: Bootstrapped the foundational `pytest` suite within `tests/` to guarantee invariants for core subsystems (`AtomicWriter`, `ResumeManager`, etc.).
+- **UI & UX**: `feat(global): standardized notification and UI across all skill modules`.
 
 ### Ecosystem Integrations
 - **LiteLLM & ChromaDB**: Finalized integrations for semantic RAG routing.

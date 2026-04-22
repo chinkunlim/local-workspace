@@ -58,3 +58,7 @@ the original chunk is returned unchanged.
 
 ## Version
 - v1.0.0 — 2026-04-19: Extracted from audio-transcriber/p04 and doc-parser/p02
+
+## 全域標準化
+
+- **全域標準化介面 (Global Standardization)**: 採用統一的 CLI 狀態與 DAG 追蹤面板，支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷保護。

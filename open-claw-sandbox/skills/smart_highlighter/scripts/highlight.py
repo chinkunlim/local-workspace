@@ -117,40 +117,75 @@ class SmartHighlighter(PipelineBase):
 
 
 if __name__ == "__main__":
-    import argparse
+    try:
+        import argparse
 
-    parser = argparse.ArgumentParser(description="Smart Highlighter Skill")
-    parser.add_argument("--subject", default="Default", help="Subject label")
-    parser.add_argument("--profile", help="Config profile override")
-    parser.add_argument("--input-file", dest="input_file", help="Input .md file path (file mode)")
-    parser.add_argument(
-        "--output-file", dest="output_file", help="Output .md file path (file mode)"
-    )
-    args = parser.parse_args()
-
-    highlighter = SmartHighlighter(profile=args.profile)
-
-    # File mode (WebUI Re-run)
-    if args.input_file:
-        import pathlib
-
-        input_text = pathlib.Path(args.input_file).read_text(encoding="utf-8")
-        result = highlighter.run(input_text, subject=args.subject)
-        if args.output_file:
-            from core.atomic_writer import AtomicWriter
-
-            AtomicWriter.write_text(args.output_file, result)
-            print(f"✅ Highlighted output written to: {args.output_file}")
-        else:
-            print(result)
-
-    # Stdin mode (legacy / CLI testing)
-    elif not sys.stdin.isatty():
-        input_text = sys.stdin.read()
-        if input_text:
-            result = highlighter.run(input_text, subject=args.subject)
-            print(result)
-    else:
-        print(
-            "Usage: cat doc.md | python highlight.py  OR  python highlight.py --input-file doc.md --output-file out.md"
+        parser = argparse.ArgumentParser(description="Smart Highlighter Skill")
+        parser.add_argument("--subject", default="Default", help="Subject label")
+        parser.add_argument("--profile", help="Config profile override")
+        parser.add_argument(
+            "--input-file", dest="input_file", help="Input .md file path (file mode)"
         )
+        parser.add_argument(
+            "--output-file", dest="output_file", help="Output .md file path (file mode)"
+        )
+        args = parser.parse_args()
+
+        highlighter = SmartHighlighter(profile=args.profile)
+
+        # File mode (WebUI Re-run)
+        if args.input_file:
+            import pathlib
+
+            input_text = pathlib.Path(args.input_file).read_text(encoding="utf-8")
+            result = highlighter.run(input_text, subject=args.subject)
+            if args.output_file:
+                from core.atomic_writer import AtomicWriter
+
+                AtomicWriter.write_text(args.output_file, result)
+                print(f"✅ Highlighted output written to: {args.output_file}")
+            else:
+                print(result)
+
+        # Stdin mode (legacy / CLI testing)
+        elif not sys.stdin.isatty():
+            input_text = sys.stdin.read()
+            if input_text:
+                result = highlighter.run(input_text, subject=args.subject)
+                print(result)
+        else:
+            print(
+                "Usage: cat doc.md | python highlight.py  OR  python highlight.py --input-file doc.md --output-file out.md"
+            )
+        print("🏁 Pipeline 執行完畢。")
+        try:
+            import subprocess
+
+            subprocess.run(
+                [
+                    "osascript",
+                    "-e",
+                    'display notification "Pipeline 執行完畢" with title "Open-Claw"',
+                ],
+                check=False,
+            )
+        except Exception:
+            pass
+    except KeyboardInterrupt:
+        print("\n🛑 使用者手動中斷執行 (KeyboardInterrupt)")
+        try:
+            import subprocess
+
+            subprocess.run(
+                [
+                    "osascript",
+                    "-e",
+                    'display notification "Execution Interrupted" with title "Open-Claw"',
+                ],
+                check=False,
+            )
+        except Exception:
+            pass
+        import sys
+
+        sys.exit(130)
