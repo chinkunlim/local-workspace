@@ -76,6 +76,8 @@ else
     pkill -f "core/inbox_daemon.py" 2>/dev/null || true
 fi
 
+# (Telegram Bot 已經被分離到獨立的 stop_bot.sh 腳本中，不再由 stop.sh 自動關閉)
+
 # 清理可能的孤兒程序 (安全檢查)
 pkill -f "python3.*pipelines/start.sh" 2>/dev/null || true
 
@@ -141,3 +143,11 @@ else
     echo -e "  ${GREEN}●${NC} Ollama            : ${GREEN}OFF${NC}"
 fi
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# [測試功能] Telegram 關閉推播通知 (未來不需要可將此段註解)
+(
+    # Get workspace directory safely if WORKSPACE_DIR is not set
+    _WORKSPACE="${WORKSPACE_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../open-claw-sandbox" && pwd)}"
+    cd "$_WORKSPACE" || exit
+    python3 -c "import sys; sys.path.insert(0, '.'); from core.telegram_bot import send_message; send_message('🛑 [測試] Open Claw AI 生態系已安全關閉。')" > /dev/null 2>&1
+) &

@@ -130,7 +130,7 @@ else
 fi
 
 # 7. Open Claw Inbox Daemon
-echo -e "\n${YELLOW}[7/7] Starting Inbox Daemon (audio-transcriber + doc-parser)...${NC}"
+echo -e "\n${YELLOW}[7/8] Starting Inbox Daemon (audio-transcriber + doc-parser)...${NC}"
 INBOX_DAEMON_PID_FILE="${LOG_DIR}/inbox_daemon.pid"
 if [[ -f "${INBOX_DAEMON_PID_FILE}" ]] && kill -0 "$(cat "${INBOX_DAEMON_PID_FILE}")" 2>/dev/null; then
     echo -e "   ${BLUE}─── ℹ️ Inbox Daemon already running (PID: $(cat "${INBOX_DAEMON_PID_FILE}"))${NC}"
@@ -143,6 +143,9 @@ else
     sleep 1
     echo -e "   ${GREEN}✓ Inbox Daemon started (PID: $(cat "${INBOX_DAEMON_PID_FILE}"))${NC}"
 fi
+
+# (Telegram Bot 已經被分離到獨立的 start_bot.sh 腳本中，不再由 start.sh 自動啟動)
+
 
 # --- 最終狀態彙整表 ---
 echo -e "\n${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -160,3 +163,9 @@ echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━�
 if nc -z localhost 8080 >/dev/null 2>&1; then
     open http://localhost:8080
 fi
+
+# [測試功能] Telegram 啟動推播通知 (未來不需要可將此段註解)
+(
+    cd "${WORKSPACE_DIR}" || exit
+    python3 -c "import sys; sys.path.insert(0, '.'); from core.telegram_bot import send_message; send_message('🚀 [測試] Open Claw AI 生態系已啟動！')" > /dev/null 2>&1
+) &
