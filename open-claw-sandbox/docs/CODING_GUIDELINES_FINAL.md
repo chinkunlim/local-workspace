@@ -66,6 +66,8 @@
 | **服務重啟確認** | 任何程式碼變更後，必須主動確認相關服務已重新載入，不可假設熱重載生效 |
 | **Commit 紀律** | 每次成功驗證的變更，必須立即以 Conventional Commits 格式 commit |
 | **環境衛生（Hygiene）** | 不留 `.bak`、`.tmp`、臨時測試檔；不留 `print()` 除錯語句；不留被大段註解掉的廢棄程式碼 |
+| **防精簡協議 (Anti-Truncation Protocol)** | 嚴禁將終端機指令（如 `pip install`, `chmod`）、環境變數（`.env`）、或程式碼區塊精簡為摘要文字，必須 100% 保留其完整性與可複製性，絕對禁止刪除現有條文。 |
+| **雙層文檔修改權限** | 嚴禁混修文檔。`docs/` (Root Docs) 專責環境部署與基礎設施引導；`open-claw-sandbox/docs/` (Sandbox Docs) 專責代碼規範與架構核心。 |
 
 ### 0.4 原則優先順序
 

@@ -8,38 +8,42 @@
 
 ## Root Level
 
+```text
+local-workspace/
+├── docs/                 ← 基礎設施與部署引導 (Root Docs) — 包含 AI_Master_Guide_Final.md, USER_MANUAL.md
+└── open-claw-sandbox/
+    ├── AGENTS.md             ← Non-negotiable rules and startup context for AI agents
+    ├── BOOTSTRAP.md          ← How to bring this workspace to operational state from scratch
+    ├── HEARTBEAT.md          ← Known-good state snapshot; updated after each verified stable milestone
+    ├── IDENTITY.md           ← Open Claw system identity: mission, boundaries, personality
+    ├── SOUL.md               ← Quality and discipline principles (the "why" behind the rules)
+    ├── TOOLS.md              ← Local endpoints, key paths, env vars, hardware profile
+    ├── USER.md               ← Operator profile: preferences, working style, constraints
+    │
+    ├── pyproject.toml        ← Ruff (linter/formatter) + Mypy (type checker) configuration
+    ├── requirements.txt      ← All Python dependencies for core + all skills
+    ├── .gitignore            ← Excludes data/, models/, logs/, __pycache__, .DS_Store
+    ├── .pre-commit-config.yaml ← Pre-commit hooks: Ruff lint+format + file hygiene
+    ├── .editorconfig         ← Consistent editor settings across all tools and AI agents
+    │
+    ├── .vscode/
+    │   ├── extensions.json   ← Recommended VS Code extensions (Ruff, Mypy, Python, YAML, Markdown)
+    │   └── settings.json     ← Workspace settings: format-on-save, 100-char rulers, Ruff formatter
+    │
+    ├── .openclaw/
+    │   └── workspace-state.json  ← Open Claw agent bootstrap state (version + seed timestamp)
+    │
+    ├── memory/               ← AI collaboration memory layer (read by agents at every session start)
+    ├── core/                 ← Shared framework — all skills import ONLY from here, never from each other
+    ├── skills/               ← Self-contained skill pipelines
+    ├── data/                 ← Runtime data: pipeline outputs (excluded from git)
+    ├── models/               ← HuggingFace model cache (excluded from git)
+    ├── logs/                 ← Service runtime logs from start.sh (excluded from git)
+    ├── docs/                 ← 代碼標準與架構核心 (Sandbox Docs) — 包含 STRUCTURE, CODING_GUIDELINES_FINAL
+    └── ops/                  ← Automation scripts (bootstrap.sh, check.sh) — delete one-offs after use
 ```
-open-claw-sandbox/
-├── AGENTS.md             ← Non-negotiable rules and startup context for AI agents
-├── BOOTSTRAP.md          ← How to bring this workspace to operational state from scratch
-├── HEARTBEAT.md          ← Known-good state snapshot; updated after each verified stable milestone
-├── IDENTITY.md           ← Open Claw system identity: mission, boundaries, personality
-├── SOUL.md               ← Quality and discipline principles (the "why" behind the rules)
-├── TOOLS.md              ← Local endpoints, key paths, env vars, hardware profile
-├── USER.md               ← Operator profile: preferences, working style, constraints
-│
-├── pyproject.toml        ← Ruff (linter/formatter) + Mypy (type checker) configuration
-├── requirements.txt      ← All Python dependencies for core + all skills
-├── .gitignore            ← Excludes data/, models/, logs/, __pycache__, .DS_Store
-├── .pre-commit-config.yaml ← Pre-commit hooks: Ruff lint+format + file hygiene
-├── .editorconfig         ← Consistent editor settings across all tools and AI agents
-│
-├── .vscode/
-│   ├── extensions.json   ← Recommended VS Code extensions (Ruff, Mypy, Python, YAML, Markdown)
-│   └── settings.json     ← Workspace settings: format-on-save, 100-char rulers, Ruff formatter
-│
-├── .openclaw/
-│   └── workspace-state.json  ← Open Claw agent bootstrap state (version + seed timestamp)
-│
-├── memory/               ← AI collaboration memory layer (read by agents at every session start)
-├── core/                 ← Shared framework — all skills import ONLY from here, never from each other
-├── skills/               ← Self-contained skill pipelines
-├── data/                 ← Runtime data: pipeline outputs (excluded from git)
-├── models/               ← HuggingFace model cache (excluded from git)
-├── logs/                 ← Service runtime logs from start.sh (excluded from git)
-├── docs/                 ← Project-wide documentation (STRUCTURE, CODING_GUIDELINES_FINAL)
-└── ops/                  ← Automation scripts (bootstrap.sh, check.sh) — delete one-offs after use
-```
+
+> **⚠️ 絕對原則**：本檔案 (`STRUCTURE.md`) 乃是「全域腳本唯一註冊表」。任何在此專案新增的腳本、模組或目錄，都必須在此詳述功能與位置。嚴禁刪除任何歷史說明與結構，只能新增或補充。
 
 ---
 
