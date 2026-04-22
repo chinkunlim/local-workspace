@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 skills/inbox-manager/scripts/query.py
 ======================================
@@ -6,12 +5,13 @@ CLI tool for Open Claw to list, add, or remove PDF routing rules
 in core/inbox_config.json. Designed to be invoked by Open Claw's
 intent-routing when the user asks about routing settings.
 """
+
 from __future__ import annotations
 
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
 import tempfile
 
 # ── Path bootstrap ─────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ def _load() -> dict:
     if not os.path.exists(_config_path):
         print(f"❌ 找不到設定檔: {_config_path}")
         sys.exit(1)
-    with open(_config_path, "r", encoding="utf-8") as f:
+    with open(_config_path, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -37,6 +37,7 @@ def _save(cfg: dict) -> None:
 
 # ── Commands ───────────────────────────────────────────────────────────────────
 
+
 def cmd_list(cfg: dict) -> None:
     """Print a human-friendly summary of all routing rules."""
     rules: list[dict] = cfg.get("pdf_routing_rules", [])
@@ -48,8 +49,8 @@ def cmd_list(cfg: dict) -> None:
         groups.setdefault(mode, []).append(r)
 
     mode_labels = {
-        "audio_ref":  "🔍 audio_ref  (語音校對參考)",
-        "both":       "📦 both       (同時解析 + 語音校對)",
+        "audio_ref": "🔍 audio_ref  (語音校對參考)",
+        "both": "📦 both       (同時解析 + 語音校對)",
         "doc_parser": "📄 doc_parser (獨立 Markdown 解析)",
     }
 
@@ -82,7 +83,9 @@ def cmd_add(cfg: dict, pattern: str, routing: str, description: str) -> None:
     # Check for duplicates
     for r in rules:
         if r.get("pattern", "").lower() == pattern.lower():
-            print(f"⚠️  規則 '{pattern}' 已存在 (routing={r['routing']})，使用 --remove 先刪除再新增。")
+            print(
+                f"⚠️  規則 '{pattern}' 已存在 (routing={r['routing']})，使用 --remove 先刪除再新增。"
+            )
             return
     rules.append({"pattern": pattern, "routing": routing, "description": description})
     _save(cfg)
@@ -103,10 +106,9 @@ def cmd_remove(cfg: dict, pattern: str) -> None:
 
 # ── Entry point ────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Inbox Manager — 管理 Open Claw 收件匣路由規則"
-    )
+    parser = argparse.ArgumentParser(description="Inbox Manager — 管理 Open Claw 收件匣路由規則")
     sub = parser.add_subparsers(dest="cmd")
 
     # list (default)
@@ -116,8 +118,10 @@ def main() -> None:
     p_add = sub.add_parser("add", help="新增路由規則")
     p_add.add_argument("pattern", help="後綴或關鍵字 (e.g. _ppt or 課件)")
     p_add.add_argument(
-        "--routing", choices=["audio_ref", "both", "doc_parser"],
-        default="audio_ref", help="路由模式 (預設: audio_ref)"
+        "--routing",
+        choices=["audio_ref", "both", "doc_parser"],
+        default="audio_ref",
+        help="路由模式 (預設: audio_ref)",
     )
     p_add.add_argument("--description", default="", help="說明文字")
 
@@ -128,7 +132,9 @@ def main() -> None:
     # Also support legacy flags for Open Claw direct invocation
     parser.add_argument("--list", action="store_true", help="列出所有規則")
     parser.add_argument("--add", metavar="PATTERN", help="新增規則")
-    parser.add_argument("--routing", choices=["audio_ref", "both", "doc_parser"], default="audio_ref")
+    parser.add_argument(
+        "--routing", choices=["audio_ref", "both", "doc_parser"], default="audio_ref"
+    )
     parser.add_argument("--description", default="")
     parser.add_argument("--remove", metavar="PATTERN", help="刪除規則")
 

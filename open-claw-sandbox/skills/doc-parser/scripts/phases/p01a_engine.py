@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 pdf_engine.py — Phase 1a: Docling 深度提取
 ==========================================
@@ -17,21 +16,22 @@ Phase 1a 設計決策：
   pip install docling pymupdf pdfplumber
 """
 
-import os
-import sys
 import gc
-import json
 import hashlib
+import json
+import os
 import shutil
-from typing import Optional, Dict
+import sys
+from typing import Dict, Optional
 
 # Internal Core Bootstrap
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
+from core.atomic_writer import AtomicWriter
 from core.pipeline_base import PipelineBase
 from core.resume_manager import ResumeManager
-from core.atomic_writer import AtomicWriter
 
 
 class Phase1aPDFEngine(PipelineBase):
@@ -57,7 +57,9 @@ class Phase1aPDFEngine(PipelineBase):
         if self.gc_collect_after is None:
             raise RuntimeError("doc-parser config missing pdf_processing.docling.gc_collect_after")
         if self.font_diff_threshold is None:
-            raise RuntimeError("doc-parser config missing pdf_processing.docling.font_fallback_diff_threshold")
+            raise RuntimeError(
+                "doc-parser config missing pdf_processing.docling.font_fallback_diff_threshold"
+            )
 
         # Image content filter thresholds (from config.yaml pdf_processing.image_filter)
         img_filter_cfg = self.config_manager.get_nested("pdf_processing", "image_filter") or {}
@@ -148,13 +150,19 @@ class Phase1aPDFEngine(PipelineBase):
 
             # Record SHA-256 hash
             file_hash = self._sha256(raw_output_path)
-            self._update_scan_report(pdf_id, subject, {
-                "raw_extracted_hash": file_hash,
-                "raw_extracted_chars": len(extracted_text),
-                "phase1b_status": "completed",
-            })
+            self._update_scan_report(
+                pdf_id,
+                subject,
+                {
+                    "raw_extracted_hash": file_hash,
+                    "raw_extracted_chars": len(extracted_text),
+                    "phase1b_status": "completed",
+                },
+            )
 
-            self.info(f"✅ [Phase 1a] raw_extracted.md 已寫入 ({len(extracted_text):,} 字元, hash: {file_hash[:8]}...)")
+            self.info(
+                f"✅ [Phase 1a] raw_extracted.md 已寫入 ({len(extracted_text):,} 字元, hash: {file_hash[:8]}...)"
+            )
             self.resume_manager.clear_checkpoint(pdf_id)
             return True
 
@@ -176,19 +184,19 @@ class Phase1aPDFEngine(PipelineBase):
 
     def _run_docling(self, pdf_path: str, pdf_id: str, subject: str) -> Optional[str]:
         """Run Docling PDF extraction. Returns markdown text or None."""
-        
+
         # Sandbox HuggingFace models to project directory
         openclaw_root = os.path.abspath(os.path.join(self.base_dir, "..", ".."))
         model_dir = os.path.join(openclaw_root, "models")
         os.makedirs(model_dir, exist_ok=True)
         os.environ["HF_HOME"] = model_dir
         os.environ["HF_HUB_CACHE"] = model_dir
-        
+
         try:
-            from docling.document_converter import DocumentConverter, PdfFormatOption
             from docling.datamodel.base_models import InputFormat
-            from docling.datamodel.pipeline_options import PdfPipelineOptions
             from docling.datamodel.document import PictureItem
+            from docling.datamodel.pipeline_options import PdfPipelineOptions
+            from docling.document_converter import DocumentConverter, PdfFormatOption
         except ImportError:
             self.error("❌ Docling 未安裝。請執行: pip install docling")
             return None
@@ -198,7 +206,7 @@ class Phase1aPDFEngine(PipelineBase):
         # Create output directory for Docling intermediate files
         docling_output = os.path.join(self.dirs["processed"], subject, pdf_id, "_docling_tmp")
         os.makedirs(docling_output, exist_ok=True)
-        
+
         # Setup specific assets directory for image extraction
         assets_dir = os.path.join(self.dirs["processed"], subject, pdf_id, "assets")
         os.makedirs(assets_dir, exist_ok=True)
@@ -206,15 +214,13 @@ class Phase1aPDFEngine(PipelineBase):
         try:
             pipeline_options = PdfPipelineOptions()
             pipeline_options.generate_picture_images = True
-            
+
             converter = DocumentConverter(
-                format_options={
-                    InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
-                }
+                format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
             )
             result = converter.convert(pdf_path)
             doc = result.document
-            
+
             # Extract images and build figure list database
             extracted_figures = []
             for item, level in doc.iterate_items():
@@ -223,8 +229,7 @@ class Phase1aPDFEngine(PipelineBase):
                     if img:
                         if not self._should_keep_image(img):
                             self.log(
-                                f"🔍 [Phase 1a] 跳過非內容圖片 "
-                                f"({img.width}x{img.height}px)",
+                                f"🔍 [Phase 1a] 跳過非內容圖片 ({img.width}x{img.height}px)",
                                 "info",
                             )
                             continue
@@ -233,29 +238,32 @@ class Phase1aPDFEngine(PipelineBase):
                         filepath = os.path.join(assets_dir, filename)
                         img.save(filepath)
 
-                        extracted_figures.append({
-                            "page": page_no,
-                            "src": f"assets/{filename}",
-                            "type": "picture"
-                        })
-            
+                        extracted_figures.append(
+                            {"page": page_no, "src": f"assets/{filename}", "type": "picture"}
+                        )
+
             # Write figure_list.md if figures were found
             if extracted_figures:
-                figure_list_path = os.path.join(self.dirs["processed"], subject, pdf_id, "figure_list.md")
+                figure_list_path = os.path.join(
+                    self.dirs["processed"], subject, pdf_id, "figure_list.md"
+                )
                 content = [
                     "# Figure List\n\n",
                     "> 自動生成。[P] = raster 圖片，[V] = 向量圖表光柵化\n\n",
                     "| 檔案名稱 | 頁碼 | 原始 Caption | VLM 描述 | 數據趨勢標籤 | 來源 |\n",
-                    "| :--- | :---: | :--- | :--- | :---: | :---: |\n"
+                    "| :--- | :---: | :--- | :--- | :---: | :---: |\n",
                 ]
-                
+
                 for fig in extracted_figures:
                     row = f"| {fig['src']} | {fig['page']} | - | 待 VLM 描述 | - | [P] |"
                     content.append(row + "\n")
-                    
+
                 from core import AtomicWriter
+
                 AtomicWriter.write_text(figure_list_path, "".join(content))
-                self.info(f"📸 [Phase 1a] 提取了 {len(extracted_figures)} 張圖片並建立 figure_list.md")
+                self.info(
+                    f"📸 [Phase 1a] 提取了 {len(extracted_figures)} 張圖片並建立 figure_list.md"
+                )
 
             markdown_text = doc.export_to_markdown()
             self.info(f"✅ [Phase 1a] Docling 提取完成 ({len(markdown_text):,} 字元)")
@@ -331,13 +339,11 @@ class Phase1aPDFEngine(PipelineBase):
         self.warning("⚠️ [Phase 1a] 字型損壞偵測，啟動 OCR 交叉驗證...")
 
         import subprocess
-        import tempfile
 
         try:
             # Run pdftotext as OCR baseline
             result = subprocess.run(
-                ["pdftotext", "-layout", pdf_path, "-"],
-                capture_output=True, text=True, timeout=120
+                ["pdftotext", "-layout", pdf_path, "-"], capture_output=True, text=True, timeout=120
             )
             ocr_text = result.stdout
         except Exception as e:
@@ -355,10 +361,13 @@ class Phase1aPDFEngine(PipelineBase):
 
         # Update scan report with fallback info
         font_fallback_pages = scan_report.get("font_issues", [])
-        self._update_scan_report(pdf_id, {
-            "font_fallback_applied": diff_ratio > self.font_diff_threshold,
-            "font_fallback_diff_ratio": round(diff_ratio, 4),
-        })
+        self._update_scan_report(
+            pdf_id,
+            {
+                "font_fallback_applied": diff_ratio > self.font_diff_threshold,
+                "font_fallback_diff_ratio": round(diff_ratio, 4),
+            },
+        )
 
         if diff_ratio > self.font_diff_threshold:
             self.warning(
@@ -435,6 +444,7 @@ class Phase1aPDFEngine(PipelineBase):
                 pass
         data.update(updates)
         from core import AtomicWriter
+
         AtomicWriter.write_json(path, data)
 
     def _move_to_error(self, pdf_path: str, pdf_id: str, reason: str):
@@ -450,6 +460,7 @@ class Phase1aPDFEngine(PipelineBase):
 
         error_meta = os.path.join(error_dir, f"{pdf_id}_error.json")
         from core import AtomicWriter
+
         AtomicWriter.write_json(error_meta, {"pdf_id": pdf_id, "reason": reason})
 
         self.error(f"❌ [Phase 1a] {pdf_id} 已移至 Error/ — {reason}")
@@ -459,6 +470,7 @@ class Phase1aPDFEngine(PipelineBase):
         """Check if encrypted PDF can be opened with empty password."""
         try:
             import fitz
+
             doc = fitz.open(pdf_path)
             if doc.is_encrypted:
                 return doc.authenticate("")
@@ -494,5 +506,5 @@ if __name__ == "__main__":
     if result:
         print(f"\n✅ 提取完成: {result}")
     else:
-        print(f"\n❌ 提取失敗（查看 Error/ 目錄）")
+        print("\n❌ 提取失敗（查看 Error/ 目錄）")
         sys.exit(1)

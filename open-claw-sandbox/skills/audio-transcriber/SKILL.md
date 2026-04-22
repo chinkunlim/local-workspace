@@ -17,25 +17,22 @@ metadata:
 ## Quick Start
 
 ```bash
-# 1. 放音檔進 Inbox（按科目分類）
-cp lecture.m4a data/audio-transcriber/input/raw_data/助人歷程/
+# 1. 放音檔進 Inbox（Universal Drop Zone）
+cp lecture.m4a data/raw/助人歷程/
 
-# 2. 執行流水線
-python3 skills/audio-transcriber/scripts/run_all.py
+# 2. 執行流水線 (Headless Batch Mode)
+python3 skills/audio-transcriber/scripts/run_all.py --process-all
 
 # 3. 查看進度
 cat data/audio-transcriber/state/checklist.md
-
-# 4. Review Board（差異比對，瀏覽器）
-open http://localhost:5001
 ```
 
-## 三個 Phase
+## 核心防禦機制 (V8.1 Anti-Hallucination)
 
 | Phase | 腳本 | 功能 |
 |:---:|:---|:---|
 | P0 | `p00_glossary.py` | 術語表初始化，防止 LLM 生造詞 |
-| P1 | `p01_transcribe.py` | MLX-Whisper 高精度轉錄 (內建三層抗幻覺防禦、VAD 與多片段語言偵測) |
+| P1 | `p01_transcribe.py` | 高精度轉錄。**VAD 靜音切除防護網**：使用 `pydub.silence` 預先切除雜音。若 `silence_ratio > max_removal_ratio`（預設 0.90）則自動 Fallback 至原始音檔，防止過度切除導致斷句。包含多片段多數決語言偵測。 |
 | P2 | `p02_proofread.py` | LLM 智能校對 + 術語保護 |
 | P3 | `p03_merge.py` | 跨段合併精煉 |
 
@@ -48,8 +45,14 @@ python3 skills/audio-transcriber/scripts/run_all.py --subject 助人歷程
 # 從斷點恢復
 python3 skills/audio-transcriber/scripts/run_all.py --resume
 
+# 背景批次執行 (自動處理全部)
+python3 skills/audio-transcriber/scripts/run_all.py --process-all
+
+# 輸出 JSON 格式日誌 (Headless Telemetry)
+python3 skills/audio-transcriber/scripts/run_all.py --process-all --log-json
+
 # 強制重跑（覆寫已完成）
-python3 skills/audio-transcriber/scripts/run_all.py --force
+python3 skills/audio-transcriber/scripts/run_all.py --force --subject 助人歷程
 
 # 互動切換模型
 python3 core/cli_config_wizard.py --skill audio-transcriber

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 pdf_diagnostic.py — Phase 0a: 輕量 PDF 診斷
 =============================================
@@ -18,26 +17,26 @@ pdf_diagnostic.py — Phase 0a: 輕量 PDF 診斷
 設計決策：[D017] — DECISIONS_v2.1.md
 """
 
-import os
-import sys
-import json
-import subprocess
-import re
+from dataclasses import asdict, dataclass, field
 import gc
+import os
+import re
+import subprocess
 from typing import List, Optional
-from dataclasses import dataclass, field, asdict
 
 # Internal Core Bootstrap
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
-from core.pipeline_base import PipelineBase
 from core.atomic_writer import AtomicWriter
+from core.pipeline_base import PipelineBase
 
 
 @dataclass
 class DiagnosticReport:
     """Structured diagnostic result for a single PDF."""
+
     pdf_path: str = ""
     pdf_id: str = ""
     subject: str = "Default"
@@ -91,7 +90,9 @@ class Phase0aDiagnostic(PipelineBase):
             "pdf_processing", "diagnostic", "min_text_chars_first_page"
         )
         if self.min_text_chars is None:
-            raise RuntimeError("doc-parser config missing pdf_processing.diagnostic.min_text_chars_first_page")
+            raise RuntimeError(
+                "doc-parser config missing pdf_processing.diagnostic.min_text_chars_first_page"
+            )
 
     # ------------------------------------------------------------------ #
     #  Public Entry Point                                                  #
@@ -171,7 +172,9 @@ class Phase0aDiagnostic(PipelineBase):
         """Step 1: pdfinfo → pages, version, encryption."""
         result = self._run_tool(["pdfinfo", pdf_path])
         if result is None:
-            raise RuntimeError("pdfinfo failed — is poppler-utils installed? (brew install poppler)")
+            raise RuntimeError(
+                "pdfinfo failed — is poppler-utils installed? (brew install poppler)"
+            )
 
         for line in result.splitlines():
             line = line.strip()
@@ -187,7 +190,9 @@ class Phase0aDiagnostic(PipelineBase):
 
         if report.pages == 0:
             raise RuntimeError("pdfinfo returned 0 pages — PDF may be corrupt or empty.")
-        self.info(f"📋 [Diagnose] pdfinfo: {report.pages} 頁, PDF {report.pdf_version}, 加密: {'是' if report.encrypted else '否'}")
+        self.info(
+            f"📋 [Diagnose] pdfinfo: {report.pages} 頁, PDF {report.pdf_version}, 加密: {'是' if report.encrypted else '否'}"
+        )
 
     def _run_scan_detect(self, pdf_path: str, report: DiagnosticReport):
         """Step 2: pdftotext first page sample for scan detection."""
@@ -241,7 +246,11 @@ class Phase0aDiagnostic(PipelineBase):
             self.warning("⚠️ [Diagnose] pdfimages 無法執行，跳過圖片統計")
             return
 
-        lines = [l for l in result.splitlines() if l.strip() and not l.startswith("-") and not l.lower().startswith("page")]
+        lines = [
+            l
+            for l in result.splitlines()
+            if l.strip() and not l.startswith("-") and not l.lower().startswith("page")
+        ]
         report.raster_image_count = len(lines)
         report.has_raster_images = report.raster_image_count > 0
 
@@ -259,16 +268,21 @@ class Phase0aDiagnostic(PipelineBase):
 
         for page_num in range(1, pages_to_check + 1):
             # Check if page has text
-            page_text = self._run_tool(["pdftotext", "-f", str(page_num), "-l", str(page_num), pdf_path, "-"])
+            page_text = self._run_tool(
+                ["pdftotext", "-f", str(page_num), "-l", str(page_num), pdf_path, "-"]
+            )
             page_has_text = page_text and len(page_text.strip()) > 20
 
             if not page_has_text:
                 continue
 
             # Check if page has raster images
-            page_imgs = self._run_tool(["pdfimages", "-list", "-f", str(page_num), "-l", str(page_num), pdf_path])
+            page_imgs = self._run_tool(
+                ["pdfimages", "-list", "-f", str(page_num), "-l", str(page_num), pdf_path]
+            )
             page_img_lines = [
-                l for l in (page_imgs or "").splitlines()
+                l
+                for l in (page_imgs or "").splitlines()
                 if l.strip() and not l.startswith("-") and not l.lower().startswith("page")
             ]
             page_has_raster = len(page_img_lines) > 0
@@ -377,13 +391,17 @@ if __name__ == "__main__":
         description="Phase 0a: PDF Lightweight Diagnostic (poppler-utils)"
     )
     parser.add_argument("pdf", help="Path to the PDF file to diagnose")
-    parser.add_argument("--id", dest="pdf_id", default=None,
-                        help="PDF identifier (default: filename without extension)")
+    parser.add_argument(
+        "--id",
+        dest="pdf_id",
+        default=None,
+        help="PDF identifier (default: filename without extension)",
+    )
     args = parser.parse_args()
 
     pdf_id = args.pdf_id or os.path.splitext(os.path.basename(args.pdf))[0]
     filename = os.path.basename(args.pdf)
-    
+
     diag = Phase0aDiagnostic()
     # Mock for CLI standalone run
     diag.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))

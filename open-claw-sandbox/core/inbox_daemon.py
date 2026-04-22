@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 inbox_daemon.py — Open Claw System-Wide Inbox Monitor
 ======================================================
@@ -14,114 +13,135 @@ Design:
   - Same-file debounce via threading.Event (cancellable).
 """
 
+import json
+import logging
 import os
 import sys
-import time
-import json
 import threading
-import subprocess
-from core.task_queue import task_queue
+import time
+from typing import Dict
+
 from core.cli_runner import SkillRunner
-from typing import List, Optional
+from core.task_queue import task_queue
 
 # Path Resolution
 _core_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.environ.get(
-    "WORKSPACE_DIR",
-    os.path.dirname(_core_dir)
-)
+_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.dirname(_core_dir))
 # Ensure workspace root is on sys.path so `from core.xxx` always resolves
 if _workspace_root not in sys.path:
     sys.path.insert(0, _workspace_root)
 
-from core.path_builder import PathBuilder
+from core.atomic_writer import AtomicWriter
+
+_logger = logging.getLogger("OpenClaw.InboxDaemon")
+if not _logger.handlers:
+    _h = logging.StreamHandler(sys.stdout)
+    _h.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(message)s", datefmt="%H:%M:%S"))
+    _logger.addHandler(_h)
+    _logger.setLevel(logging.INFO)
 
 # Constants
-_WAIT_TIMEOUT_SEC = 300   # 5 min: abort if file never stabilises
+_WAIT_TIMEOUT_SEC = 300  # 5 min: abort if file never stabilises
 _POLL_INTERVAL_SEC = 2.0
 
 
 class SystemInboxDaemon:
     def __init__(self):
         self._observer = None
-        self._debounce_events: dict[str, threading.Event] = {}
+        self._debounce_events: Dict[str, threading.Event] = {}
         self._lock = threading.Lock()
+        # B-2 Fix: track files already dispatched to prevent dual-trigger
+        self._seen_files: set = set()
 
         # Configure global raw path
         self.raw_path = os.path.join(_workspace_root, "data", "raw")
         os.makedirs(self.raw_path, exist_ok=True)
-        
+
         # Load Config
         self.config_path = os.path.join(_core_dir, "inbox_config.json")
         self._load_config()
 
     def _load_config(self):
         self.routing_rules = {}
-        self.pdf_routing_rules = []   # list of {pattern, routing}
+        self.pdf_routing_rules = []  # list of {pattern, routing}
         if os.path.exists(self.config_path):
             try:
-                with open(self.config_path, "r", encoding="utf-8") as f:
+                with open(self.config_path, encoding="utf-8") as f:
                     cfg = json.load(f)
 
                     rules = cfg.get("routing_rules", {})
-                    for ext in rules.get("voice_memo", []):    self.routing_rules[ext] = "audio-transcriber"
-                    for ext in rules.get("pdf_knowledge", []): self.routing_rules[ext] = "doc-parser"
-                    for ext in rules.get("compiler", []):      self.routing_rules[ext] = "knowledge-compiler"
+                    for ext in rules.get("voice_memo", []):
+                        self.routing_rules[ext] = "audio-transcriber"
+                    for ext in rules.get("pdf_knowledge", []):
+                        self.routing_rules[ext] = "doc-parser"
+                    for ext in rules.get("compiler", []):
+                        self.routing_rules[ext] = "knowledge-compiler"
 
                     # Remove structured pdf_routing_rules as they violate sandbox boundaries
 
             except Exception as e:
-                print(f"❌ [Daemon] 讀取 inbox_config.json 失敗: {e}")
+                _logger.error("讀取 inbox_config.json 失敗: %s", e)
 
         if not self.routing_rules:
-            self.routing_rules = {".m4a": "audio-transcriber", ".mp3": "audio-transcriber", ".pdf": "doc-parser"}
+            self.routing_rules = {
+                ".m4a": "audio-transcriber",
+                ".mp3": "audio-transcriber",
+                ".pdf": "doc-parser",
+            }
 
-    def _process_file(self, filepath: str):
-        self._load_config() # Reload config on fly
-        
+    def _process_file(self, filepath: str) -> None:
+        """Route a single raw file to its target skill's input directory."""
+        self._load_config()  # Reload config on fly
+
+        # B-2 Fix: deduplicate files already dispatched by scan_all or watchdog
+        with self._lock:
+            if filepath in self._seen_files:
+                return
+            self._seen_files.add(filepath)
+
         filename = os.path.basename(filepath)
         ext = os.path.splitext(filename)[1].lower()
-        basename_noext = os.path.splitext(filename)[0]
-        
+
         # Extract Subject from relative path
         rel_path = os.path.relpath(filepath, self.raw_path)
         parts = rel_path.split(os.sep)
         subject = parts[0] if len(parts) > 1 else "Default"
-        
+
         target_skill = self.routing_rules.get(ext)
-        
+
         if not target_skill:
-            print(f"ℹ️ [Daemon] 未知格式，忽略: {filepath}")
+            _logger.info("未知格式，忽略: %s", filepath)
             return
 
         # Strict Sandbox Routing
         target_dir = os.path.join(_workspace_root, "data", target_skill, "input", subject)
-        print(f"📄 [Daemon] 路由派發: [{subject}] {filename} → {target_skill}")
+        _logger.info("路由派發: [%s] %s → %s", subject, filename, target_skill)
 
         os.makedirs(target_dir, exist_ok=True)
         target_path = os.path.join(target_dir, filename)
 
         try:
             os.rename(filepath, target_path)
-            print(f"🚚 [Daemon] 已移動: [{subject}] {filename} → {target_skill}")
+            _logger.info("已移動: [%s] %s → %s", subject, filename, target_skill)
             if os.sep + "input" + os.sep in target_dir + os.sep:
                 self._schedule_trigger(target_skill, target_path)
         except Exception as e:
-            print(f"❌ [Daemon] 無法移動檔案 {filename}: {e}")
+            _logger.error("無法移動檔案 %s: %s", filename, e)
 
-    def scan_all(self):
+    def scan_all(self) -> None:
         """Manually trigger scan for all files in raw_path."""
-        print(f"🔄 [Daemon] 正在掃描現有檔案: {self.raw_path}")
-        for root, dirs, files in os.walk(self.raw_path):
+        _logger.info("正在掃描現有檔案: %s", self.raw_path)
+        for root, _dirs, files in os.walk(self.raw_path):
             for filename in sorted(files):
-                if filename.startswith("."): continue
+                if filename.startswith("."):
+                    continue
                 filepath = os.path.join(root, filename)
                 self._process_file(filepath)
 
     def start(self):
         try:
-            from watchdog.observers import Observer
             from watchdog.events import FileSystemEventHandler
+            from watchdog.observers import Observer
 
             class InboxHandler(FileSystemEventHandler):
                 def __init__(self, daemon: "SystemInboxDaemon"):
@@ -131,28 +151,29 @@ class SystemInboxDaemon:
                     if event.is_directory:
                         return
                     self.daemon._process_file(event.src_path)
-                    
+
             class OutputWatchdogHandler(FileSystemEventHandler):
                 def __init__(self, daemon: "SystemInboxDaemon"):
                     self.daemon = daemon
+
                 def on_modified(self, event):
                     if event.is_directory or not event.src_path.endswith(".md"):
                         return
                     self.daemon._check_rewrite_status(event.src_path)
 
             self._observer = Observer()
-            print(f"👁️ [Daemon] 監控啟動 (遞迴支援多科目): 全局收件匣 -> {self.raw_path}")
+            _logger.info("監控啟動 (遞迴支援多科目): 全局收件匣 -> %s", self.raw_path)
             self._observer.schedule(InboxHandler(self), self.raw_path, recursive=True)
-            
+
             data_path = os.path.join(_workspace_root, "data")
             if os.path.exists(data_path):
                 self._observer.schedule(OutputWatchdogHandler(self), data_path, recursive=True)
-                print(f"👁️ [Daemon] 監控啟動 (Obsidian Watchdog): 輸出資料夾 -> {data_path}")
-                
+                _logger.info("監控啟動 (Obsidian Watchdog): 輸出資料夾 -> %s", data_path)
+
             self._observer.start()
 
         except ImportError:
-            print("⚠️ [Daemon] watchdog 未安裝 (pip install watchdog)，忽略即時監控。")
+            _logger.warning("watchdog 未安裝 (pip install watchdog)，忽略即時監控。")
 
     def _schedule_trigger(self, skill: str, filepath: str):
         """
@@ -183,24 +204,24 @@ class SystemInboxDaemon:
 
         while elapsed < _WAIT_TIMEOUT_SEC:
             if stop_event.is_set():
-                print(f"⏹️ [Daemon] 去抖取消，停止等待: {filepath}")
+                _logger.debug("去抖取消，停止等待: %s", filepath)
                 return
 
             try:
                 if not os.path.exists(filepath):
-                    print(f"⚠️ [Daemon] 檔案已消失，放棄觸發: {filepath}")
+                    _logger.warning("檔案已消失，放棄觸發: %s", filepath)
                     return
                 current_size = os.path.getsize(filepath)
                 if current_size == prev_size and current_size > 0:
                     break  # Stable!
                 prev_size = current_size
-            except OSError:
-                pass
+            except OSError as e:
+                _logger.debug("輪詢檔案大小時發生 OSError: %s — %s", filepath, e)
 
             time.sleep(_POLL_INTERVAL_SEC)
             elapsed += _POLL_INTERVAL_SEC
         else:
-            print(f"❌ [Daemon] 等待超時 ({_WAIT_TIMEOUT_SEC}s)，放棄觸發: {filepath}")
+            _logger.error("等待超時 (%ss)，放棄觸發: %s", _WAIT_TIMEOUT_SEC, filepath)
             return
 
         # Clean up debounce map
@@ -209,14 +230,12 @@ class SystemInboxDaemon:
 
         self._trigger_pipeline(skill, filepath)
 
-    def _trigger_pipeline(self, skill: str, filepath: str):
-        """
-        Route trigger through the single-threaded Task Queue to prevent OOM.
-        """
-        print(f"\n🚀 [Daemon] 偵測到新檔案: {filepath} ({skill})")
-        
+    def _trigger_pipeline(self, skill: str, filepath: str) -> None:
+        """Route trigger through the single-threaded Task Queue to prevent OOM."""
+        _logger.info("偵測到新檔案: %s (%s)", filepath, skill)
+
         cwd = os.path.join(_workspace_root, "skills", skill)
-        
+
         if skill == "audio-transcriber":
             cmd = SkillRunner.run_audio_transcriber()
         elif skill == "doc-parser":
@@ -225,73 +244,97 @@ class SystemInboxDaemon:
             script_path = os.path.join(cwd, "scripts", "run_all.py")
             cmd = [sys.executable, script_path, "--process-all"]
 
-        task_queue.enqueue(f"{skill} Pipeline", cmd, cwd)
+        task_queue.enqueue(f"{skill} Pipeline", cmd, cwd, filepath=filepath, skill=skill)
 
-    def _check_rewrite_status(self, filepath: str):
-        """Watch for YAML `status: rewrite` to trigger note_generator."""
-        # Simple debounce check using the file lock mechanism
+    def _check_rewrite_status(self, filepath: str) -> None:
+        """Watch for YAML `status: rewrite` to trigger note_generator.
+
+        B-1 Fix: reads the full file, replaces the status token atomically using
+        AtomicWriter so a mid-write crash cannot corrupt the Obsidian note.
+        Uses a separate rewrite-debounce set to avoid interfering with the
+        file-arrival debounce map.
+        """
+        # Use a dedicated set so Watchdog debounce doesn't block file-arrival debounce
         with self._lock:
             if filepath in self._debounce_events:
                 return
-                
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                head = f.read(500)
-                if "status: rewrite" in head:
-                    print(f"\n🔄 [Watchdog] 偵測到重寫請求: {filepath}")
-                    
-                    # 1. Update status to 'processing' to avoid infinite loops
-                    new_content = head.replace("status: rewrite", "status: processing")
-                    with open(filepath, "r+", encoding="utf-8") as fw:
-                        fw.seek(0)
-                        fw.write(new_content)
-                        
-                    # 2. Extract Subject and infer target
-                    rel_path = os.path.relpath(filepath, os.path.join(_workspace_root, "data"))
-                    parts = rel_path.split(os.sep)
-                    skill = parts[0] if len(parts) > 0 else "note-generator"
-                    subject = parts[3] if len(parts) > 3 else "Default"
-                    
-                    # 3. Enqueue the task
-                    cmd = SkillRunner.run_note_generator(
-                        input_file=filepath,
-                        output_file=filepath.replace(".md", "_rewrite.md"), # simple example output
-                        subject=subject
-                    )
-                    task_queue.enqueue(f"Note Generator (Rewrite)", cmd, os.path.join(_workspace_root, "skills", "note-generator"))
-                    
-                    # Prevent multiple triggers
-                    with self._lock:
-                        self._debounce_events[filepath] = threading.Event()
-                        
-        except Exception:
-            pass
 
-    def stop(self):
+        try:
+            with open(filepath, encoding="utf-8") as f:
+                full_content = f.read()
+
+            if "status: rewrite" not in full_content:
+                return
+
+            _logger.info("偵測到重寫請求: %s", filepath)
+
+            # 1. B-1 Fix: replace status token and write back atomically
+            new_content = full_content.replace("status: rewrite", "status: processing", 1)
+            AtomicWriter.write_text(filepath, new_content)
+
+            # 2. Extract Subject and infer target
+            rel_path = os.path.relpath(filepath, os.path.join(_workspace_root, "data"))
+            parts = rel_path.split(os.sep)
+            subject = parts[3] if len(parts) > 3 else "Default"
+
+            # 3. Enqueue the task
+            cmd = SkillRunner.run_note_generator(
+                input_file=filepath,
+                output_file=filepath.replace(".md", "_rewrite.md"),
+                subject=subject,
+            )
+            task_queue.enqueue(
+                "Note Generator (Rewrite)",
+                cmd,
+                os.path.join(_workspace_root, "skills", "note-generator"),
+            )
+
+            # Prevent multiple triggers for this file
+            with self._lock:
+                self._debounce_events[filepath] = threading.Event()
+
+        except OSError as e:
+            _logger.error("讀取重寫狀態時發生 I/O 錯誤: %s — %s", filepath, e, exc_info=True)
+        except Exception as e:
+            _logger.error(
+                "_check_rewrite_status 發生未預期錯誤: %s — %s", filepath, e, exc_info=True
+            )
+
+    def stop(self) -> None:
+        """Gracefully stop the observer and all pending poll threads."""
         if self._observer:
             self._observer.stop()
             self._observer.join()
-            print("👁️ [Daemon] 監控已停止")
-        # Signal all pending poll threads to stop
+            _logger.info("監控已停止")
         with self._lock:
             for event in self._debounce_events.values():
                 event.set()
             self._debounce_events.clear()
+            self._seen_files.clear()
 
 
 if __name__ == "__main__":
     import argparse
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
     parser = argparse.ArgumentParser(description="Open Claw Inbox Daemon")
-    parser.add_argument("--scan-only", action="store_true", help="僅手動掃描並歸檔現有檔案，不啟動常駐監控")
+    parser.add_argument(
+        "--scan-only", action="store_true", help="僅手動掃描並歸檔現有檔案，不啟動常駐監控"
+    )
     args = parser.parse_args()
 
     daemon = SystemInboxDaemon()
     if args.scan_only:
-        print("🚀 [Daemon] 執行手動歸檔模式 (Scan Only)...")
+        _logger.info("執行手動歸檔模式 (Scan Only)...")
         daemon.scan_all()
     else:
         daemon.start()
-        daemon.scan_all() # Initial scan on startup
+        daemon.scan_all()  # Initial scan on startup
         try:
             while True:
                 time.sleep(1)

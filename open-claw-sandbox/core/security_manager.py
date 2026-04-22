@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SecurityManager — OpenClaw Shared Security Framework
 =====================================================
@@ -19,16 +18,18 @@ Usage:
     sm.validate_navigation("https://mail.google.com/")         # → SecurityViolationError
 """
 
+from datetime import datetime
+import fnmatch
 import os
 import re
-import yaml
-import fnmatch
-from datetime import datetime
 from typing import Optional
+
+import yaml
 
 
 class SecurityViolationError(Exception):
     """Raised when a Playwright action violates the security policy."""
+
     pass
 
 
@@ -49,7 +50,10 @@ class SecurityManager:
             skill_root = os.path.dirname(config_dir)
             audit_log_path = os.path.join(
                 os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(skill_root, ".."))),
-                "data", "doc-parser", "logs", "security_audit.log"
+                "data",
+                "doc-parser",
+                "logs",
+                "security_audit.log",
             )
         self.audit_log_path = audit_log_path
         os.makedirs(os.path.dirname(audit_log_path), exist_ok=True)
@@ -65,7 +69,7 @@ class SecurityManager:
                 f"security_policy.yaml not found at {policy_path}. "
                 "This file is required and must ONLY be modified by the user."
             )
-        with open(policy_path, "r", encoding="utf-8") as f:
+        with open(policy_path, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
 
     # ------------------------------------------------------------------ #
@@ -160,7 +164,7 @@ class SecurityManager:
         Returns True if user confirms, False otherwise.
         """
         profile_name = os.path.basename(os.path.normpath(chrome_profile))
-        print(f"\n🔐 Chrome Profile: {profile_name} — 備忘: \"{account_hint}\"")
+        print(f'\n🔐 Chrome Profile: {profile_name} — 備忘: "{account_hint}"')
         try:
             answer = input("這是你想要使用的帳號嗎？[是/否] ").strip().lower()
         except (EOFError, KeyboardInterrupt):

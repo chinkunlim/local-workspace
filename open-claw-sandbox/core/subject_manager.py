@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 core/subject_manager.py
 =======================
@@ -10,6 +9,7 @@ principles across the entire Open Claw architecture.
 from __future__ import annotations
 
 import os
+
 
 def ask_reprocess(subject: str, item_id: str, phase_label: str) -> bool:
     """
@@ -61,11 +61,9 @@ def should_process_task(
     if status.get(current_phase_key) == "✅":
         if force:
             return True
-            
+
         item_id = os.path.splitext(task.get("filename", "unknown"))[0]
-        return ask_reprocess(
-            task.get("subject", "unknown"), item_id, current_phase_key.upper()
-        )
+        return ask_reprocess(task.get("subject", "unknown"), item_id, current_phase_key.upper())
 
     return True
 
@@ -73,12 +71,12 @@ def should_process_task(
 def get_target_path(base_dir: str, subject: str, filename: str, target_suffix: str = ".md") -> str:
     """
     Construct the canonical output path for a given subject + source filename.
-    
+
     If target_suffix has no extension dot but acts as a filename (like "raw_extracted.md" in doc-parser),
     this generates `base_dir/subject/item_id/target_suffix`.
-    If target_suffix acts as an extension (like ".md" in audio-transcriber), 
+    If target_suffix acts as an extension (like ".md" in audio-transcriber),
     this generates `base_dir/subject/item_id<target_suffix>`.
-    
+
     Args:
         base_dir: Phase output directory.
         subject:  Subject folder name.
@@ -89,7 +87,7 @@ def get_target_path(base_dir: str, subject: str, filename: str, target_suffix: s
         Absolute path
     """
     item_id = os.path.splitext(filename)[0]
-    
+
     # Heuristic: if it starts with a dot, it's a file extension replacement
     if target_suffix.startswith("."):
         return os.path.join(base_dir, subject, f"{item_id}{target_suffix}")

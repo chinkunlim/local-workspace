@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 core/bootstrap.py — Open Claw Boundary-Safe Path Initialiser
 =============================================================
@@ -28,14 +27,13 @@ def _find_openclawed_root(script_file: str) -> str:
     resilient to any future directory restructuring.
     """
     candidate = os.path.abspath(script_file)
-    for _ in range(10):             # hard cap — prevents infinite loops
+    for _ in range(10):  # hard cap — prevents infinite loops
         candidate = os.path.dirname(candidate)
         if os.path.isdir(os.path.join(candidate, "core")):
             return candidate
     # Fallback: WORKSPACE_DIR env or cwd
     return os.environ.get(
-        "WORKSPACE_DIR",
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        "WORKSPACE_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     )
 
 

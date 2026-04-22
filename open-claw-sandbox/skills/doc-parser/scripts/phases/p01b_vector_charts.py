@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 vector_chart_extractor.py — Phase 1b: 向量圖表補充
 ===================================================
@@ -14,16 +13,17 @@ pdfimages 只能提取 raster（點陣）圖片，向量圖表完全不在其列
 依賴：poppler-utils（brew install poppler）
 """
 
-import os
-import sys
 import glob
-import shutil
 import json
+import os
+import shutil
 import subprocess
-from typing import List, Dict, Optional
+import sys
+from typing import Dict, List, Optional
 
 # Internal Core Bootstrap
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
 from core.pipeline_base import PipelineBase
@@ -46,7 +46,9 @@ class Phase1bVectorChartExtractor(PipelineBase):
         self.dpi = vc.get("dpi")
         self.fmt = vc.get("format")
         if self.dpi is None or self.fmt is None:
-            raise RuntimeError("doc-parser config missing pdf_processing.vector_chart.dpi or format")
+            raise RuntimeError(
+                "doc-parser config missing pdf_processing.vector_chart.dpi or format"
+            )
 
     # ------------------------------------------------------------------ #
     #  Public Entry Point                                                  #
@@ -66,16 +68,18 @@ class Phase1bVectorChartExtractor(PipelineBase):
         """
         pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
         pdf_id = os.path.splitext(filename)[0]
-        
+
         # Load scan_report.json
-        scan_report_path = os.path.join(self.dirs.get("processed", ""), subject, pdf_id, "scan_report.json")
+        scan_report_path = os.path.join(
+            self.dirs.get("processed", ""), subject, pdf_id, "scan_report.json"
+        )
         if not os.path.exists(scan_report_path):
             self.error(f"❌ [VectorChart] 無法找到診斷報告: {scan_report_path}")
             return False
-            
-        with open(scan_report_path, "r", encoding="utf-8") as f:
+
+        with open(scan_report_path, encoding="utf-8") as f:
             scan_report = json.load(f)
-            
+
         page_nums = scan_report.get("vector_chart_pages", [])
         if not page_nums:
             self.info("📋 [VectorChart] 無向量圖表頁面需要處理")
@@ -125,9 +129,12 @@ class Phase1bVectorChartExtractor(PipelineBase):
         cmd = [
             "pdftoppm",
             f"-{self.fmt}",
-            "-r", str(self.dpi),
-            "-f", str(page_num),
-            "-l", str(page_num),
+            "-r",
+            str(self.dpi),
+            "-f",
+            str(page_num),
+            "-l",
+            str(page_num),
             pdf_path,
             tmp_prefix,
         ]
@@ -172,20 +179,18 @@ class Phase1bVectorChartExtractor(PipelineBase):
         # Read existing entries
         existing = ""
         if os.path.exists(figure_list_path):
-            with open(figure_list_path, "r", encoding="utf-8") as f:
+            with open(figure_list_path, encoding="utf-8") as f:
                 existing = f.read()
 
         new_rows = []
         for entry in extracted:
             page = entry["page"]
             src = entry["src"]
-            row = (
-                f"| {src} | {page} | (向量圖表 — 自動光柵化) "
-                f"| 待 VLM 描述 | - | [V] |"
-            )
+            row = f"| {src} | {page} | (向量圖表 — 自動光柵化) | 待 VLM 描述 | - | [V] |"
             new_rows.append(row)
 
         from core import AtomicWriter
+
         content = []
         if not existing.strip():
             content.append("# Figure List\n\n")
@@ -210,15 +215,18 @@ class Phase1bVectorChartExtractor(PipelineBase):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Phase 1b: Vector Chart Extractor"
-    )
+    parser = argparse.ArgumentParser(description="Phase 1b: Vector Chart Extractor")
     parser.add_argument("pdf", help="Path to PDF")
     parser.add_argument("--id", dest="pdf_id", default=None)
-    parser.add_argument("--pages", nargs="+", type=int, default=[],
-                        help="Page numbers to rasterize (1-indexed)")
-    parser.add_argument("--from-report", dest="from_report", action="store_true",
-                        help="Read vector_chart_pages from existing scan_report.json")
+    parser.add_argument(
+        "--pages", nargs="+", type=int, default=[], help="Page numbers to rasterize (1-indexed)"
+    )
+    parser.add_argument(
+        "--from-report",
+        dest="from_report",
+        action="store_true",
+        help="Read vector_chart_pages from existing scan_report.json",
+    )
     args = parser.parse_args()
 
     pdf_id = args.pdf_id or os.path.splitext(os.path.basename(args.pdf))[0]
@@ -226,9 +234,7 @@ if __name__ == "__main__":
 
     page_nums = args.pages
     if args.from_report:
-        report_path = os.path.join(
-            extractor.dirs["processed"], pdf_id, "scan_report.json"
-        )
+        report_path = os.path.join(extractor.dirs["processed"], pdf_id, "scan_report.json")
         if os.path.exists(report_path):
             with open(report_path) as f:
                 data = json.load(f)

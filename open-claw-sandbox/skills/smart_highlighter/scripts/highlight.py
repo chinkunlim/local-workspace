@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SmartHighlighter — Standalone skill for Markdown annotation
 ===========================================================
@@ -14,6 +13,7 @@ import sys
 # Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
 from core import PipelineBase
@@ -34,55 +34,61 @@ class SmartHighlighter(PipelineBase):
     def run(self, markdown_text: str, subject: str = "Default") -> str:
         """
         Apply Markdown bold/highlight annotations to the input text.
-        
+
         Args:
             markdown_text: The raw Markdown string to annotate.
             subject: The subject label (used for logging and config selection).
-            
+
         Returns:
             The annotated Markdown string.
         """
         self.info(f"🖊️  [SmartHighlighter] 啟動重點標記: [{subject}] ({len(markdown_text):,} 字元)")
-        
+
         config = self.get_config("highlight", subject_name=subject)
-        
+
         # Override active profile if specified
         if self.profile_override:
-            profile_data = self.config_manager.get_section("highlight", {}).get("profiles", {}).get(self.profile_override)
+            profile_data = (
+                self.config_manager.get_section("highlight", {})
+                .get("profiles", {})
+                .get(self.profile_override)
+            )
             if profile_data:
                 config.update(profile_data)
-                
+
         model_name = config.get("model")
         options = config.get("options", {})
         chunk_size = int(config.get("chunk_size", 3000))
         min_chunk_chars = int(config.get("min_chunk_chars", 30))
-        verbatim_threshold = float(config.get("verbatim_threshold", self.DEFAULT_VERBATIM_THRESHOLD))
-        
+        verbatim_threshold = float(
+            config.get("verbatim_threshold", self.DEFAULT_VERBATIM_THRESHOLD)
+        )
+
         if not model_name:
             raise RuntimeError("smart-highlighter highlight config missing model")
-            
+
         prompt_tpl = self.get_prompt("Phase 4: 重點標記指令")
         if not prompt_tpl:
             self.error("❌ 找不到 prompt 指令，請確認 prompt.md 有「Phase 4: 重點標記指令」段落")
             return markdown_text  # Fallback to original
-            
+
         chunks = smart_split(markdown_text, chunk_size)
         self.info(f"📦 [SmartHighlighter] 共 {len(chunks)} 個片段待標記 (模型: {model_name})")
-        
+
         highlighted_parts = []
-        pbar, stop_tick, t = self.create_spinner(f"標記")
-        
+        pbar, stop_tick, t = self.create_spinner("標記")
+
         for idx, chunk in enumerate(chunks, 1):
             if self.stop_requested:
                 self.warning("⚠️  [SmartHighlighter] 收到中止信號，停止標記")
                 break
-                
+
             if len(chunk.strip()) < min_chunk_chars:
                 highlighted_parts.append(chunk)
                 continue
-                
+
             prompt = f"{prompt_tpl}\n\n【原文片段】:\n{chunk}"
-            
+
             try:
                 result = self.llm.generate(
                     model=model_name,
@@ -90,7 +96,7 @@ class SmartHighlighter(PipelineBase):
                     options=options,
                     logger=self,
                 )
-                
+
                 # Anti-Tampering guard
                 if len(result.strip()) < len(chunk) * verbatim_threshold:
                     self.warning(
@@ -103,20 +109,23 @@ class SmartHighlighter(PipelineBase):
             except Exception as e:
                 self.error(f"   ❌ 片段 {idx} 標記失敗: {e}，還原原文")
                 highlighted_parts.append(chunk)
-                
+
         self.finish_spinner(pbar, stop_tick, t)
         self.llm.unload_model(model_name, logger=self)
-        
+
         return "\n\n".join(highlighted_parts)
 
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Smart Highlighter Skill")
     parser.add_argument("--subject", default="Default", help="Subject label")
     parser.add_argument("--profile", help="Config profile override")
     parser.add_argument("--input-file", dest="input_file", help="Input .md file path (file mode)")
-    parser.add_argument("--output-file", dest="output_file", help="Output .md file path (file mode)")
+    parser.add_argument(
+        "--output-file", dest="output_file", help="Output .md file path (file mode)"
+    )
     args = parser.parse_args()
 
     highlighter = SmartHighlighter(profile=args.profile)
@@ -124,10 +133,12 @@ if __name__ == "__main__":
     # File mode (WebUI Re-run)
     if args.input_file:
         import pathlib
+
         input_text = pathlib.Path(args.input_file).read_text(encoding="utf-8")
         result = highlighter.run(input_text, subject=args.subject)
         if args.output_file:
             from core.atomic_writer import AtomicWriter
+
             AtomicWriter.write_text(args.output_file, result)
             print(f"✅ Highlighted output written to: {args.output_file}")
         else:
@@ -140,4 +151,6 @@ if __name__ == "__main__":
             result = highlighter.run(input_text, subject=args.subject)
             print(result)
     else:
-        print("Usage: cat doc.md | python highlight.py  OR  python highlight.py --input-file doc.md --output-file out.md")
+        print(
+            "Usage: cat doc.md | python highlight.py  OR  python highlight.py --input-file doc.md --output-file out.md"
+        )

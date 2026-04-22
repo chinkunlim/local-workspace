@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """Configuration validation helpers for required runtime settings."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Optional, Sequence
+from typing import Any, Optional
 
 
 class ConfigValidationError(ValueError):
@@ -25,7 +25,9 @@ class ConfigValidator:
         return value
 
     @staticmethod
-    def require_int(value: Any, path: str, *, min_value: Optional[int] = None, max_value: Optional[int] = None) -> int:
+    def require_int(
+        value: Any, path: str, *, min_value: Optional[int] = None, max_value: Optional[int] = None
+    ) -> int:
         value = ConfigValidator.require(value, path)
         if isinstance(value, bool) or not isinstance(value, int):
             raise ConfigValidationError(f"{path} must be an integer")
@@ -36,7 +38,13 @@ class ConfigValidator:
         return value
 
     @staticmethod
-    def require_float(value: Any, path: str, *, min_value: Optional[float] = None, max_value: Optional[float] = None) -> float:
+    def require_float(
+        value: Any,
+        path: str,
+        *,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+    ) -> float:
         value = ConfigValidator.require(value, path)
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise ConfigValidationError(f"{path} must be a number")

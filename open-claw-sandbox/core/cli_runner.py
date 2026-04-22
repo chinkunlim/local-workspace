@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 core/cli_runner.py — Shared Service Layer for Skill Command Construction
 ========================================================================
@@ -30,6 +29,7 @@ from core.path_builder import PathBuilder
 # Cached PathBuilder instances (one per skill)
 _pb_cache: dict[str, PathBuilder] = {}
 
+
 def _pb(skill: str) -> PathBuilder:
     if skill not in _pb_cache:
         _pb_cache[skill] = PathBuilder(_workspace_root, skill)
@@ -58,7 +58,9 @@ class SkillRunner:
         start_phase: int = 1,
     ) -> list[str]:
         """Build command to run the full audio-transcriber pipeline."""
-        script = os.path.join(_workspace_root, "skills", "audio-transcriber", "scripts", "run_all.py")
+        script = os.path.join(
+            _workspace_root, "skills", "audio-transcriber", "scripts", "run_all.py"
+        )
         cmd = [sys.executable, script]
         if subject:
             cmd += ["--subject", subject]
@@ -123,8 +125,19 @@ class SkillRunner:
             subject:     Subject label (used for config profile selection).
             profile:     Optional config profile override.
         """
-        script = os.path.join(_workspace_root, "skills", "smart-highlighter", "scripts", "highlight.py")
-        cmd = [sys.executable, script, "--input-file", input_file, "--output-file", output_file, "--subject", subject]
+        script = os.path.join(
+            _workspace_root, "skills", "smart-highlighter", "scripts", "highlight.py"
+        )
+        cmd = [
+            sys.executable,
+            script,
+            "--input-file",
+            input_file,
+            "--output-file",
+            output_file,
+            "--subject",
+            subject,
+        ]
         if profile:
             cmd += ["--profile", profile]
         return cmd
@@ -152,9 +165,21 @@ class SkillRunner:
             label:       Document label for YAML frontmatter.
             profile:     Optional config profile override.
         """
-        script = os.path.join(_workspace_root, "skills", "note-generator", "scripts", "synthesize.py")
-        cmd = [sys.executable, script, "--input-file", input_file, "--output-file", output_file,
-               "--subject", subject, "--label", label]
+        script = os.path.join(
+            _workspace_root, "skills", "note-generator", "scripts", "synthesize.py"
+        )
+        cmd = [
+            sys.executable,
+            script,
+            "--input-file",
+            input_file,
+            "--output-file",
+            output_file,
+            "--subject",
+            subject,
+            "--label",
+            label,
+        ]
         if profile:
             cmd += ["--profile", profile]
         return cmd
@@ -178,15 +203,35 @@ class SkillRunner:
         dirs = pb.phase_dirs
 
         if skill == "audio-transcriber":
-            input_path  = os.path.join(dirs.get("p3", os.path.join(_workspace_root, "data", skill, "output", "03_merged")),
-                                        subject, f"{file_id}.md")
-            output_path = os.path.join(dirs.get("p4", os.path.join(_workspace_root, "data", skill, "output", "04_highlighted")),
-                                        subject, f"{file_id}.md")
+            input_path = os.path.join(
+                dirs.get("p3", os.path.join(_workspace_root, "data", skill, "output", "03_merged")),
+                subject,
+                f"{file_id}.md",
+            )
+            output_path = os.path.join(
+                dirs.get(
+                    "p4", os.path.join(_workspace_root, "data", skill, "output", "04_highlighted")
+                ),
+                subject,
+                f"{file_id}.md",
+            )
         elif skill == "doc-parser":
-            input_path  = os.path.join(dirs.get("p1b", os.path.join(_workspace_root, "data", skill, "output", "01_processed")),
-                                        subject, file_id, "raw_extracted.md")
-            output_path = os.path.join(dirs.get("p2a", os.path.join(_workspace_root, "data", skill, "output", "02_highlighted")),
-                                        subject, file_id, "highlighted.md")
+            input_path = os.path.join(
+                dirs.get(
+                    "p1b", os.path.join(_workspace_root, "data", skill, "output", "01_processed")
+                ),
+                subject,
+                file_id,
+                "raw_extracted.md",
+            )
+            output_path = os.path.join(
+                dirs.get(
+                    "p2a", os.path.join(_workspace_root, "data", skill, "output", "02_highlighted")
+                ),
+                subject,
+                file_id,
+                "highlighted.md",
+            )
         else:
             raise ValueError(f"Unknown skill: {skill!r}")
 
@@ -210,15 +255,38 @@ class SkillRunner:
         dirs = pb.phase_dirs
 
         if skill == "audio-transcriber":
-            input_path  = os.path.join(dirs.get("p4", os.path.join(_workspace_root, "data", skill, "output", "04_highlighted")),
-                                        subject, f"{file_id}.md")
-            output_path = os.path.join(dirs.get("p5", os.path.join(_workspace_root, "data", skill, "output", "05_notion_synthesis")),
-                                        subject, f"{file_id}.md")
+            input_path = os.path.join(
+                dirs.get(
+                    "p4", os.path.join(_workspace_root, "data", skill, "output", "04_highlighted")
+                ),
+                subject,
+                f"{file_id}.md",
+            )
+            output_path = os.path.join(
+                dirs.get(
+                    "p5",
+                    os.path.join(_workspace_root, "data", skill, "output", "05_notion_synthesis"),
+                ),
+                subject,
+                f"{file_id}.md",
+            )
         elif skill == "doc-parser":
-            input_path  = os.path.join(dirs.get("p2a", os.path.join(_workspace_root, "data", skill, "output", "02_highlighted")),
-                                        subject, file_id, "highlighted.md")
-            output_path = os.path.join(dirs.get("p2b", os.path.join(_workspace_root, "data", skill, "output", "03_synthesis")),
-                                        subject, file_id, "content.md")
+            input_path = os.path.join(
+                dirs.get(
+                    "p2a", os.path.join(_workspace_root, "data", skill, "output", "02_highlighted")
+                ),
+                subject,
+                file_id,
+                "highlighted.md",
+            )
+            output_path = os.path.join(
+                dirs.get(
+                    "p2b", os.path.join(_workspace_root, "data", skill, "output", "03_synthesis")
+                ),
+                subject,
+                file_id,
+                "content.md",
+            )
         else:
             raise ValueError(f"Unknown skill: {skill!r}")
 

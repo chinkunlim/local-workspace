@@ -17,28 +17,25 @@ metadata:
 ## Quick Start
 
 ```bash
-# 1. 放 PDF 進 Inbox（按科目分類）
-cp textbook.pdf data/doc-parser/input/01_Inbox/AI_Papers/
+# 1. 放 PDF 進 Inbox（Universal Drop Zone）
+cp textbook.pdf data/raw/AI_Papers/
 
-# 2. 執行流水線
-python3 skills/doc-parser/scripts/run_all.py
+# 2. 執行流水線 (Headless Batch Mode)
+python3 skills/doc-parser/scripts/run_all.py --process-all
 
 # 3. 查看進度
 cat data/doc-parser/state/checklist.md
-
-# 4. Review Board（raw vs final 差異比對）
-open http://localhost:5001
 ```
 
-## 五個 Phase
+## 核心解析機制 (V2.0 Antigravity)
 
 | Phase | 腳本 | 功能 |
 |:---:|:---|:---|
 | P0a | `p00a_diagnostic.py` | 輕量診斷（頁數、文字密度、掃描判斷） |
-| P1a | `p01a_engine.py` | Docling 深度提取 → raw_extracted.md |
+| P1a | `p01a_engine.py` | Docling 深度提取 → `raw_extracted.md` (IMMUTABLE) |
 | P1b | `p01b_vector_charts.py` | 向量圖表光柵化 (pdftoppm) |
 | P1c | `p01c_ocr_gate.py` | OCR 品質評估（掃描件才觸發） |
-| P1d | `p01d_vlm_vision.py` | VLM 圖像自動描述 |
+| P1d | `p01d_vlm_vision.py` | **VLM 圖像自動描述**：動態解析 `figure_list.md`，自動鎖定 `待 VLM 描述` 的項目並調用 Vision 模型處理。具備容錯機制（圖片遺失優雅降級），最後進行 Atomic Markdown 寫回。強制 `temperature: 0` 防止幻覺。 |
 
 ## 常用指令
 
@@ -46,8 +43,11 @@ open http://localhost:5001
 # 只處理特定科目的 PDF
 python3 skills/doc-parser/scripts/run_all.py --subject AI_Papers
 
-# 互動模式（Phase 1d 後暫停，可人工確認圖表）
-python3 skills/doc-parser/scripts/run_all.py --interactive
+# 背景批次執行 (自動處理全部)
+python3 skills/doc-parser/scripts/run_all.py --process-all
+
+# 輸出 JSON 格式日誌 (Headless Telemetry)
+python3 skills/doc-parser/scripts/run_all.py --process-all --log-json
 
 # 互動切換模型
 python3 core/cli_config_wizard.py --skill doc-parser

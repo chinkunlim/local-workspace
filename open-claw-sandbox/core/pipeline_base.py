@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 PipelineBase — OpenClaw Shared Base Class (V2.3)
 =================================================
@@ -22,22 +21,22 @@ PipelineBase — OpenClaw Shared Base Class (V2.3)
     super().__init__("phase1a", "PDF Diagnostic", skill_name="doc-parser")
 """
 
+import logging
 import os
 import signal
 import sys
-import psutil
 import threading
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
-import logging
+import psutil
 
 from .config_manager import ConfigManager
 from .config_validation import ConfigValidator
-from .path_builder import PathBuilder
-from .state_manager import StateManager
 from .llm_client import OllamaClient
 from .log_manager import build_logger
+from .path_builder import PathBuilder
 from .session_state import SessionState, write_session_state
+from .state_manager import StateManager
 
 
 class PipelineBase:
@@ -45,7 +44,7 @@ class PipelineBase:
         self,
         phase_key: str,
         phase_name: str,
-        skill_name: str = "audio-transcriber",   # ← V2.2 新增，向後相容預設值
+        skill_name: str = "audio-transcriber",  # ← V2.2 新增，向後相容預設值
         logger=None,
     ):
         self.phase_key = phase_key
@@ -96,13 +95,14 @@ class PipelineBase:
         self.logger = self.logger or build_logger(
             f"OpenClaw.{self.skill_name}",
             log_file=self.log_file,
-            file_level=logging.DEBUG,   # Full detail in log file
-            console=False,              # Console output handled by self.log()
+            file_level=logging.DEBUG,  # Full detail in log file
+            console=False,  # Console output handled by self.log()
         )
 
     def log(self, msg: str, level: str = "info") -> None:
         if "tqdm" in sys.modules:
             import tqdm
+
             tqdm.tqdm.write(msg)
         else:
             print(msg)
@@ -157,6 +157,7 @@ class PipelineBase:
         - 第二次 Ctrl+C（在問答期間再按）→ 強制終止
         強制終止不寫 Checkpoint，暫停才寫。
         """
+
         def handle_interrupt(signum, frame):
             if self.stop_requested:
                 self.log("\n🚨 [緊急中斷] 偵測到連續中斷指令，執行強制停機！", "error")
@@ -166,7 +167,10 @@ class PipelineBase:
             self.pause_requested = False
 
             if not sys.stdin.isatty():
-                self.log("\n⏸️ [背景服務模式] 收到暫停信號，將於當前任務完成後自動切斷並保存斷點...", "warn")
+                self.log(
+                    "\n⏸️ [背景服務模式] 收到暫停信號，將於當前任務完成後自動切斷並保存斷點...",
+                    "warn",
+                )
                 self.pause_requested = True
                 self._write_session_state(SessionState.PAUSED)
                 return
@@ -195,6 +199,7 @@ class PipelineBase:
                 print("🛑 已選擇停止，處理完目前檔案後將退出（不儲存進度）。")
 
         signal.signal(signal.SIGINT, handle_interrupt)
+        signal.signal(signal.SIGTERM, handle_interrupt)
 
     # ------------------------------------------------------------------ #
     #  Hardware Health Check                                               #
@@ -208,13 +213,33 @@ class PipelineBase:
         battery_cfg = hardware_cfg.get("battery", {}) if isinstance(hardware_cfg, dict) else {}
         disk_cfg = hardware_cfg.get("disk", {}) if isinstance(hardware_cfg, dict) else {}
 
-        warning_mb = ConfigValidator.require_int(ram_cfg.get("warning_mb"), "hardware.ram.warning_mb", min_value=1)
-        critical_mb = ConfigValidator.require_int(ram_cfg.get("critical_mb"), "hardware.ram.critical_mb", min_value=1)
-        warning_temp = ConfigValidator.require_int(temp_cfg.get("warning_celsius"), "hardware.temperature.warning_celsius", min_value=1)
-        critical_temp = ConfigValidator.require_int(temp_cfg.get("critical_celsius"), "hardware.temperature.critical_celsius", min_value=1)
-        critical_disk_mb = ConfigValidator.require_int(disk_cfg.get("min_free_mb"), "hardware.disk.min_free_mb", min_value=1)
-        low_battery_percent = ConfigValidator.require_int(battery_cfg.get("low_percent"), "hardware.battery.low_percent", min_value=1, max_value=100)
-        critical_battery_percent = ConfigValidator.require_int(battery_cfg.get("critical_percent"), "hardware.battery.critical_percent", min_value=1, max_value=100)
+        warning_mb = ConfigValidator.require_int(
+            ram_cfg.get("warning_mb"), "hardware.ram.warning_mb", min_value=1
+        )
+        critical_mb = ConfigValidator.require_int(
+            ram_cfg.get("critical_mb"), "hardware.ram.critical_mb", min_value=1
+        )
+        warning_temp = ConfigValidator.require_int(
+            temp_cfg.get("warning_celsius"), "hardware.temperature.warning_celsius", min_value=1
+        )
+        critical_temp = ConfigValidator.require_int(
+            temp_cfg.get("critical_celsius"), "hardware.temperature.critical_celsius", min_value=1
+        )
+        critical_disk_mb = ConfigValidator.require_int(
+            disk_cfg.get("min_free_mb"), "hardware.disk.min_free_mb", min_value=1
+        )
+        low_battery_percent = ConfigValidator.require_int(
+            battery_cfg.get("low_percent"),
+            "hardware.battery.low_percent",
+            min_value=1,
+            max_value=100,
+        )
+        critical_battery_percent = ConfigValidator.require_int(
+            battery_cfg.get("critical_percent"),
+            "hardware.battery.critical_percent",
+            min_value=1,
+            max_value=100,
+        )
 
         available_ram = psutil.virtual_memory().available / (1024 * 1024)
         disk_free = psutil.disk_usage(self.base_dir).free / (1024 * 1024)
@@ -267,9 +292,10 @@ class PipelineBase:
     def get_prompt(self, section_title: str) -> str:
         """Parse prompt.md — format: ## <section_title>"""
         import re
+
         if not self.prompt_file or not os.path.exists(self.prompt_file):
             return ""
-        with open(self.prompt_file, "r", encoding="utf-8") as f:
+        with open(self.prompt_file, encoding="utf-8") as f:
             lines = f.readlines()
 
         prompt_lines = []
@@ -290,7 +316,9 @@ class PipelineBase:
 
     def get_config(self, phase_name: str, subject_name: str = None) -> Dict[str, Any]:
         """Read config.yaml profile."""
-        return self.config_manager.get_profile(phase_name.lower().replace(" ", ""), subject_name=subject_name)
+        return self.config_manager.get_profile(
+            phase_name.lower().replace(" ", ""), subject_name=subject_name
+        )
 
     # ------------------------------------------------------------------ #
     #  Task Management (audio-transcriber pattern; optional for other skills)     #
@@ -361,7 +389,7 @@ class PipelineBase:
                 if t["filename"] == file_filter:
                     start_idx = i
                     break
-            
+
             if single_mode:
                 if start_idx < len(all_tasks) and all_tasks[start_idx]["filename"] == file_filter:
                     all_tasks = [all_tasks[start_idx]]
@@ -376,11 +404,7 @@ class PipelineBase:
 
         return all_tasks
 
-    def process_tasks(
-        self,
-        process_callback,
-        **kwargs
-    ):
+    def process_tasks(self, process_callback, **kwargs):
         """
         Generic task iteration loop with built-in health checks and checkpoints.
         process_callback should accept: (idx, task, total_tasks) and return True on success.
@@ -391,12 +415,13 @@ class PipelineBase:
             return
 
         self.log(f"📋 {self.phase_name} 共有 {len(tasks)} 個檔案待處理。")
-        
+
         for idx, task in enumerate(tasks, 1):
-            if self.check_system_health(): break
-            
+            if self.check_system_health():
+                break
+
             process_callback(idx, task, len(tasks))
-            
+
             if self.stop_requested:
                 if self.pause_requested and idx < len(tasks):
                     next_task = tasks[idx]
@@ -405,73 +430,9 @@ class PipelineBase:
 
     def _batch_select_reprocess(self, done_tasks: List[Dict]) -> Dict[int, Dict]:
         """互動式批量選擇已完成任務是否重跑。"""
-        selected: set = set()
+        from core.cli_menu import batch_select_tasks
 
-        def render_list():
-            print("\n" + "═" * 56)
-            print(f"   ⚠️  偵測到 {len(done_tasks)} 個 [{self.phase_key.upper()}] 已完成的檔案")
-            print("═" * 56)
-            for i, task in enumerate(done_tasks, 1):
-                mark = "●" if (i - 1) in selected else "○"
-                print(f"  [{i:>2}] {mark} {task['subject']} / {task['filename']}")
-            print("-" * 56)
-            print("   數字 (如 1,3,5) = 切換選取  |  A = 全選  |  S = 全部跳過")
-            if selected:
-                print(f"   已選取 {len(selected)} 個 → 按 [Enter] 確認並重新轉錄")
-            else:
-                print("   按 [Enter] 或 S = 略過全部，直接進行下一 Phase")
-            print("-" * 56)
-
-        render_list()
-
-        while True:
-            try:
-                raw = input("   > ").strip().lower()
-            except (EOFError, KeyboardInterrupt):
-                print("   [已跳過全部已完成檔案]")
-                return {}
-
-            if raw == "s":
-                print(f"   ⏭️  已選擇跳過全部 {len(done_tasks)} 個已完成檔案。")
-                return {}
-            elif raw == "":
-                if not selected:
-                    print(f"   ⏭️  未選取任何項目，跳過全部 {len(done_tasks)} 個已完成檔案。")
-                    return {}
-                else:
-                    chosen = {i: done_tasks[i] for i in sorted(selected)}
-                    print(f"   ✅ 確認重新處理 {len(chosen)} 個檔案。")
-                    return chosen
-            elif raw == "a":
-                selected = set(range(len(done_tasks)))
-                render_list()
-                print(f"   ✅ 已全選，將重新處理全部 {len(done_tasks)} 個已完成檔案。")
-                return {i: done_tasks[i] for i in sorted(selected)}
-            else:
-                tokens = raw.replace(",", " ").split()
-                valid = True
-                parsed = []
-                for tok in tokens:
-                    if tok.isdigit():
-                        idx = int(tok) - 1
-                        if 0 <= idx < len(done_tasks):
-                            parsed.append(idx)
-                        else:
-                            print(f"   ⚠️  編號 {tok} 超出範圍，請重新輸入。")
-                            valid = False
-                            break
-                    else:
-                        print(f"   ⚠️  無法辨識指令：{tok}。請輸入數字、A 或 S/Enter。")
-                        valid = False
-                        break
-
-                if valid and parsed:
-                    for idx in parsed:
-                        if idx in selected:
-                            selected.discard(idx)
-                        else:
-                            selected.add(idx)
-                    render_list()
+        return batch_select_tasks(done_tasks, header=f"[{self.phase_key.upper()}] 已完成的檔案")
 
     # ------------------------------------------------------------------ #
     #  Checkpoint (delegates to StateManager)                             #
@@ -493,6 +454,7 @@ class PipelineBase:
 
     def create_spinner(self, desc: str):
         from tqdm import tqdm
+
         stop_tick = threading.Event()
         pbar = tqdm(total=100, desc=desc, bar_format="{l_bar}{bar}| [{elapsed}]")
 
@@ -511,5 +473,3 @@ class PipelineBase:
         pbar.bar_format = "{l_bar}{bar}| [完成: {elapsed}]"
         pbar.refresh()
         pbar.close()
-
-

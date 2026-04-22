@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Classify exceptions into operational categories for logging and routing."""
 
 from __future__ import annotations
@@ -37,6 +36,11 @@ def classify_exception(exc: BaseException) -> ClassifiedError:
         return ClassifiedError(ErrorCategory.SECURITY, False, message)
     if "memory" in lowered or "ram" in lowered or "disk" in lowered or "temperature" in lowered:
         return ClassifiedError(ErrorCategory.RESOURCE, True, message)
-    if "timeout" in lowered or "connection" in lowered or "network" in lowered or "ollama" in lowered:
+    if (
+        "timeout" in lowered
+        or "connection" in lowered
+        or "network" in lowered
+        or "ollama" in lowered
+    ):
         return ClassifiedError(ErrorCategory.EXTERNAL, True, message)
     return ClassifiedError(ErrorCategory.INTERNAL, False, message)

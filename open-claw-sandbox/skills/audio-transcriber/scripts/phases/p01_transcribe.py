@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Phase 1: High-Precision Audio Transcription
 Refactored to V8.1 — Anti-Hallucination Triple Defence
@@ -20,15 +19,16 @@ import zlib
 # Group 2 — Internal Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
 # Group 3 — Core imports
-from core import PipelineBase, AtomicWriter
-
+from core import AtomicWriter, PipelineBase
 
 # ---------------------------------------------------------------------------
 # Layer 1: VAD Pre-processing
 # ---------------------------------------------------------------------------
+
 
 def vad_preprocess(
     audio_path: str,
@@ -55,6 +55,7 @@ def vad_preprocess(
     Returns:
         cleaned_wav_path: 去靜音後的 .wav 絕對路徑；若全靜音、過度移除或套件未安裝則回傳原路徑
     """
+
     def _log(msg):
         if log_fn:
             log_fn(msg)
@@ -90,14 +91,14 @@ def vad_preprocess(
     chunks = []
     for start, end in nonsilent_ranges:
         padded_start = max(0, start - padding_ms)
-        padded_end   = min(len(audio), end + padding_ms)
+        padded_end = min(len(audio), end + padding_ms)
         chunks.append(audio[padded_start:padded_end])
 
     cleaned_audio = sum(chunks)
 
     original_duration = len(audio) / 1000
-    cleaned_duration  = len(cleaned_audio) / 1000
-    silence_ratio     = 1.0 - (cleaned_duration / original_duration)
+    cleaned_duration = len(cleaned_audio) / 1000
+    silence_ratio = 1.0 - (cleaned_duration / original_duration)
 
     # ── 安全閥：移除率超過上限，代表閾值過高誤判語音，fallback 回原始音檔 ──
     if silence_ratio > max_removal_ratio:
@@ -113,7 +114,7 @@ def vad_preprocess(
     )
 
     os.makedirs(tmp_dir, exist_ok=True)
-    base_name    = os.path.splitext(os.path.basename(audio_path))[0]
+    base_name = os.path.splitext(os.path.basename(audio_path))[0]
     cleaned_path = os.path.join(tmp_dir, f"{base_name}_vad.wav")
     cleaned_audio.export(cleaned_path, format="wav")
 
@@ -123,6 +124,7 @@ def vad_preprocess(
 # ---------------------------------------------------------------------------
 # Layer 2a: Segment-level Repetition Detection
 # ---------------------------------------------------------------------------
+
 
 def detect_repetition(
     text: str,
@@ -150,20 +152,20 @@ def detect_repetition(
         False → 正常文字
     """
     # Strategy 2: zlib 壓縮比
-    encoded        = text.encode("utf-8")
-    compressed     = zlib.compress(encoded)
+    encoded = text.encode("utf-8")
+    compressed = zlib.compress(encoded)
     compress_ratio = len(compressed) / len(encoded)
     if compress_ratio < compress_ratio_threshold:
         return True
 
-    words = list(text.strip()) if not ' ' in text.strip() else text.strip().split()
+    words = list(text.strip()) if " " not in text.strip() else text.strip().split()
 
     # 過短文字不處理（至少需要 2 個完整的 N-gram）
     if len(words) < ngram_size * 2:
         return False
 
     # Strategy 1: N-gram 重複率
-    ngrams       = [tuple(words[i:i + ngram_size]) for i in range(len(words) - ngram_size + 1)]
+    ngrams = [tuple(words[i : i + ngram_size]) for i in range(len(words) - ngram_size + 1)]
     unique_ngrams = set(ngrams)
     repetition_ratio = 1.0 - (len(unique_ngrams) / len(ngrams))
     if repetition_ratio > repetition_threshold:
@@ -175,6 +177,7 @@ def detect_repetition(
 # ---------------------------------------------------------------------------
 # Layer 2b: Local Segment Retry
 # ---------------------------------------------------------------------------
+
 
 def retry_segment(
     audio_path: str,
@@ -208,6 +211,7 @@ def retry_segment(
         str   → 重新轉錄的文字（乾淨）
         None  → 重試後仍異常，由呼叫端決定輸出策略
     """
+
     def _log(msg):
         if log_fn:
             log_fn(msg)
@@ -220,10 +224,10 @@ def retry_segment(
 
     BUFFER_MS = 200
     try:
-        audio    = AudioSegment.from_file(audio_path)
+        audio = AudioSegment.from_file(audio_path)
         start_ms = max(0, int(start_sec * 1000) - BUFFER_MS)
-        end_ms   = min(len(audio), int(end_sec * 1000) + BUFFER_MS)
-        clip     = audio[start_ms:end_ms]
+        end_ms = min(len(audio), int(end_sec * 1000) + BUFFER_MS)
+        clip = audio[start_ms:end_ms]
     except Exception as e:
         _log(f"⚠️  無法切割局部音軌: {e}")
         return None
@@ -237,16 +241,15 @@ def retry_segment(
         retry_text = ""
         if engine == "mlx-whisper":
             import mlx_whisper
-            result     = mlx_whisper.transcribe(
+
+            result = mlx_whisper.transcribe(
                 clip_path,
                 path_or_hf_repo=model_name,
                 condition_on_previous_text=False,
                 temperature=retry_temperature,
                 verbose=False,
             )
-            retry_text = " ".join(
-                s["text"].strip() for s in result.get("segments", [])
-            )
+            retry_text = " ".join(s["text"].strip() for s in result.get("segments", []))
         elif engine == "faster-whisper":
             if model is None:
                 _log("⚠️  faster-whisper 模型未載入，無法重試。")
@@ -260,7 +263,9 @@ def retry_segment(
             retry_text = " ".join(s.text.strip() for s in segments_gen)
 
         # 驗證重試結果
-        if detect_repetition(retry_text, ngram_size, repetition_threshold, compress_ratio_threshold):
+        if detect_repetition(
+            retry_text, ngram_size, repetition_threshold, compress_ratio_threshold
+        ):
             _log(f"⚠️  Segment [{start_sec:.1f}s-{end_sec:.1f}s] 重試後仍異常，標記失敗。")
             return None
 
@@ -280,6 +285,7 @@ def retry_segment(
 # ---------------------------------------------------------------------------
 # Language Detection (before VAD) — multi-clip majority vote
 # ---------------------------------------------------------------------------
+
 
 def detect_audio_language(
     audio_path: str,
@@ -307,8 +313,8 @@ def detect_audio_language(
     Returns:
         語言代碼字串（如 'zh'、'en'）或 None（偵測失敗）
     """
-    import tempfile
     from collections import Counter
+    import tempfile
 
     def _log(msg):
         if log_fn:
@@ -316,25 +322,23 @@ def detect_audio_language(
 
     try:
         from pydub import AudioSegment
-        audio     = AudioSegment.from_file(audio_path)
-        total_ms  = len(audio)
-        clip_ms   = int(clip_duration_sec * 1000)
+
+        audio = AudioSegment.from_file(audio_path)
+        total_ms = len(audio)
+        clip_ms = int(clip_duration_sec * 1000)
         NUM_CLIPS = 3
-        starts    = [
-            max(0, int(total_ms * i / NUM_CLIPS))
-            for i in range(NUM_CLIPS)
-        ]
+        starts = [max(0, int(total_ms * i / NUM_CLIPS)) for i in range(NUM_CLIPS)]
     except Exception as e:
         _log(f"⚠️  語言偵測前置處理失敗: {e}")
         return None
 
-    votes     = []
+    votes = []
     tmp_paths = []
 
     try:
         for i, start_ms in enumerate(starts):
             end_ms = min(start_ms + clip_ms, total_ms)
-            clip   = audio[start_ms:end_ms].set_channels(1).set_frame_rate(16000)
+            clip = audio[start_ms:end_ms].set_channels(1).set_frame_rate(16000)
 
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
                 tmp_path = f.name
@@ -345,6 +349,7 @@ def detect_audio_language(
                 lang = None
                 if engine == "mlx-whisper":
                     import mlx_whisper
+
                     # 壓制子進程 stderr（MallocStackLogging 等 macOS 雜訊）
                     with open(os.devnull, "w") as _dn:
                         _old = os.dup(2)
@@ -366,16 +371,18 @@ def detect_audio_language(
 
                 if lang:
                     votes.append(lang)
-                    _log(f"   片段 {i+1}/{NUM_CLIPS} ({start_ms//1000}s): [{lang}]")
+                    _log(f"   片段 {i + 1}/{NUM_CLIPS} ({start_ms // 1000}s): [{lang}]")
             except Exception as e:
-                _log(f"   片段 {i+1} 偵測失敗: {e}")
+                _log(f"   片段 {i + 1} 偵測失敗: {e}")
 
         if not votes:
             _log("⚠️  語言偵測無法取得任何結果，將使用 Whisper 自動判斷。")
             return None
 
         winner, count = Counter(votes).most_common(1)[0]
-        _log(f"🌐 語言偵測結果：[{winner}]（{count}/{len(votes)} 片段同意）— 將鎖定此語言進行轉錄。")
+        _log(
+            f"🌐 語言偵測結果：[{winner}]（{count}/{len(votes)} 片段同意）— 將鎖定此語言進行轉錄。"
+        )
         return winner
 
     finally:
@@ -387,7 +394,6 @@ def detect_audio_language(
                     pass
 
 
-
 class Phase1Transcribe(PipelineBase):
     def __init__(self):
         super().__init__(phase_key="p1", phase_name="語音轉錄", logger=None)
@@ -397,12 +403,12 @@ class Phase1Transcribe(PipelineBase):
 
         # Sandbox HuggingFace to strictly inside the project
         openclaw_root = os.path.abspath(os.path.join(self.base_dir, "..", ".."))
-        model_dir     = os.path.join(openclaw_root, "models")
+        model_dir = os.path.join(openclaw_root, "models")
         os.makedirs(model_dir, exist_ok=True)
-        os.environ["HF_HOME"]      = model_dir
+        os.environ["HF_HOME"] = model_dir
         os.environ["HF_HUB_CACHE"] = model_dir
 
-        model              = None
+        model = None
         current_model_name = None
 
         tasks = self.get_tasks(
@@ -426,47 +432,47 @@ class Phase1Transcribe(PipelineBase):
             subj, fname = task["subject"], task["filename"]
 
             # ── 讀取設定 ────────────────────────────────────────────────
-            config       = self.get_config("phase1", subject_name=subj)
-            engine       = config.get("engine", "faster-whisper").lower()
-            model_name   = config.get("model", "medium")
-            device       = config.get("device", "cpu")
+            config = self.get_config("phase1", subject_name=subj)
+            engine = config.get("engine", "faster-whisper").lower()
+            model_name = config.get("model", "medium")
+            device = config.get("device", "cpu")
             compute_type = config.get("compute_type", "int8")
-            beam_size    = int(config.get("beam_size", 5))
+            beam_size = int(config.get("beam_size", 5))
 
             # 讀取抗幻覺設定（所有值均有合理預設值）
             ah = config.get("anti_hallucination", {})
             # Layer 0
-            condition_on_prev_text     = bool(ah.get("condition_on_previous_text", False))
-            compression_ratio_thresh   = float(ah.get("compression_ratio_threshold", 2.4))
-            no_speech_thresh           = float(ah.get("no_speech_threshold", 0.6))
-            hallucination_silence_sec  = float(ah.get("hallucination_silence_threshold", 2.0))
+            condition_on_prev_text = bool(ah.get("condition_on_previous_text", False))
+            compression_ratio_thresh = float(ah.get("compression_ratio_threshold", 2.4))
+            no_speech_thresh = float(ah.get("no_speech_threshold", 0.6))
+            hallucination_silence_sec = float(ah.get("hallucination_silence_threshold", 2.0))
             # Layer 1
-            vad_enabled                = bool(ah.get("vad_enabled", True))
-            vad_min_silence_ms         = int(ah.get("vad_min_silence_len_ms", 1500))
-            vad_silence_dbfs           = int(ah.get("vad_silence_thresh_dbfs", -35))
-            vad_padding_ms             = int(ah.get("vad_padding_ms", 300))
-            vad_max_removal_ratio      = float(ah.get("vad_max_removal_ratio", 0.90))
+            vad_enabled = bool(ah.get("vad_enabled", True))
+            vad_min_silence_ms = int(ah.get("vad_min_silence_len_ms", 1500))
+            vad_silence_dbfs = int(ah.get("vad_silence_thresh_dbfs", -35))
+            vad_padding_ms = int(ah.get("vad_padding_ms", 300))
+            vad_max_removal_ratio = float(ah.get("vad_max_removal_ratio", 0.90))
             # Language detection
-            lang_detect_enabled        = bool(ah.get("language_detection_enabled", True))
-            lang_detect_clip_sec       = float(ah.get("language_detection_clip_sec", 30.0))
-            force_language             = ah.get("force_language", None) or None  # e.g. 'zh', None = auto
+            lang_detect_enabled = bool(ah.get("language_detection_enabled", True))
+            lang_detect_clip_sec = float(ah.get("language_detection_clip_sec", 30.0))
+            force_language = ah.get("force_language", None) or None  # e.g. 'zh', None = auto
             # Layer 2
-            rep_enabled                = bool(ah.get("repetition_detection_enabled", True))
-            rep_ngram                  = int(ah.get("repetition_ngram_size", 4))
-            rep_threshold              = float(ah.get("repetition_threshold", 0.45))
-            rep_compress_ratio         = float(ah.get("repetition_compress_ratio", 0.3))
-            retry_temperature          = float(ah.get("retry_temperature", 0.2))
+            rep_enabled = bool(ah.get("repetition_detection_enabled", True))
+            rep_ngram = int(ah.get("repetition_ngram_size", 4))
+            rep_threshold = float(ah.get("repetition_threshold", 0.45))
+            rep_compress_ratio = float(ah.get("repetition_compress_ratio", 0.3))
+            retry_temperature = float(ah.get("retry_temperature", 0.2))
 
             # Re-load model if profile changes between subjects
             if model is not None and current_model_name != model_name:
                 model = None
             current_model_name = model_name
 
-            base_name     = fname.replace(".m4a", "")
-            audio_path    = os.path.join(self.dirs["p0"], subj, fname)
+            base_name = fname.replace(".m4a", "")
+            audio_path = os.path.join(self.dirs["p0"], subj, fname)
             pure_out_path = os.path.join(self.dirs["p1"], subj, f"{base_name}.md")
-            ts_out_path   = os.path.join(self.dirs["p1"], subj, f"{base_name}_timestamped.md")
-            tmp_dir       = os.path.join(self.dirs["p1"], subj, "tmp")
+            ts_out_path = os.path.join(self.dirs["p1"], subj, f"{base_name}_timestamped.md")
+            tmp_dir = os.path.join(self.dirs["p1"], subj, "tmp")
 
             os.makedirs(os.path.dirname(pure_out_path), exist_ok=True)
 
@@ -478,13 +484,20 @@ class Phase1Transcribe(PipelineBase):
                     try:
                         from faster_whisper import WhisperModel
                     except ImportError:
-                        self.log("❌ 找不到 faster_whisper。請安裝: pip3 install faster-whisper", "error")
+                        self.log(
+                            "❌ 找不到 faster_whisper。請安裝: pip3 install faster-whisper", "error"
+                        )
                         return
                     self.log(f"🧠 載入 Whisper ({engine}) {model_name}...")
-                    model = WhisperModel(model_name, device=device, compute_type=compute_type, download_root=model_dir)
+                    model = WhisperModel(
+                        model_name,
+                        device=device,
+                        compute_type=compute_type,
+                        download_root=model_dir,
+                    )
                 elif engine == "mlx-whisper":
                     try:
-                        import mlx_whisper  # noqa: F401
+                        import mlx_whisper
                     except ImportError:
                         self.log("❌ 找不到 mlx_whisper。請安裝: pip3 install mlx-whisper", "error")
                         return
@@ -507,7 +520,9 @@ class Phase1Transcribe(PipelineBase):
                 # ── Layer 1: VAD 前處理 ──────────────────────────────────
                 cleaned_path = audio_path
                 if vad_enabled:
-                    self.log(f"🔇 Layer 1: VAD 前處理中（閾值 {vad_silence_dbfs} dBFS，上限移除率 {vad_max_removal_ratio:.0%}）...")
+                    self.log(
+                        f"🔇 Layer 1: VAD 前處理中（閾值 {vad_silence_dbfs} dBFS，上限移除率 {vad_max_removal_ratio:.0%}）..."
+                    )
                     cleaned_path = vad_preprocess(
                         audio_path=audio_path,
                         tmp_dir=tmp_dir,
@@ -520,19 +535,20 @@ class Phase1Transcribe(PipelineBase):
 
                 # ── Layer 0 + Whisper 轉錄 ───────────────────────────────
                 pure_text = ""
-                ts_text   = ""
-                segments  = []
+                ts_text = ""
+                segments = []
 
                 # 將偵測到的語言碼準備為 VAR_KEYWORD（直接展開傳入）
                 lang_kwargs = {"language": detected_lang} if detected_lang else {}
 
                 if engine == "mlx-whisper":
-                    import mlx_whisper
                     import warnings
+
+                    import mlx_whisper
+
                     pbar, stop_tick, t = self.create_spinner(f"轉錄處理 ({fname})")
                     # 重定向 stderr → /dev/null，壓制 macOS MallocStackLogging 雜訊
-                    with open(os.devnull, "w") as _devnull, \
-                         warnings.catch_warnings():
+                    with open(os.devnull, "w") as _devnull, warnings.catch_warnings():
                         warnings.simplefilter("ignore")
                         _old_fd = os.dup(2)
                         os.dup2(_devnull.fileno(), 2)
@@ -555,6 +571,7 @@ class Phase1Transcribe(PipelineBase):
 
                 else:  # faster-whisper
                     from tqdm import tqdm
+
                     segments_gen, info = model.transcribe(
                         cleaned_path,
                         beam_size=beam_size,
@@ -582,12 +599,12 @@ class Phase1Transcribe(PipelineBase):
                 hallucination_count = 0
 
                 for s in segments:
-                    text_val  = s["text"] if isinstance(s, dict) else s.text
+                    text_val = s["text"] if isinstance(s, dict) else s.text
                     start_val = s["start"] if isinstance(s, dict) else s.start
-                    end_val   = s["end"] if isinstance(s, dict) else s.end
+                    end_val = s["end"] if isinstance(s, dict) else s.end
 
                     start_m, start_s = int(start_val // 60), int(start_val % 60)
-                    end_m,   end_s   = int(end_val // 60),   int(end_val % 60)
+                    end_m, end_s = int(end_val // 60), int(end_val % 60)
 
                     # 偵測到幻覺 → 嘗試局部重試
                     if rep_enabled and detect_repetition(
@@ -624,7 +641,7 @@ class Phase1Transcribe(PipelineBase):
                         )
                     else:
                         pure_text += text_val.strip() + "\n"
-                        ts_text   += (
+                        ts_text += (
                             f"[{start_m:02d}:{start_s:02d}] - [{end_m:02d}:{end_s:02d}]"
                             f" {text_val.strip()}\n"
                         )
@@ -670,30 +687,34 @@ class Phase1Transcribe(PipelineBase):
         self.log("🧹 [Phase 1] 正在卸載轉錄模型並釋放記憶體...")
         if model is not None:
             del model
-        
+
         import gc
+
         gc.collect()
 
         # 清理 MLX / PyTorch 快取
         if engine == "mlx-whisper":
             try:
                 import mlx.core as mx
-                mx.metal.clear_cache()
+
+                mx.clear_cache()
             except Exception:
                 pass
         elif engine == "faster-whisper":
             try:
                 import torch
+
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
             except Exception:
                 pass
-        
+
         self.log("✅ [Phase 1] 記憶體釋放完成。")
 
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", "-f", action="store_true")
     parser.add_argument("--subject", "-s", type=str)

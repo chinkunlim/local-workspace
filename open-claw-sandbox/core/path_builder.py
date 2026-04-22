@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 core/path_builder.py — Config-Driven Canonical Path Construction
 ================================================================
@@ -26,9 +25,9 @@ Zero `if skill_name ==` branches — any new skill only needs a
 
 from __future__ import annotations
 
-import os
 from functools import cached_property
-from typing import Dict, Optional
+import os
+from typing import Dict
 
 # ---------------------------------------------------------------------------
 # Built-in defaults (used when config.yaml is unavailable).
@@ -36,11 +35,11 @@ from typing import Dict, Optional
 # ---------------------------------------------------------------------------
 _DEFAULTS: Dict[str, Dict] = {
     "audio-transcriber": {
-        "input":  "input",
+        "input": "input",
         "output": "output",
-        "state":  "state",
+        "state": "state",
         "resume": "state/resume",
-        "logs":   "logs",
+        "logs": "logs",
         "phases": {
             "p0": "input",
             "p1": "output/01_transcript",
@@ -51,25 +50,28 @@ _DEFAULTS: Dict[str, Dict] = {
         },
     },
     "doc-parser": {
-        "input":  "input",
+        "input": "input",
         "output": "output",
-        "state":  "state",
+        "state": "state",
         "resume": "state/resume",
-        "logs":   "logs",
+        "logs": "logs",
         "phases": {
-            "inbox":      "input",
-            "processed":  "output/01_processed",
+            "inbox": "input",
+            "processed": "output/01_processed",
             "highlighted": "output/02_highlighted",
-            "synthesis":  "output/03_synthesis",
-            "error":      "output/error",
+            "synthesis": "output/03_synthesis",
+            "error": "output/error",
         },
     },
 }
 
 # Generic fallback for unknown skills with no config
 _GENERIC_DEFAULT: Dict[str, str] = {
-    "input": "input", "output": "output",
-    "state": "state", "resume": "state/resume", "logs": "logs",
+    "input": "input",
+    "output": "output",
+    "state": "state",
+    "resume": "state/resume",
+    "logs": "logs",
 }
 
 
@@ -100,7 +102,8 @@ class PathBuilder:
         if os.path.exists(cfg_file):
             try:
                 import yaml
-                with open(cfg_file, "r", encoding="utf-8") as f:
+
+                with open(cfg_file, encoding="utf-8") as f:
                     data = yaml.safe_load(f) or {}
                 paths_block = data.get("paths")
                 if isinstance(paths_block, dict):
@@ -147,7 +150,9 @@ class PathBuilder:
         """
         cfg = self._raw_paths_cfg
         return {
-            key: self._resolve(cfg.get(key, _DEFAULTS.get(self.skill_name, _GENERIC_DEFAULT).get(key)))
+            key: self._resolve(
+                str(cfg.get(key, _DEFAULTS.get(self.skill_name, _GENERIC_DEFAULT).get(key)))
+            )
             for key in ("input", "output", "state", "resume", "logs")
             if cfg.get(key) or _DEFAULTS.get(self.skill_name, _GENERIC_DEFAULT).get(key)
         }
@@ -192,7 +197,4 @@ class PathBuilder:
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
-        return (
-            f"PathBuilder(skill={self.skill_name!r}, "
-            f"base_dir={self.base_dir!r})"
-        )
+        return f"PathBuilder(skill={self.skill_name!r}, base_dir={self.base_dir!r})"

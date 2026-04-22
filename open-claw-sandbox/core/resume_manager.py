@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ResumeManager — OpenClaw Cross-Session Resume
 =============================================
@@ -30,13 +29,16 @@ Usage:
     rm.clear_checkpoint(pdf_id="Psychology_Paper_05")
 """
 
-import os
-import json
-import threading
 from datetime import datetime
-from typing import Optional, Dict, Any
+import json
+import logging
+import os
+import threading
+from typing import Any, Dict, Optional
 
 from .atomic_writer import AtomicWriter
+
+_logger = logging.getLogger("OpenClaw.ResumeManager")
 
 
 class ResumeManager:
@@ -106,12 +108,16 @@ class ResumeManager:
             if not os.path.exists(checkpoint_path):
                 return None
             try:
-                with open(checkpoint_path, "r", encoding="utf-8") as f:
+                with open(checkpoint_path, encoding="utf-8") as f:
                     state = json.load(f)
                 if state.get("status") == "interrupted":
                     return state
                 return None
-            except Exception:
+            except json.JSONDecodeError as exc:
+                _logger.error("斷點檔案 JSON 損毀 (%s): %s", checkpoint_path, exc)
+                return None
+            except OSError as exc:
+                _logger.error("無法讀取斷點檔案 (%s): %s", checkpoint_path, exc)
                 return None
 
     def clear_checkpoint(self, pdf_id: str):
@@ -124,13 +130,15 @@ class ResumeManager:
             if not os.path.exists(checkpoint_path):
                 return
             try:
-                with open(checkpoint_path, "r", encoding="utf-8") as f:
+                with open(checkpoint_path, encoding="utf-8") as f:
                     state = json.load(f)
                 state["status"] = "completed"
                 state["completed_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
                 AtomicWriter.write_json(checkpoint_path, state)
-            except Exception:
-                pass
+            except json.JSONDecodeError as exc:
+                _logger.error("清除斷點時 JSON 損毀 (%s): %s", checkpoint_path, exc)
+            except OSError as exc:
+                _logger.error("清除斷點時 I/O 錯誤 (%s): %s", checkpoint_path, exc)
 
     def get_all_interrupted(self) -> Dict[str, Dict]:
         """
@@ -140,7 +148,7 @@ class ResumeManager:
         Returns:
             Dict mapping pdf_id → checkpoint dict
         """
-        interrupted = {}
+        interrupted: Dict[str, Dict] = {}
         with self._lock:
             if not os.path.exists(self.agent_core_dir):
                 return interrupted
@@ -164,7 +172,7 @@ class ResumeManager:
             # Mark as resuming
             checkpoint_path = os.path.join(self.agent_core_dir, pdf_id, "resume_state.json")
             try:
-                with open(checkpoint_path, "r", encoding="utf-8") as f:
+                with open(checkpoint_path, encoding="utf-8") as f:
                     state = json.load(f)
                 state["status"] = "resuming"
                 state["resumed_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")

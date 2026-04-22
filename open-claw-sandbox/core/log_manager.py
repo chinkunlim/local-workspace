@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 """Shared logging setup for OpenClaw skills and workspace services."""
 
 from __future__ import annotations
 
+import json
 import logging
-import os
 from logging.handlers import RotatingFileHandler
+import os
 from typing import Optional
 
 
@@ -21,6 +21,22 @@ class EmojiFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         record.emoji = self.LEVEL_EMOJI.get(record.levelno, "•")
         return super().format(record)
+
+
+class JsonFormatter(logging.Formatter):
+    """Structured JSON formatter for headless mode and log aggregation."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_obj = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "logger": record.name,
+            "line": record.lineno,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            log_obj["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_obj, ensure_ascii=False)
 
 
 def build_logger(
@@ -41,11 +57,19 @@ def build_logger(
     if logger.handlers:
         return logger
 
-    formatter = EmojiFormatter("%(asctime)s [%(levelname)s] %(emoji)s %(name)s:%(lineno)d - %(message)s")
+    use_json = os.environ.get("OPENCLAW_LOG_JSON") == "1"
+    if use_json:
+        formatter: logging.Formatter = JsonFormatter()
+    else:
+        formatter = EmojiFormatter(
+            "%(asctime)s [%(levelname)s] %(emoji)s %(name)s:%(lineno)d - %(message)s"
+        )
 
     if log_file:
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
-        file_handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8")
+        file_handler = RotatingFileHandler(
+            log_file, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8"
+        )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(file_level or level)
         logger.addHandler(file_handler)

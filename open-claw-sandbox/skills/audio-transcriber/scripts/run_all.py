@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 run_all.py — Audio Transcriber Skill Orchestrator (V8.0)
 ==================================================
@@ -22,25 +21,26 @@ import sys
 # Group 2 — Internal Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
 # Group 3 — Core imports
-from core import (
-    PipelineBase,
-    StateManager,
-    ConfigManager,
-    build_skill_parser,
-    SessionState,
-)
 from phases.p00_glossary import Phase0Glossary
 from phases.p01_transcribe import Phase1Transcribe
 from phases.p02_proofread import Phase2Proofread
 from phases.p03_merge import Phase3Merge
 
+from core import (
+    PipelineBase,
+    SessionState,
+    StateManager,
+    build_skill_parser,
+)
 
 # ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
+
 
 class VoiceMemoOrchestrator(PipelineBase):
     """Full audio-transcriber pipeline orchestrator.
@@ -101,7 +101,9 @@ class VoiceMemoOrchestrator(PipelineBase):
 
         # 3. Check required packages
         try:
-            import tqdm, pypdf, mlx_whisper  # noqa: F401
+            import mlx_whisper  # noqa: F401
+            import pypdf
+            import tqdm
         except ImportError as exc:
             print(f"❌ 錯誤：缺少必要套件 {exc.name}")
             fail = True
@@ -111,41 +113,6 @@ class VoiceMemoOrchestrator(PipelineBase):
 
         print("✅ 前置檢查通過。")
         return True
-
-    # ------------------------------------------------------------------ #
-    #  Status Dashboard                                                    #
-    # ------------------------------------------------------------------ #
-
-    def _print_status_dashboard(self) -> None:
-        """Print phase completion counters from StateManager."""
-        counters = {f"p{i}": {"done": 0, "total": 0} for i in range(1, 4)}
-
-        for subj_data in self._state_manager.state.values():
-            for _fname, record in subj_data.items():
-                for key in counters:
-                    counters[key]["total"] += 1
-                    if record.get(key) == "✅":
-                        counters[key]["done"] += 1
-
-        labels = {
-            "p1": "P1 轉錄",
-            "p2": "P2 校對",
-            "p3": "P3 合併",
-        }
-        print("\n" + "=" * 36)
-        print("     📊 V8.0 狀態與 DAG 追蹤面板")
-        print("=" * 36)
-        for key, label in labels.items():
-            done = counters[key]["done"]
-            total = counters[key]["total"]
-            if done == total and total > 0:
-                icon = "✅"
-            elif done > 0:
-                icon = "⏳"
-            else:
-                icon = "❌"
-            print(f"  [{label}]: {icon} {done}/{total}")
-        print("=" * 36 + "\n")
 
     # ------------------------------------------------------------------ #
     #  Checkpoint Resume                                                   #
@@ -218,7 +185,7 @@ class VoiceMemoOrchestrator(PipelineBase):
         elif not args.force:
             resume_from = self._check_and_resume()
 
-        self._print_status_dashboard()
+        self._state_manager.print_dashboard()
 
         # Optional glossary generation
         if args.glossary:
@@ -282,7 +249,7 @@ class VoiceMemoOrchestrator(PipelineBase):
 
                 # Reload state for dashboard (other phases may have mutated it)
                 self._state_manager = StateManager(self.base_dir, skill_name="audio-transcriber")
-                self._print_status_dashboard()
+                self._state_manager.print_dashboard()
 
                 if args.interactive and p_num < 3:
                     if sys.stdin.isatty():
@@ -308,8 +275,13 @@ class VoiceMemoOrchestrator(PipelineBase):
         print("🏁 Pipeline 執行完畢。")
         try:
             import subprocess
+
             subprocess.run(
-                ["osascript", "-e", 'display notification "V8.0 Pipeline 執行完畢" with title "Open-Claw"'],
+                [
+                    "osascript",
+                    "-e",
+                    'display notification "V8.0 Pipeline 執行完畢" with title "Open-Claw"',
+                ],
                 check=False,
             )
         except Exception:
@@ -319,6 +291,7 @@ class VoiceMemoOrchestrator(PipelineBase):
 # ---------------------------------------------------------------------------
 # Entry Point
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     parser = build_skill_parser(

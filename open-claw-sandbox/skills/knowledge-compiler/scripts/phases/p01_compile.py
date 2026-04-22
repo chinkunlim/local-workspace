@@ -1,31 +1,32 @@
-# -*- coding: utf-8 -*-
-import os
-import sys
-import re
 import datetime
+import os
+import re
+import sys
 
 # Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
-from core import PipelineBase, AtomicWriter
-from core.text_utils import smart_split
+from core import AtomicWriter, PipelineBase
+
 
 class Phase1Compile(PipelineBase):
     def __init__(self):
         super().__init__(
-            phase_key="p1",
-            phase_name="知識庫編譯與雙向連結",
-            skill_name="knowledge-compiler"
+            phase_key="p1", phase_name="知識庫編譯與雙向連結", skill_name="knowledge-compiler"
         )
         self.wiki_dir = os.path.abspath(os.path.join(self.base_dir, "..", "wiki"))
         os.makedirs(self.wiki_dir, exist_ok=True)
-        
+
         # We also create an INDEX.md if it doesn't exist
         self.index_file = os.path.join(self.wiki_dir, "INDEX.md")
         if not os.path.exists(self.index_file):
-            AtomicWriter.write_text(self.index_file, "# 🧠 Knowledge Base Index\n\n自動維護的知識庫索引。\n\n## 最新條目\n")
+            AtomicWriter.write_text(
+                self.index_file,
+                "# 🧠 Knowledge Base Index\n\n自動維護的知識庫索引。\n\n## 最新條目\n",
+            )
 
     def _update_index(self, title: str, filename: str):
         """Append to INDEX.md"""
@@ -41,12 +42,12 @@ class Phase1Compile(PipelineBase):
         subj = task["subject"]
         fname = task["filename"]
         in_path = os.path.join(self.base_dir, "input", subj, fname)
-        
+
         if not os.path.exists(in_path):
             self.warning(f"⚠️ 找不到來源：{in_path}")
             return
-            
-        with open(in_path, "r", encoding="utf-8") as f:
+
+        with open(in_path, encoding="utf-8") as f:
             content = f.read()
 
         self.info(f"📝 [{idx}/{total}] 編譯筆記：[{subj}] {fname} ({len(content)} 字元)")
@@ -75,28 +76,28 @@ class Phase1Compile(PipelineBase):
         try:
             # We use Qwen2.5-Coder:7b or similar default model
             final_doc = self.llm.generate(model="qwen2.5-coder:7b", prompt=prompt)
-            
+
             # Extract title to name the file in wiki/
-            title_match = re.search(r'^#\s+(.+)$', final_doc, re.MULTILINE)
+            title_match = re.search(r"^#\s+(.+)$", final_doc, re.MULTILINE)
             if title_match:
                 title = title_match.group(1).strip()
                 safe_title = re.sub(r'[\\/*?:"<>|]', "", title)
             else:
                 title = os.path.splitext(fname)[0]
                 safe_title = title
-                
+
             out_filename = f"{safe_title}.md"
             out_path = os.path.join(self.wiki_dir, out_filename)
-            
+
             AtomicWriter.write_text(out_path, final_doc)
-            
+
             # Update INDEX.md
             self._update_index(title, out_filename)
-            
+
             # Mark as completed in state manager
             self.state_manager.update_task(subj, fname, self.phase_key, char_count=len(final_doc))
             self.info(f"✅ [{idx}/{total}] 編譯完成：{out_path}")
-            
+
         except Exception as e:
             self.error(f"❌ 編譯失敗 {fname}: {e}")
         finally:
@@ -104,12 +105,12 @@ class Phase1Compile(PipelineBase):
             self.llm.unload_model("qwen2.5-coder:7b", logger=self)
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
-        self.info(f"✨ 啟動 Phase 1：知識庫編譯與雙向連結")
+        self.info("✨ 啟動 Phase 1：知識庫編譯與雙向連結")
         self.process_tasks(
             self._process_file,
             force=force,
             subject_filter=subject,
             file_filter=file_filter,
             single_mode=single_mode,
-            resume_from=resume_from
+            resume_from=resume_from,
         )

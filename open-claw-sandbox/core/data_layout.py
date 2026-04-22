@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Canonical data-layout migration helpers.
 
 These helpers preserve existing phase paths by creating symlinks to the new
@@ -7,9 +6,9 @@ input/output/state/logs structure when possible.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import os
 import shutil
-from dataclasses import dataclass
 from typing import Dict
 
 
@@ -36,14 +35,30 @@ class DataLayoutManager:
             }
             legacy_aliases = {
                 os.path.join(base_dir, "raw_data"): canonical_dirs["input"],
-                os.path.join(base_dir, "01_transcript"): os.path.join(canonical_dirs["output"], "01_transcript"),
-                os.path.join(base_dir, "02_proofread"): os.path.join(canonical_dirs["output"], "02_proofread"),
-                os.path.join(base_dir, "03_merged"): os.path.join(canonical_dirs["output"], "03_merged"),
-                os.path.join(base_dir, "04_highlighted"): os.path.join(canonical_dirs["output"], "04_highlighted"),
-                os.path.join(base_dir, "05_notion_synthesis"): os.path.join(canonical_dirs["output"], "05_notion_synthesis"),
-                os.path.join(base_dir, ".pipeline_state.json"): os.path.join(canonical_dirs["state"], ".pipeline_state.json"),
-                os.path.join(base_dir, "checklist.md"): os.path.join(canonical_dirs["state"], "checklist.md"),
-                os.path.join(base_dir, "system.log"): os.path.join(canonical_dirs["logs"], "system.log"),
+                os.path.join(base_dir, "01_transcript"): os.path.join(
+                    canonical_dirs["output"], "01_transcript"
+                ),
+                os.path.join(base_dir, "02_proofread"): os.path.join(
+                    canonical_dirs["output"], "02_proofread"
+                ),
+                os.path.join(base_dir, "03_merged"): os.path.join(
+                    canonical_dirs["output"], "03_merged"
+                ),
+                os.path.join(base_dir, "04_highlighted"): os.path.join(
+                    canonical_dirs["output"], "04_highlighted"
+                ),
+                os.path.join(base_dir, "05_notion_synthesis"): os.path.join(
+                    canonical_dirs["output"], "05_notion_synthesis"
+                ),
+                os.path.join(base_dir, ".pipeline_state.json"): os.path.join(
+                    canonical_dirs["state"], ".pipeline_state.json"
+                ),
+                os.path.join(base_dir, "checklist.md"): os.path.join(
+                    canonical_dirs["state"], "checklist.md"
+                ),
+                os.path.join(base_dir, "system.log"): os.path.join(
+                    canonical_dirs["logs"], "system.log"
+                ),
             }
         elif skill_name == "doc-parser":
             canonical_dirs = {
@@ -55,7 +70,7 @@ class DataLayoutManager:
             }
             # Migration complete: no legacy aliases needed.
             # All code now references canonical paths directly.
-            legacy_aliases: Dict[str, str] = {}
+            legacy_aliases = {}
         else:
             canonical_dirs = {
                 "input": os.path.join(base_dir, "input"),
@@ -80,11 +95,9 @@ class DataLayoutManager:
             if os.path.islink(alias_path):
                 continue
 
-            if os.path.isdir(alias_path) and not os.path.isdir(canonical_path):
-                if not dry_run:
-                    os.makedirs(os.path.dirname(canonical_path), exist_ok=True)
-                    shutil.move(alias_path, canonical_path)
-            elif os.path.isfile(alias_path) and not os.path.exists(canonical_path):
+            if (os.path.isdir(alias_path) and not os.path.isdir(canonical_path)) or (
+                os.path.isfile(alias_path) and not os.path.exists(canonical_path)
+            ):
                 if not dry_run:
                     os.makedirs(os.path.dirname(canonical_path), exist_ok=True)
                     shutil.move(alias_path, canonical_path)

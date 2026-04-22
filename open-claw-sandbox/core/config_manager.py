@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Centralized skill configuration loading."""
 
 from __future__ import annotations
@@ -60,7 +59,9 @@ class ConfigManager:
         self.data = self._load()
         return self.data
 
-    def get_section(self, section_name: str, default: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def get_section(
+        self, section_name: str, default: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         section = self.data.get(section_name, default or {})
         return section if isinstance(section, dict) else (default or {})
 

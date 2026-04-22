@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 core/session_state.py — Unified Pipeline Control State Machine
 ==============================================================
@@ -21,17 +20,17 @@ Usage (via PipelineBase — do not call directly in phase scripts):
 
 from __future__ import annotations
 
-import os
 from datetime import datetime
 from enum import Enum
+import os
 from typing import Any, Dict, Optional
 
 from .atomic_writer import AtomicWriter
 
-
 # ---------------------------------------------------------------------------
 # State Enum
 # ---------------------------------------------------------------------------
+
 
 class SessionState(Enum):
     """Canonical pipeline control states.
@@ -40,12 +39,13 @@ class SessionState(Enum):
         RUNNING → PAUSED | STOPPED | FORCE_STOPPED | COMPLETED | FAILED
         PAUSED  → RUNNING  (on --resume)
     """
-    RUNNING       = "running"
-    PAUSED        = "paused"
-    STOPPED       = "stopped"
+
+    RUNNING = "running"
+    PAUSED = "paused"
+    STOPPED = "stopped"
     FORCE_STOPPED = "force_stopped"
-    COMPLETED     = "completed"
-    FAILED        = "failed"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -93,11 +93,12 @@ def read_session_state(state_dir: str) -> Optional[Dict[str, Any]]:
         Parsed session.json dict, or None if the file does not exist.
     """
     import json
+
     session_path = os.path.join(state_dir, SESSION_FILE)
     if not os.path.exists(session_path):
         return None
     try:
-        with open(session_path, "r", encoding="utf-8") as fh:
+        with open(session_path, encoding="utf-8") as fh:
             return json.load(fh)
     except Exception:
         return None

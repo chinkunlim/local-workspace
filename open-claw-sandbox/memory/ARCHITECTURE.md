@@ -1,7 +1,7 @@
 # ARCHITECTURE.md — System Architecture
 
-> **Last Updated:** 2026-04-19
-> **Status:** Stable / Production-Ready (Phase 1 Sign-off)
+> **Last Updated:** 2026-04-22
+> **Status:** Stable / Production-Ready (V2 Antigravity Checkpoint)
 
 ---
 
@@ -27,6 +27,7 @@ local-workspace/
 │   ├── docs/                   ← Documentation (STRUCTURE, CODING_GUIDELINES_FINAL)
 │   └── data/                   ← Runtime data (gitignored; created on first run)
 │       ├── raw/                ← Universal Inbox — only human-facing input point
+│       ├── quarantine/         ← Dead Letter Queue (DLQ) for permanently failed files
 │       └── wiki/               ← Obsidian Vault — final published knowledge base
 ├── infra/scripts/start.sh      ← Starts all infrastructure services
 └── infra/scripts/stop.sh       ← Gracefully stops all services
@@ -43,23 +44,26 @@ local-workspace/
 | `state_manager.py` | Persists pipeline run state per file per phase (started / done / error) using atomic JSON writes with `fcntl.flock` |
 | `resume_manager.py` | Saves and restores mid-run checkpoints for graceful resume after interruption |
 | `session_state.py` | Volatile per-session state (current subject, active flags); written atomically |
-| `log_manager.py` | Structured logger factory — rotated file log + console output with emoji prefixes |
-| `atomic_writer.py` | Crash-safe file writes via `tempfile` + `os.replace()`; enforces path-traversal guard |
+| `log_manager.py` | Structured logger factory (`JsonFormatter` toggled via `OPENCLAW_LOG_JSON=1`) |
+| `atomic_writer.py` | Crash-safe file writes via `tempfile` + `os.replace()`; mathematically guarantees no corruption |
+| `file_utils.py` | DRY utility module (`safe_read_json`, `managed_tmp_dir`, `ensure_dir`) |
 | `data_layout.py` | Initialises required `data/` subdirectory tree before each pipeline run |
 | `security_manager.py` | PDF sanitisation, filename allow-listing, path-traversal prevention |
 | `glossary_manager.py` | Cross-skill terminology sync from `priority_terms.json` |
 | `text_utils.py` | `smart_split()` — context-aware chunker for LLM prompt windowing |
 | `llm_client.py` | Unified Ollama / LM Studio client with exponential-backoff retry (3 attempts, 600 s timeout) |
 | `subject_manager.py` | Enumerates and validates subject/session directories |
-| `cli.py` | Shared `argparse` builder (`--subject`, `--force`, `--resume`, `--file-filter`) |
+| `cli.py` | Shared `argparse` factory (`--process-all`, `--subject`, `--force`, `--log-json`, `--config`) |
 | `cli_config_wizard.py` | Interactive TUI for runtime model-profile switching |
 | `cli_runner.py` | Service layer — constructs subprocess command lists for all skills; imported by Open Claw dispatcher |
-| `inbox_daemon.py` | Watchdog (`watchdog` library, recursive) over `data/raw/`; routes files by extension and PDF routing rules; subject-folder aware |
+| `inbox_daemon.py` | Watchdog background daemon; detects Obsidian YAML `status: rewrite` triggers and new files |
+| `task_queue.py` | `LocalTaskQueue`: Single-threaded execution lock, strict `timeout` guards, and Dead Letter Queue (DLQ) quarantine |
+| `run_all_pipelines.py` | Global PID-locked pipeline orchestrator; prevents Telegram `/run` rapid-fire OOM crashes |
 | `inbox_config.json` | Declarative routing ruleset; 42 pre-configured patterns; hot-reloaded on every file event |
 | `error_classifier.py` | Classifies exceptions into recoverable / fatal / user-error categories |
 
-> **Removed:** `web_ui/app.py` (Flask dashboard, port 5001) — replaced by Open Claw native
-> CLI dispatch and Telegram integration in v0.9.0.
+> **Removed:** Legacy Flask `web_ui` components were purged during the V2 Headless migration. 
+> The system is now driven strictly by `BotDaemon`, `SystemInboxDaemon`, and `LocalTaskQueue`.
 
 ---
 
@@ -132,19 +136,22 @@ Phase 03:  Synthesis            (delegated to skills/note_generator/ → data/wi
 ## Data Flow
 
 ```
-User (Telegram / CLI / Open WebUI Custom Tool)
+User (Telegram Bot / Obsidian Vault / CLI)
     │
-    └─► data/raw/<Subject>/
+    └─► data/raw/<Subject>/ OR Obsidian `status: rewrite` trigger
             │
-            └─► inbox_daemon.py  (watchdog, recursive, hot-config)
+            └─► inbox_daemon.py  (Watchdog daemon)
                     │
-                    ├─► task_queue.py ─► audio-transcriber/input/<Subject>/   ─► 6-phase pipeline
-                    └─► task_queue.py ─► doc-parser/input/<Subject>/          ─► 7-phase pipeline
-                                 │                                     │
-                                 └─────────── data/wiki/ ──────────────┘
-                                                 │
-                                                 ├─► knowledge_pusher.py ─► Open WebUI Knowledge API
-                                                 │
+                    └─► task_queue.py (LocalTaskQueue with DLQ & 7200s timeout bounds)
+                                 │
+                                 ├─► doc-parser / audio-transcriber (Extraction, Immutable)
+                                 │
+                                 └─► note-generator / smart-highlighter (Synthesis)
+                                              │
+                                              └─► data/wiki/ (Obsidian Vault)
+                                                        │
+                                                        ├─► Open WebUI Knowledge API (Literature Matrix Synthesis)
+                                                        │
                                      ┌───────────┴───────────┐
                                      │                       │
                                  Obsidian               ChromaDB index

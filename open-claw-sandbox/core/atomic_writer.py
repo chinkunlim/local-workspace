@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Crash-safe file writes using atomic rename."""
 
 from __future__ import annotations
@@ -17,7 +16,9 @@ class AtomicWriter:
     def write_text(path: str, content: str, encoding: str = "utf-8") -> None:
         abs_path = os.path.abspath(os.path.expanduser(path))
         if not abs_path.startswith(_workspace_root):
-            raise PermissionError(f"🚨 Path Traversal 防禦觸發！禁止寫入 Workspace 外的絕對路徑: {abs_path}")
+            raise PermissionError(
+                f"🚨 Path Traversal 防禦觸發！禁止寫入 Workspace 外的絕對路徑: {abs_path}"
+            )
 
         parent_dir = os.path.dirname(abs_path)
         if parent_dir:
@@ -39,4 +40,6 @@ class AtomicWriter:
 
     @staticmethod
     def write_json(path: str, payload: Any, encoding: str = "utf-8") -> None:
-        AtomicWriter.write_text(path, json.dumps(payload, ensure_ascii=False, indent=2), encoding=encoding)
+        AtomicWriter.write_text(
+            path, json.dumps(payload, ensure_ascii=False, indent=2), encoding=encoding
+        )

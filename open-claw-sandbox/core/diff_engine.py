@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 core/diff_engine.py — Open Claw Universal Diff & Audit Engine
 =============================================================
@@ -19,44 +18,44 @@ Design:
 from __future__ import annotations
 
 import collections
+from dataclasses import dataclass, field
+from datetime import datetime
 import difflib
 import glob
 import os
 import re
-import webbrowser
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple
-
+import webbrowser
 
 # ──────────────────────────────────────────────────────────────────────────────
 #  Data containers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class DiffResult:
-    file_a:      str          # absolute path
-    file_b:      str          # absolute path
-    label_a:     str = ""
-    label_b:     str = ""
-    text_a:      str = ""
-    text_b:      str = ""
+    file_a: str  # absolute path
+    file_b: str  # absolute path
+    label_a: str = ""
+    label_b: str = ""
+    text_a: str = ""
+    text_b: str = ""
     html_report: str = ""
-    additions:   int = 0
-    deletions:   int = 0
-    char_delta:  float = 0.0  # percentage (negative = shrinkage)
-    success:     bool = True
-    error:       str  = ""
+    additions: int = 0
+    deletions: int = 0
+    char_delta: float = 0.0  # percentage (negative = shrinkage)
+    success: bool = True
+    error: str = ""
 
 
 @dataclass
 class AuditEntry:
-    before:  str
-    after:   str
-    count:   int             = 0
-    reasons: List[str]       = field(default_factory=list)
-    phases:  List[str]       = field(default_factory=list)
-    files:   List[str]       = field(default_factory=list)
+    before: str
+    after: str
+    count: int = 0
+    reasons: List[str] = field(default_factory=list)
+    phases: List[str] = field(default_factory=list)
+    files: List[str] = field(default_factory=list)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -102,6 +101,7 @@ _HTML_STYLE = """
 #  DiffEngine
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class DiffEngine:
     """
     Skill-agnostic side-by-side diff generator.
@@ -116,7 +116,7 @@ class DiffEngine:
 
     def __init__(self, context_lines: int = 3, wrap_columns: int = 100):
         self.context_lines = context_lines
-        self.wrap_columns   = wrap_columns
+        self.wrap_columns = wrap_columns
 
     # --- public API ----------------------------------------------------------
 
@@ -141,7 +141,8 @@ class DiffEngine:
                               for audio-transcriber audit-log footers).
         """
         r = DiffResult(
-            file_a=path_a, file_b=path_b,
+            file_a=path_a,
+            file_b=path_b,
             label_a=label_a or os.path.basename(path_a),
             label_b=label_b or os.path.basename(path_b),
         )
@@ -153,9 +154,9 @@ class DiffEngine:
             r.success, r.error = False, f"File not found: {path_b}"
             return r
 
-        with open(path_a, "r", encoding="utf-8") as f:
+        with open(path_a, encoding="utf-8") as f:
             r.text_a = f.read()
-        with open(path_b, "r", encoding="utf-8") as f:
+        with open(path_b, encoding="utf-8") as f:
             raw_b = f.read()
 
         if strip_log_marker and strip_log_marker in raw_b:
@@ -166,7 +167,7 @@ class DiffEngine:
         lines_b = r.text_b.splitlines(keepends=True)
 
         r.additions = sum(1 for l in lines_b if l not in lines_a)
-        r.deletions  = sum(1 for l in lines_a if l not in lines_b)
+        r.deletions = sum(1 for l in lines_a if l not in lines_b)
         chars_a, chars_b = sum(len(l) for l in lines_a), sum(len(l) for l in lines_b)
         r.char_delta = ((chars_b - chars_a) / chars_a * 100) if chars_a else 0.0
 
@@ -192,9 +193,12 @@ class DiffEngine:
             charjunk=difflib.IS_CHARACTER_JUNK,
         )
         table = differ.make_table(
-            fromlines=lines_a, tolines=lines_b,
-            fromdesc=r.label_a, todesc=r.label_b,
-            context=True, numlines=self.context_lines,
+            fromlines=lines_a,
+            tolines=lines_b,
+            fromdesc=r.label_a,
+            todesc=r.label_b,
+            context=True,
+            numlines=self.context_lines,
         )
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
         stats = (
@@ -222,7 +226,7 @@ class DiffEngine:
 # Matches: * **"原文"** → **"修正後"** — 理由
 _LOG_ENTRY_RE = re.compile(
     r'\*\s+\*{1,2}[「""]?(.+?)[」""]?\*{1,2}\s*→\s*\*{1,2}[「""]?(.+?)[」""]?\*{1,2}'
-    r'(?:\s*[—\-–]\s*(.+))?',
+    r"(?:\s*[—\-–]\s*(.+))?",
     re.UNICODE,
 )
 
@@ -252,22 +256,22 @@ class AuditEngine:
         Scan all .md files in a directory, parse change-log sections,
         and return aggregated AuditEntry dict keyed by (before, after).
         """
-        aggregated: Dict[Tuple[str, str], AuditEntry] = collections.defaultdict(AuditEntry)
+        aggregated: Dict[Tuple[str, str], AuditEntry] = {}
 
         if not os.path.isdir(directory):
             return {}
 
         for fpath in sorted(glob.glob(os.path.join(directory, "*.md"))):
             fname = os.path.basename(fpath)
-            with open(fpath, "r", encoding="utf-8") as f:
+            with open(fpath, encoding="utf-8") as f:
                 content = f.read()
 
             log_text = self._extract_section(content, log_marker)
             for entry in self._parse_entries(log_text):
                 key = (entry["before"], entry["after"])
-                ae  = aggregated[key]
-                ae.before = entry["before"]
-                ae.after  = entry["after"]
+                if key not in aggregated:
+                    aggregated[key] = AuditEntry(before=entry["before"], after=entry["after"])
+                ae = aggregated[key]
                 ae.count += 1
                 ae.files.append(fname)
                 ae.phases.append(phase_tag)
@@ -287,22 +291,34 @@ class AuditEngine:
         sorted_entries = sorted(entries.items(), key=lambda x: (-x[1].count, x[0][0]))
 
         lines = [
-            f"# 校對總報告 — {subject}", "",
+            f"# 校對總報告 — {subject}",
+            "",
             f"> 生成時間：{now}  ",
-            f"> 最低出現次數：{min_count}  ", "",
-            "---", "", "## 統計摘要", "",
-            "| 指標 | 數值 |", "| :-- | --: |",
+            f"> 最低出現次數：{min_count}  ",
+            "",
+            "---",
+            "",
+            "## 統計摘要",
+            "",
+            "| 指標 | 數值 |",
+            "| :-- | --: |",
             f"| 總修改條目（去重後） | {len(entries):,} 筆 |",
             f"| 跨檔案重複修改（≥2 次） | {sum(1 for v in entries.values() if v.count >= 2):,} 筆 |",
-            "", "---", "", "## 修改彙整（按頻率排序）", "",
+            "",
+            "---",
+            "",
+            "## 修改彙整（按頻率排序）",
+            "",
             "| # | 原文 | → 修正後 | 次數 | Phase | 涉及檔案 | 修改理由 |",
             "| --: | :-- | :-- | :--: | :-- | :-- | :-- |",
         ]
         for rank, ((before, after), ae) in enumerate(sorted_entries, 1):
             phases_str = " ".join(sorted(set(ae.phases)))
-            files_str  = "、".join(sorted(set(ae.files)))
+            files_str = "、".join(sorted(set(ae.files)))
             reason_str = "；".join(ae.reasons) if ae.reasons else "—"
-            lines.append(f"| {rank} | `{before}` | `{after}` | {ae.count} | {phases_str} | {files_str} | {reason_str} |")
+            lines.append(
+                f"| {rank} | `{before}` | `{after}` | {ae.count} | {phases_str} | {files_str} | {reason_str} |"
+            )
 
         return "\n".join(lines) + "\n"
 
@@ -321,7 +337,7 @@ class AuditEngine:
             m = _LOG_ENTRY_RE.search(line)
             if m:
                 before = m.group(1).strip()
-                after  = m.group(2).strip()
+                after = m.group(2).strip()
                 reason = m.group(3).strip() if m.group(3) else ""
                 if before and after and before != after:
                     entries.append({"before": before, "after": after, "reason": reason})
@@ -333,7 +349,8 @@ class AuditEngine:
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import argparse, sys
+    import argparse
+    import sys
 
     parser = argparse.ArgumentParser(description="Open Claw Diff Engine — CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -344,40 +361,51 @@ if __name__ == "__main__":
     d.add_argument("file_b", help="'After'  file path")
     d.add_argument("--label-a", default="Before")
     d.add_argument("--label-b", default="After")
-    d.add_argument("--out",    help="Output HTML path (default: adjacent to file_b)")
-    d.add_argument("--open",   dest="auto_open", action="store_true")
-    d.add_argument("--strip-log", metavar="MARKER", default=None,
-                   help="Strip everything from this markdown marker onward in file_b")
+    d.add_argument("--out", help="Output HTML path (default: adjacent to file_b)")
+    d.add_argument("--open", dest="auto_open", action="store_true")
+    d.add_argument(
+        "--strip-log",
+        metavar="MARKER",
+        default=None,
+        help="Strip everything from this markdown marker onward in file_b",
+    )
 
     # audit subcommand
     a = sub.add_parser("audit", help="Aggregate correction logs in a directory")
     a.add_argument("directory", help="Directory containing .md files")
-    a.add_argument("--marker",   default="## 📋 彙整修改日誌")
-    a.add_argument("--phase",    default="P?",   help="Phase tag label (e.g. P2)")
-    a.add_argument("--subject",  default="Unknown Subject")
+    a.add_argument("--marker", default="## 📋 彙整修改日誌")
+    a.add_argument("--phase", default="P?", help="Phase tag label (e.g. P2)")
+    a.add_argument("--subject", default="Unknown Subject")
     a.add_argument("--min-count", type=int, default=1)
-    a.add_argument("--out",      help="Output .md report path")
+    a.add_argument("--out", help="Output .md report path")
 
     args = parser.parse_args()
 
     if args.command == "diff":
         engine = DiffEngine()
-        result = engine.diff_files(args.file_a, args.file_b,
-                                   label_a=args.label_a, label_b=args.label_b,
-                                   strip_log_marker=args.strip_log)
+        result = engine.diff_files(
+            args.file_a,
+            args.file_b,
+            label_a=args.label_a,
+            label_b=args.label_b,
+            strip_log_marker=args.strip_log,
+        )
         if not result.success:
             print(f"❌ {result.error}", file=sys.stderr)
             sys.exit(1)
         out = args.out or (os.path.splitext(args.file_b)[0] + ".diff.html")
         engine.write_html(result, out, auto_open=args.auto_open)
         print(f"✅ Diff 報告已生成: {out}")
-        print(f"   新增行: {result.additions}, 刪除行: {result.deletions}, 字元淨變化: {result.char_delta:+.1f}%")
+        print(
+            f"   新增行: {result.additions}, 刪除行: {result.deletions}, 字元淨變化: {result.char_delta:+.1f}%"
+        )
 
     elif args.command == "audit":
-        engine = AuditEngine()
-        entries = engine.aggregate_directory(args.directory, args.marker,
-                                             args.phase, args.min_count)
-        report  = engine.render_report(entries, args.subject, args.min_count)
+        audit_engine = AuditEngine()
+        entries = audit_engine.aggregate_directory(
+            args.directory, args.marker, args.phase, args.min_count
+        )
+        report = audit_engine.render_report(entries, args.subject, args.min_count)
         if args.out:
             os.makedirs(os.path.dirname(args.out), exist_ok=True)
             with open(args.out, "w", encoding="utf-8") as f:

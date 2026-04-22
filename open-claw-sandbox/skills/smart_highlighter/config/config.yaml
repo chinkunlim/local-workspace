@@ -4,10 +4,10 @@
 
 # Paths managed by core.PathBuilder (base: data/smart-highlighter/)
 paths:
-  input:  "input"
+  input: "input"
   output: "output"
-  state:  "state"
-  logs:   "logs"
+  state: "state"
+  logs: "logs"
   phases:
     output: "output"
 
@@ -18,17 +18,19 @@ highlight:
   active_profile: default
   profiles:
     default:
-      model: gemma3:12b
+      # model: gemma3:12b
+      model: gemma4:e4b
       chunk_size: 3000
-      verbatim_threshold: 0.85   # Anti-Tampering: output must be >= 85% of input length
-      min_chunk_chars: 30        # Skip LLM for very short fragments
+      verbatim_threshold: 0.85 # Anti-Tampering: output must be >= 85% of input length
+      min_chunk_chars: 30 # Skip LLM for very short fragments
       options:
         num_ctx: 8192
         temperature: 0
 
     # Stricter profile for academic transcripts (audio-transcriber default)
     strict:
-      model: gemma3:12b
+      # model: gemma3:12b
+      model: gemma4:e4b
       chunk_size: 3000
       verbatim_threshold: 0.95
       min_chunk_chars: 30
@@ -38,7 +40,7 @@ highlight:
 
     # Faster profile for quick annotation
     fast:
-      model: qwen2.5-coder:7b
+      model: gemma4:e2b
       chunk_size: 4000
       verbatim_threshold: 0.80
       min_chunk_chars: 30

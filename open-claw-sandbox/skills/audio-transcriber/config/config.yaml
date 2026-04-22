@@ -23,7 +23,6 @@ paths:
     p2: "output/02_proofread" # 02 — AI 校對稿
     p3: "output/03_merged" # 03 — 跨段合併精煉
 
-
 phase0:
   active_profile: priority_gemma
   profiles:
@@ -57,29 +56,29 @@ phase1:
   # ------------------------------------------------------------------------------
   anti_hallucination:
     # Layer 0 — MLX Whisper 原生防禦（v0.4.3 已支援）
-    condition_on_previous_text: false    # 禁止跨段自我增強（最關鍵）
-    compression_ratio_threshold: 2.4    # 壓縮比超標自動放棄該段
-    no_speech_threshold: 0.6            # 無語音機率閾值
+    condition_on_previous_text: false # 禁止跨段自我增強（最關鍵）
+    compression_ratio_threshold: 2.4 # 壓縮比超標自動放棄該段
+    no_speech_threshold: 0.6 # 無語音機率閾值
     hallucination_silence_threshold: 2.0 # 靜音 > 2s 自動跳過
 
     # Layer 1 — VAD 前處理（有背景噪音環境）
     vad_enabled: true
-    vad_min_silence_len_ms: 1500        # 超過 1500ms 才切除靜音
-    vad_silence_thresh_dbfs: -35        # -35dBFS 適合有背景噪音的環境
-    vad_padding_ms: 300                 # 切除靜音時前後保留 300ms buffer
-    vad_max_removal_ratio: 0.90         # 移除率上限：超過 90% 視為閾值誤判，fallback 回原始音檔
+    vad_min_silence_len_ms: 1500 # 超過 1500ms 才切除靜音
+    vad_silence_thresh_dbfs: -35 # -35dBFS 適合有背景噪音的環境
+    vad_padding_ms: 300 # 切除靜音時前後保留 300ms buffer
+    vad_max_removal_ratio: 0.90 # 移除率上限：超過 90% 視為閾值誤判，fallback 回原始音檔
 
     # Language Detection — 在 VAD 前偵測語言，鎖定後轉錄，防止靜音段誤判
     language_detection_enabled: true
-    language_detection_clip_sec: 30.0   # 取前 30 秒做快速語言偵測
-    force_language:                     # 強制指定語言（如 'zh'）；留空 = 自動偵測
+    language_detection_clip_sec: 30.0 # 取前 30 秒做快速語言偵測
+    force_language: # 強制指定語言（如 'zh'）；留空 = 自動偵測
 
     # Layer 2 — Segment 重複偵測 + 局部重試
     repetition_detection_enabled: true
-    repetition_ngram_size: 4            # 4-gram 重複率偵測
-    repetition_threshold: 0.45          # 超過 45% 重複率觸發重試
-    repetition_compress_ratio: 0.3      # zlib 壓縮比低於 0.3 觸發重試
-    retry_temperature: 0.2              # 重試時輕微隨機性打破迴圈
+    repetition_ngram_size: 4 # 4-gram 重複率偵測
+    repetition_threshold: 0.45 # 超過 45% 重複率觸發重試
+    repetition_compress_ratio: 0.3 # zlib 壓縮比低於 0.3 觸發重試
+    retry_temperature: 0.2 # 重試時輕微隨機性打破迴圈
 
 phase2:
   active_profile: strict_gemma
@@ -101,14 +100,12 @@ phase3:
     default:
       # model: qwen3:14b
       # model: gemma3:12b
-      model: gemma4:e2b
+      model: gemma4:e4b
       chunk_size: 4000
       options:
         num_ctx: 16384
         temperature: 0
         num_predict: 4096
-
-
 
 runtime:
   ollama:

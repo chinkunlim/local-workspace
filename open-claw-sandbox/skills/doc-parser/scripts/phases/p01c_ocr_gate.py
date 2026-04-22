@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ocr_quality_gate.py — Phase 1c: OCR 品質評估
 ============================================
@@ -16,20 +15,20 @@ ocr_quality_gate.py — Phase 1c: OCR 品質評估
   （繁中語言包: tesseract-lang 已含 chi_tra）
 """
 
-import os
-import sys
 import gc
 import json
+import os
 import subprocess
 import tempfile
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 # Internal Core Bootstrap
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
-from core.pipeline_base import PipelineBase
 from core.atomic_writer import AtomicWriter
+from core.pipeline_base import PipelineBase
 
 # OCR settings are required from config.yaml.
 DEFAULT_CONFIDENCE_THRESHOLD = None
@@ -55,7 +54,9 @@ class Phase1cOCRQualityGate(PipelineBase):
         self.lang = ocr_cfg.get("lang")
         self.threshold = ocr_cfg.get("confidence_threshold")
         if self.dpi is None or self.lang is None or self.threshold is None:
-            raise RuntimeError("doc-parser config missing pdf_processing.ocr.dpi/lang/confidence_threshold")
+            raise RuntimeError(
+                "doc-parser config missing pdf_processing.ocr.dpi/lang/confidence_threshold"
+            )
 
     # ------------------------------------------------------------------ #
     #  Public Entry Point                                                  #
@@ -74,7 +75,7 @@ class Phase1cOCRQualityGate(PipelineBase):
         """
         pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
         pdf_id = os.path.splitext(filename)[0]
-        
+
         scanned_pages = self._get_scanned_pages_from_report(pdf_id, subject)
 
         if not scanned_pages:
@@ -125,8 +126,8 @@ class Phase1cOCRQualityGate(PipelineBase):
         Returns 0.0 on failure (will trigger warning).
         """
         try:
-            import pytesseract
             from PIL import Image
+            import pytesseract
             from pytesseract import Output
         except ImportError as e:
             self.warning(f"⚠️ [OCR] 缺少套件 {e}。請安裝: pip install pytesseract pillow")
@@ -165,25 +166,34 @@ class Phase1cOCRQualityGate(PipelineBase):
             cmd = [
                 "pdftoppm",
                 "-png",
-                "-r", str(self.dpi),
-                "-f", str(page_num),
-                "-l", str(page_num),
+                "-r",
+                str(self.dpi),
+                "-f",
+                str(page_num),
+                "-l",
+                str(page_num),
                 pdf_path,
                 prefix,
             ]
             try:
                 subprocess.run(cmd, check=True, capture_output=True, timeout=60)
-            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+            except (
+                subprocess.CalledProcessError,
+                FileNotFoundError,
+                subprocess.TimeoutExpired,
+            ) as e:
                 self.warning(f"⚠️ pdftoppm 失敗 (頁面 {page_num}): {e}")
                 return None
 
             import glob as glob_mod
+
             files = sorted(glob_mod.glob(f"{prefix}-*.png"))
             if not files:
                 return None
 
             # Copy to a named temp file (tmpdir will be deleted on exit)
             import shutil
+
             dest = tempfile.mktemp(suffix=f"_p{page_num}.png")
             shutil.copy(files[0], dest)
             return dest
@@ -231,7 +241,9 @@ class Phase1cOCRQualityGate(PipelineBase):
 
             AtomicWriter.write_json(report_path, data)
 
-            self.info(f"💾 [OCR] scan_report.json 已更新 (low_confidence_pages: {low_confidence_pages})")
+            self.info(
+                f"💾 [OCR] scan_report.json 已更新 (low_confidence_pages: {low_confidence_pages})"
+            )
         except Exception as e:
             self.warning(f"⚠️ [OCR] 無法更新 scan_report.json: {e}")
 
@@ -254,13 +266,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Phase 1c: OCR Quality Gate")
     parser.add_argument("pdf", help="Path to PDF")
     parser.add_argument("--id", dest="pdf_id", default=None)
-    parser.add_argument("--pages", nargs="+", type=int, default=None,
-                        help="Specific pages to assess (default: auto from scan_report.json)")
+    parser.add_argument(
+        "--pages",
+        nargs="+",
+        type=int,
+        default=None,
+        help="Specific pages to assess (default: auto from scan_report.json)",
+    )
     args = parser.parse_args()
 
     pdf_id = args.pdf_id or os.path.splitext(os.path.basename(args.pdf))[0]
     filename = os.path.basename(args.pdf)
-    
+
     gate = Phase1cOCRQualityGate()
     gate.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
     success = gate.run("Default", filename)

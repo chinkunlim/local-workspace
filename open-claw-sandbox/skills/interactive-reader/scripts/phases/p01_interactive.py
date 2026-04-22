@@ -1,38 +1,35 @@
-# -*- coding: utf-8 -*-
 import os
-import sys
 import re
+import sys
 
 # Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
-from core import PipelineBase, AtomicWriter
+from core import AtomicWriter, PipelineBase
+
 
 class Phase1Interactive(PipelineBase):
     def __init__(self):
-        super().__init__(
-            phase_key="p1",
-            phase_name="互動標籤處理",
-            skill_name="interactive-reader"
-        )
+        super().__init__(phase_key="p1", phase_name="互動標籤處理", skill_name="interactive-reader")
         self.wiki_dir = os.path.abspath(os.path.join(self.base_dir, "..", "wiki"))
 
     def _process_file(self, idx: int, task: dict, total: int):
         fname = task["filename"]
         in_path = os.path.join(self.wiki_dir, fname)
-        
+
         if not os.path.exists(in_path):
             self.warning(f"⚠️ 找不到來源：{in_path}")
             return
-            
-        with open(in_path, "r", encoding="utf-8") as f:
+
+        with open(in_path, encoding="utf-8") as f:
             content = f.read()
 
         # Find all > [AI: command] tags
         # We use a non-greedy match. Also allow optional spaces.
-        pattern = re.compile(r'^> \[AI:\s*(.+?)\]\s*$', re.MULTILINE)
+        pattern = re.compile(r"^> \[AI:\s*(.+?)\]\s*$", re.MULTILINE)
         matches = list(pattern.finditer(content))
 
         if not matches:
@@ -43,15 +40,15 @@ class Phase1Interactive(PipelineBase):
         self.info(f"📝 [{idx}/{total}] 發現 {len(matches)} 個互動標籤：{fname}")
 
         modified_content = content
-        
+
         # Process from back to front to avoid messing up indices
         for m in reversed(matches):
             if self.stop_requested:
                 break
-                
+
             instruction = m.group(1).strip()
             self.info(f"  🔍 處理標籤: {instruction}")
-            
+
             # Extract Context Window (1000 chars before and after)
             start_idx = max(0, m.start() - 1000)
             end_idx = min(len(content), m.end() + 1000)
@@ -77,18 +74,26 @@ class Phase1Interactive(PipelineBase):
             pbar, stop_tick, t = self.create_spinner(f"AI 思考中 ({instruction[:10]}...)")
             try:
                 # We use qwen2.5-coder:7b or similar
-                response = self.llm.generate(model="qwen2.5-coder:7b", prompt=f"{system_prompt}\n\n使用者指令：{instruction}")
-                
+                response = self.llm.generate(
+                    model="qwen2.5-coder:7b", prompt=f"{system_prompt}\n\n使用者指令：{instruction}"
+                )
+
                 # Format the replacement
                 # Replace > [AI: ...] with > [AI-DONE: ...]
                 # And append the response as blockquotes
-                formatted_response = "\n".join([f"> {line}" if line.strip() else ">" for line in response.split("\n")])
-                
-                replacement = f"> [AI-DONE: {instruction}]\n>\n> 🤖 **AI 回應：**\n{formatted_response}\n"
-                
+                formatted_response = "\n".join(
+                    [f"> {line}" if line.strip() else ">" for line in response.split("\n")]
+                )
+
+                replacement = (
+                    f"> [AI-DONE: {instruction}]\n>\n> 🤖 **AI 回應：**\n{formatted_response}\n"
+                )
+
                 # Replace exactly this match
-                modified_content = modified_content[:m.start()] + replacement + modified_content[m.end():]
-                
+                modified_content = (
+                    modified_content[: m.start()] + replacement + modified_content[m.end() :]
+                )
+
             except Exception as e:
                 self.error(f"❌ 標籤處理失敗 [{instruction}]: {e}")
             finally:
@@ -97,18 +102,18 @@ class Phase1Interactive(PipelineBase):
         if modified_content != content:
             AtomicWriter.write_text(in_path, modified_content)
             self.info(f"✅ [{idx}/{total}] 回寫完成：{fname}")
-            
+
         # Unload model and update status
         self.llm.unload_model("qwen2.5-coder:7b", logger=self)
         self.state_manager.update_task("Wiki", fname, self.phase_key)
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
-        self.info(f"✨ 啟動 Phase 1：互動閱讀與原地協作")
+        self.info("✨ 啟動 Phase 1：互動閱讀與原地協作")
         self.process_tasks(
             self._process_file,
             force=force,
             subject_filter=subject,
             file_filter=file_filter,
             single_mode=single_mode,
-            resume_from=resume_from
+            resume_from=resume_from,
         )

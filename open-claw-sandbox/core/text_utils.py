@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 text_utils.py — Text processing and chunking utilities
 ========================================================
@@ -8,14 +7,15 @@ Extracted from audio-transcriber Phase 5 for shared usage with doc-parser.
 
 from typing import List
 
+
 def smart_split(text: str, chunk_size: int) -> List[str]:
     """
     Split text into chunks ≤ chunk_size, respecting line boundaries.
-    
+
     Args:
         text: The input text to split
         chunk_size: Maximum character count per chunk
-        
+
     Returns:
         A list of string chunks.
     """
@@ -32,6 +32,7 @@ def smart_split(text: str, chunk_size: int) -> List[str]:
     if current.strip():
         chunks.append(current.strip())
     return chunks if chunks else [text]
+
 
 def count_words_approx(text: str) -> int:
     """Approximate word/token count for rough LLM sizing."""

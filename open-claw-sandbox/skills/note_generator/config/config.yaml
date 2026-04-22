@@ -4,10 +4,10 @@
 
 # Paths managed by core.PathBuilder (base: data/note-generator/)
 paths:
-  input:  "input"
+  input: "input"
   output: "output"
-  state:  "state"
-  logs:   "logs"
+  state: "state"
+  logs: "logs"
   phases:
     output: "output"
 
@@ -18,7 +18,8 @@ synthesize:
   active_profile: reasoning
   profiles:
     default:
-      model: gemma3:12b
+      # model: gemma3:12b
+      model: gemma4:e4b
       chunk_threshold: 5000
       map_chunk_size: 4000
       mermaid_retry_max: 2

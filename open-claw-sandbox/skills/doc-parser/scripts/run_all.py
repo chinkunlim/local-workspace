@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 queue_manager.py — Phase 0: 串行 PDF 佇列管理
 ============================================
@@ -13,28 +12,26 @@ queue_manager.py — Phase 0: 串行 PDF 佇列管理
 - 中斷後重啟自動從 resume_state.json 繼續
 """
 
-import os
-import sys
-import json
-import hashlib
-import time
-import threading
-from typing import List, Optional, Dict
 from datetime import datetime
 from enum import Enum
-
-# Internal Core Bootstrap
+import hashlib
+import json
 import os
 import sys
+import threading
+from typing import Dict, List, Optional
+
+# Internal Core Bootstrap
 
 # Temporary path injection just to reach core/bootstrap.py from skills/doc-parser/scripts
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 from core.bootstrap import ensure_core_path as _bootstrap
+
 _bootstrap(__file__)
 
+from core import build_skill_parser
 from core.pipeline_base import PipelineBase
 from core.resume_manager import ResumeManager
-from core import build_skill_parser
 
 
 class PDFStatus(Enum):
@@ -91,7 +88,13 @@ class QueueManager(PipelineBase):
     Orchestrates the full pipeline: Phase 1a → 1b → 1c → 1d → (later phases).
     """
 
-    def __init__(self, force_mode: bool = False, subject_filter: str = None, file_filter: str = None, single_mode: bool = False):
+    def __init__(
+        self,
+        force_mode: bool = False,
+        subject_filter: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+    ):
         super().__init__(
             phase_key="phase0",
             phase_name="佇列管理",
@@ -121,7 +124,8 @@ class QueueManager(PipelineBase):
 
         Returns True if safe to proceed.
         """
-        self.info("🔍 [Queue] 執行啟動前置檢查...")
+        print("=" * 50)
+        print("✈️  進行啟動前置檢查 (Preflight Check)...")
 
         # 1. Ensure inbox exists
         os.makedirs(self.dirs["inbox"], exist_ok=True)
@@ -130,37 +134,35 @@ class QueueManager(PipelineBase):
 
         # 2. Check poppler-utils
         import subprocess
+
         try:
             subprocess.run(["pdfinfo", "--version"], capture_output=True, timeout=5)
-            self.info("✅ [Queue] poppler-utils 可用")
         except FileNotFoundError:
-            self.error("❌ [Queue] poppler-utils 未安裝！請執行: brew install poppler")
+            self.error("❌ poppler-utils 未安裝！請執行: brew install poppler")
             return False
 
         # 3. Chrome Profile confirmation (config check)
         playwright_cfg = self.config_manager.get_section("playwright", {})
         profile = playwright_cfg.get("chrome_profile", "")
-        hint = playwright_cfg.get("account_hint", "（未設定）")
 
         if not profile or "limchinkun" not in profile:
             self.warning(
-                "⚠️ [Queue] Chrome Profile 路徑尚未設定！\n"
+                "⚠️ Chrome Profile 路徑尚未設定！\n"
                 "   請在 skills/doc-parser/config/config.yaml 中填寫:\n"
-                    "   playwright.chrome_profile: \"<your Chrome profile path>\""
+                '   playwright.chrome_profile: "<your Chrome profile path>"'
             )
-            # Non-fatal: Phase 1a/1b/1c/1d can run without Playwright
 
         # 4. Check for interrupted sessions
         interrupted = self.resume_manager.get_all_interrupted()
         if interrupted:
-            self.info(f"📌 [Queue] 偵測到 {len(interrupted)} 個未完成的 PDF：{list(interrupted.keys())}")
+            self.info(f"📌 偵測到 {len(interrupted)} 個未完成的 PDF：{list(interrupted.keys())}")
 
         # 5. System health baseline
         if self.check_system_health():
-            self.error("❌ [Queue] 系統資源不足，請稍後再試")
+            self.error("❌ 系統資源不足，請稍後再試")
             return False
 
-        self.info("✅ [Queue] 啟動前置檢查通過")
+        print("✅ 前置檢查通過。\n")
 
         # Sync inbox state to generate initial checklist.md
         self.state_manager.sync_physical_files()
@@ -193,40 +195,39 @@ class QueueManager(PipelineBase):
 
                 pdf_path = os.path.join(root, filename)
                 pdf_id = os.path.splitext(filename)[0]
-                
+
                 # Resolve subject from directory structure relative to inbox_dir
                 rel_path = os.path.relpath(root, inbox_dir)
                 subject = "Default" if rel_path == "." else rel_path.replace(os.sep, "_")
 
                 # Layer 1: Check if already processed
                 if not self.force_mode and self._is_already_processed(pdf_id, subject):
-                    self.info(f"⏭️ [Queue] {filename} 已完成，跳過 (使用 --force 可強制重跑)")
                     continue
 
                 # Layer 2: Check if already in queue
                 if any(item["pdf_id"] == pdf_id for item in self._queue):
-                    self.info(f"⏭️ [Queue] {filename} 已在佇列中，跳過")
                     continue
 
                 # Layer 3: MD5 hash dedup
                 pdf_hash = self._md5(pdf_path)
                 if not self.force_mode and pdf_hash in self._processed_hashes:
-                    self.info(f"⏭️ [Queue] {filename} 內容重複（MD5 相同），跳過")
                     continue
 
                 # Check for encryption
                 is_encrypted = self._quick_check_encrypted(pdf_path)
 
-                new_pdfs.append({
-                    "pdf_id": pdf_id,
-                    "subject": subject,
-                    "pdf_path": pdf_path,
-                    "filename": filename,
-                    "md5": pdf_hash,
-                    "status": PDFStatus.PENDING.value,
-                    "added_at": datetime.now().isoformat(),
-                    "encrypted": is_encrypted,
-                })
+                new_pdfs.append(
+                    {
+                        "pdf_id": pdf_id,
+                        "subject": subject,
+                        "pdf_path": pdf_path,
+                        "filename": filename,
+                        "md5": pdf_hash,
+                        "status": PDFStatus.PENDING.value,
+                        "added_at": datetime.now().isoformat(),
+                        "encrypted": is_encrypted,
+                    }
+                )
 
         # 1. Subject Filter Enforcement
         if self.subject_filter:
@@ -244,23 +245,23 @@ class QueueManager(PipelineBase):
                     start_idx = i
                     found = True
                     break
-            
+
             if not found:
-                self.log(f"⚠️  --file 指定的檔案 '{self.file_filter}' 不在未處理清單中，將掃描全部 Inbox。", "warn")
+                self.log(
+                    f"⚠️  --file 指定的檔案 '{self.file_filter}' 不在未處理清單中，將掃描全部 Inbox。",
+                    "warn",
+                )
             elif self.single_mode:
                 new_pdfs = [new_pdfs[start_idx]]
                 self.log(f"🎯  單檔模式：僅抽出 [{new_pdfs[0]['subject']}] {self.file_filter}")
             else:
                 new_pdfs = new_pdfs[start_idx:]
                 if start_idx > 0:
-                    self.log(f"➩️  指定起點：從 {self.file_filter} 之後開始處理（共計 {len(new_pdfs)} 項）。")
+                    self.log(
+                        f"➩️  指定起點：從 {self.file_filter} 之後開始處理（共計 {len(new_pdfs)} 項）。"
+                    )
 
         self._queue.extend(new_pdfs)
-        if new_pdfs:
-            self.info(f"🔍 [Queue] 偵測 / 篩選出 {len(new_pdfs)} 個新 PDF")
-        if not self._queue:
-            self.info("📭 [Queue] input/ 無待處理 PDF")
-
         return new_pdfs
 
     # ------------------------------------------------------------------ #
@@ -297,18 +298,23 @@ class QueueManager(PipelineBase):
             if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p0a"):
                 self.info(f"📋 [Queue] Phase 0a: 輕量診斷 ({subject})...")
                 from phases.p00a_diagnostic import Phase0aDiagnostic
+
                 success = Phase0aDiagnostic().run(subject, item["filename"])
 
                 if not success:
                     raise RuntimeError("Phase 0a 診斷失敗")
                 self.state_manager.update_task(subject, item["filename"], "p0a", "✅")
             else:
-                self.info(f"📋 [Queue] Phase 0a 已完成，載入快取")
+                self.info("📋 [Queue] Phase 0a 已完成，載入快取")
                 from phases.p00a_diagnostic import DiagnosticReport
-                report_path = os.path.join(self.dirs["processed"], subject, pdf_id, "scan_report.json")
+
+                report_path = os.path.join(
+                    self.dirs["processed"], subject, pdf_id, "scan_report.json"
+                )
                 if os.path.exists(report_path):
-                    with open(report_path, "r", encoding="utf-8") as f:
+                    with open(report_path, encoding="utf-8") as f:
                         import json
+
                         scan_report = DiagnosticReport(**json.load(f))
                 else:
                     raise RuntimeError("Phase 0a 完成但找不到 scan_report.json")
@@ -319,6 +325,7 @@ class QueueManager(PipelineBase):
                     self.warning("⚠️ [Queue] Playwright 執行中，Docling 等待...")
                     while self.model_mutex._playwright_active:
                         import time
+
                         time.sleep(10)
                         if self.stop_requested:
                             return None
@@ -327,6 +334,7 @@ class QueueManager(PipelineBase):
                 try:
                     self.info(f"📄 [Queue] Phase 1a: Docling 提取 ({subject})...")
                     from phases.p01a_engine import Phase1aPDFEngine
+
                     success = Phase1aPDFEngine().run(subject, item["filename"])
                     if not success:
                         raise RuntimeError("Phase 1a Docling 提取失敗")
@@ -334,54 +342,61 @@ class QueueManager(PipelineBase):
                 finally:
                     self.model_mutex.release_docling()
             else:
-                self.info(f"📄 [Queue] Phase 1a 已完成，跳過")
+                self.info("📄 [Queue] Phase 1a 已完成，跳過")
 
             # --- Phase 1b: Vector Chart Extraction ---
             if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1b"):
                 # Always call run(), Phase 1b internally reads scan_report.json and skips if empty
                 self.info(f"🎨 [Queue] Phase 1b: 向量圖表補充 ({subject})...")
                 from phases.p01b_vector_charts import Phase1bVectorChartExtractor
+
                 Phase1bVectorChartExtractor().run(subject, item["filename"])
                 self.state_manager.update_task(subject, item["filename"], "p1b", "✅")
             else:
-                self.info(f"🎨 [Queue] Phase 1b 已完成，跳過")
+                self.info("🎨 [Queue] Phase 1b 已完成，跳過")
 
             # --- Phase 1c: OCR Quality (if scanned) ---
             if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1c"):
                 # Phase 1c internally reads scan_report.json and skips if not scanned
                 self.info(f"🔤 [Queue] Phase 1c: OCR 品質評估 ({subject})...")
                 from phases.p01c_ocr_gate import Phase1cOCRQualityGate
+
                 Phase1cOCRQualityGate().run(subject, item["filename"])
                 self.state_manager.update_task(subject, item["filename"], "p1c", "✅")
             else:
-                self.info(f"🔤 [Queue] Phase 1c 已完成，跳過")
+                self.info("🔤 [Queue] Phase 1c 已完成，跳過")
 
             # --- Phase 1d: VLM Vision ---
             if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1d"):
                 self.info(f"👁️ [Queue] Phase 1d: VLM 視覺圖表解析 ({subject})...")
                 from phases.p01d_vlm_vision import Phase1dVLMVision
+
                 Phase1dVLMVision().run(subject, item["filename"])
                 self.state_manager.update_task(subject, item["filename"], "p1d", "✅")
             else:
-                self.info(f"👁️ [Queue] Phase 1d 已完成，跳過")
+                self.info("👁️ [Queue] Phase 1d 已完成，跳過")
 
             if getattr(self, "interactive", False):
-                input(f"⏸️ [Interactive] Phase 1d 已完成。請確認 figure_list.md，按 Enter 繼續...")
-
-
+                input("⏸️ [Interactive] Phase 1d 已完成。請確認 figure_list.md，按 Enter 繼續...")
 
             # Done
             item["status"] = PDFStatus.COMPLETED.value
             item["completed_at"] = datetime.now().isoformat()
             self._processed_hashes.add(item["md5"])
-            self.state_manager.update_task(subject, item["filename"], "p1d", "✅",
-                                           note_tag="Pipeline 全部完成")
+            self.state_manager.update_task(
+                subject, item["filename"], "p1d", "✅", note_tag="Pipeline 全部完成"
+            )
             self.info(f"✅ [Queue] {item['filename']} 處理完成")
 
         except Exception as e:
             self.error(f"❌ [Queue] {item['filename']} 失敗: {e}")
             item["status"] = PDFStatus.FAILED.value
             item["error"] = str(e)
+
+            # Explicitly mark as failed in StateManager so it isn't re-queued
+            self.state_manager.update_task(
+                subject, item["filename"], "p1d", "❌", note_tag=f"處理失敗: {e}"
+            )
         finally:
             self.model_mutex.release_docling()  # Safety release
 
@@ -407,34 +422,36 @@ class QueueManager(PipelineBase):
     #  Utilities                                                           #
     # ------------------------------------------------------------------ #
 
-    def _is_already_processed(self, pdf_id: str, subject: str = "Default", phase_key: str = None) -> bool:
+    def _is_already_processed(
+        self, pdf_id: str, subject: str = "Default", phase_key: str = None
+    ) -> bool:
         """
         Check if pdf_id has completed processing via StateManager checklist.
         If phase_key is provided, checks if that specific phase is '✅'.
         If no phase_key is provided, checks if the final phase 'p3' is '✅'.
         """
-        # We need the original filename which we can infer or pass, but StateManager 
+        # We need the original filename which we can infer or pass, but StateManager
         # stores it by filename. To be exact, we should look up the task.
         # Since Queue relies on filename, we can search the state checklist for pdf_id.
         state = self.state_manager.state
         if subject not in state or not state[subject]:
             return False
-            
+
         # Find the record matching this pdf_id
         record = None
         for fn, details in state[subject].items():
             if os.path.splitext(fn)[0] == pdf_id:
                 record = details
                 break
-                
+
         if not record:
             return False
 
         if phase_key:
-            return record.get(phase_key) == "✅"
-            
-        # If no explicit phase requested, full processing means p1d is finished.
-        return record.get("p1d") == "✅"
+            return record.get(phase_key) in ("✅", "❌")
+
+        # If no explicit phase requested, consider it processed if the final phase is success OR explicitly failed
+        return record.get("p1d") in ("✅", "❌")
 
     def _load_processed_hashes(self):
         """Load MD5 hashes of already-processed PDFs from scan_reports."""
@@ -443,8 +460,9 @@ class QueueManager(PipelineBase):
             return
         for subject_dir in os.listdir(processed_dir):
             subject_path = os.path.join(processed_dir, subject_dir)
-            if not os.path.isdir(subject_path): continue
-            
+            if not os.path.isdir(subject_path):
+                continue
+
             for pdf_id in os.listdir(subject_path):
                 report_path = os.path.join(subject_path, pdf_id, "scan_report.json")
                 if os.path.exists(report_path):
@@ -460,10 +478,10 @@ class QueueManager(PipelineBase):
     def _quick_check_encrypted(self, pdf_path: str) -> bool:
         """Quick encryption check using pdfinfo."""
         import subprocess
+
         try:
             result = subprocess.run(
-                ["pdfinfo", pdf_path],
-                capture_output=True, text=True, timeout=10
+                ["pdfinfo", pdf_path], capture_output=True, text=True, timeout=10
             )
             return "encrypted: yes" in result.stdout.lower()
         except Exception:
@@ -483,14 +501,24 @@ class QueueManager(PipelineBase):
 # ---------------------------------------------------------------------------- #
 
 if __name__ == "__main__":
-    parser = build_skill_parser("Doc Parser Queue Manager", include_force=True, include_resume=True, include_subject=True)
+    parser = build_skill_parser(
+        "Doc Parser Queue Manager",
+        include_force=True,
+        include_resume=True,
+        include_subject=True,
+        include_process_all=True,
+        include_interactive=True,
+    )
     parser.add_argument("--scan", action="store_true", help="只掃描 Inbox，不處理")
-    parser.add_argument("--process-all", action="store_true", help="處理所有待辦 PDF")
     parser.add_argument("--process-one", action="store_true", help="只處理下一個 PDF")
-    parser.add_argument("--interactive", "-i", action="store_true", help="啟用人工審核停留機制 (Phase 04)")
     args = parser.parse_args()
 
-    qm = QueueManager(force_mode=args.force, subject_filter=getattr(args, 'subject', None), file_filter=getattr(args, 'file', None), single_mode=getattr(args, 'single', False))
+    qm = QueueManager(
+        force_mode=args.force,
+        subject_filter=getattr(args, "subject", None),
+        file_filter=getattr(args, "file", None),
+        single_mode=getattr(args, "single", False),
+    )
     qm.interactive = args.interactive
 
     if not qm.startup_check():
@@ -499,6 +527,7 @@ if __name__ == "__main__":
     qm.scan_inbox()
 
     if args.scan:
+        qm.state_manager.print_dashboard()
         print(f"\n佇列狀態: {len(qm._queue)} 個 PDF")
         for item in qm._queue:
             print(f"  {item['status']:10s} {item['filename']}")
@@ -512,3 +541,20 @@ if __name__ == "__main__":
 
     elif args.process_all:
         qm.process_all()
+
+    else:
+        # 互動式選單 (當沒有帶入任何執行參數時)
+        qm.state_manager.print_dashboard()
+        pending = [i for i in qm._queue if i["status"] == PDFStatus.PENDING.value]
+        if pending:
+            from core.cli_menu import batch_select_tasks
+
+            chosen_dict = batch_select_tasks(pending, header="待處理的 PDF")
+            if not chosen_dict:
+                print("\n已退出。")
+            else:
+                # 覆寫佇列為所選的檔案
+                qm._queue = list(chosen_dict.values())
+                qm.process_all()
+        else:
+            print("\n📭 目前沒有需要處理的 PDF。")
