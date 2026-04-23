@@ -106,6 +106,26 @@ core/
 │                                all skill Inboxes and triggers pipelines on new files.
 │                                Started/stopped by local-workspace/start.sh and stop.sh.
 │
+├── check_status.py           ← CLI helper for querying pipeline status without running them.
+│
+├── cli_menu.py               ← Interactive terminal menu for pipeline selection and options.
+│
+├── cli_runner.py             ← Service layer constructing subprocess commands for skills.
+│
+├── file_utils.py             ← DRY utility module (safe_read_json, managed_tmp_dir, ensure_dir).
+│
+├── knowledge_pusher.py       ← Helper to push final outputs to Obsidian/Wiki layout.
+│
+├── run_all_pipelines.py      ← Global PID-locked pipeline orchestrator; prevents OOM crashes.
+│
+├── session_state.py          ← Volatile per-session state tracking (current subject, flags).
+│
+├── subject_manager.py        ← Enumerates and validates subject/session directories.
+│
+├── task_queue.py             ← LocalTaskQueue: Single-threaded execution lock with DLQ.
+│
+├── telegram_bot.py           ← Telegram integration for notifications and RAG queries.
+│
 └── web_ui/
     ├── app.py                ← Flask API server for the Central Dashboard (port 5001).
     │                            Routes: /, /api/status, /api/logs, /api/start, /api/stop,
@@ -178,15 +198,49 @@ skills/
 │   └── scripts/
 │       └── highlight.py            ← Main entry point (SmartHighlighter class)
 │
-└── note-generator/                 ← Standalone skill: Synthesize structured Markdown notes
-    ├── SKILL.md                    ← Quick-start
-    ├── config/
-    │   ├── config.yaml             ← Model profiles and chunk sizes
-    │   └── prompt.md               ← Map-Reduce synthesis instructions
-    ├── docs/
-    │   └── ARCHITECTURE.md         ← Standalone skill architecture
+├── note-generator/                 ← Standalone skill: Synthesize structured Markdown notes
+│   ├── SKILL.md                    ← Quick-start
+│   ├── config/
+│   │   ├── config.yaml             ← Model profiles and chunk sizes
+│   │   └── prompt.md               ← Map-Reduce synthesis instructions
+│   ├── docs/
+│   │   └── ARCHITECTURE.md         ← Standalone skill architecture
+│   └── scripts/
+│       └── synthesize.py           ← Main entry point (NoteGenerator class)
+│
+├── academic-edu-assistant/         ← Cross-document comparison + Anki export
+│   ├── SKILL.md
+│   └── scripts/
+│       ├── run_all.py              ← Orchestrator
+│       └── phases/
+│           ├── p01_compare.py      ← Phase 1: Topic comparison across documents
+│           └── p02_anki.py         ← Phase 2: Anki flashcard generation
+│
+├── knowledge-compiler/             ← Compiles factory outputs to data/wiki/
+│   ├── SKILL.md
+│   └── scripts/
+│       ├── run_all.py              ← Orchestrator
+│       └── phases/
+│           └── p01_compile.py      ← Phase 1: Compile notes into Obsidian Vault
+│
+├── telegram-kb-agent/              ← RAG query agent over ChromaDB index
+│   ├── SKILL.md
+│   └── scripts/
+│       ├── bot_daemon.py           ← Telegram bot daemon (long-running)
+│       ├── indexer.py              ← ChromaDB index builder
+│       └── query.py                ← RAG query CLI interface
+│
+├── inbox-manager/                  ← CLI tool for routing rule inspection and mutation
+│   ├── SKILL.md
+│   └── scripts/
+│       └── query.py                ← Routing rule CLI (add/remove/list rules)
+│
+└── interactive-reader/             ← In-place [AI:] annotation resolver
+    ├── SKILL.md
     └── scripts/
-        └── synthesize.py           ← Main entry point (NoteGenerator class)
+        ├── run_all.py              ← Orchestrator
+        └── phases/
+            └── p01_interactive.py  ← Phase 1: Resolve in-file AI annotations
 ```
 
 ---

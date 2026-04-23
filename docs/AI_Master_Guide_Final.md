@@ -143,12 +143,16 @@ ollama ps
 | `qwen3.5:9b`       | Multilingual dialogue                         | ~6GB  |
 
 ```bash
-# Pull all models
+# Pull all models (完整指令，確保抓取最新版本)
 ollama pull qwen2.5-coder:7b
 ollama pull deepseek-r1:8b
 ollama pull gemma3:12b
 ollama pull deepseek-r1:14b
 ollama pull qwen3.5:9b
+
+# 如果需要下載特定量化版本 (GGUF)，請手動透過 huggingface-cli 下載並建立 Modelfile
+# 例如: huggingface-cli download unsloth/DeepSeek-R1-GGUF --include "*Q4_K_M.gguf"
+```
 
 # Verify
 ollama list
@@ -250,6 +254,9 @@ curl http://localhost:1234/v1/models
 ### 3.1 Install and Start
 
 ```bash
+# ==========================================
+# 方案 A：使用 uvx 直接啟動 (推薦給 macOS 本地環境)
+# ==========================================
 # Install uv first (if not installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 # Then close and reopen Terminal to refresh PATH
@@ -263,6 +270,14 @@ DATA_DIR=/Users/limchinkun/Desktop/local-workspace/open-webui \
   uvx --python 3.11 --with 'ddgs>=9.11.3' open-webui@latest serve
 
 # Open WebUI runs on http://localhost:8080
+
+# ==========================================
+# 方案 B：使用 Docker 部署 (若需容器化環境)
+# ==========================================
+# 必須使用 --network host (Linux) 或正確映射 port 確保能連線至 localhost 的 Ollama
+# docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway \
+#   -v /Users/limchinkun/Desktop/local-workspace/open-webui:/app/backend/data \
+#   --name open-webui --restart always ghcr.io/open-webui/open-webui:main
 ```
 
 > ⚠️ **First account = Admin.** Create your account immediately when the page loads.
@@ -314,6 +329,9 @@ uv pip install psutil
 
 ### 4.2 Start Pipelines Server
 
+> **🔗 infra/scripts/ 聯動機制**：在日常操作中，你不應該手動啟動 Pipeline。請一律使用 `infra/scripts/start.sh`，它會自動為 Pipeline 與所有基礎設施建立正確的背景執行緒與日誌綁定。
+
+手動測試指令如下：
 ```bash
 cd /Users/limchinkun/Desktop/local-workspace/pipelines
 source .venv/bin/activate

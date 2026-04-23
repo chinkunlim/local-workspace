@@ -69,6 +69,21 @@
 | **防精簡協議 (Anti-Truncation Protocol)** | 嚴禁將終端機指令（如 `pip install`, `chmod`）、環境變數（`.env`）、或程式碼區塊精簡為摘要文字，必須 100% 保留其完整性與可複製性，絕對禁止刪除現有條文。 |
 | **雙層文檔修改權限** | 嚴禁混修文檔。`docs/` (Root Docs) 專責環境部署與基礎設施引導；`open-claw-sandbox/docs/` (Sandbox Docs) 專責代碼規範與架構核心。 |
 
+### 0.3.1 防精簡協議 (Anti-Truncation Protocol)
+
+> **⚠️ 絕對鐵律：任何 AI Agent 在更新本專案文檔時，必須嚴格遵守以下防護機制，違者視為破壞系統完整性。**
+
+1. **禁止濃縮終端機指令**：所有的安裝、部署、啟動腳本（如 `pip install`, `uvx`, `docker run`, `chmod`）必須以完整的 Markdown 程式碼區塊保留。不准將三行指令縮減為一句「請安裝依賴」。
+2. **禁止假設環境設定**：不准假設使用者已經知道如何配置環境變數或啟動參數。所有的環境變數配置（例如 `launchctl setenv` 或 `.env` 檔案格式）必須 100% 保留。
+3. **強制還原**：在執行文檔同步時，若發現前面的版本不慎將細節精簡成了摘要，你有義務主動從程式碼庫或記憶中提取完整資訊並將其**還原**，絕不允許繼承被閹割的資訊。
+
+### 0.3.2 雙層文檔修改權限
+
+專案架構採用雙層文檔設計，AI Agent 在讀寫文件時必須嚴格遵守權限邊界，**嚴禁混修**：
+
+- **Root Docs (`/local-workspace/docs/`)**：負責「環境部署」與「基礎設施引導」。包含 `AI_Master_Guide_Final.md` 與 `USER_MANUAL.md`。這裡記載的是系統如何啟動、外部服務（如 Ollama, Open WebUI）如何配置。
+- **Sandbox Docs (`/local-workspace/open-claw-sandbox/docs/`)**：負責「代碼標準」與「架構核心」。包含 `CODING_GUIDELINES_FINAL.md` 與 `STRUCTURE.md`。這裡記載的是程式碼開發規範與腳本的唯一註冊表。
+
 ### 0.4 原則優先順序
 
 當原則之間發生衝突時：

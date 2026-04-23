@@ -91,6 +91,16 @@ cd ~/Desktop/local-workspace
 
 ---
 
+## 🔄 5. 全鏈路操作範例 (Obsidian ➡️ CLI ➡️ Open WebUI)
+
+Open Claw 的設計哲學是讓各種介面無縫協作，以下是標準的跨介面工作流：
+
+1. **觸發 (Obsidian)**：你在 Obsidian 中閱讀 `data/wiki/認知心理學/lecture_01.md` 時，覺得這篇筆記需要重新總結。你在 YAML frontmatter 加上 `status: rewrite`，並存檔。
+2. **自動化 (CLI 背景執行)**：`inbox_daemon` 瞬間偵測到變化，自動在背景觸發 `note_generator` 重新合成該筆記，過程中會有 macOS **原生系統通知 (osascript)** 告訴你「Pipeline 啟動」與「執行完畢」。
+3. **高階分析 (Open WebUI)**：筆記更新後，你打開 `http://localhost:8080` (Open WebUI)，在對話框中輸入「請基於我最新的認知心理學筆記，出一份測驗卷」，AI 將調用 RAG 讀取剛更新的內容並與你互動。
+
+---
+
 # Part 2：完整 CLI 操作教程
 
 > **前提**：所有指令都在 `~/Desktop/local-workspace/open-claw-sandbox/` 目錄下執行。
@@ -545,3 +555,16 @@ python3 skills/inbox-manager/scripts/query.py list
 ### Q6：程式碼裡有些地方提到 "Notion Synthesis"，Notion 同步功能在哪裡？
 
 早期架構確實嘗試過直接同步 Notion，但後來轉向**本地優先**架構。`05_notion_synthesis.py` 現在產出的是相容 Obsidian 的 Markdown 筆記，統一存放在 `data/wiki/`。如需 Notion，可直接將 `data/wiki/` 資料夾匯入。
+
+### Q7：執行時出現 `Permission denied` 或腳本無法啟動怎麼辦？
+
+系統內建了全域環境自癒腳本，若遇到 `Permission Error`（特別是 `.sh` 檔案沒有執行權限時），請執行以下指令：
+```bash
+chmod +x infra/scripts/fix_perms.sh
+./infra/scripts/fix_perms.sh
+```
+這會掃描專案內所有的 Shell 腳本並自動賦予執行權限。
+
+### Q8：什麼是 macOS 原生通知？我要怎麼開啟？
+
+本系統（包含所有 8 個子技能）已全域內建 `osascript` 通知支援。當你啟動任何較為耗時的管線（如語音轉錄、知識編譯），或者按下 `Ctrl+C` 中斷時，系統會自動透過 macOS 通知中心推播進度（例如「🏁 Pipeline 執行完畢」）。此功能為原生支援，**無需額外設定或安裝任何軟體**。

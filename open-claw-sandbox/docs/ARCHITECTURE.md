@@ -36,12 +36,16 @@
 ```mermaid
 graph TD
     A[Human / Telegram] -->|Upload .pdf / .m4a| B(data/raw/Subject/)
-    B -->|inbox_daemon.py&#10;audio_ref| C(Audio Transcriber)
-    B -->|inbox_daemon.py&#10;doc_parser| D(Doc Parser)
-    B -->|inbox_daemon.py&#10;both = copy to both| C
-    B -->|inbox_daemon.py&#10;both = move to both| D
+    
+    IM(Inbox Manager) -.->|Updates config| ID{inbox_daemon.py}
+    
+    B --> ID
+    ID -->|audio_ref| C(Audio Transcriber)
+    ID -->|doc_parser| D(Doc Parser)
+    ID -->|both = route to both| C
+    ID -->|both = route to both| D
 
-    C -->|output/05_synthesis/| E[Knowledge Compiler]
+    C -->|output/03_merged/| E[Knowledge Compiler]
     D -->|output/03_synthesis/| E
 
     E -->|Publish| F[(data/wiki/)]

@@ -72,4 +72,4 @@ to the LLM and asks it to correct the code (up to `mermaid_retry_max` times).
 
 ## 全域標準化
 
-- **全域標準化介面 (Global Standardization)**: 採用統一的 CLI 狀態與 DAG 追蹤面板，支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷保護。
+- **全域標準化介面 (Global Standardization)**: 採用統一的 CLI 狀態與 DAG 追蹤面板 (`📊 筆記生成狀態與 DAG 追蹤面板`)，支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷保護。

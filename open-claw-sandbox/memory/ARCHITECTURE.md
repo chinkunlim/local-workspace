@@ -138,6 +138,8 @@ Phase 03:  Synthesis            (delegated to skills/note_generator/ → data/wi
 ```
 User (Telegram Bot / Obsidian Vault / CLI)
     │
+    ├─► [Inbox Manager] -.-> Updates inbox_config.json
+    │
     └─► data/raw/<Subject>/ OR Obsidian `status: rewrite` trigger
             │
             └─► inbox_daemon.py  (Watchdog daemon)
@@ -145,12 +147,13 @@ User (Telegram Bot / Obsidian Vault / CLI)
                     └─► task_queue.py (LocalTaskQueue with DLQ & 7200s timeout bounds)
                                  │
                                  ├─► doc-parser / audio-transcriber (Extraction, Immutable)
+                                 │      (outputs to 03_synthesis / 03_merged)
                                  │
                                  └─► note-generator / smart-highlighter (Synthesis)
                                               │
                                               └─► data/wiki/ (Obsidian Vault)
                                                         │
-                                                        ├─► Open WebUI Knowledge API (Literature Matrix Synthesis)
+                                                        ├─► Open WebUI Knowledge API
                                                         │
                                      ┌───────────┴───────────┐
                                      │                       │
