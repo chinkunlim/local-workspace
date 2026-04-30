@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import threading
 import time
 
 import requests
@@ -10,15 +11,42 @@ from core.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
+from core.hitl_manager import HITLManager
 from core.log_manager import build_logger
-from core.telegram_bot import _get_bot_config, send_message
+from core.telegram_bot import _get_bot_config, send_inline_keyboard, send_message
 
 _workspace_root = os.environ.get(
     "WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 )
+# S2: Resolve canonical path — prevents symlink/env-var path traversal attack
+_workspace_root = os.path.realpath(_workspace_root)
+
 _logger = build_logger(
     "OpenClaw.BotDaemon", log_file=os.path.join(_workspace_root, "logs", "bot_daemon.log")
 )
+
+# M4: User preference store path (runtime model switching)
+_USER_PREFS_PATH = os.path.join(_workspace_root, "state", "user_prefs.json")
+
+
+def _load_user_prefs() -> dict:
+    import json
+
+    try:
+        with open(_USER_PREFS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_user_prefs(prefs: dict) -> None:
+    import json
+
+    os.makedirs(os.path.dirname(_USER_PREFS_PATH), exist_ok=True)
+    tmp = _USER_PREFS_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(prefs, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, _USER_PREFS_PATH)
 
 
 def run_status_check() -> str:
@@ -110,42 +138,128 @@ def main():
 
                     elif text == "/start_system":
                         send_message(
-                            "🚀 正在啟動 Open Claw 核心生態系 (這可能需要幾分鐘)...", chat_id
+                            "\U0001f680 \u6b63\u5728\u555f\u52d5 Open Claw \u6838\u5fc3\u751f\u614b\u7cfb...",
+                            chat_id,
                         )
-                        start_script = os.path.abspath(
-                            os.path.join(_workspace_root, "..", "infra", "scripts", "start.sh")
+                        start_script = os.path.realpath(
+                            os.path.abspath(
+                                os.path.join(_workspace_root, "..", "infra", "scripts", "start.sh")
+                            )
                         )
-                        subprocess.Popen(["bash", start_script])
-                        send_message("✅ 系統啟動程序已在背景執行。", chat_id)
+                        _infra_root = os.path.realpath(
+                            os.path.abspath(os.path.join(_workspace_root, "..", "infra"))
+                        )
+                        # S2: Ensure script is within expected infra directory
+                        if not start_script.startswith(_infra_root):
+                            send_message(
+                                "\u26a0\ufe0f \u5b89\u5168\u932f\u8aa4\uff1a\u555f\u52d5\u8173\u672c\u8def\u5f91\u7570\u5e38\uff0c\u5df2\u4e2d\u6b62\u3002",
+                                chat_id,
+                            )
+                        else:
+                            subprocess.Popen(["bash", start_script])
+                            send_message(
+                                "\u2705 \u7cfb\u7d71\u555f\u52d5\u7a0b\u5e8f\u5df2\u5728\u80cc\u666f\u57f7\u884c\u3002",
+                                chat_id,
+                            )
 
                     elif text == "/stop_system":
-                        send_message("🛑 正在關閉 Open Claw 核心生態系...", chat_id)
-                        stop_script = os.path.abspath(
-                            os.path.join(_workspace_root, "..", "infra", "scripts", "stop.sh")
-                        )
-                        subprocess.Popen(["bash", stop_script])
                         send_message(
-                            "✅ 系統關閉程序已在背景執行，Ollama 與其他服務將被停止。", chat_id
+                            "\U0001f6d1 \u6b63\u5728\u95dc\u9589 Open Claw \u6838\u5fc3\u751f\u614b\u7cfb...",
+                            chat_id,
                         )
+                        stop_script = os.path.realpath(
+                            os.path.abspath(
+                                os.path.join(_workspace_root, "..", "infra", "scripts", "stop.sh")
+                            )
+                        )
+                        _infra_root = os.path.realpath(
+                            os.path.abspath(os.path.join(_workspace_root, "..", "infra"))
+                        )
+                        # S2: Ensure script is within expected infra directory
+                        if not stop_script.startswith(_infra_root):
+                            send_message(
+                                "\u26a0\ufe0f \u5b89\u5168\u932f\u8aa4\uff1a\u95dc\u9589\u8173\u672c\u8def\u5f91\u7570\u5e38\uff0c\u5df2\u4e2d\u6b62\u3002",
+                                chat_id,
+                            )
+                        else:
+                            subprocess.Popen(["bash", stop_script])
+                            send_message(
+                                "\u2705 \u7cfb\u7d71\u95dc\u9589\u7a0b\u5e8f\u5df2\u5728\u80cc\u666f\u57f7\u884c\uff0cOllama \u8207\u5176\u4ed6\u670d\u52d9\u5c07\u88ab\u505c\u6b62\u3002",
+                                chat_id,
+                            )
 
                     elif text.startswith("/query "):
                         q = text[7:].strip()
-                        send_message(f"🧠 正在為您查詢知識庫: {q}", chat_id)
-                        ans = run_query(q)
-                        send_message(ans, chat_id)
+                        send_message(
+                            f"\U0001f9e0 \u6b63\u5728\u70ba\u60a8\u67e5\u8a62\u77e5\u8b58\u5eab: {q}",
+                            chat_id,
+                        )
+
+                        # A1: Run blocking query in background thread — keeps poll loop responsive
+                        def _bg_query(question=q, cid=chat_id):
+                            ans = run_query(question)
+                            send_message(ans, cid)
+
+                        threading.Thread(target=_bg_query, daemon=True).start()
+
+                    elif text.startswith("/model"):
+                        # M4: Runtime LLM model switching
+                        arg = text[6:].strip()
+                        if arg:
+                            prefs = _load_user_prefs()
+                            prefs["active_model"] = arg
+                            _save_user_prefs(prefs)
+                            send_message(
+                                f"\u2705 \u6a21\u578b\u5df2\u5207\u63db\u70ba `{arg}`\uff0c\u4e0b\u6b21\u4efb\u52d9\u751f\u6548\u3002",
+                                chat_id,
+                            )
+                        else:
+                            prefs = _load_user_prefs()
+                            current = prefs.get(
+                                "active_model",
+                                "(\u672a\u8a2d\u5b9a\uff0c\u4f7f\u7528\u5404 Skill \u9810\u8a2d\u6a21\u578b)",
+                            )
+                            send_message(
+                                f"\U0001f916 \u76ee\u524d\u6a21\u578b: `{current}`", chat_id
+                            )
+
+                    elif text.startswith("/hitl "):
+                        # H2: HITL callback — /hitl approve|skip <trace_id>
+                        parts = text.split()
+                        if len(parts) >= 3:
+                            resolution = parts[1].lower()
+                            trace_id = parts[2]
+                            hitl_mgr = HITLManager(base_dir=_workspace_root)
+                            snapshot = hitl_mgr.resolve(trace_id, resolution)
+                            if snapshot is not None:
+                                send_message(
+                                    f"\u2705 HITL \u5df2\u8655\u7406: `{trace_id}`\n\u6c7a\u5b9a: {resolution}\n\u7ba1\u7dda\u5c07\u81ea\u52d5\u6062\u5fa9\u3002",
+                                    chat_id,
+                                )
+                            else:
+                                send_message(
+                                    f"\u26a0\ufe0f \u627e\u4e0d\u5230 HITL \u4e8b\u4ef6 `{trace_id}`\uff0c\u53ef\u80fd\u5df2\u8655\u7406\u3002",
+                                    chat_id,
+                                )
+                        else:
+                            send_message("\u7528\u6cd5: /hitl approve|skip <trace_id>", chat_id)
 
                     elif text == "/start" or text == "/help":
                         send_message(
-                            "👋 歡迎使用 Open Claw 全能遙控中樞！\n\n"
-                            "【進度管理】\n"
-                            "/status - 查看系統處理佇列進度\n"
-                            "/run 或 /resume - 依序執行待辦任務\n"
-                            "/pause - 暫停執行並釋放所有記憶體\n\n"
-                            "【系統管理】\n"
-                            "/start_system - 開啟整個生態系專案 (啟動 WebUI/Ollama 等)\n"
-                            "/stop_system - 關閉整個生態系專案 (不含 Bot)\n\n"
-                            "【知識問答】\n"
-                            "/query <問題> - 在知識庫中發問",
+                            "\U0001f44b \u6b61\u8fce\u4f7f\u7528 Open Claw \u5168\u80fd\u9059\u63a7\u4e2d\u6a1e\uff01\n\n"
+                            "[\u9032\u5ea6\u7ba1\u7406]\n"
+                            "/status - \u67e5\u770b\u7cfb\u7d71\u8655\u7406\u4f47\u5217\u9032\u5ea6\n"
+                            "/run \u6216 /resume - \u4f9d\u5e8f\u57f7\u884c\u5f85\u8fa6\u4efb\u52d9\n"
+                            "/pause - \u66ab\u505c\u57f7\u884c\u4e26\u91cb\u653e\u6240\u6709\u8a18\u61b6\u9ad4\n\n"
+                            "[\u7cfb\u7d71\u7ba1\u7406]\n"
+                            "/start_system - \u958b\u555f\u6574\u500b\u751f\u614b\u7cfb\u5c08\u6848\n"
+                            "/stop_system - \u95dc\u9589\u6574\u500b\u751f\u614b\u7cfb\u5c08\u6848 (\u4e0d\u542b Bot)\n\n"
+                            "[\u77e5\u8b58\u554f\u7b54]\n"
+                            "/query <\u554f\u984c> - \u5728\u77e5\u8b58\u5eab\u4e2d\u767c\u554f\n\n"
+                            "[\u6a21\u578b\u7ba1\u7406]\n"
+                            "/model <\u540d\u7a31> - \u5207\u63db LLM \u6a21\u578b (\u7a7a\u767d = \u67e5\u8a62\u76ee\u524d)\n\n"
+                            "[HITL \u4ecb\u5165]\n"
+                            "/hitl approve|skip <trace_id> - \u56de\u61c9\u7cfb\u7d71\u66ab\u505c\u7684\u4ecb\u5165\u4e8b\u4ef6",
                             chat_id,
                         )
 

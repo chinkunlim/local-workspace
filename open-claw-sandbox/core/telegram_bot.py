@@ -54,3 +54,86 @@ def send_message(text: str, chat_id: str = None) -> bool:
             success = False
 
     return success
+
+
+def send_inline_keyboard(
+    text: str,
+    buttons: list,
+    chat_id: str = None,
+) -> bool:
+    """Send a message with an inline keyboard (for HITL interventions).
+
+    H1: Enables interactive HITL buttons without requiring python-telegram-bot.
+
+    Args:
+        text:    The message text (supports Markdown).
+        buttons: List of rows; each row is a list of (label, callback_data) tuples.
+                 Example: [[("Approve", "hitl:abc:approve"), ("Skip", "hitl:abc:skip")]]
+        chat_id: Optional specific chat ID. Defaults to all allowed users.
+
+    Returns:
+        True if all messages were sent successfully.
+    """
+    token, allowed_users = _get_bot_config()
+    if not token:
+        return False
+
+    targets = [chat_id] if chat_id else allowed_users
+    if not targets:
+        return False
+
+    inline_keyboard = [
+        [{"text": label, "callback_data": data} for label, data in row] for row in buttons
+    ]
+    reply_markup = {"inline_keyboard": inline_keyboard}
+
+    success = True
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    for user_id in targets:
+        try:
+            resp = requests.post(
+                url,
+                json={
+                    "chat_id": user_id,
+                    "text": text,
+                    "parse_mode": "Markdown",
+                    "reply_markup": reply_markup,
+                },
+                timeout=10,
+            )
+            if not resp.ok:
+                success = False
+        except Exception as e:
+            print(f"\u26a0\ufe0f [TelegramBot] send_inline_keyboard \u9023\u7dda\u932f\u8aa4: {e}")
+            success = False
+    return success
+
+
+def send_hitl_prompt(
+    trace_id: str,
+    phase: str,
+    reason: str,
+    chat_id: str = None,
+) -> bool:
+    """Convenience wrapper: send a pre-formatted HITL intervention message with Approve/Skip buttons.
+
+    Args:
+        trace_id: The HITLEvent trace ID (used as callback_data).
+        phase:    The pipeline phase that triggered the intervention.
+        reason:   Human-readable explanation of why the pipeline paused.
+        chat_id:  Optional specific chat ID.
+    """
+    text = (
+        f"\u26a0\ufe0f *OpenClaw HITL \u4ecb\u5165*\n"
+        f"Phase: `{phase}`\n"
+        f"\u539f\u56e0: {reason}\n"
+        f"Trace ID: `{trace_id}`\n\n"
+        f"\u8acb\u9078\u64c7\u8655\u7406\u65b9\u5f0f\uff1a"
+    )
+    buttons = [
+        [
+            ("\u2705 Approve", f"/hitl approve {trace_id}"),
+            ("\u23ed\ufe0f Skip", f"/hitl skip {trace_id}"),
+        ]
+    ]
+    return send_inline_keyboard(text, buttons, chat_id=chat_id)

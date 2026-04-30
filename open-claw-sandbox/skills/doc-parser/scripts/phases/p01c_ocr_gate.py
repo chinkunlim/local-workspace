@@ -105,11 +105,43 @@ class Phase1cOCRQualityGate(PipelineBase):
 
         if low_confidence_pages:
             self.warning(
-                f"⚠️ [OCR] {len(low_confidence_pages)} 頁信心值低於 {self.threshold:.0%}: "
+                f"\u26a0\ufe0f [OCR] {len(low_confidence_pages)} \u9801\u4fe1\u5fc3\u5024\u4f4e\u65bc {self.threshold:.0%}: "
                 f"{low_confidence_pages}"
             )
+            # H3: Trigger HITL intervention — pipeline pauses; user approves/skips via Telegram
+            try:
+                from core.hitl_manager import HITLEvent, HITLManager
+                from core.telegram_bot import send_hitl_prompt
+
+                hitl_mgr = HITLManager(base_dir=self.base_dir)
+                event = HITLEvent(
+                    phase="p01c_ocr_gate",
+                    skill_name="doc-parser",
+                    subject=subject,
+                    reason=(
+                        f"{len(low_confidence_pages)} \u9801 OCR \u4fe1\u5fc3\u5024 < {self.threshold:.0%}: "
+                        f"\u9801\u78bc {low_confidence_pages}"
+                    ),
+                    payload={
+                        "pdf_id": pdf_id,
+                        "low_confidence_pages": low_confidence_pages,
+                        "ocr_page_scores": {str(k): round(v, 4) for k, v in page_scores.items()},
+                    },
+                )
+                hitl_mgr.trigger(event)
+                send_hitl_prompt(
+                    trace_id=event.trace_id,
+                    phase=event.phase,
+                    reason=event.reason,
+                )
+            except Exception as _hitl_exc:
+                self.warning(
+                    f"\u26a0\ufe0f [HITL] \u7121\u6cd5\u767c\u9001 HITL \u4e8b\u4ef6: {_hitl_exc}"
+                )
         else:
-            self.info(f"✅ [OCR] 所有頁面信心值 ≥ {self.threshold:.0%}")
+            self.info(
+                f"\u2705 [OCR] \u6240\u6709\u9801\u9762\u4fe1\u5fc3\u5024 \u2265 {self.threshold:.0%}"
+            )
 
         gc.collect()
         return True
@@ -194,7 +226,9 @@ class Phase1cOCRQualityGate(PipelineBase):
             # Copy to a named temp file (tmpdir will be deleted on exit)
             import shutil
 
-            dest = tempfile.mktemp(suffix=f"_p{page_num}.png")
+            # S1: Use NamedTemporaryFile(delete=False) — mktemp() is deprecated (TOCTOU risk)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f"_p{page_num}.png") as _ntf:
+                dest = _ntf.name
             shutil.copy(files[0], dest)
             return dest
 

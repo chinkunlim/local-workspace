@@ -581,59 +581,67 @@ class Phase1Transcribe(PipelineBase):
                 # 將偵測到的語言碼準備為 VAR_KEYWORD（直接展開傳入）
                 lang_kwargs = {"language": detected_lang} if detected_lang else {}
 
+                # F2: Use time-based chunks if Chunk Fallback produced them; otherwise use full file
+                _audio_paths_to_transcribe = (
+                    self._time_chunks if self._time_chunks else [cleaned_path]
+                )
+
                 if engine == "mlx-whisper":
                     import warnings
 
                     import mlx_whisper
 
-                    pbar, stop_tick, t = self.create_spinner(f"轉錄處理 ({fname})")
-                    # 重定向 stderr → /dev/null，壓制 macOS MallocStackLogging 雜訊
-                    with open(os.devnull, "w") as _devnull, warnings.catch_warnings():
-                        warnings.simplefilter("ignore")
-                        _old_fd = os.dup(2)
-                        os.dup2(_devnull.fileno(), 2)
-                        try:
-                            result = mlx_whisper.transcribe(
-                                cleaned_path,
-                                path_or_hf_repo=model_name,
-                                condition_on_previous_text=condition_on_prev_text,
-                                compression_ratio_threshold=compression_ratio_thresh,
-                                no_speech_threshold=no_speech_thresh,
-                                hallucination_silence_threshold=hallucination_silence_sec,
-                                **lang_kwargs,
-                                verbose=False,
-                            )
-                        finally:
-                            os.dup2(_old_fd, 2)
-                            os.close(_old_fd)
-                    self.finish_spinner(pbar, stop_tick, t)
-                    segments = result.get("segments", [])
+                    for _chunk_path in _audio_paths_to_transcribe:
+                        pbar, stop_tick, t = self.create_spinner(
+                            f"\u8f49\u9304\u8655\u7406 ({os.path.basename(_chunk_path)})"
+                        )
+                        with open(os.devnull, "w") as _devnull, warnings.catch_warnings():
+                            warnings.simplefilter("ignore")
+                            _old_fd = os.dup(2)
+                            os.dup2(_devnull.fileno(), 2)
+                            try:
+                                result = mlx_whisper.transcribe(
+                                    _chunk_path,
+                                    path_or_hf_repo=model_name,
+                                    condition_on_previous_text=condition_on_prev_text,
+                                    compression_ratio_threshold=compression_ratio_thresh,
+                                    no_speech_threshold=no_speech_thresh,
+                                    hallucination_silence_threshold=hallucination_silence_sec,
+                                    **lang_kwargs,
+                                    verbose=False,
+                                )
+                            finally:
+                                os.dup2(_old_fd, 2)
+                                os.close(_old_fd)
+                        self.finish_spinner(pbar, stop_tick, t)
+                        segments.extend(result.get("segments", []))
 
                 else:  # faster-whisper
                     from tqdm import tqdm
 
-                    segments_gen, info = model.transcribe(
-                        cleaned_path,
-                        beam_size=beam_size,
-                        vad_filter=True,
-                        condition_on_previous_text=condition_on_prev_text,
-                    )
-                    duration = int(info.duration)
-                    last_end = 0
-                    with tqdm(
-                        total=duration,
-                        desc=f"轉錄進度 ({fname})",
-                        unit="秒",
-                        bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
-                    ) as pbar:
-                        for s in segments_gen:
-                            inc = int(s.end) - last_end
-                            if inc > 0:
-                                pbar.update(inc)
-                                last_end = int(s.end)
-                            segments.append(s)
-                        if last_end < duration:
-                            pbar.update(duration - last_end)
+                    for _chunk_path in _audio_paths_to_transcribe:
+                        segments_gen, info = model.transcribe(
+                            _chunk_path,
+                            beam_size=beam_size,
+                            vad_filter=True,
+                            condition_on_previous_text=condition_on_prev_text,
+                        )
+                        duration = int(info.duration)
+                        last_end = 0
+                        with tqdm(
+                            total=duration,
+                            desc=f"\u8f49\u9304\u9032\u5ea6 ({os.path.basename(_chunk_path)})",
+                            unit="\u79d2",
+                            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
+                        ) as pbar:
+                            for s in segments_gen:
+                                inc = int(s.end) - last_end
+                                if inc > 0:
+                                    pbar.update(inc)
+                                    last_end = int(s.end)
+                                segments.append(s)
+                            if last_end < duration:
+                                pbar.update(duration - last_end)
 
                 # ── Layer 2: Segment 掃描 + 局部重試 ────────────────────
                 hallucination_count = 0

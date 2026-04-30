@@ -132,12 +132,53 @@ class Phase2Proofread(PipelineBase):
             )
             try:
                 secondary_result = _call(self.feedback_secondary_model)
+                secondary_ratio = len(secondary_result.strip()) / max(len(chunk), 1)
                 models_used_ref = getattr(self, "_current_models_used", None)
                 if models_used_ref is not None:
                     models_used_ref.add(self.feedback_secondary_model)
+                # H4: If secondary model ALSO fails confidence, trigger HITL
+                if secondary_ratio < self.feedback_threshold:
+                    self.log(
+                        f"\u26a0\ufe0f [H4/HITL] \u5099\u7528\u6a21\u578b\u4fe1\u5fc3\u5206\u4e5f\u4f4e ({secondary_ratio:.2f})\uff0c\u89f8\u767c HITL \u4ecb\u5165...",
+                        "warn",
+                    )
+                    try:
+                        from core.hitl_manager import HITLEvent, HITLManager
+                        from core.telegram_bot import send_hitl_prompt
+
+                        hitl_mgr = HITLManager(base_dir=self.base_dir)
+                        event = HITLEvent(
+                            phase="p2_proofread",
+                            skill_name="audio-transcriber",
+                            reason=(
+                                f"\u7247\u6bb5 {c_idx + 1}: \u4e3b\u8981\u6a21\u578b ({model_name}) \u548c\u5099\u7528\u6a21\u578b "
+                                f"({self.feedback_secondary_model}) \u4fe1\u5fc3\u5206\u5747\u4f4e\u65bc\u95b3\u5024 "
+                                f"{self.feedback_threshold:.2f}"
+                            ),
+                            payload={
+                                "chunk_index": c_idx,
+                                "primary_ratio": round(ratio, 3),
+                                "secondary_ratio": round(secondary_ratio, 3),
+                                "chunk_preview": chunk[:200],
+                            },
+                        )
+                        hitl_mgr.trigger(event)
+                        send_hitl_prompt(
+                            trace_id=event.trace_id,
+                            phase=event.phase,
+                            reason=event.reason,
+                        )
+                    except Exception as _hitl_exc:
+                        self.log(
+                            f"\u26a0\ufe0f [HITL] \u7121\u6cd5\u767c\u9001\u4e8b\u4ef6: {_hitl_exc}",
+                            "warn",
+                        )
                 return secondary_result
             except Exception as e:
-                self.log(f"⚠️ [回饋修正環] 備用模型失敗: {e}，保留主要模型結果", "warn")
+                self.log(
+                    f"\u26a0\ufe0f [\u56de\u994b\u4fee\u6b63\u74b0] \u5099\u7528\u6a21\u578b\u5931\u6557: {e}\uff0c\u4fdd\u7559\u4e3b\u8981\u6a21\u578b\u7d50\u679c",
+                    "warn",
+                )
 
         return primary_result
 
@@ -241,54 +282,83 @@ class Phase2Proofread(PipelineBase):
                     f"📦 [{idx}/{len(tasks)}] 正在校對：[{subj}] {base_name}.md (共分為 {len(chunks)} 段)"
                 )
 
-                pbar, stop_tick, t = self.create_spinner(f"校對 ({fname})")
+                pbar, stop_tick, t = self.create_spinner(f"\u6821\u5c0d ({fname})")
 
+                # A2: Build all prompts first, then fire async batch generation
+                # Prompts that should be skipped (checkpoint resume) get empty string placeholder.
+                prompts_to_run: list[str] = []
+                skip_flags: list[bool] = []
                 for c_idx, chunk in enumerate(chunks):
-                    # Skip already-completed chunks on resume
                     if resume_chunk is not None and c_idx <= resume_chunk:
-                        full_corrected.append(chunk)  # placeholder preserved for join
+                        prompts_to_run.append("")
+                        skip_flags.append(True)
                         continue
-
-                    if self.check_system_health():
-                        # Save chunk checkpoint before OOM abort
-                        self.state_manager.save_chunk_checkpoint(
-                            subj, fname, "p2", chunk_index=c_idx - 1
-                        )
-                        break
-
+                    skip_flags.append(False)
                     context_hint = ""
                     if c_idx > 0:
                         prev_tail = raw_text[
                             max(0, c_idx * chunk_size - self.LOOKBACK_CHARS) : c_idx * chunk_size
                         ]
-                        context_hint = f"【前段結尾上下文（僅供參考，請勿在輸出中重複此段）】：\n...{prev_tail}\n\n"
-
-                    pdf_block = f"【講義 PDF 參考】：\n{pdf_text}\n\n" if pdf_text else ""
-                    gloss_block = f"{glossary_text}\n\n" if glossary_text else ""
-
-                    full_prompt = f"{prompt_tpl}\n\n{gloss_block}{pdf_block}{context_hint}【本段逐字稿原文】：\n{chunk}"
-
-                    # #8: Feedback Loop replaces bare llm.generate call
-                    res = self._proofread_with_feedback(
-                        model_name=model_name,
-                        prompt=full_prompt,
-                        chunk=chunk,
-                        options=options,
-                        c_idx=c_idx,
+                        context_hint = f"[\u524d\u6bb5\u7d50\u5c3e\u4e0a\u4e0b\u6587\uff08\u50c5\u4f9b\u53c3\u8003\uff0c\u8acb\u52ff\u5728\u8f38\u51fa\u4e2d\u91cd\u8907\u6b64\u6bb5\uff09]\uff1a\n...{prev_tail}\n\n"
+                    pdf_block = (
+                        f"[\u8b1b\u7fa9 PDF \u53c3\u8003]\uff1a\n{pdf_text}\n\n" if pdf_text else ""
                     )
+                    gloss_block = f"{glossary_text}\n\n" if glossary_text else ""
+                    prompts_to_run.append(
+                        f"{prompt_tpl}\n\n{gloss_block}{pdf_block}{context_hint}"
+                        f"[\u672c\u6bb5\u9010\u5b57\u7a3f\u539f\u6587]\uff1a\n{chunk}"
+                    )
+
+                # Execute concurrently (max 3 in-flight to prevent OOM)
+                import asyncio
+
+                raw_responses = asyncio.run(
+                    self.llm.async_batch_generate(
+                        model=model_name,
+                        prompts=prompts_to_run,
+                        options=options,
+                        max_concurrency=3,
+                        logger=self,
+                    )
+                )
+
+                for c_idx, (chunk, res, skipped) in enumerate(
+                    zip(chunks, raw_responses, skip_flags)
+                ):
+                    if skipped:
+                        full_corrected.append(chunk)
+                        continue
+
+                    if self.check_system_health():
+                        self.state_manager.save_chunk_checkpoint(
+                            subj, fname, "p2", chunk_index=c_idx - 1
+                        )
+                        break
+
+                    # If async call failed (returns ""), fall back to _proofread_with_feedback
+                    if not res:
+                        res = self._proofread_with_feedback(
+                            model_name=model_name,
+                            prompt=prompts_to_run[c_idx],
+                            chunk=chunk,
+                            options=options,
+                            c_idx=c_idx,
+                        )
 
                     corrected = res
                     expl = ""
                     if "---" in res:
-                        parts = res.split("---", 1)
-                        corrected = parts[0].strip()
-                        expl = parts[1].strip()
+                        parts_res = res.split("---", 1)
+                        corrected = parts_res[0].strip()
+                        expl = parts_res[1].strip()
 
                     if len(corrected) < len(chunk) * self.VERBATIM_THRESHOLD:
-                        self.log(f"⚠️ 片段 {c_idx + 1} 觸發守衛: 過短，保留原文", "warn")
+                        self.log(
+                            f"\u26a0\ufe0f \u7247\u6bb5 {c_idx + 1} \u89f8\u767c\u5b88\u885b: \u904e\u77ed\uff0c\u4fdd\u7559\u539f\u6587",
+                            "warn",
+                        )
                         full_corrected.append(chunk)
                     else:
-                        # #5: Hard-enforce glossary terms via Regex post-pass
                         corrected = self._apply_glossary_regex(corrected, subj)
                         full_corrected.append(corrected)
                         if expl:
@@ -299,9 +369,9 @@ class Phase2Proofread(PipelineBase):
                                 s_lower = s.lower().replace("*", "").replace(":", "").strip()
                                 if s_lower in (
                                     "explanation of changes",
-                                    "彙整修改日誌",
-                                    "修改說明",
-                                    "修改日誌",
+                                    "\u5f59\u6574\u4fee\u6539\u65e5\u8a8c",
+                                    "\u4fee\u6539\u8aaa\u660e",
+                                    "\u4fee\u6539\u65e5\u8a8c",
                                 ):
                                     continue
                                 if s == seen_last:
@@ -312,7 +382,7 @@ class Phase2Proofread(PipelineBase):
                             if cleaned:
                                 full_logs.append(cleaned)
 
-                    # #6: Save chunk checkpoint every 5 chunks (throttled writes)
+                    # Throttled checkpoint every 5 chunks
                     if (c_idx + 1) % 5 == 0:
                         self.state_manager.save_chunk_checkpoint(
                             subj, fname, "p2", chunk_index=c_idx

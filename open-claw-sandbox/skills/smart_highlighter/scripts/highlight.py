@@ -73,45 +73,52 @@ class SmartHighlighter(PipelineBase):
             return markdown_text  # Fallback to original
 
         chunks = smart_split(markdown_text, chunk_size)
-        self.info(f"📦 [SmartHighlighter] 共 {len(chunks)} 個片段待標記 (模型: {model_name})")
+        self.info(
+            f"\U0001f4e6 [SmartHighlighter] \u5171 {len(chunks)} \u500b\u7247\u6bb5\u5f85\u6a19\u8a18 (\u6a21\u578b: {model_name})"
+        )
 
         highlighted_parts = []
-        pbar, stop_tick, t = self.create_spinner("標記")
+        pbar, stop_tick, t = self.create_spinner("\u6a19\u8a18")
 
-        for idx, chunk in enumerate(chunks, 1):
-            if self.stop_requested:
-                self.warning("⚠️  [SmartHighlighter] 收到中止信號，停止標記")
-                break
-
-            if len(chunk.strip()) < min_chunk_chars:
-                highlighted_parts.append(chunk)
-                continue
-
-            prompt = f"{prompt_tpl}\n\n【原文片段】:\n{chunk}"
-
-            try:
-                result = self.llm.generate(
-                    model=model_name,
-                    prompt=prompt,
-                    options=options,
-                    logger=self,
-                )
-
-                # Anti-Tampering guard
-                if len(result.strip()) < len(chunk) * verbatim_threshold:
+        try:  # M2: guarantee unload_model even if an exception escapes the chunk loop
+            for idx, chunk in enumerate(chunks, 1):
+                if self.stop_requested:
                     self.warning(
-                        f"   ⚠️  片段 {idx} [防竄改觸發]: LLM 輸出過短 "
-                        f"({len(result.strip())} < {len(chunk) * verbatim_threshold:.0f})，還原原文"
+                        "\u26a0\ufe0f  [SmartHighlighter] \u6536\u5230\u4e2d\u6b62\u4fe1\u865f\uff0c\u505c\u6b62\u6a19\u8a18"
+                    )
+                    break
+
+                if len(chunk.strip()) < min_chunk_chars:
+                    highlighted_parts.append(chunk)
+                    continue
+
+                prompt = f"{prompt_tpl}\n\n[\u539f\u6587\u7247\u6bb5]:\n{chunk}"
+
+                try:
+                    result = self.llm.generate(
+                        model=model_name,
+                        prompt=prompt,
+                        options=options,
+                        logger=self,
+                    )
+
+                    # Anti-Tampering guard
+                    if len(result.strip()) < len(chunk) * verbatim_threshold:
+                        self.warning(
+                            f"   \u26a0\ufe0f  \u7247\u6bb5 {idx} [\u9632\u7ac4\u6539\u89f8\u767c]: LLM \u8f38\u51fa\u904e\u77ed "
+                            f"({len(result.strip())} < {len(chunk) * verbatim_threshold:.0f})\uff0c\u9084\u539f\u539f\u6587"
+                        )
+                        highlighted_parts.append(chunk)
+                    else:
+                        highlighted_parts.append(result.strip())
+                except Exception as e:
+                    self.error(
+                        f"   \u274c \u7247\u6bb5 {idx} \u6a19\u8a18\u5931\u6557: {e}\uff0c\u9084\u539f\u539f\u6587"
                     )
                     highlighted_parts.append(chunk)
-                else:
-                    highlighted_parts.append(result.strip())
-            except Exception as e:
-                self.error(f"   ❌ 片段 {idx} 標記失敗: {e}，還原原文")
-                highlighted_parts.append(chunk)
-
-        self.finish_spinner(pbar, stop_tick, t)
-        self.llm.unload_model(model_name, logger=self)
+        finally:
+            self.finish_spinner(pbar, stop_tick, t)
+            self.llm.unload_model(model_name, logger=self)  # M2: always executes
 
         return "\n\n".join(highlighted_parts)
 

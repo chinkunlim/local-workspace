@@ -1,4 +1,4 @@
-import base64
+import json
 import os
 
 # Internal Core Bootstrap
@@ -7,8 +7,7 @@ from core.bootstrap import ensure_core_path as _bootstrap
 _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
-from core.atomic_writer import AtomicWriter
-from core.pipeline_base import PipelineBase
+from core.file_utils import encode_image_b64  # S3: DRY — replaces private _encode_image()
 
 
 class Phase1dVLMVision(PipelineBase):
@@ -22,9 +21,43 @@ class Phase1dVLMVision(PipelineBase):
         if not self.vlm_model:
             raise RuntimeError("Missing model in phase1d config profile")
 
-    def _encode_image(self, image_path: str) -> str:
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode("utf-8")
+    def _read_vlm_prompt_route(self, subject: str, pdf_id: str) -> str:
+        """F1: Read vlm_prompt_route from scan_report.json to select an adaptive prompt.
+
+        Returns:
+            str: prompt route key, e.g. "academic", "report", "manual", "default".
+        """
+        report_path = os.path.join(
+            self.dirs.get("processed", ""), subject, pdf_id, "scan_report.json"
+        )
+        try:
+            with open(report_path, encoding="utf-8") as f:
+                data = json.load(f)
+            return data.get("vlm_prompt_route", "default")
+        except Exception:
+            return "default"
+
+    def _get_adaptive_vlm_prompt(self, subject: str, pdf_id: str) -> str:
+        """Return the best-fit VLM prompt based on Phase 0a intent classification.
+
+        Prompt section naming convention in prompt.md:
+          - "Phase 1d: VLM Vision"          → default fallback
+          - "Phase 1d: VLM Vision (Academic)" → academic papers
+          - "Phase 1d: VLM Vision (Report)"   → reports / slides
+          - "Phase 1d: VLM Vision (Manual)"   → instruction manuals
+        """
+        route = self._read_vlm_prompt_route(subject, pdf_id)
+        route_map = {
+            "academic": "Phase 1d: VLM Vision (Academic)",
+            "report": "Phase 1d: VLM Vision (Report)",
+            "manual": "Phase 1d: VLM Vision (Manual)",
+        }
+        prompt_key = route_map.get(route, "Phase 1d: VLM Vision")
+        prompt = self.get_prompt(prompt_key)
+        if not prompt:
+            self.warning(f"⚠️ [Phase 1d] 找不到 prompt '{prompt_key}'，回退至預設版本")
+            prompt = self.get_prompt("Phase 1d: VLM Vision")
+        return prompt
 
     def _clean_markdown_text(self, text: str) -> str:
         """Escape tricky characters that break Markdown tables."""
@@ -77,7 +110,7 @@ class Phase1dVLMVision(PipelineBase):
                 self.error("❌ figure_list.md 缺少必要的 '檔案名稱' 或 'VLM 描述' 欄位。")
                 return False
 
-            prompt = self.get_prompt("Phase 1d: VLM Vision")
+            prompt = self._get_adaptive_vlm_prompt(subject, pdf_id)  # F1: adaptive dispatch
             if not prompt:
                 self.error("❌ 找不到 Phase 1d 的 prompt 指令，請確認 prompt.md 內有對應的段落。")
                 return False
@@ -101,7 +134,7 @@ class Phase1dVLMVision(PipelineBase):
                         cols[vlm_col] = "圖片遺失"
                     else:
                         self.info(f"🔍 正在解析圖片: {rel_img_path}")
-                        b64_image = self._encode_image(abs_img_path)
+                        b64_image = encode_image_b64(abs_img_path)  # S3: shared utility
 
                         try:
                             res = self.llm.generate(

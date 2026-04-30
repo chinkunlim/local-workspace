@@ -132,17 +132,33 @@ class Phase2Anki(PipelineBase):
         stem = os.path.splitext(fname)[0]
         out_path = os.path.join(out_dir, f"{stem}.csv")
 
-        # #10: Use shared write_csv_safe for robust CSV handling
+        # F3: Use write_csv_safe so commas/quotes inside card content are properly escaped.
+        # Re-parse LLM output to build typed rows for the csv module.
         csv_text = response.strip()
-        AtomicWriter.write_text(out_path, csv_text + "\n")
-        self.info(f"✅ Anki 卡片已匯出: {out_path}")
+        csv_rows = []
+        for line in csv_text.splitlines():
+            line = line.strip()
+            if not line or "," not in line:
+                continue
+            parts = line.split(",", 1)
+            if len(parts) == 2:
+                csv_rows.append([parts[0].strip().strip('"'), parts[1].strip().strip('"')])
 
-        # #9: Push to AnkiConnect if enabled
+        from core.file_utils import write_csv_safe
+
+        write_csv_safe(path=out_path, rows=csv_rows, logger=self)
+        self.info(
+            f"\u2705 Anki \u5361\u7247\u5df2\u532f\u51fa: {out_path} ({len(csv_rows)} \u7b46)"
+        )
+
+        # #9: Push to AnkiConnect if enabled (pass raw csv_text so _push_to_anki re-parses)
         if self.ankiconnect_enabled:
             deck = f"{self.ankiconnect_deck}::{subj}"
             added = self._push_to_anki(csv_text, deck_name=deck)
             if added:
-                self.info(f"🎴 [AnkiConnect] 成功推送 {added} 張卡片 → 牌組「{deck}」")
+                self.info(
+                    f"\U0001f3b4 [AnkiConnect] \u6210\u529f\u63a8\u9001 {added} \u5f35\u5361\u7247 \u2192 \u724c\u7d44\u300c{deck}\u300d"
+                )
 
         self.state_manager.update_task(subj, fname, self.phase_key)
 

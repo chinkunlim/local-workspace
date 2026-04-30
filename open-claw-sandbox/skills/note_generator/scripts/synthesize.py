@@ -28,7 +28,7 @@ class NoteGenerator(PipelineBase):
         super().__init__(
             phase_key="synthesize",
             phase_name="Note Generator",
-            skill_name="note-generator",
+            skill_name="note_generator",  # F4: standardised to underscore (matches skills/ dir + RouterAgent)
         )
         self.profile_override = profile
 
@@ -88,35 +88,54 @@ class NoteGenerator(PipelineBase):
     ):
         chunks = smart_split(content, map_size)
         tc = len(chunks)
-        self.info(f"   📦 大型輸入（{len(content):,} 字元），啟動 Map-Reduce ({tc} 個分塊)")
+        self.info(
+            f"   \U0001f4e6 \u5927\u578b\u8f38\u5165\uff08{len(content):,} \u5b57\u5143\uff09\uff0c\u555f\u52d5 Map-Reduce ({tc} \u500b\u5206\u584a)"
+        )
 
-        map_results = []
-        map_success = 0
-        for ci, chunk in enumerate(chunks, 1):
-            if self.stop_requested:
-                break
-            self.info(f"   🗂  Map [{ci}/{tc}]：提取關鍵材料...")
-            prompt = (
+        # A3: Build all Map prompts and run concurrently via async_batch_generate
+        map_prompts = []
+        for chunk in chunks:
+            map_prompts.append(
                 map_tpl.replace("{INPUT_CONTENT}", chunk)
                 if "{INPUT_CONTENT}" in map_tpl
                 else f"{map_tpl}\n\n<transcript>\n{chunk}\n</transcript>"
             )
 
-            pbar, stop_tick, t = self.create_spinner(f"Map {ci}/{tc} ({label})")
-            try:
-                extracted = self.llm.generate(model=model, prompt=prompt, options=options)
-                map_results.append(f"<!-- 分塊 {ci}/{tc} -->\n{extracted.strip()}")
+        import asyncio
+
+        self.info(
+            f"   \u23f3 \u5f15\u64ce: \u4e26\u767c\u57f7\u884c {tc} \u500b Map \u4efb\u52d9 (max_concurrency=3)..."
+        )
+        pbar, stop_tick, t = self.create_spinner(f"Map x{tc} ({label})")
+        try:
+            raw_map_results = asyncio.run(
+                self.llm.async_batch_generate(
+                    model=model,
+                    prompts=map_prompts,
+                    options=options,
+                    max_concurrency=3,
+                    logger=self,
+                )
+            )
+        finally:
+            self.finish_spinner(pbar, stop_tick, t)
+
+        map_results = []
+        map_success = 0
+        for ci, extracted in enumerate(raw_map_results, 1):
+            if extracted:
+                map_results.append(f"<!-- \u5206\u584a {ci}/{tc} -->\n{extracted.strip()}")
                 map_success += 1
-            except Exception as e:
-                self.warning(f"   ⚠️  Map [{ci}/{tc}] 失敗: {e}，跳過。")
-            finally:
-                self.finish_spinner(pbar, stop_tick, t)
+            else:
+                self.warning(
+                    f"   \u26a0\ufe0f  Map [{ci}/{tc}] \u5931\u6557\uff0c\u8df3\u904e\u3002"
+                )
 
         if not map_results:
-            raise ValueError("Map 階段全部失敗。")
+            raise ValueError("Map \u968e\u6bb5\u5168\u90e8\u5931\u6557\u3002")
 
         cmb = "\n\n---\n\n".join(map_results)
-        note = "以下是按段落提取的關鍵材料。請整合成一份結構化筆記。\n\n"
+        note = "\u4ee5\u4e0b\u662f\u6309\u6bb5\u843d\u63d0\u53d6\u7684\u95dc\u9375\u6750\u6599\u3002\u8acb\u6574\u5408\u6210\u4e00\u4efd\u7d50\u69cb\u5316\u7b46\u8a18\u3002\n\n"
 
         fin_prompt = (
             reduce_tpl.replace("{INPUT_CONTENT}", note + cmb)
@@ -124,7 +143,9 @@ class NoteGenerator(PipelineBase):
             else f"{reduce_tpl}\n\n<materials>\n{note}{cmb}\n</materials>"
         )
 
-        self.info(f"   🔗 Reduce：整合 {len(map_results)} 份摘要...")
+        self.info(
+            f"   \U0001f517 Reduce\uff1a\u6574\u5408 {len(map_results)} \u4efd\u6458\u8981..."
+        )
         pbar, stop_tick, t = self.create_spinner(f"Reduce ({label})")
         try:
             final_note = self.llm.generate(model=model, prompt=fin_prompt, options=options)
@@ -248,10 +269,22 @@ class NoteGenerator(PipelineBase):
             final_doc = yaml_header + res
 
         except Exception as e:
-            self.error(f"❌ 合成失敗: {e}")
+            self.error(f"\u274c \u5408\u6210\u5931\u6557: {e}")
             raise e
         finally:
             self.llm.unload_model(model, logger=self)
+
+        # M3: Track synthesis completion in StateManager for DAG continuity
+        try:
+            self.state_manager.update_task(
+                subject=subject,
+                filename=f"{label}.md",
+                phase_key="synthesize",
+                status="\u2705",
+                char_count=len(final_doc),
+            )
+        except Exception:
+            pass  # State tracking is best-effort; never block output delivery
 
         return final_doc
 
