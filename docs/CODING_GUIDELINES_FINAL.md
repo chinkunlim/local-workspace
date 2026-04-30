@@ -2106,3 +2106,36 @@ def _process_sub(sub):
 *本手冊版本：v4.0.0*
 *最後更新：2026-04-30*
 *維護者：Jinkun & Antigravity*
+
+## 🚨 P4 Sprint: Multi-Agent Architecture Rules (v1.2.0+)
+
+1. **Mandatory Async (強制非同步)**
+   - All external network requests (LLM API, Database) MUST use `asyncio` and `aiohttp`.
+   - Sequential processing of batches (like chunking in `doc-parser` or `audio-transcriber`) should utilize `async_batch_generate` with an `asyncio.Semaphore` to maximize throughput without causing OOM.
+
+2. **State Immutability (狀態不可變性)**
+   - During Pipeline execution, state objects (e.g., JSON files in `state/`) must NOT be mutated in-place by external scripts.
+   - Use atomic operations (`core/atomic_writer.py`) and write new copies.
+   - For `MemoryPool` global state, use the built-in locking provided by `StateManager`.
+
+3. **Unified Logging (統一日誌)**
+   - `print()` is strictly forbidden in core pipeline logic.
+   - All standard output must flow through `PipelineBase.log()`, `info()`, `warning()`, or `error()`.
+   - Use `rich` for formatting terminal output (spinners, progress bars, colored text) in `cli_runner.py` or interactive scripts.
+
+
+## 🚨 P4 Sprint: Multi-Agent Architecture Rules (v1.2.0+)
+
+1. **Mandatory Async (強制非同步)**
+   - All external network requests (LLM API, Database) MUST use `asyncio` and `aiohttp`.
+   - Sequential processing of batches (like chunking in `doc-parser` or `audio-transcriber`) should utilize `async_batch_generate` with an `asyncio.Semaphore` to maximize throughput without causing OOM.
+
+2. **State Immutability (狀態不可變性)**
+   - During Pipeline execution, state objects (e.g., JSON files in `state/`) must NOT be mutated in-place by external scripts.
+   - Use atomic operations (`core/atomic_writer.py`) and write new copies.
+   - For `MemoryPool` global state, use the built-in locking provided by `StateManager`.
+
+3. **Unified Logging (統一日誌)**
+   - `print()` is strictly forbidden in core pipeline logic.
+   - All standard output must flow through `PipelineBase.log()`, `info()`, `warning()`, or `error()`.
+   - Use `rich` for formatting terminal output (spinners, progress bars, colored text) in `cli_runner.py` or interactive scripts.

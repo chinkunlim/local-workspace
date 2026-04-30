@@ -110,16 +110,16 @@ class Phase1dVLMVision(PipelineBase):
                 self.error("❌ figure_list.md 缺少必要的 '檔案名稱' 或 'VLM 描述' 欄位。")
                 return False
 
-            prompt = self._get_adaptive_vlm_prompt(subject, pdf_id)  # F1: adaptive dispatch
+            prompt = self._get_adaptive_vlm_prompt(subject, pdf_id)
             if not prompt:
                 self.error("❌ 找不到 Phase 1d 的 prompt 指令，請確認 prompt.md 內有對應的段落。")
                 return False
 
-            modifications = 0
+            pending_tasks = []
             for i in range(header_idx + 2, len(lines)):
                 line = lines[i].strip()
                 if not line.startswith("|") or not line.endswith("|"):
-                    continue  # Not a table row
+                    continue
 
                 cols = [c.strip() for c in line.split("|")[1:-1]]
                 if len(cols) != len(headers):
@@ -132,28 +132,52 @@ class Phase1dVLMVision(PipelineBase):
                     if not os.path.exists(abs_img_path):
                         self.warning(f"⚠️ 找不到實體圖片檔案: {abs_img_path}")
                         cols[vlm_col] = "圖片遺失"
+                        lines[i] = "| " + " | ".join(cols) + " |\n"
                     else:
-                        self.info(f"🔍 正在解析圖片: {rel_img_path}")
-                        b64_image = encode_image_b64(abs_img_path)  # S3: shared utility
+                        b64_image = encode_image_b64(abs_img_path)
+                        pending_tasks.append((i, rel_img_path, cols, b64_image))
 
-                        try:
-                            res = self.llm.generate(
-                                model=self.vlm_model,
-                                prompt=prompt,
-                                images=[b64_image],
-                                options=self.vlm_options,
-                                logger=self,
-                            )
-                            safe_res = self._clean_markdown_text(res.strip())
-                            cols[vlm_col] = safe_res
-                            self.info(f"✅ 解析完成: {safe_res[:20]}...")
-                            modifications += 1
-                        except Exception as e:
-                            self.error(f"❌ VLM 解析失敗 ({rel_img_path}): {e}")
-                            cols[vlm_col] = f"[錯誤] {self._clean_markdown_text(str(e))}"
+            modifications = 0
+            if pending_tasks:
+                self.info(f"🔍 準備併發解析 {len(pending_tasks)} 張圖片...")
+                import asyncio
 
-                    # Reconstruct row
-                    lines[i] = "| " + " | ".join(cols) + " |\n"
+                # async_batch_generate does not natively accept multiple images arrays out of the box in the signature,
+                # Wait, looking at async_batch_generate, it takes a single `images` list for ALL prompts? 
+                # Let's write a small wrapper here for concurrent execution.
+                
+                async def _process_img(idx, rel_path, cols_list, b64_img):
+                    try:
+                        res = await self.llm.async_generate(
+                            model=self.vlm_model,
+                            prompt=prompt,
+                            images=[b64_img],
+                            options=self.vlm_options,
+                            logger=self,
+                        )
+                        safe_res = self._clean_markdown_text(res.strip())
+                        cols_list[vlm_col] = safe_res
+                        self.info(f"✅ 解析完成 ({rel_path}): {safe_res[:20]}...")
+                        return idx, cols_list
+                    except Exception as e:
+                        self.error(f"❌ VLM 解析失敗 ({rel_path}): {e}")
+                        cols_list[vlm_col] = f"[錯誤] {self._clean_markdown_text(str(e))}"
+                        return idx, cols_list
+
+                async def _run_all():
+                    semaphore = asyncio.Semaphore(2)  # Max 2 concurrent VLM requests to avoid VRAM OOM
+                    async def _bounded_process(*args):
+                        async with semaphore:
+                            return await _process_img(*args)
+                    
+                    tasks = [_bounded_process(i, rel, cols, b64) for i, rel, cols, b64 in pending_tasks]
+                    return await asyncio.gather(*tasks)
+
+                results = asyncio.run(_run_all())
+                
+                for idx, new_cols in results:
+                    lines[idx] = "| " + " | ".join(new_cols) + " |\n"
+                    modifications += 1
 
             if modifications > 0:
                 AtomicWriter.write_text(figure_list_path, "".join(lines))
@@ -164,6 +188,7 @@ class Phase1dVLMVision(PipelineBase):
             return True
         finally:
             self.llm.unload_model(self.vlm_model, logger=self)
+
 
 
 if __name__ == "__main__":

@@ -103,3 +103,9 @@ graph TD
 *   **WebUI to CLI Convergence**: Upon achieving absolute functional parity between the Flask WebUI and the CLI, the architecture was decisively streamlined. This fortified the core CLI infrastructure, enabling autonomous pure-CLI operations and foolproof automated file routing.
 *   **Omega Integration (Self-Healing & UI Uniformity)**: Ported the interactive DAG tracking panel, Preflight Checks, and checkpoint-resume capabilities across all skills, ensuring identical user experience regardless of the pipeline executed.
 *   **Single Source of Truth (SSoT) Consolidation**: Concluded the Antigravity project by completely merging the experimental `open-claw-sandbox/docs/` into the root `/docs/`, designating it as the immutable single source of truth for all subsequent architectural reference.
+
+
+# Multi-Agent Architecture (v1.2.0)
+- `core/`: The heart of the system. Manages state (`state_manager`), queues (`task_queue`), config (`config_manager`), and LLM connections (`llm_client`).
+- `infra/pipelines/`: Interface layer connecting external providers (OpenAI, Anthropic) and tools.
+- `skills/`: The concrete business logic implementation. Each skill has its own `config/`, `scripts/`, and `docs/`.

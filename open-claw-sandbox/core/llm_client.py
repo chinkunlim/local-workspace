@@ -12,7 +12,9 @@ import os
 import time
 from typing import Any, Dict, NamedTuple, Optional, Tuple, Union
 
+import aiohttp
 import requests
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 TimeoutType = Union[float, Tuple[float, float]]
 
@@ -225,6 +227,11 @@ class OllamaClient:
     #  Async / Concurrent Generation (#16)                                #
     # ------------------------------------------------------------------ #
 
+    @retry(
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(3),
+        retry=retry_if_exception_type((aiohttp.ClientError, TimeoutError, ValueError))
+    )
     async def async_generate(
         self,
         model: str,
@@ -233,31 +240,73 @@ class OllamaClient:
         images: Optional[list] = None,
         logger=None,
     ) -> str:
-        """Async wrapper around generate() for use with asyncio.
+        """Fully async generation using aiohttp and tenacity (P4.2)."""
+        trace_id = TRACE_ID_VAR.get()
+        trace_pfx = f"[trace:{trace_id[:8]}] " if trace_id else ""
 
-        Runs the blocking HTTP call in a thread-pool executor so that
-        multiple chunk requests can be in-flight concurrently.
+        effective_model = model
+        if self._circuit_open and self.fallback_model and self.fallback_model != model:
+            effective_model = self.fallback_model
 
-        Usage:
-            result = await client.async_generate(model="gemma3:4b", prompt="...")
+        is_openai = "/v1" in self.api_url or "chat/completions" in self.api_url
+        if is_openai:
+            payload = {
+                "model": effective_model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+            }
+            if options:
+                if "temperature" in options:
+                    payload["temperature"] = options["temperature"]
+                if "num_predict" in options:
+                    payload["max_tokens"] = options["num_predict"]
+                if "max_tokens" in options:
+                    payload["max_tokens"] = options["max_tokens"]
+        else:
+            payload = {"model": effective_model, "prompt": prompt, "stream": False}
+            if options:
+                payload["options"] = options
+            if images:
+                payload["images"] = images
 
-        Note:
-            For OOM safety, always wrap concurrent calls with an
-            asyncio.Semaphore (see async_batch_generate).
-        """
-        import asyncio
+        t_start = time.monotonic()
+        timeout_val = self.timeout[0] if isinstance(self.timeout, tuple) else self.timeout
 
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None,  # default ThreadPoolExecutor
-            lambda: self.generate(
-                model=model,
-                prompt=prompt,
-                options=options,
-                images=images,
-                logger=logger,
-            ),
-        )
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(self.api_url, json=payload, timeout=timeout_val) as res:
+                    res.raise_for_status()
+                    _resp_json = await res.json()
+
+                    if is_openai:
+                        response_text = _resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        _token_count = _resp_json.get("usage", {}).get("completion_tokens", 0)
+                    else:
+                        response_text = _resp_json.get("response", "")
+                        _token_count = _resp_json.get("eval_count", 0)
+
+                    if not response_text or not response_text.strip():
+                        raise ValueError("API 回傳空內容")
+
+                    self._consecutive_failures = 0
+                    self._circuit_open = False
+                    _latency_ms = (time.monotonic() - t_start) * 1000
+
+                    return GenerateResult(
+                        response_text,
+                        latency_ms=_latency_ms,
+                        token_count=_token_count,
+                        model=effective_model,
+                    )
+            except Exception as e:
+                self._consecutive_failures += 1
+                if self._consecutive_failures >= self.CIRCUIT_BREAKER_THRESHOLD:
+                    self._circuit_open = True
+                    if logger:
+                        logger.error(f"{trace_pfx}⚡ Circuit Breaker 已開路！自動切換至 {self.fallback_model}")
+                if logger:
+                    logger.warning(f"{trace_pfx}LLM API 請求失敗 ({e})，觸發 Tenacity 退避重試...")
+                raise e
 
     async def async_batch_generate(
         self,

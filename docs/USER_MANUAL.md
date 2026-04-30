@@ -241,3 +241,12 @@ All Open Claw skills integrate a standardized architectural interface:
 2. **Unified Dashboard & Code Self-Healing**: Every module renders a standardized `📊 [Skill Name] State & DAG Tracking Panel` in the terminal for consistent UX. 
 3. **Interactive Selection UI**: If you execute a pipeline without arguments, the Orchestrator will display an interactive CLI menu allowing you to use numbers and ranges (e.g. `1,3,5` or `1-5`) to select pending tasks, or even choose previously completed tasks for reprocessing.
 4. **Graceful Interruptions & Notifications**: Press `Ctrl+C` to halt operations. The system intercepts `KeyboardInterrupt`, saves state checkpoints safely, and dispatches a macOS native alert (`Execution Interrupted`). Upon successful completion, a `Pipeline Execution Complete` notification is dispatched. **No additional software installation is required.**
+
+
+# Use-Case Driven Operations (v1.2.0)
+
+## Telegram Bot Integration
+The Telegram bot provides real-time notifications for Human-in-the-Loop (HITL) events. When the system encounters low confidence data, it will pause and message you. Reply with `/hitl approve <trace_id>` to resume.
+
+## Configuring Providers
+Configure your LLM providers in `config.yaml` or global `~/.openclaw/openclaw.json`. The new `llm_client` automatically falls back to secondary models upon encountering rate limits.

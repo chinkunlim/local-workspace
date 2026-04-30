@@ -8,8 +8,58 @@ import threading
 from typing import Any, Dict, List, Optional
 
 from .atomic_writer import AtomicWriter
+from .state_backend import get_state_backend
 
 _logger = logging.getLogger("OpenClaw.StateManager")
+
+
+class MemoryPool:
+    """Global key-value store for cross-skill memory and user preferences (P4.1-1).
+
+    Uses the StateBackend interface to persist data either locally in a
+    `_global_` namespace or in a shared Redis instance.
+    """
+
+    def __init__(self, workspace_root: str, backend_cfg: Optional[Dict[str, Any]] = None):
+        self.workspace_root = workspace_root
+        backend_cfg = backend_cfg or {}
+        # Default local persistence to data/_global_/state/
+        base_dir = os.path.join(workspace_root, "data", "_global_", "state")
+        self.backend = get_state_backend(backend_cfg, base_dir=base_dir)
+        self._pool_key = "memory_pool"
+        self._lock = threading.RLock()
+
+        # Initialize if empty
+        if not self.backend.exists(self._pool_key):
+            self.backend.set(self._pool_key, {})
+
+    def get_preference(self, key: str, default: Any = None) -> Any:
+        """Retrieve a global user preference."""
+        with self._lock:
+            data = self.backend.get(self._pool_key) or {}
+            return data.get("preferences", {}).get(key, default)
+
+    def set_preference(self, key: str, value: Any) -> None:
+        """Save a global user preference."""
+        with self._lock:
+            data = self.backend.get(self._pool_key) or {}
+            if "preferences" not in data:
+                data["preferences"] = {}
+            data["preferences"][key] = value
+            self.backend.set(self._pool_key, data)
+
+    def get_memory(self, key: str) -> Optional[Any]:
+        """Retrieve a raw global memory variable."""
+        with self._lock:
+            data = self.backend.get(self._pool_key) or {}
+            return data.get(key)
+
+    def set_memory(self, key: str, value: Any) -> None:
+        """Save a raw global memory variable."""
+        with self._lock:
+            data = self.backend.get(self._pool_key) or {}
+            data[key] = value
+            self.backend.set(self._pool_key, data)
 
 
 class StateManager:

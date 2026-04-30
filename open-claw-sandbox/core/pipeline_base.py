@@ -21,6 +21,7 @@ PipelineBase — OpenClaw Shared Base Class (V2.3)
     super().__init__("phase1a", "PDF Diagnostic", skill_name="doc-parser")
 """
 
+from dataclasses import dataclass, field
 import logging
 import os
 import signal
@@ -31,8 +32,17 @@ import uuid
 
 import psutil
 
+@dataclass
+class PipelineResponse:
+    """Standardized response object for all Pipeline executions (P4.3-3)."""
+    status: str  # "success", "failed", "paused"
+    data: Dict[str, Any] = field(default_factory=dict)
+    errors: List[str] = field(default_factory=list)
+
+
 from .config_manager import ConfigManager
 from .config_validation import ConfigValidator
+from .hitl_manager import HITLPendingInterrupt
 from .llm_client import TRACE_ID_VAR, OllamaClient
 from .log_manager import build_logger
 from .path_builder import PathBuilder
@@ -47,10 +57,11 @@ class PipelineBase:
         phase_name: str,
         skill_name: str = "audio-transcriber",  # ← V2.2 新增，向後相容預設值
         logger=None,
-        # ── P1-2: Dependency Injection slots ──────────────────────────────
+        # ── P1-2 & P4.2: Dependency Injection slots ───────────────────────
         # Pass a mock/stub in unit tests; leave as None for production use.
         llm_client=None,
         state_manager=None,
+        config_manager=None,
     ):
         self.phase_key = phase_key
         self.phase_name = phase_name
@@ -62,7 +73,7 @@ class PipelineBase:
         self.workspace_root = os.environ.get("WORKSPACE_DIR", default_workspace)
 
         self.path_builder = PathBuilder(self.workspace_root, skill_name)
-        self.config_manager = ConfigManager(self.workspace_root, skill_name)
+        self.config_manager = config_manager or ConfigManager(self.workspace_root, skill_name)
         self.base_dir = self.path_builder.base_dir
         self.dirs = self.path_builder.phase_dirs
         self.config_dir = self.path_builder.config_dir
@@ -435,13 +446,25 @@ class PipelineBase:
             if self.check_system_health():
                 break
 
-            process_callback(idx, task, len(tasks))
+            try:
+                process_callback(idx, task, len(tasks))
+            except HITLPendingInterrupt as hitl_exc:
+                self.log(f"⏸️ 任務被暫停以等待人工介入 (Trace ID: {hitl_exc.trace_id})", "warn")
+                # When paused by HITL, we save the checkpoint to the CURRENT task so it resumes here.
+                self.save_checkpoint(task["subject"], task["filename"])
+                self._write_session_state(SessionState.PAUSED)
+                break
+            except Exception as e:
+                self.log(f"❌ 任務執行失敗: {e}", "error")
+                # On error, optionally halt or continue; here we halt.
+                break
 
             if self.stop_requested:
                 if self.pause_requested and idx < len(tasks):
                     next_task = tasks[idx]
                     self.save_checkpoint(next_task["subject"], next_task["filename"])
                 break
+
 
     def _batch_select_reprocess(self, done_tasks: List[Dict]) -> Dict[int, Dict]:
         """互動式批量選擇已完成任務是否重跑。"""
@@ -463,28 +486,25 @@ class PipelineBase:
     def clear_checkpoint(self):
         self.state_manager.clear_checkpoint()
 
-    # ------------------------------------------------------------------ #
-    #  Utilities                                                           #
-    # ------------------------------------------------------------------ #
-
     def create_spinner(self, desc: str):
-        from tqdm import tqdm
+        try:
+            from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+            progress = Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                TimeElapsedColumn(),
+            )
+            task_id = progress.add_task(description=desc, total=None)
+            progress.start()
+            return progress, task_id, None
+        except ImportError:
+            # Fallback to simple console message if rich is not available
+            self.log(f"⏳ {desc}...", "info")
+            return None, None, None
 
-        stop_tick = threading.Event()
-        pbar = tqdm(total=100, desc=desc, bar_format="{l_bar}{bar}| [{elapsed}]")
-
-        def ticker():
-            while not stop_tick.wait(1.0):
-                pbar.refresh()
-
-        t = threading.Thread(target=ticker, daemon=True)
-        t.start()
-        return pbar, stop_tick, t
-
-    def finish_spinner(self, pbar, stop_tick, t):
-        stop_tick.set()
-        t.join()
-        pbar.n = 100
-        pbar.bar_format = "{l_bar}{bar}| [完成: {elapsed}]"
-        pbar.refresh()
-        pbar.close()
+    def finish_spinner(self, pbar, task_id, t):
+        if pbar is not None and hasattr(pbar, "stop"):
+            pbar.update(task_id, description=f"{pbar.tasks[task_id].description} [完成]")
+            pbar.stop()
+        else:
+            self.log("✅ 完成", "info")
