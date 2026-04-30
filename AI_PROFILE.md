@@ -54,10 +54,13 @@
 - `.DS_Store`, runtime logs, model caches, databases are NEVER committed
 
 ### Documentation discipline
-- Code change = documentation update in the same commit
-- `HANDOFF.md` must be updated at the end of every session
-- `TASKS.md` must reflect real task state (not stale)
-- `STRUCTURE.md` must be updated when directories change
+- **Global Documentation Sync (SSoT)**: A code or structural change MUST be accompanied by updates to ALL relevant `.md` files in the same commit. Do not just update one file and ignore the rest. This includes, but is not limited to:
+  - `memory/ARCHITECTURE.md` (if system architecture or logic changes)
+  - `memory/HANDOFF.md` and `memory/TASKS.md` (at the end of every session or task completion)
+  - `docs/STRUCTURE.md` and `docs/INDEX.md` (if any directory or file structure changes)
+  - `CHANGELOG.md` (for any meaningful feature, fix, or refactor)
+  - Skill-level `SKILL.md`, `ARCHITECTURE.md`, `CLAUDE.md`, `DECISIONS.md` (if a specific skill is modified)
+  - `docs/USER_MANUAL.md` or `docs/INFRA_SETUP.md` (if user-facing operations or setup changes)
 - **Continuous Profile Update**: When the user mentions new habits, workflows, or explicitly asks to "update md files" regarding their requirements, the AI MUST continuously integrate these new rules into `AI_PROFILE.md`.
 
 ---
