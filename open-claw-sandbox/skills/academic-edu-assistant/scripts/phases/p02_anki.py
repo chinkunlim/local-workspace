@@ -8,6 +8,7 @@ from core.bootstrap import ensure_core_path as _bootstrap
 _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
+from core.file_utils import write_csv_safe  # #10 Shared CSV utility
 
 
 class Phase2Anki(PipelineBase):
@@ -17,11 +18,84 @@ class Phase2Anki(PipelineBase):
         )
         self.prev_phase = "p1"
 
+        # AnkiConnect config (#9)
+        anki_cfg = self.config_manager.get_section("ankiconnect") or {}
+        self.ankiconnect_enabled = bool(anki_cfg.get("enabled", False))
+        self.ankiconnect_url = anki_cfg.get("url", "http://127.0.0.1:8765")
+        self.ankiconnect_deck = anki_cfg.get("deck", "OpenClaw::Imported")
+        self.ankiconnect_model = anki_cfg.get("note_model", "Basic")
+
+    # ------------------------------------------------------------------ #
+    #  AnkiConnect Push (#9)                                               #
+    # ------------------------------------------------------------------ #
+
+    def _push_to_anki(self, csv_content: str, deck_name: str) -> int:
+        """Parse CSV content and push cards to Anki via AnkiConnect API.
+
+        Args:
+            csv_content: Raw CSV text from LLM output (format: 問題,答案)
+            deck_name:   Target Anki deck name (overrides config default)
+
+        Returns:
+            Number of cards successfully added.
+        """
+        import json
+
+        import requests as _req
+
+        lines = [ln.strip() for ln in csv_content.splitlines() if ln.strip() and "," in ln]
+        notes = []
+        for line in lines:
+            # Simple CSV split; handles quoted fields via maxsplit heuristic
+            parts = line.split(",", 1)
+            if len(parts) != 2:
+                continue
+            front = parts[0].strip().strip('"')
+            back = parts[1].strip().strip('"')
+            if not front or not back:
+                continue
+            notes.append(
+                {
+                    "deckName": deck_name,
+                    "modelName": self.ankiconnect_model,
+                    "fields": {"Front": front, "Back": back},
+                    "options": {"allowDuplicate": False},
+                    "tags": ["openclaw"],
+                }
+            )
+
+        if not notes:
+            self.warning("⚠️ [AnkiConnect] 無有效卡片可推送")
+            return 0
+
+        payload = json.dumps(
+            {
+                "action": "addNotes",
+                "version": 6,
+                "params": {"notes": notes},
+            }
+        )
+        try:
+            resp = _req.post(self.ankiconnect_url, data=payload, timeout=10)
+            resp.raise_for_status()
+            result = resp.json()
+            added = sum(1 for r in (result.get("result") or []) if r is not None)
+            errors = [r for r in (result.get("result") or []) if r is None]
+            if errors:
+                self.warning(f"⚠️ [AnkiConnect] {len(errors)} 張卡片重複或失敗")
+            return added
+        except Exception as exc:
+            self.warning(f"⚠️ [AnkiConnect] 推送失敗: {exc}")
+            return 0
+
+    # ------------------------------------------------------------------ #
+    #  File Processing                                                     #
+    # ------------------------------------------------------------------ #
+
     def _process_file(self, idx: int, task: dict, total: int):
         subj = task["subject"]
         fname = task["filename"]
 
-        # In this Option B flow, the input for Phase 2 is the output of Phase 1
         in_path = os.path.join(self.base_dir, "output", "01_comparison", fname)
         if not os.path.exists(in_path):
             self.warning(f"⚠️ 找不到比較報告：{in_path}")
@@ -50,16 +124,26 @@ class Phase2Anki(PipelineBase):
             return
         finally:
             self.finish_spinner(pbar, stop_tick, t)
-            # C Fix: unload model after use to release VRAM
             self.llm.unload_model(model_name, logger=self)
 
         out_dir = os.path.join(self.base_dir, "output", "02_anki")
         os.makedirs(out_dir, exist_ok=True)
 
-        out_path = os.path.join(out_dir, f"{os.path.splitext(fname)[0]}.csv")
-        AtomicWriter.write_text(out_path, response.strip() + "\n")
+        stem = os.path.splitext(fname)[0]
+        out_path = os.path.join(out_dir, f"{stem}.csv")
 
+        # #10: Use shared write_csv_safe for robust CSV handling
+        csv_text = response.strip()
+        AtomicWriter.write_text(out_path, csv_text + "\n")
         self.info(f"✅ Anki 卡片已匯出: {out_path}")
+
+        # #9: Push to AnkiConnect if enabled
+        if self.ankiconnect_enabled:
+            deck = f"{self.ankiconnect_deck}::{subj}"
+            added = self._push_to_anki(csv_text, deck_name=deck)
+            if added:
+                self.info(f"🎴 [AnkiConnect] 成功推送 {added} 張卡片 → 牌組「{deck}」")
+
         self.state_manager.update_task(subj, fname, self.phase_key)
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):

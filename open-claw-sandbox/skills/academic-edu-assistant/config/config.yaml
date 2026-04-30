@@ -9,10 +9,24 @@ paths:
     p2: "output/02_anki"
 
 models:
-  # Using the global model mapping defined in core configurations
-  # Deepseek-r1 or qwen2.5-coder are good for reasoning and logic
   default: "qwen2.5-coder:7b"
-  
+  fallback: "gemma3:4b"   # Circuit Breaker fallback (#11)
+
 options:
   chunk_size: 4000
   temperature: 0.2
+
+runtime:
+  ollama:
+    api_url: "http://127.0.0.1:11434/api/generate"
+    timeout_seconds: 600
+    retries: 3
+    backoff_seconds: 5
+
+# AnkiConnect Integration (#9)
+# Set enabled: true and ensure Anki is running with the AnkiConnect add-on installed.
+ankiconnect:
+  enabled: false                    # Flip to true to activate auto-push
+  url: "http://127.0.0.1:8765"
+  deck: "OpenClaw::Academic"        # Parent deck; subject name appended automatically
+  note_model: "Basic"               # Anki note type (Front/Back fields required)

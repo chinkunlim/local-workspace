@@ -27,12 +27,13 @@ import signal
 import sys
 import threading
 from typing import Any, Dict, List, Optional
+import uuid
 
 import psutil
 
 from .config_manager import ConfigManager
 from .config_validation import ConfigValidator
-from .llm_client import OllamaClient
+from .llm_client import TRACE_ID_VAR, OllamaClient
 from .log_manager import build_logger
 from .path_builder import PathBuilder
 from .session_state import SessionState, write_session_state
@@ -72,14 +73,20 @@ class PipelineBase:
         self.state_manager = StateManager(self.base_dir, skill_name=skill_name)
         runtime_cfg = self.config_manager.get_section("runtime", {})
         ollama_cfg = runtime_cfg.get("ollama", {}) if isinstance(runtime_cfg, dict) else {}
+        fallback_model = self.config_manager.get_nested("models", "fallback")
         self.llm = OllamaClient(
             api_url=ConfigValidator.require(ollama_cfg.get("api_url"), "runtime.ollama.api_url"),
             timeout=ollama_cfg.get("timeout_seconds", 600),
             retries=ollama_cfg.get("retries", 3),
             backoff_seconds=ollama_cfg.get("backoff_seconds", 5.0),
+            fallback_model=fallback_model,
         )
         self.stop_requested = False
         self.pause_requested = False
+
+        # Generate and register a Trace ID for distributed log correlation (#12)
+        self.trace_id = TRACE_ID_VAR.get() or str(uuid.uuid4())
+        TRACE_ID_VAR.set(self.trace_id)
 
         self._setup_logging()
         self._setup_signals()

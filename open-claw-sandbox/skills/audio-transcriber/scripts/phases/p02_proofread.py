@@ -34,6 +34,12 @@ class Phase2Proofread(PipelineBase):
             raise RuntimeError("audio-transcriber thresholds.phase2_verbatim is missing")
         self.VERBATIM_THRESHOLD = float(threshold)
 
+        # Proofread Feedback Loop config (#8)
+        fb_cfg = self.config_manager.get_section("phase2_feedback") or {}
+        self.feedback_enabled = bool(fb_cfg.get("enabled", False))
+        self.feedback_threshold = float(fb_cfg.get("confidence_threshold", 0.70))
+        self.feedback_secondary_model = fb_cfg.get("secondary_model", "")
+
     def _get_glossary(self, subject: str) -> str:
         import json
 
@@ -52,6 +58,88 @@ class Phase2Proofread(PipelineBase):
         except Exception as e:
             self.log(f"⚠️ 詞庫載入失敗: {e}", "warn")
             return ""
+
+    def _apply_glossary_regex(self, text: str, subject: str) -> str:
+        """#5 Deterministic Terminology: hard-enforce glossary corrections via Regex.
+
+        After LLM proofreads, this pass iterates over glossary.json and uses
+        re.sub to replace any remaining incorrect terms with their canonical forms.
+        This is non-probabilistic and guarantees terminology consistency.
+        """
+        import json
+
+        ref_dir = self.dirs.get("p0_ref", os.path.join(self.base_dir, "output", "00_glossary"))
+        glossary_path = os.path.join(ref_dir, subject, "glossary.json")
+        if not os.path.exists(glossary_path):
+            return text
+        try:
+            with open(glossary_path, encoding="utf-8") as f:
+                gloss = json.load(f)
+        except Exception:
+            return text
+
+        replacements = 0
+        for wrong, correct in gloss.items():
+            if wrong.strip() == correct.strip():
+                continue
+            # Escape the wrong term for regex safety
+            pattern = re.escape(wrong)
+            new_text, n = re.subn(pattern, correct, text)
+            if n:
+                text = new_text
+                replacements += n
+
+        if replacements:
+            self.log(f"🔄 [Regex术語修正] 共強制替換 {replacements} 處術語")
+        return text
+
+    def _proofread_with_feedback(
+        self,
+        model_name: str,
+        prompt: str,
+        chunk: str,
+        options: dict,
+        c_idx: int,
+    ) -> str:
+        """#8 Proofread Feedback Loop.
+
+        Performs primary LLM proofreading. If the confidence score
+        (output/input length ratio) falls below self.feedback_threshold,
+        automatically re-runs with self.feedback_secondary_model.
+        Returns the best corrected text, falling back to original chunk on total failure.
+        """
+
+        def _call(m: str) -> str:
+            return self.llm.generate(model=m, prompt=prompt, options=options)
+
+        try:
+            primary_result = _call(model_name)
+        except Exception as e:
+            self.log(f"❌ [主要模型] 片段 {c_idx + 1} 失敗: {e}", "error")
+            return chunk
+
+        ratio = len(primary_result.strip()) / max(len(chunk), 1)
+
+        if (
+            self.feedback_enabled
+            and ratio < self.feedback_threshold
+            and self.feedback_secondary_model
+        ):
+            self.log(
+                f"⚠️ [回饋修正環] 片段 {c_idx + 1} 信心分 {ratio:.2f} < {self.feedback_threshold:.2f}，"
+                f"啟動備用模型 {self.feedback_secondary_model}...",
+                "warn",
+            )
+            try:
+                secondary_result = _call(self.feedback_secondary_model)
+                models_used_ref = getattr(self, "_current_models_used", None)
+                if models_used_ref is not None:
+                    models_used_ref.add(self.feedback_secondary_model)
+                return secondary_result
+            except Exception as e:
+                self.log(f"⚠️ [回饋修正環] 備用模型失敗: {e}，保留主要模型結果", "warn")
+
+        return primary_result
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log("🧠 啟動 Phase 2：校對模式")
@@ -72,6 +160,7 @@ class Phase2Proofread(PipelineBase):
 
         self.log(f"📋 Phase 2 共有 {len(tasks)} 個檔案待校對。")
         models_used = set()
+        self._current_models_used = models_used  # expose to _proofread_with_feedback (#8)
 
         try:
             for idx, task in enumerate(tasks, 1):
@@ -163,47 +252,49 @@ class Phase2Proofread(PipelineBase):
 
                     full_prompt = f"{prompt_tpl}\n\n{gloss_block}{pdf_block}{context_hint}【本段逐字稿原文】：\n{chunk}"
 
-                    try:
-                        res = self.llm.generate(
-                            model=model_name, prompt=full_prompt, options=options
-                        )
+                    # #8: Feedback Loop replaces bare llm.generate call
+                    res = self._proofread_with_feedback(
+                        model_name=model_name,
+                        prompt=full_prompt,
+                        chunk=chunk,
+                        options=options,
+                        c_idx=c_idx,
+                    )
 
-                        corrected = res
-                        expl = ""
-                        if "---" in res:
-                            parts = res.split("---", 1)
-                            corrected = parts[0].strip()
-                            expl = parts[1].strip()
+                    corrected = res
+                    expl = ""
+                    if "---" in res:
+                        parts = res.split("---", 1)
+                        corrected = parts[0].strip()
+                        expl = parts[1].strip()
 
-                        if len(corrected) < len(chunk) * self.VERBATIM_THRESHOLD:
-                            self.log(f"⚠️ 片段 {c_idx + 1} 觸發守衛: 過短，保留原文", "warn")
-                            full_corrected.append(chunk)
-                        else:
-                            full_corrected.append(corrected)
-                            if expl:
-                                cleaned_lines = []
-                                seen_last = None
-                                for line in expl.splitlines():
-                                    s = line.strip()
-                                    s_lower = s.lower().replace("*", "").replace(":", "").strip()
-                                    if s_lower in (
-                                        "explanation of changes",
-                                        "彙整修改日誌",
-                                        "修改說明",
-                                        "修改日誌",
-                                    ):
-                                        continue
-                                    if s == seen_last:
-                                        continue
-                                    seen_last = s
-                                    cleaned_lines.append(line)
-                                cleaned = "\n".join(cleaned_lines).strip()
-                                if cleaned:
-                                    full_logs.append(cleaned)
-
-                    except Exception as e:
-                        self.log(f"❌ 片段 {c_idx + 1} 失敗: {e}", "error")
+                    if len(corrected) < len(chunk) * self.VERBATIM_THRESHOLD:
+                        self.log(f"⚠️ 片段 {c_idx + 1} 觸發守衛: 過短，保留原文", "warn")
                         full_corrected.append(chunk)
+                    else:
+                        # #5: Hard-enforce glossary terms via Regex post-pass
+                        corrected = self._apply_glossary_regex(corrected, subj)
+                        full_corrected.append(corrected)
+                        if expl:
+                            cleaned_lines = []
+                            seen_last = None
+                            for line in expl.splitlines():
+                                s = line.strip()
+                                s_lower = s.lower().replace("*", "").replace(":", "").strip()
+                                if s_lower in (
+                                    "explanation of changes",
+                                    "彙整修改日誌",
+                                    "修改說明",
+                                    "修改日誌",
+                                ):
+                                    continue
+                                if s == seen_last:
+                                    continue
+                                seen_last = s
+                                cleaned_lines.append(line)
+                            cleaned = "\n".join(cleaned_lines).strip()
+                            if cleaned:
+                                full_logs.append(cleaned)
 
                 self.finish_spinner(pbar, stop_tick, t)
 

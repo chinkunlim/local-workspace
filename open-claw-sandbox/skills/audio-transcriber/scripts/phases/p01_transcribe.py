@@ -397,6 +397,10 @@ def detect_audio_language(
 class Phase1Transcribe(PipelineBase):
     def __init__(self):
         super().__init__(phase_key="p1", phase_name="語音轉錄", logger=None)
+        # Audio Chunk Fallback config (#7)
+        fb_cfg = self.config_manager.get_section("phase1_chunk_fallback") or {}
+        self.chunk_fallback_enabled = bool(fb_cfg.get("enabled", True))
+        self.max_chunk_duration_sec = float(fb_cfg.get("max_chunk_duration_sec", 30.0))
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log("🚀 啟動 Phase 1：語音轉錄 (V8.1 抗幻覺版)")
@@ -533,7 +537,43 @@ class Phase1Transcribe(PipelineBase):
                         log_fn=self.log,
                     )
 
-                # ── Layer 0 + Whisper 轉錄 ───────────────────────────────
+                # #7 ── Time-based Chunk Fallback ──────────────────────────
+                # Handles continuous speech where VAD finds insufficient silence.
+                # Splits audio into deterministic fixed-length chunks so Whisper
+                # never receives audio longer than max_chunk_duration_sec.
+                self._time_chunks: list = []
+                if self.chunk_fallback_enabled:
+                    try:
+                        from pydub import AudioSegment
+
+                        _audio_seg = AudioSegment.from_file(cleaned_path)
+                        duration_sec = len(_audio_seg) / 1000.0
+                        max_ms = int(self.max_chunk_duration_sec * 1000)
+                        if duration_sec > self.max_chunk_duration_sec * 1.2:
+                            self.log(
+                                f"⚠️ [Chunk Fallback] 音檔長度 {duration_sec:.1f}s > "
+                                f"{self.max_chunk_duration_sec:.0f}s，啟動時間切片保護模式"
+                            )
+                            os.makedirs(tmp_dir, exist_ok=True)
+                            chunk_paths = []
+                            for start_ms in range(0, len(_audio_seg), max_ms):
+                                seg = _audio_seg[start_ms : start_ms + max_ms]
+                                seg_path = os.path.join(
+                                    tmp_dir,
+                                    f"{base_name}_chunk{start_ms // max_ms:04d}.wav",
+                                )
+                                seg.export(seg_path, format="wav")
+                                chunk_paths.append(seg_path)
+                            self._time_chunks = chunk_paths
+                            self.log(
+                                f"✅ [Chunk Fallback] 切分為 {len(chunk_paths)} 個 "
+                                f"{self.max_chunk_duration_sec:.0f}s 時間區塊"
+                            )
+                    except ImportError:
+                        self.log("⚠️ [Chunk Fallback] pydub 未安裝，跳過時間切片", "warn")
+                    except Exception as _ce:
+                        self.log(f"⚠️ [Chunk Fallback] 切片失敗: {_ce}，繼續使用原始音檔", "warn")
+
                 pure_text = ""
                 ts_text = ""
                 segments = []
