@@ -607,6 +607,7 @@ class Phase1Transcribe(PipelineBase):
                                     compression_ratio_threshold=compression_ratio_thresh,
                                     no_speech_threshold=no_speech_thresh,
                                     hallucination_silence_threshold=hallucination_silence_sec,
+                                    word_timestamps=True,
                                     **lang_kwargs,
                                     verbose=False,
                                 )
@@ -625,6 +626,7 @@ class Phase1Transcribe(PipelineBase):
                             beam_size=beam_size,
                             vad_filter=True,
                             condition_on_previous_text=condition_on_prev_text,
+                            word_timestamps=True,
                         )
                         duration = int(info.duration)
                         last_end = 0
@@ -645,14 +647,23 @@ class Phase1Transcribe(PipelineBase):
 
                 # ── Layer 2: Segment 掃描 + 局部重試 ────────────────────
                 hallucination_count = 0
+                last_segment_end = None
 
                 for s in segments:
-                    text_val = s["text"] if isinstance(s, dict) else s.text
-                    start_val = s["start"] if isinstance(s, dict) else s.start
-                    end_val = s["end"] if isinstance(s, dict) else s.end
+                    is_dict = isinstance(s, dict)
+                    text_val = s["text"] if is_dict else s.text
+                    start_val = s["start"] if is_dict else s.start
+                    end_val = s["end"] if is_dict else s.end
+                    words = s.get("words", []) if is_dict else getattr(s, "words", [])
 
                     start_m, start_s = int(start_val // 60), int(start_val % 60)
                     end_m, end_s = int(end_val // 60), int(end_val % 60)
+                    
+                    # ── Light Diarization (Speaker Separation on Pauses) ──
+                    if last_segment_end is not None and (start_val - last_segment_end > 1.5):
+                        pure_text += "\n\n"
+                        ts_text += "\n"
+                    last_segment_end = end_val
 
                     # 偵測到幻覺 → 嘗試局部重試
                     if rep_enabled and detect_repetition(
@@ -678,6 +689,25 @@ class Phase1Transcribe(PipelineBase):
                             log_fn=self.log,
                         )
                         text_val = repaired  # None = 重試仍失敗
+                        words = [] # Clear words if we retry, since retry doesn't guarantee word timestamps
+
+                    # ── Low-Confidence Flagging (<60%) ──
+                    formatted_text = ""
+                    if text_val is not None:
+                        if words:
+                            for w in words:
+                                w_text = w["word"] if isinstance(w, dict) else w.word
+                                w_prob = w["probability"] if isinstance(w, dict) else w.probability
+                                w_start = w["start"] if isinstance(w, dict) else w.start
+                                
+                                if w_prob < 0.60:
+                                    formatted_text += f"[? {w_text.strip()} | {w_start:.1f} ?] "
+                                else:
+                                    formatted_text += w_text
+                        else:
+                            formatted_text = text_val
+                            
+                        formatted_text = formatted_text.strip()
 
                     # ── 分層輸出策略 ─────────────────────────────────────
                     if text_val is None:
@@ -688,10 +718,10 @@ class Phase1Transcribe(PipelineBase):
                             f"{start_m:02d}:{start_s:02d}-{end_m:02d}:{end_s:02d}]\n"
                         )
                     else:
-                        pure_text += text_val.strip() + "\n"
+                        pure_text += formatted_text + " "
                         ts_text += (
                             f"[{start_m:02d}:{start_s:02d}] - [{end_m:02d}:{end_s:02d}]"
-                            f" {text_val.strip()}\n"
+                            f" {formatted_text}\n"
                         )
 
                 if hallucination_count > 0:

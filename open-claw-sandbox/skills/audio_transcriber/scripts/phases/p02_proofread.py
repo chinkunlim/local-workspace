@@ -20,6 +20,7 @@ from pypdf import PdfReader
 # Group 4 — Core imports
 from core import AtomicWriter, PipelineBase
 from core.utils.text_utils import smart_split
+from core.orchestration.human_gate import VerificationGate
 
 
 class Phase2Proofread(PipelineBase):
@@ -401,15 +402,45 @@ class Phase2Proofread(PipelineBase):
 
                 self.finish_spinner(pbar, stop_tick, t)
 
-                # --- Save Output ---
+
+                # --- Verification Gate (Ollama-first, Human-approve) ---
+                # Build the Ollama-proofread draft first
                 final_doc = "\n".join(full_corrected)
                 if full_logs:
                     final_doc += "\n\n---\n\n## 📋 彙整修改日誌\n\n" + "\n\n".join(full_logs)
 
+                # Then open the ephemeral WebUI for human review
+                audio_path_for_gate = os.path.join(
+                    self.dirs.get("p0", ""), subj, fname
+                )
+                if not os.path.exists(audio_path_for_gate):
+                    audio_path_for_gate = None  # degrade gracefully if audio missing
+
+                self.log(
+                    "⏸️  [Verification Gate] 正在開啟人工審核視窗 (完成後 Pipeline 自動繼續)..."
+                )
+                gate = VerificationGate(
+                    skill_name="audio_transcriber / p02_proofread",
+                    original_text=raw_text,    # verbatim P1 output (left pane)
+                    llm_text=final_doc,         # Ollama-proofread P2 draft (right pane, editable)
+                    audio_path=audio_path_for_gate,
+                )
+                approved_text = gate.start()
+                if approved_text and approved_text.strip():
+                    final_doc = approved_text
+                    self.log("✅ [Verification Gate] 人工審核完成，使用核准版本。")
+                else:
+                    self.log(
+                        "⚠️  [Verification Gate] 未收到審核內容，保留 Ollama 校對結果。",
+                        "warn",
+                    )
+
+                # --- Save Output ---
                 out_path = os.path.join(self.dirs["p2"], subj, f"{base_name}.md")
                 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
                 AtomicWriter.write_text(out_path, final_doc)
+
 
                 out_hash = self.state_manager.get_file_hash(out_path)
                 self.state_manager.update_task(
