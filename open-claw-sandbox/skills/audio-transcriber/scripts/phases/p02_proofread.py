@@ -284,6 +284,17 @@ class Phase2Proofread(PipelineBase):
 
                 pbar, stop_tick, t = self.create_spinner(f"\u6821\u5c0d ({fname})")
 
+                # P1-7: Pre-flight health check BEFORE building prompts.
+                # A2's async batch dispatches ALL prompts simultaneously — the OOM guard
+                # must fire before any API call is made, not after all chunks have run.
+                if self.check_system_health():
+                    self.finish_spinner(pbar, stop_tick, t)
+                    self.log(
+                        f"\u26a0\ufe0f [OOM Guard/P1-7] \u7cfb\u7d71\u8a18\u61b6\u9ad4\u4e0d\u8db3\uff0c\u8df3\u904e [{subj}] {fname}\u3002",
+                        "warn",
+                    )
+                    continue
+
                 # A2: Build all prompts first, then fire async batch generation
                 # Prompts that should be skipped (checkpoint resume) get empty string placeholder.
                 prompts_to_run: list[str] = []

@@ -107,6 +107,84 @@ def main():
                     if chat_id not in allowed_users:
                         continue
 
+                    # ── P1-5: Multimodal routing ───────────────────────────────────
+                    # Handle voice/audio → route to audio-transcriber inbox
+                    if msg.get("voice") or msg.get("audio"):
+
+                        def _handle_voice(_msg=msg, _cid=chat_id):
+                            try:
+                                from core.telegram_bot import download_voice
+
+                                raw_inbox = os.path.join(_workspace_root, "data", "raw", "Telegram")
+                                local_path = download_voice(_msg, raw_inbox)
+                                send_message(
+                                    f"\U0001f3a4 \u8a9e\u97f3\u6a94\u6848\u5df2\u63a5\u6536\uff0c\u6b63\u5728\u6392\u961f\u8f49\u9304\u4e2d...\n"
+                                    f"\U0001f4c4 `{os.path.basename(local_path)}`",
+                                    _cid,
+                                )
+                                # SystemInboxDaemon will pick it up via watchdog or next scan
+                                from core.inbox_daemon import SystemInboxDaemon
+
+                                SystemInboxDaemon()._process_file(local_path)
+                            except Exception as _exc:
+                                send_message(
+                                    f"\u274c \u8a9e\u97f3\u8655\u7406\u5931\u6557: {_exc}", _cid
+                                )
+
+                        threading.Thread(target=_handle_voice, daemon=True).start()
+                        continue
+
+                    # Handle photo → run inline VLM analysis and reply
+                    if msg.get("photo"):
+
+                        def _handle_photo(_msg=msg, _cid=chat_id):
+                            try:
+                                from core.telegram_bot import download_file
+
+                                # Largest photo is last in the array
+                                file_id = _msg["photo"][-1]["file_id"]
+                                tmp_dir = os.path.join(_workspace_root, "data", "raw", "_photo_tmp")
+                                local_path = download_file(file_id, tmp_dir)
+                                send_message(
+                                    "\U0001f5bc\ufe0f \u7167\u7247\u5df2\u63a5\u6536\uff0c\u6b63\u5728\u547c\u53eb\u8996\u8986\u6a21\u578b\u5206\u6790...",
+                                    _cid,
+                                )
+                                # Encode and call VLM via OllamaClient
+                                import json as _json
+
+                                from core.file_utils import encode_image_b64
+                                from core.llm_client import OllamaClient
+
+                                with open(
+                                    os.path.expanduser("~/.openclaw/openclaw.json"),
+                                    encoding="utf-8",
+                                ) as _f:
+                                    _cfg = _json.load(_f)
+                                _ollama_url = (
+                                    _cfg.get("runtime", {})
+                                    .get("ollama", {})
+                                    .get("api_url", "http://127.0.0.1:11434/api")
+                                )
+                                _vlm_model = _cfg.get("models", {}).get("vlm", "llava:7b")
+                                _llm = OllamaClient(api_url=_ollama_url)
+                                _b64 = encode_image_b64(local_path)
+                                _ans = _llm.generate(
+                                    model=_vlm_model,
+                                    prompt="\u8acb\u63cf\u8ff0\u9019\u5f35\u5716\u7247\u7684\u5167\u5bb9\uff0c\u7528\u7e41\u9ad4\u4e2d\u6587\u56de\u7b54\u3002",
+                                    images=[_b64],
+                                )
+                                send_message(
+                                    f"\U0001f916 VLM \u5206\u6790\u7d50\u679c\uff1a\n\n{_ans}", _cid
+                                )
+                            except Exception as _exc:
+                                send_message(
+                                    f"\u274c \u7167\u7247\u5206\u6790\u5931\u6557: {_exc}", _cid
+                                )
+
+                        threading.Thread(target=_handle_photo, daemon=True).start()
+                        continue
+                    # ── End multimodal routing ─────────────────────────────────────
+
                     if text.startswith("/status"):
                         send_message("🔍 正在查詢目前系統佇列狀態...", chat_id)
                         status_text = run_status_check()
@@ -224,13 +302,29 @@ def main():
                             )
 
                     elif text.startswith("/hitl "):
-                        # H2: HITL callback — /hitl approve|skip <trace_id>
+                        # H2 + P0-5: HITL callback — searches ALL skill pending dirs
                         parts = text.split()
                         if len(parts) >= 3:
                             resolution = parts[1].lower()
                             trace_id = parts[2]
-                            hitl_mgr = HITLManager(base_dir=_workspace_root)
-                            snapshot = hitl_mgr.resolve(trace_id, resolution)
+
+                            # P0-5: HITLManager stores events under data/<skill>/state/hitl_pending/
+                            # We must search across all skills, not just _workspace_root
+                            snapshot = None
+                            searched_dirs = []
+                            data_root = os.path.join(_workspace_root, "data")
+                            if os.path.isdir(data_root):
+                                for skill_dir in os.listdir(data_root):
+                                    skill_base = os.path.join(data_root, skill_dir)
+                                    if not os.path.isdir(skill_base):
+                                        continue
+                                    hitl_mgr = HITLManager(base_dir=skill_base)
+                                    searched_dirs.append(skill_dir)
+                                    result = hitl_mgr.resolve(trace_id, resolution)
+                                    if result is not None:
+                                        snapshot = result
+                                        break
+
                             if snapshot is not None:
                                 send_message(
                                     f"\u2705 HITL \u5df2\u8655\u7406: `{trace_id}`\n\u6c7a\u5b9a: {resolution}\n\u7ba1\u7dda\u5c07\u81ea\u52d5\u6062\u5fa9\u3002",
@@ -238,7 +332,8 @@ def main():
                                 )
                             else:
                                 send_message(
-                                    f"\u26a0\ufe0f \u627e\u4e0d\u5230 HITL \u4e8b\u4ef6 `{trace_id}`\uff0c\u53ef\u80fd\u5df2\u8655\u7406\u3002",
+                                    f"\u26a0\ufe0f \u627e\u4e0d\u5230 HITL \u4e8b\u4ef6 `{trace_id}` "
+                                    f"(\u641c\u5c0b\u4e86 {len(searched_dirs)} \u500b Skill)\u3002\u53ef\u80fd\u5df2\u8655\u7406\u6216 ID \u932f\u8aa4\u3002",
                                     chat_id,
                                 )
                         else:

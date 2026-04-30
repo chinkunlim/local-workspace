@@ -1,7 +1,15 @@
 import os
 import sys
 
-import chromadb
+# P0-2: Guard against missing ChromaDB — skill should degrade gracefully
+try:
+    import chromadb as _chromadb
+
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    _chromadb = None  # type: ignore[assignment]
+    CHROMADB_AVAILABLE = False
+
 import requests
 
 # Core Bootstrap
@@ -46,17 +54,28 @@ class Phase1Compare(PipelineBase):
             self.info("⚠️ 沒有提供 --query 參數，跳過 RAG 交叉比對。")
             return
 
-        self.info(f"🔍 查詢字串: {query}")
-
-        # Connect to ChromaDB from telegram-kb-agent
-        db_path = os.path.abspath(
-            os.path.join(self.base_dir, "..", "telegram-kb-agent", "state", "chroma_db")
-        )
-        if not os.path.exists(db_path):
-            self.error("❌ 找不到 ChromaDB 向量庫，請先執行 telegram-kb-agent 的 indexer.py。")
+        # P0-2: Fail gracefully when ChromaDB is not installed
+        if not CHROMADB_AVAILABLE:
+            self.error(
+                "\u274c ChromaDB \u672a\u5b89\u88dd (pip install chromadb) \u2014 RAG \u6bd4\u5c0d\u7121\u6cd5\u904b\u884c\u3002"
+            )
             return
 
-        client = chromadb.PersistentClient(path=db_path)
+        # P0-2: Read ChromaDB path from config.yaml (vector_db.path) — remove cross-skill hardcode
+        chroma_cfg = self.config_manager.get_section("vector_db") or {}
+        db_path = chroma_cfg.get(
+            "path",
+            os.path.abspath(
+                os.path.join(self.base_dir, "..", "telegram-kb-agent", "state", "chroma_db")
+            ),
+        )
+        if not os.path.exists(db_path):
+            self.error(
+                "\u274c \u627e\u4e0d\u5230 ChromaDB \u5411\u91cf\u5eab\uff0c\u8acb\u5148\u57f7\u884c telegram-kb-agent \u7684 indexer.py\u3002"
+            )
+            return
+
+        client = _chromadb.PersistentClient(path=db_path)
         collection = client.get_collection(name="wiki_knowledge")
 
         ollama_api_url = "http://127.0.0.1:11434/api"

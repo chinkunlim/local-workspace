@@ -286,7 +286,9 @@ class SystemInboxDaemon:
             task_queue.enqueue(
                 "Note Generator (Rewrite)",
                 cmd,
-                os.path.join(_workspace_root, "skills", "note-generator"),
+                os.path.join(
+                    _workspace_root, "skills", "note_generator"
+                ),  # P0-1: underscore (matches skills/ dir)
             )
 
             # Prevent multiple triggers for this file

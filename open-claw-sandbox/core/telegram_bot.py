@@ -137,3 +137,84 @@ def send_hitl_prompt(
         ]
     ]
     return send_inline_keyboard(text, buttons, chat_id=chat_id)
+
+
+# ---------------------------------------------------------------------------
+# P1-4: Multimodal File Download Helpers
+# ---------------------------------------------------------------------------
+
+
+def download_file(file_id: str, dest_dir: str) -> str:
+    """Download a Telegram file to dest_dir and return the local absolute path.
+
+    Uses the Telegram Bot API getFile endpoint to resolve the file_path,
+    then downloads the binary content. Raises RuntimeError on failure.
+
+    Args:
+        file_id:  Telegram file_id from a message object (voice/audio/photo/document).
+        dest_dir: Local directory where the file will be saved.
+
+    Returns:
+        Absolute path to the downloaded file.
+
+    Raises:
+        RuntimeError: If the bot token is missing or the API call fails.
+    """
+    token, _ = _get_bot_config()
+    if not token:
+        raise RuntimeError("[TelegramBot] download_file: bot token not configured.")
+
+    # Step 1: Resolve file_path from file_id
+    meta_resp = requests.get(
+        f"https://api.telegram.org/bot{token}/getFile",
+        params={"file_id": file_id},
+        timeout=15,
+    )
+    if not meta_resp.ok:
+        raise RuntimeError(f"[TelegramBot] getFile failed for file_id={file_id}: {meta_resp.text}")
+    file_path_remote = meta_resp.json()["result"]["file_path"]
+
+    # Step 2: Download the binary content
+    download_url = f"https://api.telegram.org/file/bot{token}/{file_path_remote}"
+    bin_resp = requests.get(download_url, timeout=120, stream=True)
+    if not bin_resp.ok:
+        raise RuntimeError(
+            f"[TelegramBot] File download failed for {file_path_remote}: {bin_resp.status_code}"
+        )
+
+    os.makedirs(dest_dir, exist_ok=True)
+    local_filename = os.path.basename(file_path_remote)
+    local_path = os.path.join(dest_dir, local_filename)
+
+    with open(local_path, "wb") as f:
+        for chunk in bin_resp.iter_content(chunk_size=65536):
+            if chunk:
+                f.write(chunk)
+
+    return os.path.abspath(local_path)
+
+
+def download_voice(message: dict, dest_dir: str) -> str:
+    """Convenience wrapper: extract file_id from a Telegram voice/audio message dict.
+
+    Accepts a `message` dict from the Telegram getUpdates response and downloads
+    the attachment to dest_dir. Prefers `voice` > `audio` > `document`.
+
+    Args:
+        message:  The `message` sub-dict from a Telegram update.
+        dest_dir: Local directory to save the file.
+
+    Returns:
+        Absolute local path to the downloaded file.
+
+    Raises:
+        ValueError:   If no downloadable attachment is found in the message.
+        RuntimeError: If the download fails.
+    """
+    for key in ("voice", "audio", "document"):
+        attachment = message.get(key)
+        if attachment:
+            file_id = attachment.get("file_id", "")
+            if file_id:
+                return download_file(file_id, dest_dir)
+    raise ValueError("[TelegramBot] download_voice: no voice/audio/document found in message.")

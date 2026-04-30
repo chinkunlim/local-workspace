@@ -47,6 +47,10 @@ class PipelineBase:
         phase_name: str,
         skill_name: str = "audio-transcriber",  # ← V2.2 新增，向後相容預設值
         logger=None,
+        # ── P1-2: Dependency Injection slots ──────────────────────────────
+        # Pass a mock/stub in unit tests; leave as None for production use.
+        llm_client=None,
+        state_manager=None,
     ):
         self.phase_key = phase_key
         self.phase_name = phase_name
@@ -70,11 +74,15 @@ class PipelineBase:
         self.path_builder.ensure_directories()
         os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
 
-        self.state_manager = StateManager(self.base_dir, skill_name=skill_name)
+        # P1-2: Use injected StateManager if provided; otherwise construct from config
+        self.state_manager = state_manager or StateManager(self.base_dir, skill_name=skill_name)
+
         runtime_cfg = self.config_manager.get_section("runtime", {})
         ollama_cfg = runtime_cfg.get("ollama", {}) if isinstance(runtime_cfg, dict) else {}
         fallback_model = self.config_manager.get_nested("models", "fallback")
-        self.llm = OllamaClient(
+
+        # P1-2: Use injected LLM client if provided; otherwise construct from config
+        self.llm = llm_client or OllamaClient(
             api_url=ConfigValidator.require(ollama_cfg.get("api_url"), "runtime.ollama.api_url"),
             timeout=ollama_cfg.get("timeout_seconds", 600),
             retries=ollama_cfg.get("retries", 3),
