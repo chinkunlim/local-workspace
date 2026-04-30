@@ -58,6 +58,7 @@
 - `HANDOFF.md` must be updated at the end of every session
 - `TASKS.md` must reflect real task state (not stale)
 - `STRUCTURE.md` must be updated when directories change
+- **Continuous Profile Update**: When the user mentions new habits, workflows, or explicitly asks to "update md files" regarding their requirements, the AI MUST continuously integrate these new rules into `AI_PROFILE.md`.
 
 ---
 
