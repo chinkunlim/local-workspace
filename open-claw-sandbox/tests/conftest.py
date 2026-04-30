@@ -1,10 +1,17 @@
 """Shared fixtures for pytest."""
 
 import os
+import sys
 import shutil
 import tempfile
 
 import pytest
+
+# Ensure the root of open-claw-sandbox is in sys.path so 'core' can be imported
+sandbox_root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+if sandbox_root not in sys.path:
+    sys.path.insert(0, sandbox_root)
+
 
 
 @pytest.fixture
