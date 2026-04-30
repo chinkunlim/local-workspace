@@ -63,21 +63,21 @@ fallback handling. Do NOT raise `max_retries` above 5 — it risks infinite cost
 
 ---
 
-## 2026-04-19 — Extraction of Synthesis from `audio-transcriber` and `doc-parser`
+## 2026-04-19 — Extraction of Synthesis from `audio_transcriber` and `doc_parser`
 
-**Decision**: Remove Phase 4 (highlight) and Phase 5 (synthesis) from `audio-transcriber`, and
-Phase 3 (synthesis) from `doc-parser`. Create `note_generator` and `smart_highlighter` as
+**Decision**: Remove Phase 4 (highlight) and Phase 5 (synthesis) from `audio_transcriber`, and
+Phase 3 (synthesis) from `doc_parser`. Create `note_generator` and `smart_highlighter` as
 standalone, reusable synthesis skills.
 
-**Context**: Both `audio-transcriber` and `doc-parser` contained duplicated synthesis logic
+**Context**: Both `audio_transcriber` and `doc_parser` contained duplicated synthesis logic
 (prompts, Map-Reduce chunking, Mermaid generation). Any change to synthesis logic required
 editing two separate codebases. This is a clear violation of DRY and the Single Responsibility Principle.
 
 **Chosen approach**: `NoteGenerator` is a standalone class importable by any orchestrator.
-The calling skill (e.g., `audio-transcriber/p03_merge.py`) imports it directly:
+The calling skill (e.g., `audio_transcriber/p03_merge.py`) imports it directly:
 `from skills.note_generator.scripts.synthesize import NoteGenerator`. Zero duplication.
 
-**Impact**: `audio-transcriber` reduced from 6 phases to 3. `doc-parser` reduced from 5 phases
+**Impact**: `audio_transcriber` reduced from 6 phases to 3. `doc_parser` reduced from 5 phases
 to 4. All synthesis logic is maintained in a single location.
 
 ---

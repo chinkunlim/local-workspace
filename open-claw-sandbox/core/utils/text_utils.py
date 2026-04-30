@@ -2,7 +2,7 @@
 text_utils.py — Text processing and chunking utilities
 ========================================================
 Provides text splitting and tokenization-aware chunking for Map-Reduce operations.
-Extracted from audio-transcriber Phase 5 for shared usage with doc-parser.
+Extracted from audio_transcriber Phase 5 for shared usage with doc_parser.
 """
 
 from typing import List

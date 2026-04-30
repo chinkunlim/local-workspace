@@ -10,15 +10,15 @@ PipelineBase — OpenClaw Shared Base Class (V2.3)
 - build_logger 以 DEBUG 層級寫入檔案，INFO 層級印至 console
 
 關鍵升級（V2.2）：
-- 新增 `skill_name` keyword 參數（預設 "audio-transcriber"，保持向後相容）
+- 新增 `skill_name` keyword 參數（預設 "audio_transcriber"，保持向後相容）
 - `base_dir` 動態對應 `data/{skill_name}/`
-- 所有現有 audio-transcriber phase 腳本無需修改即可繼續運行
+- 所有現有 audio_transcriber phase 腳本無需修改即可繼續運行
 
-用法（audio-transcriber，不需改動）:
-    super().__init__("p1", "Transcription")   # skill_name 預設 audio-transcriber
+用法（audio_transcriber，不需改動）:
+    super().__init__("p1", "Transcription")   # skill_name 預設 audio_transcriber
 
-用法（doc-parser）:
-    super().__init__("phase1a", "PDF Diagnostic", skill_name="doc-parser")
+用法（doc_parser）:
+    super().__init__("phase1a", "PDF Diagnostic", skill_name="doc_parser")
 """
 
 from dataclasses import dataclass, field
@@ -57,7 +57,7 @@ class PipelineBase:
         self,
         phase_key: str,
         phase_name: str,
-        skill_name: str = "audio-transcriber",  # ← V2.2 新增，向後相容預設值
+        skill_name: str = "audio_transcriber",  # ← V2.2 新增，向後相容預設值
         logger=None,
         # ── P1-2 & P4.2: Dependency Injection slots ───────────────────────
         # Pass a mock/stub in unit tests; leave as None for production use.
@@ -349,7 +349,7 @@ class PipelineBase:
         )
 
     # ------------------------------------------------------------------ #
-    #  Task Management (audio-transcriber pattern; optional for other skills)     #
+    #  Task Management (audio_transcriber pattern; optional for other skills)     #
     # ------------------------------------------------------------------ #
 
     def get_tasks(
@@ -363,7 +363,7 @@ class PipelineBase:
     ) -> List[Dict]:
         """
         收集待處理任務清單。
-        audio-transcriber 使用，doc-parser 可不使用（改用 queue_manager）。
+        audio_transcriber 使用，doc_parser 可不使用（改用 queue_manager）。
         """
         self.state_manager.sync_physical_files()
         self.state_manager.check_output_hashes(self.dirs)

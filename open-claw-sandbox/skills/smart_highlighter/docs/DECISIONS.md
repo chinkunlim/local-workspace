@@ -20,9 +20,9 @@ If it fires frequently, the problem is in the prompt or model selection, not the
 
 ---
 
-## 2026-04-19 — Extraction of Highlighting from `audio-transcriber` and `doc-parser`
+## 2026-04-19 — Extraction of Highlighting from `audio_transcriber` and `doc_parser`
 
-**Decision**: Remove Phase 4 (highlight) from `audio-transcriber` and Phase 2 (highlight) from `doc-parser`. Create `smart_highlighter` as a standalone, reusable annotation skill.
+**Decision**: Remove Phase 4 (highlight) from `audio_transcriber` and Phase 2 (highlight) from `doc_parser`. Create `smart_highlighter` as a standalone, reusable annotation skill.
 
 **Context**: Both extraction skills contained duplicated highlighting prompts and logic.
 Any update to the highlighting approach required editing two separate skills — a classic

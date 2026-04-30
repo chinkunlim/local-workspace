@@ -42,7 +42,7 @@ YOU
  │
  ▼  (inbox_daemon routes automatically, 24/7)
  │
- ├──► 🏭 audio-transcriber        (for .m4a / .mp3)
+ ├──► 🏭 audio_transcriber        (for .m4a / .mp3)
  │         6-phase pipeline:
  │         P0: Build glossary
  │         P1: Transcribe with MLX-Whisper
@@ -51,7 +51,7 @@ YOU
  │         P4: Highlight key concepts
  │         P5: Synthesise into study notes
  │
- └──► 🏭 doc-parser               (for .pdf)
+ └──► 🏭 doc_parser               (for .pdf)
            7-phase pipeline:
            P00a: Security check & metadata
            P01a: Extract text with Docling
@@ -124,22 +124,22 @@ While the inbox daemon runs automatically, you can also trigger pipelines manual
 cd open-claw-sandbox
 
 # Process all pending audio files
-python3 skills/audio-transcriber/scripts/run_all.py --process-all
+python3 skills/audio_transcriber/scripts/run_all.py --process-all
 
 # Process only one subject
-python3 skills/audio-transcriber/scripts/run_all.py --subject Cognitive_Psychology
+python3 skills/audio_transcriber/scripts/run_all.py --subject Cognitive_Psychology
 
 # Resume after an interruption
-python3 skills/audio-transcriber/scripts/run_all.py --process-all --resume
+python3 skills/audio_transcriber/scripts/run_all.py --process-all --resume
 
 # Force re-run (even completed files)
-python3 skills/audio-transcriber/scripts/run_all.py --process-all --force
+python3 skills/audio_transcriber/scripts/run_all.py --process-all --force
 
 # Start from a specific phase (e.g., phase 2)
-python3 skills/audio-transcriber/scripts/run_all.py --from 2
+python3 skills/audio_transcriber/scripts/run_all.py --from 2
 
 # Regenerate glossary only
-python3 skills/audio-transcriber/scripts/run_all.py --glossary
+python3 skills/audio_transcriber/scripts/run_all.py --glossary
 ```
 
 ### Doc Parser
@@ -148,13 +148,13 @@ python3 skills/audio-transcriber/scripts/run_all.py --glossary
 cd open-claw-sandbox
 
 # Process all pending PDFs
-python3 skills/doc-parser/scripts/run_all.py --process-all
+python3 skills/doc_parser/scripts/run_all.py --process-all
 
 # Process only one subject
-python3 skills/doc-parser/scripts/run_all.py --subject AI_Papers
+python3 skills/doc_parser/scripts/run_all.py --subject AI_Papers
 
 # Force re-run
-python3 skills/doc-parser/scripts/run_all.py --process-all --force
+python3 skills/doc_parser/scripts/run_all.py --process-all --force
 ```
 
 ### Knowledge Compiler
@@ -164,7 +164,7 @@ Compiles all skill outputs into your Obsidian Vault with bi-directional WikiLink
 ```bash
 cd open-claw-sandbox
 
-python3 skills/knowledge-compiler/scripts/run_all.py --process-all
+python3 skills/knowledge_compiler/scripts/run_all.py --process-all
 ```
 
 ### Telegram Knowledge Base Agent
@@ -173,10 +173,10 @@ python3 skills/knowledge-compiler/scripts/run_all.py --process-all
 cd open-claw-sandbox
 
 # Rebuild the vector index (run after new notes are generated)
-python3 skills/telegram-kb-agent/scripts/indexer.py
+python3 skills/telegram_kb_agent/scripts/indexer.py
 
 # Start the Telegram bot daemon
-python3 skills/telegram-kb-agent/scripts/bot_daemon.py
+python3 skills/telegram_kb_agent/scripts/bot_daemon.py
 ```
 
 ### Academic & Education Assistant
@@ -185,10 +185,10 @@ python3 skills/telegram-kb-agent/scripts/bot_daemon.py
 cd open-claw-sandbox
 
 # Place files to compare inside:
-# data/academic-edu-assistant/input/<YourSubjectName>/
+# data/academic_edu_assistant/input/<YourSubjectName>/
 
 # Run the comparison + Anki card generation
-python3 skills/academic-edu-assistant/scripts/run_all.py
+python3 skills/academic_edu_assistant/scripts/run_all.py
 ```
 
 ### Interactive Reader (In-Note AI Annotations)
@@ -201,7 +201,7 @@ Write a tag anywhere inside a Markdown note:
 Then run:
 ```bash
 cd open-claw-sandbox
-python3 skills/interactive-reader/scripts/run_all.py --process-all
+python3 skills/interactive_reader/scripts/run_all.py --process-all
 ```
 
 The AI response is appended below the tag automatically.
@@ -214,28 +214,28 @@ PDFs can be routed in three different ways depending on their content:
 
 | Mode | Behaviour |
 |---|---|
-| `audio_ref` | PDF is sent to `audio-transcriber` as a proofreading reference only |
-| `doc_parser` | PDF is fully extracted by `doc-parser` |
+| `audio_ref` | PDF is sent to `audio_transcriber` as a proofreading reference only |
+| `doc_parser` | PDF is fully extracted by `doc_parser` |
 | `both` | PDF is sent to BOTH simultaneously |
 
 ### View Current Routing Rules
 
 ```bash
 cd open-claw-sandbox
-python3 skills/inbox-manager/scripts/query.py --list
+python3 skills/inbox_manager/scripts/query.py --list
 ```
 
 ### Add a New Rule
 
 ```bash
-python3 skills/inbox-manager/scripts/query.py --add "_slides" --routing audio_ref --description "Lecture slides"
-python3 skills/inbox-manager/scripts/query.py --add "_textbook" --routing both --description "Course textbook"
+python3 skills/inbox_manager/scripts/query.py --add "_slides" --routing audio_ref --description "Lecture slides"
+python3 skills/inbox_manager/scripts/query.py --add "_textbook" --routing both --description "Course textbook"
 ```
 
 ### Remove a Rule
 
 ```bash
-python3 skills/inbox-manager/scripts/query.py --remove "_slides"
+python3 skills/inbox_manager/scripts/query.py --remove "_slides"
 ```
 
 ---
@@ -248,10 +248,10 @@ Each skill writes a checklist to its state directory:
 
 ```bash
 # Audio transcriber progress
-cat open-claw-sandbox/data/audio-transcriber/state/checklist.md
+cat open-claw-sandbox/data/audio_transcriber/state/checklist.md
 
 # Doc parser progress
-cat open-claw-sandbox/data/doc-parser/state/checklist.md
+cat open-claw-sandbox/data/doc_parser/state/checklist.md
 ```
 
 ### Check System Logs

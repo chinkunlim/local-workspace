@@ -2,17 +2,17 @@ import os
 import re
 
 ENTRY_POINTS = [
-    ("skills/audio-transcriber/scripts/run_all.py", "Audio Transcriber"),
-    ("skills/academic-edu-assistant/scripts/run_all.py", "Academic Education Assistant"),
-    ("skills/knowledge-compiler/scripts/run_all.py", "Knowledge Compiler"),
-    ("skills/doc-parser/scripts/run_all.py", "Doc Parser"),
-    ("skills/interactive-reader/scripts/run_all.py", "Interactive Reader"),
+    ("skills/audio_transcriber/scripts/run_all.py", "Audio Transcriber"),
+    ("skills/academic_edu_assistant/scripts/run_all.py", "Academic Education Assistant"),
+    ("skills/knowledge_compiler/scripts/run_all.py", "Knowledge Compiler"),
+    ("skills/doc_parser/scripts/run_all.py", "Doc Parser"),
+    ("skills/interactive_reader/scripts/run_all.py", "Interactive Reader"),
     ("skills/note_generator/scripts/synthesize.py", "Note Generator"),
     ("skills/smart_highlighter/scripts/highlight.py", "Smart Highlighter"),
-    ("skills/inbox-manager/scripts/query.py", "Inbox Manager"),
-    ("skills/telegram-kb-agent/scripts/bot_daemon.py", "Telegram KB Agent"),
-    ("skills/telegram-kb-agent/scripts/indexer.py", "Telegram KB Indexer"),
-    ("skills/telegram-kb-agent/scripts/query.py", "Telegram KB Query"),
+    ("skills/inbox_manager/scripts/query.py", "Inbox Manager"),
+    ("skills/telegram_kb_agent/scripts/bot_daemon.py", "Telegram KB Agent"),
+    ("skills/telegram_kb_agent/scripts/indexer.py", "Telegram KB Indexer"),
+    ("skills/telegram_kb_agent/scripts/query.py", "Telegram KB Query"),
 ]
 
 WRAPPER_TEMPLATE = """
@@ -55,8 +55,8 @@ def patch_file(filepath):
         print(f"Already patched: {filepath}")
         return
 
-    # Special case for audio-transcriber (we just manually patch the EXCEPT block in run())
-    if "audio-transcriber" in filepath:
+    # Special case for audio_transcriber (we just manually patch the EXCEPT block in run())
+    if "audio_transcriber" in filepath:
         if "except KeyboardInterrupt:" not in content:
             # We already patched it via multi_replace, but we reverted git.
             pass

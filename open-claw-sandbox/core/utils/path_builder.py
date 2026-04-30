@@ -34,7 +34,7 @@ from typing import Dict
 # Structured identically to the YAML schema for consistency.
 # ---------------------------------------------------------------------------
 _DEFAULTS: Dict[str, Dict] = {
-    "audio-transcriber": {
+    "audio_transcriber": {
         "input": "input",
         "output": "output",
         "state": "state",
@@ -49,7 +49,7 @@ _DEFAULTS: Dict[str, Dict] = {
             "p5": "output/05_notion_synthesis",
         },
     },
-    "doc-parser": {
+    "doc_parser": {
         "input": "input",
         "output": "output",
         "state": "state",

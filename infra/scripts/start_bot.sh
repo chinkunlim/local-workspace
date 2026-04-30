@@ -28,7 +28,7 @@ if [[ -f "${BOT_DAEMON_PID_FILE}" ]] && kill -0 "$(cat "${BOT_DAEMON_PID_FILE}")
 else
     (
         cd "${WORKSPACE_DIR}" || exit
-        python3 skills/telegram-kb-agent/scripts/bot_daemon.py > "${LOG_DIR}/bot_daemon.log" 2>&1 &
+        python3 skills/telegram_kb_agent/scripts/bot_daemon.py > "${LOG_DIR}/bot_daemon.log" 2>&1 &
         echo $! > "${BOT_DAEMON_PID_FILE}"
     )
     sleep 1

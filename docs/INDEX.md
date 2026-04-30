@@ -9,9 +9,9 @@ This `INDEX.md` serves as the definitive map to the documentation ecosystem. Due
 ## 1. Global Navigation & Development Standards
 These documents define the universal rules and layout of the entire `local-workspace/` monorepo.
 
-- **[Coding Guidelines & Protocols](../docs/CODING_GUIDELINES_FINAL.md)**: The Single Source of Truth (SSoT) for all AI and Human engineering rules. Includes the Anti-Truncation Protocol.
+- **[Coding Guidelines & Protocols](../docs/CODING_GUIDELINES.md)**: The Single Source of Truth (SSoT) for all AI and Human engineering rules. Includes the Anti-Truncation Protocol.
 - **[System Structure Map](../docs/STRUCTURE.md)**: Annotated map of every critical file and folder.
-- **[AI Master Guide](../docs/AI_Master_Guide_Final.md)**: Conceptual guide covering the AI's role and ecosystem vision.
+- **[AI Master Guide](../docs/INFRA_SETUP.md)**: Conceptual guide covering the AI's role and ecosystem vision.
 - **[User Manual](../docs/USER_MANUAL.md)**: High-level usage guide for human operators.
 - **[Changelog](../CHANGELOG.md)**: The global chronological history of the project.
 
@@ -46,15 +46,15 @@ Each of the 9 core skills inside `open-claw-sandbox/skills/` maintains absolute 
 
 | Skill | Description | Documentation Suite |
 |:---|:---|:---|
-| **`audio-transcriber`** | Voice-to-Wiki pipeline | [Architecture](../open-claw-sandbox/skills/audio-transcriber/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/audio-transcriber/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/audio-transcriber/docs/DECISIONS.md) |
-| **`doc-parser`** | PDF-to-Wiki extraction | [Architecture](../open-claw-sandbox/skills/doc-parser/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/doc-parser/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/doc-parser/docs/DECISIONS.md) |
+| **`audio_transcriber`** | Voice-to-Wiki pipeline | [Architecture](../open-claw-sandbox/skills/audio_transcriber/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/audio_transcriber/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/audio_transcriber/docs/DECISIONS.md) |
+| **`doc_parser`** | PDF-to-Wiki extraction | [Architecture](../open-claw-sandbox/skills/doc_parser/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/doc_parser/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/doc_parser/docs/DECISIONS.md) |
 | **`note_generator`** | Map-Reduce synthesis engine | [Architecture](../open-claw-sandbox/skills/note_generator/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/note_generator/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/note_generator/docs/DECISIONS.md) |
 | **`smart_highlighter`** | Anti-tampering annotation | [Architecture](../open-claw-sandbox/skills/smart_highlighter/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/smart_highlighter/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/smart_highlighter/docs/DECISIONS.md) |
-| **`knowledge-compiler`** | Glossary & WikiLink generator | [Architecture](../open-claw-sandbox/skills/knowledge-compiler/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/knowledge-compiler/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/knowledge-compiler/docs/DECISIONS.md) |
-| **`interactive-reader`** | In-place annotation resolver | [Architecture](../open-claw-sandbox/skills/interactive-reader/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/interactive-reader/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/interactive-reader/docs/DECISIONS.md) |
-| **`academic-edu-assistant`** | Anki export & Multi-doc RAG | [Architecture](../open-claw-sandbox/skills/academic-edu-assistant/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/academic-edu-assistant/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/academic-edu-assistant/docs/DECISIONS.md) |
-| **`telegram-kb-agent`** | Telegram Bot RAG interface | [Architecture](../open-claw-sandbox/skills/telegram-kb-agent/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/telegram-kb-agent/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/telegram-kb-agent/docs/DECISIONS.md) |
-| **`inbox-manager`** | CLI config route mutator | [Architecture](../open-claw-sandbox/skills/inbox-manager/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/inbox-manager/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/inbox-manager/docs/DECISIONS.md) |
+| **`knowledge_compiler`** | Glossary & WikiLink generator | [Architecture](../open-claw-sandbox/skills/knowledge_compiler/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/knowledge_compiler/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/knowledge_compiler/docs/DECISIONS.md) |
+| **`interactive_reader`** | In-place annotation resolver | [Architecture](../open-claw-sandbox/skills/interactive_reader/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/interactive_reader/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/interactive_reader/docs/DECISIONS.md) |
+| **`academic_edu_assistant`** | Anki export & Multi-doc RAG | [Architecture](../open-claw-sandbox/skills/academic_edu_assistant/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/academic_edu_assistant/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/academic_edu_assistant/docs/DECISIONS.md) |
+| **`telegram_kb_agent`** | Telegram Bot RAG interface | [Architecture](../open-claw-sandbox/skills/telegram_kb_agent/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/telegram_kb_agent/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/telegram_kb_agent/docs/DECISIONS.md) |
+| **`inbox_manager`** | CLI config route mutator | [Architecture](../open-claw-sandbox/skills/inbox_manager/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/inbox_manager/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/inbox_manager/docs/DECISIONS.md) |
 
 > [!TIP]
 > **To Developers & AI Agents:** Always consult this `INDEX.md` before generating new documentation. Ensure that any architectural shift is logged in the appropriate `DECISIONS.md` (global or skill-level) and that no history is ever deleted.

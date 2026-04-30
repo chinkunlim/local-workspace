@@ -14,7 +14,7 @@ If you discover a security vulnerability (e.g., path traversal, credential expos
 
 ## Security Principles
 
-This workspace follows the security rules in `open-claw-sandbox/docs/CODING_GUIDELINES_FINAL.md §7`:
+This workspace follows the security rules in `open-claw-sandbox/docs/CODING_GUIDELINES.md §7`:
 
 - No credentials or API keys committed to git
 - All file write operations use atomic write strategy

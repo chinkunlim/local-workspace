@@ -117,7 +117,7 @@ Each skill is fully self-contained. Skills share the `core/` framework but NEVER
 skills/
 ├── SKILL.md                        ← Skill registry + step-by-step guide to creating a new skill
 │
-├── audio-transcriber/                     ← Audio → Notion Markdown pipeline
+├── audio_transcriber/                     ← Audio → Notion Markdown pipeline
 │   ├── SKILL.md                    ← Quick-start: phases, run commands, config pointers
 │   ├── config/
 │   │   ├── config.yaml             ← Paths (phases section), model profiles, hardware thresholds
@@ -138,11 +138,11 @@ skills/
 │           └── subject_manager.py  ← Voice-memo-specific CLI helpers: ask_reprocess(),
 │                                      should_process_task(), get_target_path()
 │
-└── doc-parser/                  ← PDF → Structured Markdown Knowledge Base pipeline
+└── doc_parser/                  ← PDF → Structured Markdown Knowledge Base pipeline
     ├── SKILL.md                    ← Quick-start: phases, run commands, directory guide
     ├── config/
     │   ├── config.yaml             ← Paths (phases section), model profiles, OCR/Docling thresholds
-    │   ├── priority_terms.json     ← Cross-skill terminology list (shared with audio-transcriber)
+    │   ├── priority_terms.json     ← Cross-skill terminology list (shared with audio_transcriber)
     │   ├── security_policy.yaml    ← PDF security scanning rules
     │   └── selectors.yaml          ← Data source selector configuration
     ├── docs/
@@ -178,7 +178,7 @@ skills/
 │   └── scripts/
 │       └── synthesize.py           ← Main entry point (NoteGenerator class)
 │
-├── academic-edu-assistant/         ← Cross-document comparison + Anki export
+├── academic_edu_assistant/         ← Cross-document comparison + Anki export
 │   ├── SKILL.md
 │   └── scripts/
 │       ├── run_all.py              ← Orchestrator
@@ -186,26 +186,26 @@ skills/
 │           ├── p01_compare.py      ← Phase 1: Topic comparison across documents
 │           └── p02_anki.py         ← Phase 2: Anki flashcard generation
 │
-├── knowledge-compiler/             ← Compiles factory outputs to data/wiki/
+├── knowledge_compiler/             ← Compiles factory outputs to data/wiki/
 │   ├── SKILL.md
 │   └── scripts/
 │       ├── run_all.py              ← Orchestrator
 │       └── phases/
 │           └── p01_compile.py      ← Phase 1: Compile notes into Obsidian Vault
 │
-├── telegram-kb-agent/              ← RAG query agent over ChromaDB index
+├── telegram_kb_agent/              ← RAG query agent over ChromaDB index
 │   ├── SKILL.md
 │   └── scripts/
 │       ├── bot_daemon.py           ← Telegram bot daemon (long-running)
 │       ├── indexer.py              ← ChromaDB index builder
 │       └── query.py                ← RAG query CLI interface
 │
-├── inbox-manager/                  ← CLI tool for routing rule inspection and mutation
+├── inbox_manager/                  ← CLI tool for routing rule inspection and mutation
 │   ├── SKILL.md
 │   └── scripts/
 │       └── query.py                ← Routing rule CLI (add/remove/list rules)
 │
-└── interactive-reader/             ← In-place [AI:] annotation resolver
+└── interactive_reader/             ← In-place [AI:] annotation resolver
     ├── SKILL.md
     └── scripts/
         ├── run_all.py              ← Orchestrator
@@ -221,7 +221,7 @@ Created automatically on first pipeline run. Do not commit.
 
 ```
 data/
-├── audio-transcriber/
+├── audio_transcriber/
 │   ├── input/
 │   │   └── <subject>/*.m4a             ← Source audio files (drop here)
 │   ├── output/
@@ -235,7 +235,7 @@ data/
 │   └── logs/
 │       └── system.log                  ← Skill pipeline log
 │
-└── doc-parser/
+└── doc_parser/
     ├── input/
     │   └── <subject>/*.pdf             ← Source PDF files (drop here, by subject)
     ├── output/
@@ -325,7 +325,7 @@ ops/
 
 ```
 models/
-├── models--mlx-community--whisper-large-v3-mlx/   ← MLX Whisper (audio-transcriber P1)
+├── models--mlx-community--whisper-large-v3-mlx/   ← MLX Whisper (audio_transcriber P1)
 ├── models--docling-project--docling-layout-heron/  ← Docling layout model (pdf P1b)
 └── models--docling-project--docling-models/        ← Docling recognition models (pdf P1b)
 ```

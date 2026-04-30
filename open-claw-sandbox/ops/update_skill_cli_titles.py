@@ -3,15 +3,15 @@ import re
 
 SKILLS_DIR = "skills"
 MAPPINGS = {
-    "audio-transcriber": "語音轉錄",
-    "doc-parser": "文件解析",
-    "academic-edu-assistant": "學術教育助手",
-    "interactive-reader": "互動式閱讀器",
-    "knowledge-compiler": "知識庫編譯",
+    "audio_transcriber": "語音轉錄",
+    "doc_parser": "文件解析",
+    "academic_edu_assistant": "學術教育助手",
+    "interactive_reader": "互動式閱讀器",
+    "knowledge_compiler": "知識庫編譯",
     "note_generator": "筆記生成",
     "smart_highlighter": "智慧標注",
-    "inbox-manager": "收件匣管理",
-    "telegram-kb-agent": "Telegram 知識庫代理",
+    "inbox_manager": "收件匣管理",
+    "telegram_kb_agent": "Telegram 知識庫代理",
 }
 
 for skill_folder in os.listdir(SKILLS_DIR):

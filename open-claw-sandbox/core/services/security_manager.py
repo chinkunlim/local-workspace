@@ -13,7 +13,7 @@ Playwright 操作授權邊界管理器。
 Usage:
     from core.services.security_manager import SecurityManager, SecurityViolationError
 
-    sm = SecurityManager(config_dir="skills/doc-parser/config")
+    sm = SecurityManager(config_dir="skills/doc_parser/config")
     sm.validate_navigation("https://gemini.google.com/app")   # OK
     sm.validate_navigation("https://mail.google.com/")         # → SecurityViolationError
 """
@@ -51,7 +51,7 @@ class SecurityManager:
             audit_log_path = os.path.join(
                 os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(skill_root, ".."))),
                 "data",
-                "doc-parser",
+                "doc_parser",
                 "logs",
                 "security_audit.log",
             )

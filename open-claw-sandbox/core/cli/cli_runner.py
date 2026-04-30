@@ -44,7 +44,7 @@ class SkillRunner:
     """
 
     # ------------------------------------------------------------------
-    # audio-transcriber
+    # audio_transcriber
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -57,9 +57,9 @@ class SkillRunner:
         resume: bool = False,
         start_phase: int = 1,
     ) -> list[str]:
-        """Build command to run the full audio-transcriber pipeline."""
+        """Build command to run the full audio_transcriber pipeline."""
         script = os.path.join(
-            _workspace_root, "skills", "audio-transcriber", "scripts", "run_all.py"
+            _workspace_root, "skills", "audio_transcriber", "scripts", "run_all.py"
         )
         cmd = [sys.executable, script]
         if subject:
@@ -77,7 +77,7 @@ class SkillRunner:
         return cmd
 
     # ------------------------------------------------------------------
-    # doc-parser
+    # doc_parser
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -89,8 +89,8 @@ class SkillRunner:
         force: bool = False,
         resume: bool = False,
     ) -> list[str]:
-        """Build command to run the full doc-parser pipeline."""
-        script = os.path.join(_workspace_root, "skills", "doc-parser", "scripts", "run_all.py")
+        """Build command to run the full doc_parser pipeline."""
+        script = os.path.join(_workspace_root, "skills", "doc_parser", "scripts", "run_all.py")
         cmd = [sys.executable, script, "--process-all"]
         if subject:
             cmd += ["--subject", subject]
@@ -193,8 +193,8 @@ class SkillRunner:
         """
         Auto-discover input/output paths for a smart-highlighter Re-run via PathBuilder.
 
-        audio-transcriber: input = p3 (03_merged), output = p4 (04_highlighted)
-        doc-parser:        input = p1 processed raw_extracted.md, output = p2 highlighted
+        audio_transcriber: input = p3 (03_merged), output = p4 (04_highlighted)
+        doc_parser:        input = p1 processed raw_extracted.md, output = p2 highlighted
 
         Raises:
             FileNotFoundError: If the input file does not exist.
@@ -202,7 +202,7 @@ class SkillRunner:
         pb = _pb(skill)
         dirs = pb.phase_dirs
 
-        if skill == "audio-transcriber":
+        if skill == "audio_transcriber":
             input_path = os.path.join(
                 dirs.get("p3", os.path.join(_workspace_root, "data", skill, "output", "03_merged")),
                 subject,
@@ -215,7 +215,7 @@ class SkillRunner:
                 subject,
                 f"{file_id}.md",
             )
-        elif skill == "doc-parser":
+        elif skill == "doc_parser":
             input_path = os.path.join(
                 dirs.get(
                     "p1b", os.path.join(_workspace_root, "data", skill, "output", "01_processed")
@@ -245,8 +245,8 @@ class SkillRunner:
         """
         Auto-discover input/output paths for a note-generator Re-run via PathBuilder.
 
-        audio-transcriber: input = p4 (04_highlighted), output = p5 (05_notion_synthesis)
-        doc-parser:        input = p2 (02_highlighted), output = p3 (03_synthesis)
+        audio_transcriber: input = p4 (04_highlighted), output = p5 (05_notion_synthesis)
+        doc_parser:        input = p2 (02_highlighted), output = p3 (03_synthesis)
 
         Raises:
             FileNotFoundError: If the input file does not exist.
@@ -254,7 +254,7 @@ class SkillRunner:
         pb = _pb(skill)
         dirs = pb.phase_dirs
 
-        if skill == "audio-transcriber":
+        if skill == "audio_transcriber":
             input_path = os.path.join(
                 dirs.get(
                     "p4", os.path.join(_workspace_root, "data", skill, "output", "04_highlighted")
@@ -270,7 +270,7 @@ class SkillRunner:
                 subject,
                 f"{file_id}.md",
             )
-        elif skill == "doc-parser":
+        elif skill == "doc_parser":
             input_path = os.path.join(
                 dirs.get(
                     "p2a", os.path.join(_workspace_root, "data", skill, "output", "02_highlighted")

@@ -130,7 +130,7 @@ else
 fi
 
 # 7. Open Claw Inbox Daemon
-echo -e "\n${YELLOW}[7/8] Starting Inbox Daemon (audio-transcriber + doc-parser)...${NC}"
+echo -e "\n${YELLOW}[7/8] Starting Inbox Daemon (audio_transcriber + doc_parser)...${NC}"
 INBOX_DAEMON_PID_FILE="${LOG_DIR}/inbox_daemon.pid"
 if [[ -f "${INBOX_DAEMON_PID_FILE}" ]] && kill -0 "$(cat "${INBOX_DAEMON_PID_FILE}")" 2>/dev/null; then
     echo -e "   ${BLUE}─── ℹ️ Inbox Daemon already running (PID: $(cat "${INBOX_DAEMON_PID_FILE}"))${NC}"

@@ -68,7 +68,7 @@ def write_session_state(
         state_dir:  Absolute path to the skill's canonical ``state/`` directory.
         state:      One of the :class:`SessionState` enum values.
         context:    Optional dict of extra metadata (e.g. current phase, file).
-        skill_name: Skill identifier for auditing (e.g. ``"doc-parser"``).
+        skill_name: Skill identifier for auditing (e.g. ``"doc_parser"``).
     """
     os.makedirs(state_dir, exist_ok=True)
     payload: Dict[str, Any] = {

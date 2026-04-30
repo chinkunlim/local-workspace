@@ -6,13 +6,13 @@ Run this checklist at the start of any agent session to confirm workspace health
 Respond with `HEARTBEAT_OK` if all checks pass with no action required.
 
 ### 1. Log Health
-- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/audio-transcriber/logs/system.log`
-- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/doc-parser/logs/system.log`
-- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/inbox-manager/logs/system.log`
+- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/audio_transcriber/logs/system.log`
+- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/doc_parser/logs/system.log`
+- [ ] No unresolved `ERROR` or `CRITICAL` entries in `data/inbox_manager/logs/system.log`
 
 ### 2. Resume State
-- [ ] No stale interrupted states in `data/audio-transcriber/state/.pipeline_state.json`
-- [ ] No unexplained interrupted sessions in `data/doc-parser/state/.pipeline_state.json`
+- [ ] No stale interrupted states in `data/audio_transcriber/state/.pipeline_state.json`
+- [ ] No unexplained interrupted sessions in `data/doc_parser/state/.pipeline_state.json`
 - [ ] No stale HITL checkpoints in `core/state/`
 
 ### 3. Documentation Parity

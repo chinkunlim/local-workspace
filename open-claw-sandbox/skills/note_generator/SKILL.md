@@ -64,12 +64,12 @@ to the LLM and asks it to correct the code (up to `mermaid_retry_max` times).
 
 | Caller | Phase | Input Source |
 |---|---|---|
-| `audio-transcriber` | P5 Synthesis | P4 Highlighted Markdown |
-| `doc-parser` | P3 Synthesis | P2 Highlighted Markdown |
+| `audio_transcriber` | P5 Synthesis | P4 Highlighted Markdown |
+| `doc_parser` | P3 Synthesis | P2 Highlighted Markdown |
 
 ## Version
 
-- v1.0.0 — 2026-04-19: Extracted from audio-transcriber/p05 and doc-parser/p03
+- v1.0.0 — 2026-04-19: Extracted from audio_transcriber/p05 and doc_parser/p03
 
 ## Global Standards
 

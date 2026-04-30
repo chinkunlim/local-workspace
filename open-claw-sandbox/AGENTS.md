@@ -35,7 +35,7 @@ If code changes affect observable behavior, update corresponding documentation i
 | CLI interface change | `skills/<skill>/SKILL.md` |
 | Data path, phase logic, or core module change | `skills/<skill>/docs/ARCHITECTURE.md` + `docs/STRUCTURE.md` |
 | Architectural decision made | `skills/<skill>/docs/DECISIONS.md` |
-| New pattern or rule established | `docs/CODING_GUIDELINES_FINAL.md` |
+| New pattern or rule established | `docs/CODING_GUIDELINES.md` |
 | New skill or core module added | `docs/STRUCTURE.md`, `memory/ARCHITECTURE.md`, `skills/<skill>/SKILL.md` |
 
 ## 5. External Action Policy
@@ -49,8 +49,8 @@ All outputs — code, documentation, and plans — must be:
 - Professional and concise
 - Verifiable by future operators
 - Interoperable across Claude Code, GitHub Copilot, and Google Antigravity
-- Compliant with `docs/CODING_GUIDELINES_FINAL.md` in full
+- Compliant with `docs/CODING_GUIDELINES.md` in full
 
 ## 7. Sandbox Invariant
 
-`open-claw-sandbox/` is a fully self-contained sandbox. See `docs/CODING_GUIDELINES_FINAL.md` §3.4 for the full isolation specification.
+`open-claw-sandbox/` is a fully self-contained sandbox. See `docs/CODING_GUIDELINES.md` §3.4 for the full isolation specification.

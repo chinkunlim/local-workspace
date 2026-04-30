@@ -15,7 +15,7 @@ directories and performs NO file I/O of its own. All data routing, `AtomicWriter
 
 - **Status**: Production
 - **Model in use**: `gemma3:12b` (Ollama) via `core.ai.llm_client.OllamaClient`
-- **Active consumers**: `audio-transcriber` Phase 3 (post-merge), `doc-parser` final synthesis
+- **Active consumers**: `audio_transcriber` Phase 3 (post-merge), `doc_parser` final synthesis
 - **Architecture version**: V2.0 (Map-Reduce, Agentic Mermaid Retry, Content-Loss Guard)
 
 ## Key Invariants

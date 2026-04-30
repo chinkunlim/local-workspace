@@ -2,9 +2,9 @@
   "_comment": "Open Claw Inbox Routing Configuration — Edit this file to customise how files are routed.",
   "_docs": {
     "routing_rules": "Maps file extensions to which skill handles them by default.",
-    "pdf_routing_rules": "Fine-grained routing for PDF files. Each entry has: pattern (matched against filename without extension, case-insensitive), description (human readable note), and routing ('audio_ref' = send to audio-transcriber as reference, 'doc_parser' = send to doc-parser for full parsing, 'both' = do BOTH simultaneously).",
+    "pdf_routing_rules": "Fine-grained routing for PDF files. Each entry has: pattern (matched against filename without extension, case-insensitive), description (human readable note), and routing ('audio_ref' = send to audio_transcriber as reference, 'doc_parser' = send to doc_parser for full parsing, 'both' = do BOTH simultaneously).",
     "matching_logic": "Patterns starting with '_' are SUFFIX matches (e.g. '_slides' matches 'L1_slides'). Other patterns (CJK etc.) are CONTAINS matches (e.g. '課件' matches '第三章課件').",
-    "default_pdf_routing": "If a PDF filename matches NO patterns, it goes to doc-parser by default."
+    "default_pdf_routing": "If a PDF filename matches NO patterns, it goes to doc_parser by default."
   },
 
   "routing_rules": {

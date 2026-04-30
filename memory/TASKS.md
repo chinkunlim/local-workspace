@@ -47,7 +47,7 @@
   - Fixed `SyntaxError` + duplicate method + wrong output path in `p05_synthesis.py`
   - Upgraded `inbox_daemon` to recursive subject-folder routing with triple PDF modes
   - Created `core/inbox_config.json` with 42 routing rules + inline descriptions
-  - Created `skills/inbox-manager/` skill with CLI for runtime rule management
+  - Created `skills/inbox_manager/` skill with CLI for runtime rule management
 
 - [x] 2026-04-19: Antigravity Deep Thought Hotfixes (P0/P1/P2)
   - `inbox_daemon`: 300 s timeout + `stop_event` guard; debounce via `threading.Event`
@@ -65,11 +65,11 @@
 - [x] 2026-04-19: Global `memory/` directory established (monorepo root + sandbox)
 - [x] 2026-04-19: `ops/check.sh` quality gate created
 
-- [x] 2026-04-18: `CODING_GUIDELINES_FINAL.md` v3.0.0 consolidated and published
-- [x] 2026-04-18: `AI_Master_Guide_Final.md` updated to Version 9
-- [x] 2026-04-18: `doc-parser` phase naming refactored (`p01a` → `p00a`, etc.)
+- [x] 2026-04-18: `CODING_GUIDELINES.md` v3.0.0 consolidated and published
+- [x] 2026-04-18: `INFRA_SETUP.md` updated to Version 9
+- [x] 2026-04-18: `doc_parser` phase naming refactored (`p01a` → `p00a`, etc.)
 - [x] 2026-04-18: `.gitignore` updated to exclude runtime files
 
 - [x] 2026-04-15: `core/` shared framework established
-- [x] 2026-04-15: `audio-transcriber` refactored to 6-phase MLX-Whisper pipeline
-- [x] 2026-04-15: `doc-parser` 7-phase pipeline implemented
+- [x] 2026-04-15: `audio_transcriber` refactored to 6-phase MLX-Whisper pipeline
+- [x] 2026-04-15: `doc_parser` 7-phase pipeline implemented

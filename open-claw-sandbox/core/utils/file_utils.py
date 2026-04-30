@@ -98,7 +98,7 @@ def write_csv_safe(
     Write a list of rows to a CSV file using Python's stdlib csv module.
 
     Replaces manual string-formatting CSV generation across skills (e.g.,
-    academic-edu-assistant p02_anki.py) to correctly handle commas and quotes.
+    academic_edu_assistant p02_anki.py) to correctly handle commas and quotes.
 
     Args:
         path:   Absolute path to the output .csv file.

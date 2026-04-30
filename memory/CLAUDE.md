@@ -9,7 +9,7 @@
 ## Project Overview
 
 `open-claw-sandbox` is a production-grade local AI automation sandbox running on macOS with 16 GB RAM.
-It orchestrates two skills — **audio-transcriber** and **doc-parser** — through a shared `core/` framework,
+It orchestrates two skills — **audio_transcriber** and **doc_parser** — through a shared `core/` framework,
 with a Central Dashboard (port 5001) and a background Inbox Daemon for automatic file processing.
 
 **Tech stack:**
@@ -66,7 +66,7 @@ with a Central Dashboard (port 5001) and a background Inbox Daemon for automatic
 | CLI interface change | `skills/<skill>/SKILL.md` |
 | Data path, phase logic, or core module change | `skills/<skill>/docs/ARCHITECTURE.md` + `docs/STRUCTURE.md` |
 | Architectural decision | `skills/<skill>/docs/DECISIONS.md` + `memory/DECISIONS.md` |
-| New pattern or rule | `docs/CODING_GUIDELINES_FINAL.md` |
+| New pattern or rule | `docs/CODING_GUIDELINES.md` |
 | New skill or core module added | `docs/STRUCTURE.md`, `memory/ARCHITECTURE.md` |
 
 ---

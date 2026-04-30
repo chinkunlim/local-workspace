@@ -3,9 +3,9 @@ import os
 
 def mass_replace(directory):
     replacements = [
-        ("audio-transcriber", "audio-transcriber"),
+        ("audio_transcriber", "audio_transcriber"),
         ("Audio Transcriber", "Audio Transcriber"),
-        ("doc-parser", "doc-parser"),
+        ("doc_parser", "doc_parser"),
         ("Doc Parser", "Doc Parser"),
         ("audio_transcriber", "audio_transcriber"),
         ("doc_parser", "doc_parser"),

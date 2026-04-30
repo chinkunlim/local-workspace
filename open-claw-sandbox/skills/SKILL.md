@@ -6,15 +6,15 @@
 
 | Skill | Input | Output | Status |
 |:---|:---|:---|:---:|
-| [audio-transcriber](audio-transcriber/SKILL.md) | `.m4a` / `.mp3` audio recordings | Obsidian-ready `.md` knowledge notes | ✅ Production |
-| [doc-parser](doc-parser/SKILL.md) | `.pdf` academic / technical documents | Structured Markdown knowledge notes | ✅ Production |
+| [audio_transcriber](audio_transcriber/SKILL.md) | `.m4a` / `.mp3` audio recordings | Obsidian-ready `.md` knowledge notes | ✅ Production |
+| [doc_parser](doc_parser/SKILL.md) | `.pdf` academic / technical documents | Structured Markdown knowledge notes | ✅ Production |
 | [smart_highlighter](smart_highlighter/SKILL.md) | Plain Markdown text | Highlight-annotated Markdown (Anti-Tampering) | ✅ Production (Standalone) |
 | [note_generator](note_generator/SKILL.md) | Plain Markdown text | Structured YAML / Mermaid study notes | ✅ Production (Standalone) |
-| [knowledge-compiler](knowledge-compiler/SKILL.md) | Factory skill outputs | `data/wiki/` (Obsidian Vault) | ✅ Production |
-| [telegram-kb-agent](telegram-kb-agent/SKILL.md) | Telegram query via Open Claw | RAG text answer | ✅ Production |
-| [academic-edu-assistant](academic-edu-assistant/SKILL.md) | ChromaDB vector store | Comparison report + Anki CSV | ✅ Production |
-| [interactive-reader](interactive-reader/SKILL.md) | Markdown with `> [AI:]` tags | In-place resolved annotations | ✅ Production |
-| [inbox-manager](inbox-manager/SKILL.md) | `core/inbox_config.json` | Terminal output (routing rules) | ✅ Production |
+| [knowledge_compiler](knowledge_compiler/SKILL.md) | Factory skill outputs | `data/wiki/` (Obsidian Vault) | ✅ Production |
+| [telegram_kb_agent](telegram_kb_agent/SKILL.md) | Telegram query via Open Claw | RAG text answer | ✅ Production |
+| [academic_edu_assistant](academic_edu_assistant/SKILL.md) | ChromaDB vector store | Comparison report + Anki CSV | ✅ Production |
+| [interactive_reader](interactive_reader/SKILL.md) | Markdown with `> [AI:]` tags | In-place resolved annotations | ✅ Production |
+| [inbox_manager](inbox_manager/SKILL.md) | `core/inbox_config.json` | Terminal output (routing rules) | ✅ Production |
 
 ## Standard Skill Directory Structure
 

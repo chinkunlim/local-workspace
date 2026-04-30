@@ -55,11 +55,11 @@ class SkillCall:
 # Maps (file_extension, intent) → ordered list of SkillCall names.
 # Populated at registration time by SkillRegistry (#17).
 _ROUTING_TABLE: Dict[str, List[str]] = {
-    ".m4a:auto": ["audio-transcriber", "note_generator", "knowledge-compiler"],
-    ".mp3:auto": ["audio-transcriber", "note_generator", "knowledge-compiler"],
-    ".pdf:auto": ["doc-parser", "note_generator", "knowledge-compiler"],
-    ".pdf:study": ["doc-parser", "academic-edu-assistant"],
-    ".md:compile": ["knowledge-compiler"],
+    ".m4a:auto": ["audio_transcriber", "note_generator", "knowledge_compiler"],
+    ".mp3:auto": ["audio_transcriber", "note_generator", "knowledge_compiler"],
+    ".pdf:auto": ["doc_parser", "note_generator", "knowledge_compiler"],
+    ".pdf:study": ["doc_parser", "academic_edu_assistant"],
+    ".md:compile": ["knowledge_compiler"],
 }
 
 
@@ -89,13 +89,13 @@ class RouterAgent:
             f"使用者意圖: {intent}\n"
             f"檔案類型: {ext}\n\n"
             "我們有以下技能：\n"
-            "- audio-transcriber: 將語音轉為文字\n"
-            "- doc-parser: 將 PDF 解析為文字\n"
+            "- audio_transcriber: 將語音轉為文字\n"
+            "- doc_parser: 將 PDF 解析為文字\n"
             "- note_generator: 根據文字產生摘要與筆記\n"
-            "- knowledge-compiler: 將筆記編譯進知識庫並做雙向連結\n"
-            "- telegram-kb-agent: 提供知識庫問答\n\n"
+            "- knowledge_compiler: 將筆記編譯進知識庫並做雙向連結\n"
+            "- telegram_kb_agent: 提供知識庫問答\n\n"
             "請將任務拆解為執行順序清單，只輸出技能名稱，以逗號分隔，例如：\n"
-            "audio-transcriber,note_generator,knowledge-compiler"
+            "audio_transcriber,note_generator,knowledge_compiler"
         )
         try:
             # We use a fast/smart model for routing if available, else default
@@ -106,12 +106,12 @@ class RouterAgent:
                 for s in skills
                 if s
                 in [
-                    "audio-transcriber",
-                    "doc-parser",
+                    "audio_transcriber",
+                    "doc_parser",
                     "note_generator",
-                    "knowledge-compiler",
-                    "telegram-kb-agent",
-                    "academic-edu-assistant",
+                    "knowledge_compiler",
+                    "telegram_kb_agent",
+                    "academic_edu_assistant",
                 ]
             ]
         except Exception as e:

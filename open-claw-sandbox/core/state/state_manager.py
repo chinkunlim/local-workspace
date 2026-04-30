@@ -63,17 +63,17 @@ class MemoryPool:
 
 
 class StateManager:
-    # Default phases for audio-transcriber
+    # Default phases for audio_transcriber
     PHASES_VOICE = ["p1", "p2", "p3"]
-    # Phase set for doc-parser
+    # Phase set for doc_parser
     PHASES_PDF = ["p0a", "p1a", "p1b", "p1c", "p1d"]
-    # Phase set for knowledge-compiler
+    # Phase set for knowledge_compiler
     PHASES_COMPILER = ["p1"]
-    # Phase set for interactive-reader
+    # Phase set for interactive_reader
     PHASES_READER = ["p1"]
-    # Phase set for telegram-kb-agent
+    # Phase set for telegram_kb_agent
     PHASES_AGENT = ["p1"]
-    # Phase set for academic-edu-assistant
+    # Phase set for academic_edu_assistant
     PHASES_ACADEMIC = ["p1", "p2"]
 
     # Phase labels for checklist rendering
@@ -90,26 +90,26 @@ class StateManager:
     PHASE_LABELS_AGENT = {"p1": "P1 (向量庫服務)"}
     PHASE_LABELS_ACADEMIC = {"p1": "P1 (RAG 交叉比對)", "p2": "P2 (Anki 生成)"}
 
-    def __init__(self, base_dir: str, skill_name: str = "audio-transcriber"):
+    def __init__(self, base_dir: str, skill_name: str = "audio_transcriber"):
         self.base_dir = base_dir
         self.skill_name = skill_name
-        if skill_name == "doc-parser":
+        if skill_name == "doc_parser":
             self.PHASES = self.PHASES_PDF
             self._phase_labels = self.PHASE_LABELS_PDF
             self.file_ext = "*.pdf"
-        elif skill_name == "knowledge-compiler":
+        elif skill_name == "knowledge_compiler":
             self.PHASES = self.PHASES_COMPILER
             self._phase_labels = self.PHASE_LABELS_COMPILER
             self.file_ext = "*.md"
-        elif skill_name == "interactive-reader":
+        elif skill_name == "interactive_reader":
             self.PHASES = self.PHASES_READER
             self._phase_labels = self.PHASE_LABELS_READER
             self.file_ext = "*.md"
-        elif skill_name == "telegram-kb-agent":
+        elif skill_name == "telegram_kb_agent":
             self.PHASES = self.PHASES_AGENT
             self._phase_labels = self.PHASE_LABELS_AGENT
             self.file_ext = "*.md"
-        elif skill_name == "academic-edu-assistant":
+        elif skill_name == "academic_edu_assistant":
             self.PHASES = self.PHASES_ACADEMIC
             self._phase_labels = self.PHASE_LABELS_ACADEMIC
             self.file_ext = "*.md"
@@ -134,7 +134,7 @@ class StateManager:
             else legacy_checklist_file
         )
 
-        if skill_name == "interactive-reader":
+        if skill_name == "interactive_reader":
             # Interactive reader directly monitors and mutates the wiki
             self.raw_dir = os.path.abspath(os.path.join(base_dir, "..", "wiki"))
         else:
@@ -221,7 +221,7 @@ class StateManager:
             if not os.path.exists(self.raw_dir):
                 return
 
-            if self.skill_name == "interactive-reader":
+            if self.skill_name == "interactive_reader":
                 # Flat directory in data/wiki
                 subjects_dirs = [("Wiki", self.raw_dir)]
             else:
@@ -362,15 +362,15 @@ class StateManager:
 
         lines = []
         skill_display = {
-            "audio-transcriber": "語音轉錄狀態與 DAG 追蹤面板",
-            "doc-parser": "文件解析狀態與 DAG 追蹤面板",
-            "academic-edu-assistant": "學術教育助手狀態與 DAG 追蹤面板",
-            "inbox-manager": "收件匣管理狀態與 DAG 追蹤面板",
-            "interactive-reader": "互動式閱讀狀態與 DAG 追蹤面板",
-            "knowledge-compiler": "知識編譯狀態與 DAG 追蹤面板",
+            "audio_transcriber": "語音轉錄狀態與 DAG 追蹤面板",
+            "doc_parser": "文件解析狀態與 DAG 追蹤面板",
+            "academic_edu_assistant": "學術教育助手狀態與 DAG 追蹤面板",
+            "inbox_manager": "收件匣管理狀態與 DAG 追蹤面板",
+            "interactive_reader": "互動式閱讀狀態與 DAG 追蹤面板",
+            "knowledge_compiler": "知識編譯狀態與 DAG 追蹤面板",
             "note_generator": "筆記生成狀態與 DAG 追蹤面板",
             "smart_highlighter": "智能高亮狀態與 DAG 追蹤面板",
-            "telegram-kb-agent": "Telegram 知識庫代理狀態與 DAG 追蹤面板",
+            "telegram_kb_agent": "Telegram 知識庫代理狀態與 DAG 追蹤面板",
         }.get(self.skill_name, f"{self.skill_name} 狀態與 DAG 追蹤面板")
 
         lines.append("=" * 36)
@@ -527,12 +527,12 @@ class StateManager:
 
         lines: List[str] = []
         skill_display = {
-            "audio-transcriber": "學習進度",
-            "doc-parser": "知識庫處理進度",
-            "knowledge-compiler": "知識庫編譯進度",
-            "interactive-reader": "互動閱讀處理進度",
-            "telegram-kb-agent": "行動知識庫進度",
-            "academic-edu-assistant": "學術助手進度",
+            "audio_transcriber": "學習進度",
+            "doc_parser": "知識庫處理進度",
+            "knowledge_compiler": "知識庫編譯進度",
+            "interactive_reader": "互動閱讀處理進度",
+            "telegram_kb_agent": "行動知識庫進度",
+            "academic_edu_assistant": "學術助手進度",
         }.get(self.skill_name, "進度")
 
         lines.append(f"# {skill_display} (總表)\n")

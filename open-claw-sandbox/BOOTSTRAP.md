@@ -87,11 +87,11 @@ from core.ai.llm_client import OllamaClient
 print('✅ core: all sub-packages OK')
 "
 
-# Smoke-test: audio-transcriber CLI
-python3 skills/audio-transcriber/scripts/run_all.py --help
+# Smoke-test: audio_transcriber CLI
+python3 skills/audio_transcriber/scripts/run_all.py --help
 
-# Smoke-test: doc-parser CLI
-python3 skills/doc-parser/scripts/run_all.py --help
+# Smoke-test: doc_parser CLI
+python3 skills/doc_parser/scripts/run_all.py --help
 
 # Smoke-test: Open Claw API gateway (started by infra/scripts/start.sh)
 curl -s http://127.0.0.1:18789/health || echo 'API not running — start with ../infra/scripts/start.sh'
@@ -107,8 +107,8 @@ Drop files here to begin processing:
 | Skill | Input location |
 |:---|:---|
 | **Universal Inbox** (recommended) | `data/raw/<subject>/` — `inbox_daemon` routes automatically |
-| audio-transcriber (direct) | `data/audio-transcriber/input/<subject>/*.m4a` |
-| doc-parser (direct) | `data/doc-parser/input/<subject>/*.pdf` |
+| audio_transcriber (direct) | `data/audio_transcriber/input/<subject>/*.m4a` |
+| doc_parser (direct) | `data/doc_parser/input/<subject>/*.pdf` |
 
 ---
 
@@ -118,7 +118,7 @@ After bootstrap, read in this order:
 
 1. `../docs/INDEX.md` — master documentation map
 2. `../docs/STRUCTURE.md` — annotated map of every file and folder
-3. `../docs/CODING_GUIDELINES_FINAL.md` — binding engineering contract
+3. `../docs/CODING_GUIDELINES.md` — binding engineering contract
 4. `AGENTS.md` — agent operation rules
 5. `skills/<skill>/SKILL.md` — skill quick-start guide
 6. `skills/<skill>/docs/ARCHITECTURE.md` — full technical architecture

@@ -1,7 +1,7 @@
 """
 OpenClaw Shared Core Framework
 ================================
-Shared by all skills (audio-transcriber, doc-parser, and future skills).
+Shared by all skills (audio_transcriber, doc_parser, and future skills).
 
 Usage:
     from core.orchestration.pipeline_base import PipelineBase

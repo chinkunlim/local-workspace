@@ -173,7 +173,7 @@ class MemoryUpdater:
         # Locate ChromaDB via environment or default path
         db_path = os.environ.get(
             "OPENCLAW_VECTOR_DB_PATH",
-            os.path.join(self.base_dir, "..", "telegram-kb-agent", "state", "chroma_db"),
+            os.path.join(self.base_dir, "..", "telegram_kb_agent", "state", "chroma_db"),
         )
         db_path = os.path.realpath(db_path)
         if not os.path.exists(db_path):

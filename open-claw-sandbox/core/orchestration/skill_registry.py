@@ -18,7 +18,7 @@ Usage:
     for name, manifest in registry.all().items():
         print(f"{name}: {manifest.description}")
 
-    run_fn = registry.get_run_fn("audio-transcriber")
+    run_fn = registry.get_run_fn("audio_transcriber")
     run_fn(subject="math", force=False)
 """
 
@@ -42,12 +42,12 @@ class SkillManifest:
     Place a manifest.py in skills/<skill-name>/ that exposes a module-level
     variable named `MANIFEST` of this type.
 
-    Example (skills/audio-transcriber/manifest.py):
+    Example (skills/audio_transcriber/manifest.py):
         from core.orchestration.skill_registry import SkillManifest
         from scripts.run_all import VoiceMemoOrchestrator
 
         MANIFEST = SkillManifest(
-            skill_name="audio-transcriber",
+            skill_name="audio_transcriber",
             description="Transcribe audio files using Whisper with anti-hallucination.",
             phases=["p0_glossary", "p1_transcribe", "p2_proofread", "p3_merge"],
             cli_entry="scripts/run_all.py",

@@ -72,9 +72,9 @@ def get_target_path(base_dir: str, subject: str, filename: str, target_suffix: s
     """
     Construct the canonical output path for a given subject + source filename.
 
-    If target_suffix has no extension dot but acts as a filename (like "raw_extracted.md" in doc-parser),
+    If target_suffix has no extension dot but acts as a filename (like "raw_extracted.md" in doc_parser),
     this generates `base_dir/subject/item_id/target_suffix`.
-    If target_suffix acts as an extension (like ".md" in audio-transcriber),
+    If target_suffix acts as an extension (like ".md" in audio_transcriber),
     this generates `base_dir/subject/item_id<target_suffix>`.
 
     Args:

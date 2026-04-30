@@ -3,7 +3,7 @@
 ## 1. Purpose
 
 Workspace-specific operational environment facts for agents and operators.
-Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELINES_FINAL.md`.
+Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELINES.md`.
 
 ---
 
@@ -27,13 +27,13 @@ Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELI
 |:---|:---|
 | Workspace root | `open-claw-sandbox/` |
 | Shared core framework | `core/` (7 sub-packages: cli/, config/, state/, orchestration/, services/, ai/, utils/) |
-| Audio-transcriber skill | `skills/audio-transcriber/` |
-| Doc-parser skill | `skills/doc-parser/` |
+| Audio-transcriber skill | `skills/audio_transcriber/` |
+| Doc-parser skill | `skills/doc_parser/` |
 | Universal Inbox | `data/raw/` (routed by `inbox_daemon`) |
-| Audio runtime data | `data/audio-transcriber/` |
-| PDF runtime data | `data/doc-parser/` |
+| Audio runtime data | `data/audio_transcriber/` |
+| PDF runtime data | `data/doc_parser/` |
 | Obsidian Wiki Vault | `data/wiki/` |
-| ChromaDB vector store | `data/doc-parser/output/vector_db/` |
+| ChromaDB vector store | `data/doc_parser/output/vector_db/` |
 | Ops & maintenance scripts | `ops/` (sandbox), `../ops/` (global) |
 | Lifecycle scripts | `../infra/scripts/` |
 | Model cache (HuggingFace) | `models/` — set via `HF_HOME` env var |
@@ -72,9 +72,9 @@ Hardware safety thresholds (RAM warning/critical, temperature, battery) are conf
 | Model | Location | Used By |
 |:---|:---|:---|
 | Ollama models (Gemma, Qwen…) | Ollama app data (outside workspace) | All LLM phases |
-| MLX Whisper Large v3 | `models/models--mlx-community--whisper-large-v3-mlx/` | audio-transcriber P1 |
-| Faster Whisper medium | Downloaded to `models/` on first run | audio-transcriber P1 fallback |
-| Docling layout/models | `models/models--docling-*/` | doc-parser P1b |
+| MLX Whisper Large v3 | `models/models--mlx-community--whisper-large-v3-mlx/` | audio_transcriber P1 |
+| Faster Whisper medium | Downloaded to `models/` on first run | audio_transcriber P1 fallback |
+| Docling layout/models | `models/models--docling-*/` | doc_parser P1b |
 
 ---
 

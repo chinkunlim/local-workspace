@@ -16,7 +16,7 @@ The active backend is selected at runtime from config.yaml:
 
 Usage:
     from core.ai.graph_store import get_graph_store
-    gs = get_graph_store(workspace_root, skill_name="knowledge-compiler")
+    gs = get_graph_store(workspace_root, skill_name="knowledge_compiler")
 
     gs.upsert_entity("認知心理學", labels=["Concept", "Psychology"], props={"source": "notes.md"})
     gs.upsert_relation("認知心理學", "RELATED_TO", "工作記憶")
@@ -271,7 +271,7 @@ class Neo4jGraphStore:
 # ---------------------------------------------------------------------------
 
 
-def get_graph_store(workspace_root: str, skill_name: str = "knowledge-compiler") -> Any:
+def get_graph_store(workspace_root: str, skill_name: str = "knowledge_compiler") -> Any:
     """Instantiate and return the configured GraphStore backend.
 
     Reads config from skills/<skill_name>/config/config.yaml under the

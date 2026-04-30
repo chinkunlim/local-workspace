@@ -2,7 +2,7 @@
 core/scheduler.py — Open Claw Proactive Agent Scheduler (P2-1)
 ==============================================================
 Provides APScheduler-backed cron scheduling with a JSON-persisted job store,
-enabling academic-edu-assistant and other skills to run autonomously on
+enabling academic_edu_assistant and other skills to run autonomously on
 user-defined schedules (e.g. daily RSS ingestion, nightly batch processing).
 
 Design:
@@ -20,7 +20,7 @@ Usage:
     scheduler.add_job(
         job_id="rss_daily",
         cron_expr="0 7 * * *",
-        skill_name="academic-edu-assistant",
+        skill_name="academic_edu_assistant",
         command=["python", "scripts/phases/p00_rss_ingest.py"],
         description="Daily arxiv RSS ingest",
     )

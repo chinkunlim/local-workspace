@@ -11,7 +11,7 @@ Config (config.yaml):
       rerank_model: "qwen2.5-coder:7b"
       rerank_top_n: 5
     vector_db:
-      path: "skills/telegram-kb-agent/state/chroma_db"
+      path: "skills/telegram_kb_agent/state/chroma_db"
 
 Requirements:
     pip install networkx chromadb
@@ -30,7 +30,7 @@ _logger = logging.getLogger("OpenClaw.HybridRetriever")
 class HybridRetriever:
     """Vector top-K ∪ Graph 1-hop → optional LLM rerank."""
 
-    def __init__(self, workspace_root: str, skill_name: str = "telegram-kb-agent"):
+    def __init__(self, workspace_root: str, skill_name: str = "telegram_kb_agent"):
         self.workspace_root = workspace_root
         self.skill_name = skill_name
         self._chroma_client: Any = None
@@ -54,7 +54,7 @@ class HybridRetriever:
         vec = cfg.get_section("vector_db") or {}
         self._vector_db_path: str = vec.get(
             "path",
-            os.path.join(workspace_root, "skills", "telegram-kb-agent", "state", "chroma_db"),
+            os.path.join(workspace_root, "skills", "telegram_kb_agent", "state", "chroma_db"),
         )
         rt = (cfg.get_section("runtime") or {}).get("ollama", {})
         self._ollama_url: str = rt.get("api_url", "http://127.0.0.1:11434/api")

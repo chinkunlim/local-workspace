@@ -35,7 +35,7 @@ local-workspace/                    ← Monorepo root (git repo)
 ├── docs/                           ← Global documentation (SSoT)
 │   ├── INDEX.md                    ← Master navigation index for AI agents and humans
 │   ├── USER_MANUAL.md              ← End-user operational guide
-│   ├── CODING_GUIDELINES_FINAL.md  ← Engineering standards (v3.0.0)
+│   ├── CODING_GUIDELINES.md  ← Engineering standards (v3.0.0)
 │   └── STRUCTURE.md                ← Monorepo directory structure reference
 │
 ├── memory/                         ← Global AI memory (this directory)
@@ -71,7 +71,7 @@ Open WebUI Pipelines is infrastructure (a plugin runner for the LLM proxy), not 
 
 Skills are strictly divided into **Extraction** and **Processing** layers:
 
-- **Extraction Skills** (`audio-transcriber`, `doc-parser`): Responsible ONLY for generating high-fidelity Markdown from raw files. They must not perform summarisation, highlighting, or formatting.
+- **Extraction Skills** (`audio_transcriber`, `doc_parser`): Responsible ONLY for generating high-fidelity Markdown from raw files. They must not perform summarisation, highlighting, or formatting.
 - **Processing Skills** (`smart_highlighter`, `note_generator`): Responsible for taking raw Markdown and applying stylistic highlights, generating Cornell notes, or mapping core concepts.
 - **I/O Routing**: The `inbox_daemon` routes files purely by extension into a skill's `input/` directory. Direct writing to another skill's `output/` directory is strictly forbidden.
 
@@ -109,7 +109,7 @@ The `core/` directory was refactored from a flat module into domain-specific sub
 | `memory/ARCHITECTURE.md` (this file) | Understanding the entire monorepo |
 | `docs/INDEX.md` | Navigating to any skill or global doc |
 | `open-claw-sandbox/AGENTS.md` | Sandbox rules and behaviour contract |
-| `docs/CODING_GUIDELINES_FINAL.md` | Engineering development standards |
+| `docs/CODING_GUIDELINES.md` | Engineering development standards |
 
 ---
 
@@ -159,7 +159,7 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
     │    ┌────┴─────────────────────────────┐
     │    │                                  │
     │    ▼                                  ▼
-    │  audio-transcriber/input/       doc-parser/input/
+    │  audio_transcriber/input/       doc_parser/input/
     │    │  (6-phase pipeline)          │  (7-phase pipeline)
     │    │  P0: Glossary               │  P00a: Diagnostic
     │    │  P1: MLX-Whisper            │  P01a: Docling extract
@@ -175,12 +175,12 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
     │    ┌────────────────┤────────────────────────────┐
     │    │                │                            │
     │    ▼                ▼                            ▼
-    │  knowledge-     interactive-reader/          ChromaDB
+    │  knowledge-     interactive_reader/          ChromaDB
     │  compiler/      note_generator/              (indexed by
-    │                 smart_highlighter/           telegram-kb-agent)
+    │                 smart_highlighter/           telegram_kb_agent)
     │                                                   │
-    │                                          telegram-kb-agent/
-    │                                          academic-edu-assistant/
+    │                                          telegram_kb_agent/
+    │                                          academic_edu_assistant/
     │                                                   │
     └───────────────────────────────────────────────────┘
                             │

@@ -41,8 +41,8 @@ Your Raw Files
     ▼
 📥 data/raw/<Subject_Taxonomy>/          ← The ONLY manual entry point
     │ (Auto-dispatched by inbox_daemon)
-    ├──► 🏭 data/audio-transcriber/      (Audio Factory Floor)
-    └──► 🏭 data/doc-parser/             (PDF Factory Floor)
+    ├──► 🏭 data/audio_transcriber/      (Audio Factory Floor)
+    └──► 🏭 data/doc_parser/             (PDF Factory Floor)
                 │
                 ▼ (Automated Output)
     🧠 data/wiki/<Subject_Taxonomy>/     ← Obsidian Vault (Final Synthesis)
@@ -54,7 +54,7 @@ Your Raw Files
 - **Rule**: Create subdirectories named after the subject, e.g., `data/raw/Cognitive_Psychology/`.
 
 ### 🏭 Phase 2: Invisible Factory Floors
-- **Path**: `data/audio-transcriber/` and `data/doc-parser/`
+- **Path**: `data/audio_transcriber/` and `data/doc_parser/`
 - **Purpose**: Background processing zones. You do **not** need to manage any files here.
 
 ### 🧠 Phase 3: Obsidian Vault (The Brain)
@@ -70,8 +70,8 @@ The `inbox_daemon` dynamically routes PDF files based on their filename suffixes
 | Suffix Example | Routing Mode | Description |
 |---|---|---|
 | `L1_slides.pdf`, `L1_ref.pdf`, `L1_handout.pdf` | `audio_ref` | Used strictly as audio calibration references. **Does NOT** generate standalone notes. |
-| `genetics_textbook.pdf`, `ch3_reading.pdf` | `both` | Sent to the `doc-parser` for standalone parsing **AND** used as an audio reference. |
-| (No specific suffix) | `doc_parser` | Default behavior: Routed exclusively to the `doc-parser` pipeline. |
+| `genetics_textbook.pdf`, `ch3_reading.pdf` | `both` | Sent to the `doc_parser` for standalone parsing **AND** used as an audio reference. |
+| (No specific suffix) | `doc_parser` | Default behavior: Routed exclusively to the `doc_parser` pipeline. |
 
 **Complete Suffix List (`audio_ref` mode)**:
 `_ref`, `_refs`, `_slides`, `_slide`, `_handout`, `_handouts`, `_lecturenotes`, `_transcript`, `_worksheet`, `_supplement`, `_appendix`, `_coursework`, `課件`, `講義`, `參考`
@@ -93,8 +93,8 @@ Open Claw is designed to run silently in the background. The `BotDaemon` provide
 ### Open WebUI & Literature Matrix Synthesis
 1. **Ensure the Pipeline is Complete**: Verify via `/status` that your target PDFs have reached Phase 1d (VLM parsing complete).
 2. **Access Open WebUI**: Navigate to `localhost:8080`.
-3. **Select the Knowledge Compiler Model**: Choose the `knowledge-compiler` profile (enforces strict `temperature: 0` determinism).
-4. **Attach Context**: Use `#` to pull compiled `content.md` files from `data/doc-parser/output/05_Final_Knowledge/`.
+3. **Select the Knowledge Compiler Model**: Choose the `knowledge_compiler` profile (enforces strict `temperature: 0` determinism).
+4. **Attach Context**: Use `#` to pull compiled `content.md` files from `data/doc_parser/output/05_Final_Knowledge/`.
 5. **Prompt Execution**: "Extract a Literature Matrix comparing the methodologies and constraints of the attached papers. Structure the output as a Markdown table."
 
 ---
@@ -117,75 +117,75 @@ cd ~/Desktop/local-workspace/open-claw-sandbox
 
 ---
 
-## 🎙️ CLI-1: Audio Transcription Pipeline (`audio-transcriber`)
+## 🎙️ CLI-1: Audio Transcription Pipeline (`audio_transcriber`)
 
 **Standard Command Signature**:
 ```bash
-python3 skills/audio-transcriber/scripts/run_all.py [OPTIONS]
+python3 skills/audio_transcriber/scripts/run_all.py [OPTIONS]
 ```
 
 ### Basic Invocation
 ```bash
 # Process all subjects and all audio files (Full Batch Mode)
-python3 skills/audio-transcriber/scripts/run_all.py
+python3 skills/audio_transcriber/scripts/run_all.py
 
 # Target a specific subject taxonomy
-python3 skills/audio-transcriber/scripts/run_all.py --subject "Cognitive Psychology"
+python3 skills/audio_transcriber/scripts/run_all.py --subject "Cognitive Psychology"
 
 # Target a specific file precisely
-python3 skills/audio-transcriber/scripts/run_all.py \
+python3 skills/audio_transcriber/scripts/run_all.py \
     --subject "Cognitive Psychology" \
     --file lecture_01-1.m4a \
     --single
 
 # Force regeneration (bypasses idempotency checkpoints)
-python3 skills/audio-transcriber/scripts/run_all.py --force
+python3 skills/audio_transcriber/scripts/run_all.py --force
 ```
 
 ### Checkpoint Resumption & Phase Control
 ```bash
 # Resume from the last interrupted checkpoint
-python3 skills/audio-transcriber/scripts/run_all.py --resume
+python3 skills/audio_transcriber/scripts/run_all.py --resume
 
 # Start execution from a specific Phase (e.g., Phase 2 Calibration)
-python3 skills/audio-transcriber/scripts/run_all.py --subject "Cognitive Psychology" --from 2
+python3 skills/audio_transcriber/scripts/run_all.py --subject "Cognitive Psychology" --from 2
 ```
 
 ### Domain Glossary Management
 ```bash
 # Auto-generate professional terminology glossary
-python3 skills/audio-transcriber/scripts/run_all.py --subject "Cognitive Psychology" --glossary
+python3 skills/audio_transcriber/scripts/run_all.py --subject "Cognitive Psychology" --glossary
 ```
 
 ---
 
-## 📄 CLI-2: PDF Parsing Pipeline (`doc-parser`)
+## 📄 CLI-2: PDF Parsing Pipeline (`doc_parser`)
 
 **Standard Command Signature**:
 ```bash
-python3 skills/doc-parser/scripts/run_all.py [OPTIONS]
+python3 skills/doc_parser/scripts/run_all.py [OPTIONS]
 ```
 
 ### Basic Invocation
 ```bash
 # Scan inbox for pending PDFs without processing
-python3 skills/doc-parser/scripts/run_all.py --scan
+python3 skills/doc_parser/scripts/run_all.py --scan
 
 # Run in Headless Batch Mode (Processes all pending files)
-python3 skills/doc-parser/scripts/run_all.py --process-all
+python3 skills/doc_parser/scripts/run_all.py --process-all
 
 # Target a specific subject taxonomy
-python3 skills/doc-parser/scripts/run_all.py --subject "Cognitive Psychology"
+python3 skills/doc_parser/scripts/run_all.py --subject "Cognitive Psychology"
 ```
 
 ---
 
-## 🧠 CLI-3: Knowledge Compilation (`knowledge-compiler`)
+## 🧠 CLI-3: Knowledge Compilation (`knowledge_compiler`)
 
 Compiles outputs from all individual skills and publishes them into the `data/wiki/` Obsidian Vault with bidirectional links.
 ```bash
 # Compile all subjects
-python3 skills/knowledge-compiler/scripts/run_all.py
+python3 skills/knowledge_compiler/scripts/run_all.py
 ```
 
 ---
@@ -214,15 +214,15 @@ python3 skills/note_generator/scripts/synthesize.py \
 
 ---
 
-## 📋 CLI-6: Inbox Routing Management (`inbox-manager`)
+## 📋 CLI-6: Inbox Routing Management (`inbox_manager`)
 
 Dynamically manages `core/inbox_config.json` routing constraints without manual JSON editing.
 ```bash
 # List all active routing rules
-python3 skills/inbox-manager/scripts/query.py list
+python3 skills/inbox_manager/scripts/query.py list
 
 # Add a custom routing rule for 'both' processing
-python3 skills/inbox-manager/scripts/query.py add \
+python3 skills/inbox_manager/scripts/query.py add \
     --add _exam \
     --routing both \
     --description "Exam materials — parse + audio reference"
@@ -230,20 +230,20 @@ python3 skills/inbox-manager/scripts/query.py add \
 
 ---
 
-## 📖 CLI-7: Interactive Reader (`interactive-reader`)
+## 📖 CLI-7: Interactive Reader (`interactive_reader`)
 
 Batch processes Obsidian notes containing `> [AI: ...]` markers and writes responses inline.
 ```bash
-python3 skills/interactive-reader/scripts/run_all.py
+python3 skills/interactive_reader/scripts/run_all.py
 ```
 
 ---
 
-## 🔬 CLI-8: Academic Educational Assistant (`academic-edu-assistant`)
+## 🔬 CLI-8: Academic Educational Assistant (`academic_edu_assistant`)
 
 Performs cross-document topic comparison and outputs Anki-formatted review flashcards.
 ```bash
-python3 skills/academic-edu-assistant/scripts/run_all.py \
+python3 skills/academic_edu_assistant/scripts/run_all.py \
     --query "Compare the core assumptions of Behaviorism and Cognitivism" \
     --anki
 ```

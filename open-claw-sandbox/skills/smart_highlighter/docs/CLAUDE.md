@@ -15,7 +15,7 @@ orchestrator owns all of those responsibilities.
 
 - **Status**: Production
 - **Model in use**: `gemma3:12b` (Ollama) via `core.ai.llm_client.OllamaClient`
-- **Active consumers**: Called by `audio-transcriber` post-merge orchestrator (formerly Phase 4)
+- **Active consumers**: Called by `audio_transcriber` post-merge orchestrator (formerly Phase 4)
 - **Architecture version**: V2.0 (Anti-Tampering Guard, Chunked by default)
 
 ## Key Invariants

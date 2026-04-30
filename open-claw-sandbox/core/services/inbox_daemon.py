@@ -2,7 +2,7 @@
 inbox_daemon.py — Open Claw System-Wide Inbox Monitor
 ======================================================
 Monitors the `inbox` canonical directories for all active skills using Watchdog.
-When a new file arrives (e.g. .m4a for audio-transcriber, .pdf for doc-parser),
+When a new file arrives (e.g. .m4a for audio_transcriber, .pdf for doc_parser),
 it triggers the target skill's pipeline via the WebUI API (with direct subprocess
 fallback when the WebUI is not running).
 
@@ -71,11 +71,11 @@ class SystemInboxDaemon:
 
                     rules = cfg.get("routing_rules", {})
                     for ext in rules.get("voice_memo", []):
-                        self.routing_rules[ext] = "audio-transcriber"
+                        self.routing_rules[ext] = "audio_transcriber"
                     for ext in rules.get("pdf_knowledge", []):
-                        self.routing_rules[ext] = "doc-parser"
+                        self.routing_rules[ext] = "doc_parser"
                     for ext in rules.get("compiler", []):
-                        self.routing_rules[ext] = "knowledge-compiler"
+                        self.routing_rules[ext] = "knowledge_compiler"
 
                     # Remove structured pdf_routing_rules as they violate sandbox boundaries
 
@@ -84,9 +84,9 @@ class SystemInboxDaemon:
 
         if not self.routing_rules:
             self.routing_rules = {
-                ".m4a": "audio-transcriber",
-                ".mp3": "audio-transcriber",
-                ".pdf": "doc-parser",
+                ".m4a": "audio_transcriber",
+                ".mp3": "audio_transcriber",
+                ".pdf": "doc_parser",
             }
 
     def _process_file(self, filepath: str) -> None:
@@ -236,9 +236,9 @@ class SystemInboxDaemon:
 
         cwd = os.path.join(_workspace_root, "skills", skill)
 
-        if skill == "audio-transcriber":
+        if skill == "audio_transcriber":
             cmd = SkillRunner.run_audio_transcriber()
-        elif skill == "doc-parser":
+        elif skill == "doc_parser":
             cmd = SkillRunner.run_doc_parser()
         else:
             script_path = os.path.join(cwd, "scripts", "run_all.py")

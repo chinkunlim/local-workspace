@@ -45,7 +45,7 @@
 | Inbox routing | Recursive subject-folder; triple PDF modes (`audio_ref` / `doc_parser` / `both`) |
 | Web UI | Removed — orchestration via Open Claw intent engine + Telegram |
 | Obsidian Vault | `open-claw-sandbox/data/wiki/` |
-| ChromaDB index | `open-claw-sandbox/data/chroma/` (rebuilt by `telegram-kb-agent`) |
+| ChromaDB index | `open-claw-sandbox/data/chroma/` (rebuilt by `telegram_kb_agent`) |
 
 ---
 
@@ -65,7 +65,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 # 4. Query the knowledge base (via Open Claw / Telegram)
 # "What did the lecture on cognitive psychology cover?"
-# Open Claw dispatches telegram-kb-agent → ChromaDB → response
+# Open Claw dispatches telegram_kb_agent → ChromaDB → response
 ```
 
 ---
@@ -73,8 +73,8 @@ curl http://localhost:18789/health          # Open Claw API
 ## Next Session Starting Point
 
 1. Run a live end-to-end test: place a `.m4a` file into `data/raw/認知心理學/` and confirm all 6 phases complete
-2. Rebuild the ChromaDB index: `python skills/telegram-kb-agent/scripts/indexer.py`
-3. Validate a Telegram query reaches `telegram-kb-agent` and returns a coherent response
+2. Rebuild the ChromaDB index: `python skills/telegram_kb_agent/scripts/indexer.py`
+3. Validate a Telegram query reaches `telegram_kb_agent` and returns a coherent response
 4. Consider adding `tests/` stub structure per CODING_GUIDELINES §11.2
 
 ---
@@ -90,8 +90,8 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 |---|---|---|
-| 2026-04-19 | Phase 6 Finalisation — Inbox routing + Web UI removal | `inbox_config.json`, `inbox-manager` skill, wiki output paths fixed |
+| 2026-04-19 | Phase 6 Finalisation — Inbox routing + Web UI removal | `inbox_config.json`, `inbox_manager` skill, wiki output paths fixed |
 | 2026-04-19 | Skill Extraction | `smart_highlighter`, `note_generator` extracted as standalone packages |
 | 2026-04-19 | Deep Thought Hotfixes | `inbox_daemon` OOM guard, `state_manager` fcntl lock, debounce fix |
 | 2026-04-18 | Monorepo restructure + CODING_GUIDELINES_FINAL v3.0.0 | All config files promoted to root; docs consolidated |
-| 2026-04-15 | Core framework + dual-skill pipeline | `core/` shared framework; `audio-transcriber` + `doc-parser` fully operational |
+| 2026-04-15 | Core framework + dual-skill pipeline | `core/` shared framework; `audio_transcriber` + `doc_parser` fully operational |

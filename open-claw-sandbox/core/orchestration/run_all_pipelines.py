@@ -1,7 +1,7 @@
 """
 core/run_all_pipelines.py — 全域管線執行器
 ========================================
-依序執行 doc-parser 與 audio-transcriber，
+依序執行 doc_parser 與 audio_transcriber，
 確保兩個重量級模型不會同時執行導致 OOM。
 
 B-3 Fix: Uses a PID lockfile to prevent concurrent invocations spawned by
@@ -62,38 +62,38 @@ def _notify_timeout(pipeline_name: str) -> None:
 
 
 def run_pipelines() -> None:
-    """Run doc-parser then audio-transcriber sequentially."""
+    """Run doc_parser then audio_transcriber sequentially."""
     if not _acquire_lock():
         sys.exit(0)
 
     try:
         _logger.info("開始執行全域管線排程...")
 
-        doc_script = os.path.join(_workspace_root, "skills", "doc-parser", "scripts", "run_all.py")
+        doc_script = os.path.join(_workspace_root, "skills", "doc_parser", "scripts", "run_all.py")
         audio_script = os.path.join(
-            _workspace_root, "skills", "audio-transcriber", "scripts", "run_all.py"
+            _workspace_root, "skills", "audio_transcriber", "scripts", "run_all.py"
         )
 
-        # 1. doc-parser (--process-all skips interactive menu)
-        _logger.info("啟動 doc-parser...")
+        # 1. doc_parser (--process-all skips interactive menu)
+        _logger.info("啟動 doc_parser...")
         try:
             result_doc = subprocess.run([sys.executable, doc_script, "--process-all"], timeout=7200)
             if result_doc.returncode not in (0, 1):  # 1 = clean SIGTERM/sys.exit
-                _logger.warning("doc-parser 退出狀態: %s", result_doc.returncode)
+                _logger.warning("doc_parser 退出狀態: %s", result_doc.returncode)
         except subprocess.TimeoutExpired:
-            _logger.error("🚨 doc-parser 執行超時 (> 2h)，強制中斷。")
-            _notify_timeout("doc-parser")
+            _logger.error("🚨 doc_parser 執行超時 (> 2h)，強制中斷。")
+            _notify_timeout("doc_parser")
             sys.exit(1)
 
-        # 2. audio-transcriber
-        _logger.info("啟動 audio-transcriber...")
+        # 2. audio_transcriber
+        _logger.info("啟動 audio_transcriber...")
         try:
             result_audio = subprocess.run([sys.executable, audio_script], timeout=7200)
             if result_audio.returncode not in (0, 1):
-                _logger.warning("audio-transcriber 退出狀態: %s", result_audio.returncode)
+                _logger.warning("audio_transcriber 退出狀態: %s", result_audio.returncode)
         except subprocess.TimeoutExpired:
-            _logger.error("🚨 audio-transcriber 執行超時 (> 2h)，強制中斷。")
-            _notify_timeout("audio-transcriber")
+            _logger.error("🚨 audio_transcriber 執行超時 (> 2h)，強制中斷。")
+            _notify_timeout("audio_transcriber")
             sys.exit(1)
 
         _logger.info("全域管線排程結束。")

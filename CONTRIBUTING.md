@@ -7,7 +7,7 @@ This is a private workspace. The following guidelines apply to all contributors 
 Read the mandatory context in order:
 1. `open-claw-sandbox/memory/CLAUDE.md`
 2. `open-claw-sandbox/memory/ARCHITECTURE.md`
-3. `open-claw-sandbox/docs/CODING_GUIDELINES_FINAL.md`
+3. `open-claw-sandbox/docs/CODING_GUIDELINES.md`
 4. `open-claw-sandbox/AGENTS.md`
 
 ## Development Workflow
@@ -35,4 +35,4 @@ All code must pass `./open-claw-sandbox/ops/check.sh`:
 - **Ruff** lint and format (zero warnings)
 - **Mypy** type check on `core/`
 
-See `docs/CODING_GUIDELINES_FINAL.md` for full standards.
+See `docs/CODING_GUIDELINES.md` for full standards.

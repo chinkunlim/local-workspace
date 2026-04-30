@@ -3,11 +3,11 @@ import os
 docs_dir = "/Users/limchinkun/Desktop/local-workspace/docs"
 sandbox_dir = "/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox"
 
-# 1. Update AI_Master_Guide_Final.md
+# 1. Update INFRA_SETUP.md
 with open(os.path.join(sandbox_dir, "AGENTS.md")) as f:
     agents_content = f.read()
 
-with open(os.path.join(docs_dir, "AI_Master_Guide_Final.md"), "a") as f:
+with open(os.path.join(docs_dir, "INFRA_SETUP.md"), "a") as f:
     f.write("\n\n# Multi-Agent Orchestration Framework (v1.2.0 Update)\n\n")
     f.write(
         "This system has been upgraded from a single-script collection to a multi-agent orchestration framework.\n\n"
@@ -43,15 +43,15 @@ with open(os.path.join(docs_dir, "USER_MANUAL.md"), "a") as f:
         "Configure your LLM providers in `config.yaml` or global `~/.openclaw/openclaw.json`. The new `llm_client` automatically falls back to secondary models upon encountering rate limits.\n"
     )
 
-# 4. Update CODING_GUIDELINES_FINAL.md
-with open(os.path.join(docs_dir, "CODING_GUIDELINES_FINAL.md"), "a") as f:
+# 4. Update CODING_GUIDELINES.md
+with open(os.path.join(docs_dir, "CODING_GUIDELINES.md"), "a") as f:
     f.write("\n\n## 🚨 P4 Sprint: Multi-Agent Architecture Rules (v1.2.0+)\n\n")
     f.write("1. **Mandatory Async (強制非同步)**\n")
     f.write(
         "   - All external network requests (LLM API, Database) MUST use `asyncio` and `aiohttp`.\n"
     )
     f.write(
-        "   - Sequential processing of batches (like chunking in `doc-parser` or `audio-transcriber`) should utilize `async_batch_generate` with an `asyncio.Semaphore` to maximize throughput without causing OOM.\n\n"
+        "   - Sequential processing of batches (like chunking in `doc_parser` or `audio_transcriber`) should utilize `async_batch_generate` with an `asyncio.Semaphore` to maximize throughput without causing OOM.\n\n"
     )
     f.write("2. **State Immutability (狀態不可變性)**\n")
     f.write(

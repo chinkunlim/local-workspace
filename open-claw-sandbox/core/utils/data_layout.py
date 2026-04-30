@@ -25,7 +25,7 @@ class DataLayoutManager:
     def plan(workspace_root: str, skill_name: str) -> DataLayoutPlan:
         base_dir = os.path.join(os.path.abspath(workspace_root), "data", skill_name)
 
-        if skill_name == "audio-transcriber":
+        if skill_name == "audio_transcriber":
             canonical_dirs = {
                 "input": os.path.join(base_dir, "input"),
                 "output": os.path.join(base_dir, "output"),
@@ -60,7 +60,7 @@ class DataLayoutManager:
                     canonical_dirs["logs"], "system.log"
                 ),
             }
-        elif skill_name == "doc-parser":
+        elif skill_name == "doc_parser":
             canonical_dirs = {
                 "input": os.path.join(base_dir, "input"),
                 "output": os.path.join(base_dir, "output"),

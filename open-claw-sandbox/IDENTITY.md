@@ -34,4 +34,4 @@ Code and documentation produced here must be interpretable and maintainable by:
 - GitHub Copilot
 - Google Antigravity (Gemini)
 
-See `docs/CODING_GUIDELINES_FINAL.md` §0.3 for the mandatory AI agent workflow protocol.
+See `docs/CODING_GUIDELINES.md` §0.3 for the mandatory AI agent workflow protocol.

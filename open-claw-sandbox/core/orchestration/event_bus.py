@@ -19,7 +19,7 @@ Example:
     from core.orchestration.event_bus import DomainEvent, EventBus
     EventBus.publish(DomainEvent(
         name="ProofreadCompleted",
-        source_skill="audio-transcriber",
+        source_skill="audio_transcriber",
         payload={"subject": subj, "output_path": out_path},
     ))
 

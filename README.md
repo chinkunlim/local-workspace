@@ -67,7 +67,7 @@ local-workspace/
 ## Documentation
 
 - `docs/USER_MANUAL.md` — The complete guide on how to use this ecosystem (Start Here)
-- `docs/CODING_GUIDELINES_FINAL.md` — Single source of truth for all development rules (v3.0.0)
+- `docs/CODING_GUIDELINES.md` — Single source of truth for all development rules (v3.0.0)
 - `memory/ARCHITECTURE.md` — Full system architecture and design decisions
 - `open-claw-sandbox/AGENTS.md` — AI agent behaviour contract
 - `open-claw-sandbox/docs/STRUCTURE.md` — Annotated file map of the sandbox

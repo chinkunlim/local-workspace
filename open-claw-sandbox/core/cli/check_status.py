@@ -22,7 +22,7 @@ def get_full_status_report() -> str:
     report_lines = []
 
     # 定義要檢查的 Skill 列表
-    skills_to_check = ["doc-parser", "audio-transcriber"]
+    skills_to_check = ["doc_parser", "audio_transcriber"]
 
     for skill in skills_to_check:
         try:

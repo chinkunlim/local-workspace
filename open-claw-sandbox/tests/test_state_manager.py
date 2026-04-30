@@ -17,7 +17,7 @@ def test_load_state_corrupt_json(tmp_workspace):
 
 
 def test_update_task_cascade_invalidation(tmp_workspace):
-    sm = StateManager(tmp_workspace, "doc-parser")
+    sm = StateManager(tmp_workspace, "doc_parser")
 
     # Manually seed state
     sm.state = {"Math": {"file1.pdf": {"p1a": "✅", "p1b": "✅", "p1c": "✅"}}}
@@ -35,7 +35,7 @@ def test_update_task_cascade_invalidation(tmp_workspace):
 
 @patch("core.state.state_manager.AtomicWriter.write_text")
 def test_render_checklist_atomic(mock_write_text, tmp_workspace):
-    sm = StateManager(tmp_workspace, "doc-parser")
+    sm = StateManager(tmp_workspace, "doc_parser")
     sm.state = {"Math": {"test.pdf": {}}}
     sm.update_task("Math", "test.pdf", "p1a", "✅")
 

@@ -8,7 +8,7 @@
 
 ## [2026-04-30] P4 Sprint: Multi-Agent Architecture, Global State & HITL
 
-**Context:** The system originally consisted of isolated scripts that passed files sequentially through the `data/` directory. There was no global state sharing, meaning user preferences (e.g., via Telegram) could not be easily passed to the `doc-parser` or `audio-transcriber`. Furthermore, any interruption required killing the process, which lacked a robust Human-in-the-Loop (HITL) recovery mechanism.
+**Context:** The system originally consisted of isolated scripts that passed files sequentially through the `data/` directory. There was no global state sharing, meaning user preferences (e.g., via Telegram) could not be easily passed to the `doc_parser` or `audio_transcriber`. Furthermore, any interruption required killing the process, which lacked a robust Human-in-the-Loop (HITL) recovery mechanism.
 
 **Decision:**
 1. **Global State & Memory Pool**: Implemented `MemoryPool` in `core/state/state_manager.py` using `StateBackend` for atomic JSON/Redis locking. Skills can now read/write cross-skill states from a `_global_` namespace.
@@ -38,11 +38,11 @@
 
 ## [2026-04-20] Strict I/O Routing & Extraction Layer Purge
 
-**Context:** The `inbox_daemon.py` was bypassing sandbox boundaries by directly writing `.pdf` files to `audio-transcriber/output/` based on `pdf_routing_rules`, causing routing leakage. Furthermore, `audio-transcriber` and `doc-parser` still contained processing prompts (highlighting, synthesis) that belong to `smart_highlighter` and `note_generator`.
+**Context:** The `inbox_daemon.py` was bypassing sandbox boundaries by directly writing `.pdf` files to `audio_transcriber/output/` based on `pdf_routing_rules`, causing routing leakage. Furthermore, `audio_transcriber` and `doc_parser` still contained processing prompts (highlighting, synthesis) that belong to `smart_highlighter` and `note_generator`.
 
 **Decision:**
-1. **Strict I/O Routing**: `inbox_daemon.py` now strictly routes files based on extension (`.m4a`/`.mp3` to `audio-transcriber/input/`, `.pdf` to `doc-parser/input/`). Cross-skill `output/` writes are strictly forbidden.
-2. **Extraction Layer Purge**: Removed Phase 4 (highlight) and Phase 5 (synthesis) from `audio-transcriber`, and Phase 2 (highlight) and Phase 3 (synthesis) from `doc-parser`.
+1. **Strict I/O Routing**: `inbox_daemon.py` now strictly routes files based on extension (`.m4a`/`.mp3` to `audio_transcriber/input/`, `.pdf` to `doc_parser/input/`). Cross-skill `output/` writes are strictly forbidden.
+2. **Extraction Layer Purge**: Removed Phase 4 (highlight) and Phase 5 (synthesis) from `audio_transcriber`, and Phase 2 (highlight) and Phase 3 (synthesis) from `doc_parser`.
 3. **Prompt Migration**: Integrated all highlighting rules into `smart_highlighter` and all synthesis Map-Reduce rules into `note_generator`.
 
 **Rationale:** Enforces the single-responsibility principle. Extraction skills should only extract high-fidelity Markdown. Processing skills handle formatting and synthesis.
@@ -109,7 +109,7 @@ Completely eliminates Ollama OOM crashes caused by simultaneous file arrivals. G
 ## [2026-04-20] P0: Extraction Layer Temperature Forced to Zero (Anti-Hallucination)
 
 ### Decision
-All extraction layers (`audio-transcriber`, `doc-parser`) and annotation layers (`smart_highlighter`) have `temperature` forced to `0` in every LLM profile config.
+All extraction layers (`audio_transcriber`, `doc_parser`) and annotation layers (`smart_highlighter`) have `temperature` forced to `0` in every LLM profile config.
 
 ### Consequence
 Guarantees raw knowledge extraction and Markdown annotation never alter semantics, lose data, or produce hallucinations. High temperature is permitted ONLY in `note_generator` synthesis.
@@ -178,7 +178,7 @@ Replaced the infinite `while True` poll loop with a bounded loop (`elapsed < 300
 
 ### Options
 1. Independent input form: User pastes arbitrary Markdown → triggers skill → output shown in browser
-2. Re-run on existing phase output ✅ — User selects an existing `audio-transcriber`/`doc-parser` output file; system auto-discovers paths and re-triggers the skill against it
+2. Re-run on existing phase output ✅ — User selects an existing `audio_transcriber`/`doc_parser` output file; system auto-discovers paths and re-triggers the skill against it
 
 ### Decision
 Option 2 (Re-run). This avoids duplicating the data-entry UX, respects the existing Data Flow architecture, and requires no new data ingestion infrastructure. Auto-discovery logic is encapsulated in `core/cli_runner.SkillRunner.resolve_highlight_paths()` and `resolve_synthesize_paths()`.
@@ -238,33 +238,33 @@ Move to workspace root. `ops/config/` directory deleted.
 
 ---
 
-## [2026-04-18] CODING_GUIDELINES_FINAL.md as single source of truth
+## [2026-04-18] CODING_GUIDELINES.md as single source of truth
 
 ### Background
-Three overlapping documents existed: `BASIC_RULES.md` (v1.0), `CODING_GUIDELINES.md` (v2.0), and `CODING_GUIDELINES_FINAL.md`.
+Three overlapping documents existed: `BASIC_RULES.md` (v1.0), `CODING_GUIDELINES.md` (v2.0), and `CODING_GUIDELINES.md`.
 
 ### Decision
-Merge all three into `CODING_GUIDELINES_FINAL.md` v3.0.0. Delete the other two. Store in both `docs/` and workspace `docs/`.
+Merge all three into `CODING_GUIDELINES.md` v3.0.0. Delete the other two. Store in both `docs/` and workspace `docs/`.
 
 ---
 
 ## [2026-04-17] MLX-Whisper over Docker for transcription
 
 ### Background
-Earlier audio-transcriber used a Docker-based Whisper container. Docker adds startup latency and requires a daemon running.
+Earlier audio_transcriber used a Docker-based Whisper container. Docker adds startup latency and requires a daemon running.
 
 ### Decision
 Switch to MLX-Whisper (native Apple Silicon). Zero Docker dependency, lower latency, better integration with macOS power management.
 
 ### Consequence
-Removed all Docker references from audio-transcriber pipeline and docs.
+Removed all Docker references from audio_transcriber pipeline and docs.
 
 ---
 
 ## [2026-04-15] Shared `core/` framework over per-skill duplication
 
 ### Background
-Early audio-transcriber had inline logging, path resolution, and state management. Adding doc-parser would duplicate all of this. A `SKILL_PARITY_ANALYSIS` conducted on 2026-04-15 highlighted that `voice-memo` (now `audio-transcriber`) was strong in CLI-centric pipelines and content-loss guards, while `pdf-knowledge` (now `doc-parser`) excelled in preflight diagnostics and security boundaries.
+Early audio_transcriber had inline logging, path resolution, and state management. Adding doc_parser would duplicate all of this. A `SKILL_PARITY_ANALYSIS` conducted on 2026-04-15 highlighted that `voice-memo` (now `audio_transcriber`) was strong in CLI-centric pipelines and content-loss guards, while `pdf-knowledge` (now `doc_parser`) excelled in preflight diagnostics and security boundaries.
 
 ### Decision
 Do not merge the workflows. Keep skills separate but extract shared primitives to `core/` with a `PipelineBase` abstract class. Each skill phase inherits from it.
