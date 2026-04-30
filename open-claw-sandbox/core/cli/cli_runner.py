@@ -7,7 +7,7 @@ Both the Flask WebUI (app.py routes) and future CLI tools import from
 here — ensuring a single source of truth for how each Skill is invoked.
 
 Usage:
-    from core.cli_runner import SkillRunner
+    from core.cli.cli_runner import SkillRunner
 
     cmd = SkillRunner.run_audio_transcriber(subject="AI_Papers", force=True)
     exec_mgr.enqueue_task("Audio Transcriber Pipeline", cmd, cwd=workspace_root)
@@ -24,7 +24,7 @@ _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(_
 if _workspace_root not in sys.path:
     sys.path.insert(0, _workspace_root)
 
-from core.path_builder import PathBuilder
+from core.utils.path_builder import PathBuilder
 
 # Cached PathBuilder instances (one per skill)
 _pb_cache: dict[str, PathBuilder] = {}

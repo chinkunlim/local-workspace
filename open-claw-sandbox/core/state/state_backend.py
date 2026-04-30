@@ -18,7 +18,7 @@ Config (config.yaml):
         ttl_seconds: 86400   # 24h — 0 = no expiry
 
 Usage:
-    from core.state_backend import get_state_backend
+    from core.state.state_backend import get_state_backend
     backend = get_state_backend(config_section)
     backend.set("workspace-state", {"tasks": {}})
     data = backend.get("workspace-state")
@@ -92,7 +92,7 @@ class JsonStateBackend:
                 return None
 
     def set(self, key: str, value: Dict[str, Any]) -> None:
-        from core.atomic_writer import AtomicWriter
+        from core.utils.atomic_writer import AtomicWriter
 
         path = self._path(key)
         lock_path = path + ".lock"

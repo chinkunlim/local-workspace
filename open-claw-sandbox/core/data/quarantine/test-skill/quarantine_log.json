@@ -1,0 +1,1 @@
+{"timestamp": "2026-05-01T02:01:53.466339", "filename": "dummy.pdf", "original_path": "/var/folders/x1/b3b64dzn1cn50v9rkgx43dv00000gn/T/openclaw_test_workspace_zl1k60bh/dummy.pdf", "skill": "test-skill", "error": "❌ [TaskQueue] 任務執行失敗 (Exit Code 1): Fail Task", "attempts": 3}

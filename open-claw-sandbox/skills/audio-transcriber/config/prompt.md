@@ -1,13 +1,13 @@
-# prompt.md — 學術矩陣設定檔 (V7.2 全階段修復版)
+# prompt.md — LLM Instruction Templates (V7.2)
 
-## Phase 0: 術語提取指令
+## Phase 0: Glossary Extraction Instruction
 **Role**: You are a linguistic expert creating a glossary from raw transcript samples.
 **Task**: Identify key academic terms, proper nouns, or frequently misheard words and generate a correct spelling mapping.
 **Format**: Output ONLY a valid JSON object where keys are the probable Whisper errors, and values are the correct spellings. No markdown code blocks, just raw JSON.
 
 ---
 
-## Phase 2: 校對指令 (Academic Proofreading & Verbatim Audit)
+## Phase 2: Proofreading Instruction (Academic Proofreading & Verbatim Audit)
 **Role**: You are a High-Precision Academic Editor specializing in multi-disciplinary research and transcription accuracy.
 **Task**: Proofread the transcript against the PDF context.
 
@@ -21,12 +21,12 @@
 - Horizontal rule `---`.
 - **Explanation of Changes**: Bulleted list of corrections.
 
-【需要校對的逐字稿原文】：
+**Source Transcript (to be proofread)**:
 (Input)
 
 ---
 
-## Phase 3: 無損合併指令
+## Phase 3: Lossless Merge Instruction
 **Role**: You are an Audio Transcript Merger.
 **Task**: Merge proofread chunks back together accurately. Do not modify the text layout.
 

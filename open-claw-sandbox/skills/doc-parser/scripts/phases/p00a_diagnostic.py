@@ -27,12 +27,12 @@ import subprocess
 from typing import List, Optional
 
 # Internal Core Bootstrap
-from core.bootstrap import ensure_core_path as _bootstrap
+from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
-from core.atomic_writer import AtomicWriter
-from core.pipeline_base import PipelineBase
+from core.orchestration.pipeline_base import PipelineBase
+from core.utils.atomic_writer import AtomicWriter
 
 
 @dataclass

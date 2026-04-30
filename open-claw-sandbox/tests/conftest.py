@@ -13,7 +13,7 @@ def tmp_workspace(monkeypatch):
     tmp_dir = tempfile.mkdtemp(prefix="openclaw_test_workspace_")
 
     # Patch _workspace_root so AtomicWriter allows writes
-    monkeypatch.setattr("core.atomic_writer._workspace_root", tmp_dir)
+    monkeypatch.setattr("core.utils.atomic_writer._workspace_root", tmp_dir)
 
     # Create expected subdirectories
     os.makedirs(os.path.join(tmp_dir, "logs"))

@@ -1,7 +1,7 @@
 import json
 import os
 
-from core.atomic_writer import AtomicWriter
+from core.utils.atomic_writer import AtomicWriter
 
 
 def test_atomic_write_text(tmp_workspace):

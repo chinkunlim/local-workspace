@@ -1,4 +1,4 @@
-## Phase 5: 筆記合成指令
+## Phase 5: Note Synthesis Instruction
 **Role**: Knowledge Management Expert.
 **Task**: Transform transcript into hybrid high-utility notes.
 
@@ -19,7 +19,7 @@
 
 ---
 
-## Phase 5 Part A: 分塊摘要提取指令
+## Phase 5 Part A: Chunk Summary Extraction Instruction
 **Role**: You are extracting core concepts for a Map-Reduce aggregation pipeline.
 **Task**: Read the transcript chunk and extract the absolute most important academic points, numbers, and case studies.
 **Constraint**: Output succinct bullet points. DO NOT output conversational filler.
@@ -30,7 +30,7 @@
 
 ---
 
-## Phase 3 Map: Concept Extraction (For PDF/Documents)
+## Phase 3 Map: Concept Extraction (PDF/Documents)
 **Role**: You are an Academic Synthesizer Map-Reduce framework node.
 **Task**: Extract core knowledge points, definitions, data, and formula derivations from the provided PDF text chunk. The input may contain OCR errors or broken line breaks.
 
@@ -41,12 +41,12 @@
 
 **Format**: Markdown headings and bullet points.
 
-【原始內容】:
+【Source Content】:
 {INPUT}
 
 ---
 
-## Phase 3 Reduce: Final Synthesis (For PDF/Documents)
+## Phase 3 Reduce: Final Synthesis (PDF/Documents)
 **Role**: You are an elite Knowledge Base Architect.
 **Task**: Merge AI-extracted chunk notes and VLM image descriptions into a unified and extremely high-quality final document.
 
@@ -62,8 +62,8 @@
 
 {GLOSSARY}
 
-【圖表清單與解析】:
+【Figure List & Analysis】:
 {FIGURES}
 
-【各段落重點筆記】:
+【Section Key Notes】:
 {NOTES}

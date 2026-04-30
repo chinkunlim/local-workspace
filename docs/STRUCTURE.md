@@ -10,7 +10,7 @@
 
 ```text
 local-workspace/
-├── docs/                 ← Single Source of Truth (SSoT) 全域文件目錄 — 包含 ARCHITECTURE, STRUCTURE, USER_MANUAL 等所有核心文檔
+├── docs/                 ← Single Source of Truth (SSoT) Global Docs — contains ARCHITECTURE, STRUCTURE, USER_MANUAL and all core documents
 └── open-claw-sandbox/
     ├── AGENTS.md             ← Non-negotiable rules and startup context for AI agents
     ├── BOOTSTRAP.md          ← How to bring this workspace to operational state from scratch
@@ -39,11 +39,11 @@ local-workspace/
     ├── data/                 ← Runtime data: pipeline outputs (excluded from git)
     ├── models/               ← HuggingFace model cache (excluded from git)
     ├── logs/                 ← Service runtime logs from start.sh (excluded from git)
-    ├── docs/                 ← (DEPRECATED) 舊沙盒文件目錄，所有內容均已遷移至 root docs/
+    ├── docs/                 ← (DEPRECATED) Old sandbox docs dir, all contents migrated to root docs/
     └── ops/                  ← Automation scripts (bootstrap.sh, check.sh) — delete one-offs after use
 ```
 
-> **⚠️ 絕對原則**：本檔案 (`STRUCTURE.md`) 乃是「全域腳本唯一註冊表」。任何在此專案新增的腳本、模組或目錄，都必須在此詳述功能與位置。嚴禁刪除任何歷史說明與結構，只能新增或補充。
+> **⚠️ Absolute Rule**: This file (`STRUCTURE.md`) is the "Global Directory Registry". Any new script, module, or directory added to this project MUST be documented here with its location and purpose. Never delete historical structure documentation; append only.
 
 ---
 

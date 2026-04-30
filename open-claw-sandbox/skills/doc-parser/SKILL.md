@@ -1,6 +1,6 @@
 ---
 name: doc-parser
-description: Process scanned or structured PDFs using Docling, OCR validation, and VLM extraction to synthesize them into unified markdown study guides.
+description: Process scanned or structured PDFs using Docling, OCR validation, and VLM extraction to synthesize them into unified Obsidian-ready markdown study notes.
 metadata:
   {
     "openclaw":
@@ -12,65 +12,59 @@ metadata:
 
 # Doc Parser Skill
 
-> **Pipeline**: PDF → Diagnose → Extract → VLM Vision
+> **Pipeline**: PDF → Diagnose → Extract → OCR Gate → VLM Vision → Synthesis
 
 ## Quick Start
 
 ```bash
-# 1. 放 PDF 進 Inbox（Universal Drop Zone）
-cp textbook.pdf data/raw/AI_Papers/
+# 1. Drop PDF files into the Universal Inbox
+cp textbook.pdf data/raw/<SubjectName>/
 
-# 2. 執行流水線 (Headless Batch Mode)
+# 2. Run in headless batch mode
 python3 skills/doc-parser/scripts/run_all.py --process-all
 
-# 3. 查看進度
+# 3. Check pipeline progress
 cat data/doc-parser/state/checklist.md
 ```
 
-## 核心解析機制 (V2.0 Antigravity)
+## Core Extraction Architecture (V2.0 Antigravity)
 
-| Phase | 腳本 | 功能 |
+| Phase | Script | Function |
 |:---:|:---|:---|
-| P0a | `p00a_diagnostic.py` | 輕量診斷（頁數、文字密度、掃描判斷） |
-| P1a | `p01a_engine.py` | Docling 深度提取 → `raw_extracted.md` (IMMUTABLE) |
-| P1b | `p01b_vector_charts.py` | 向量圖表光柵化 (pdftoppm) |
-| P1c | `p01c_ocr_gate.py` | OCR 品質評估（掃描件才觸發） |
-| P1d | `p01d_vlm_vision.py` | **VLM 圖像自動描述**：動態解析 `figure_list.md`，自動鎖定 `待 VLM 描述` 的項目並調用 Vision 模型處理。具備容錯機制（圖片遺失優雅降級），最後進行 Atomic Markdown 寫回。強制 `temperature: 0` 防止幻覺。 |
+| P00a | `p00a_diagnostic.py` | Security check + PDF metadata extraction |
+| P01a | `p01a_engine.py` | Primary Docling extraction → `raw_extracted.md` |
+| P01b | `p01b_vector_charts.py` | Vector diagram detection and captioning |
+| P01c | `p01c_ocr_gate.py` | Adaptive OCR decision (triggers only when Docling coverage is insufficient) |
+| P01d | `p01d_vlm_vision.py` | Figure / image analysis via VLM (vision language model) |
+| P02 | (Delegated) | Highlight extraction via `smart_highlighter` |
+| P03 | (Delegated) | Synthesis and publishing via `note_generator` → `data/wiki/` |
 
-## 常用指令
+## Common Commands
 
 ```bash
-# 只處理特定科目的 PDF
-python3 skills/doc-parser/scripts/run_all.py --subject AI_Papers
-
-# 背景批次執行 (自動處理全部)
+# Run full pipeline on all pending PDFs
 python3 skills/doc-parser/scripts/run_all.py --process-all
 
-# 輸出 JSON 格式日誌 (Headless Telemetry)
-python3 skills/doc-parser/scripts/run_all.py --process-all --log-json
+# Run from a specific phase
+python3 skills/doc-parser/scripts/run_all.py --from 2
 
-# 互動切換模型
-python3 core/cli_config_wizard.py --skill doc-parser
+# Force re-run on all files
+python3 skills/doc-parser/scripts/run_all.py --process-all --force
+
+# Process a single subject
+python3 skills/doc-parser/scripts/run_all.py --subject <SubjectName>
 ```
 
-## 目錄說明
+## Security Contract
 
-| 路徑 | 說明 |
-|:---|:---|
-| `input/<subject>/` | PDF 入匣，放新文件至此 |
-| `output/01_Processed/<subject>/<id>/` | Docling 原始提取（**勿修改**）|
-| `state/checklist.md` | 自動生成的進度追蹤表 |
+- Source PDF files are **immutable** — they are read-only and never modified or moved.
+- All extracted content is written via `AtomicWriter` to guarantee crash-safe output.
+- The Security Manager runs a path-traversal check on every filename before any processing begins.
 
-## 設定檔位置
+## Global Standards
 
-- **主設定**: `config/config.yaml` — 模型選擇、路徑、OCR 閾值、分塊大小
-- **術語保護**: `config/priority_terms.json` — 跨 skill 術語清單
-- **詳細文件**: `docs/ARCHITECTURE.md`
-
-## 全域標準化 (Omega Integration)
-
-- **統一 CLI 介面**: 所有啟動腳本皆具備三大標準機制：
-  1. **啟動前置檢查 (Preflight Check)**：驗證依賴與配置無誤。
-  2. **狀態與 DAG 追蹤面板 (Dashboard)**：即時視覺化顯示管線進度。
-  3. **互動選取與重跑機制 (Interactive Menu)**：可動態選擇 PENDING 或 COMPLETED 任務。
-- 支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷與斷點保存功能。
+- **Zero Temperature**: `config.yaml` enforces `temperature: 0` to guarantee deterministic, hallucination-free outputs.
+- **Headless CLI**: Supports `--process-all`, `--from`, `--force`, `--resume`, `--log-json` for full CI/CD compatibility.
+- **Preflight Check**: Validates all dependencies and config on every run before processing begins.
+- **Checkpoint Resume**: All phase completions are saved to `state/`; use `--resume` to continue after an interruption.
+- macOS native notifications (`osascript`) and graceful `KeyboardInterrupt` handling with checkpoint save.

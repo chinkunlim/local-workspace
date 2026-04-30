@@ -1,5 +1,9 @@
 # prompt.md — Doc Parser Pipeline LLM Templates
 
+> **Note**: Some Traditional Chinese (zh-TW) tokens below (e.g., `[忽略] 裝飾性圖片`, `[圖表說明]`) are
+> **intentional machine-readable output signals** that the VLM must produce verbatim. They are not
+> translation candidates — they serve as fixed sentinel strings for downstream parsing.
+> The `Output MUST be in Traditional Chinese (繁體中文)` constraints preserve the end-user note language.
 
 ## Phase 1d: VLM Vision
 **Role**: You are a top-tier Academic Multi-Modal Visual Analyst.

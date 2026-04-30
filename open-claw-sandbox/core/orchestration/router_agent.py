@@ -9,7 +9,7 @@ CURRENT STATUS: Scaffold / Interface Definition
   Actual skill invocation wiring is deferred to P3 implementation.
 
 Usage (future):
-    from core.router_agent import RouterAgent, TaskManifest
+    from core.orchestration.router_agent import RouterAgent, TaskManifest
 
     manifest = TaskManifest(
         source_path="/path/to/lecture.m4a",
@@ -101,10 +101,19 @@ class RouterAgent:
             # We use a fast/smart model for routing if available, else default
             raw = self._llm.generate(model="qwen2.5-coder:7b", prompt=prompt)
             skills = [s.strip() for s in raw.split(",") if s.strip()]
-            return [s for s in skills if s in [
-                "audio-transcriber", "doc-parser", "note_generator",
-                "knowledge-compiler", "telegram-kb-agent", "academic-edu-assistant"
-            ]]
+            return [
+                s
+                for s in skills
+                if s
+                in [
+                    "audio-transcriber",
+                    "doc-parser",
+                    "note_generator",
+                    "knowledge-compiler",
+                    "telegram-kb-agent",
+                    "academic-edu-assistant",
+                ]
+            ]
         except Exception as e:
             print(f"⚠️ [RouterAgent] LLM 分解任務失敗: {e}")
             return []

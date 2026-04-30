@@ -116,11 +116,12 @@ Drop files here to begin processing:
 
 After bootstrap, read in this order:
 
-1. `docs/STRUCTURE.md` — annotated map of every file and folder
-2. `docs/CODING_GUIDELINES.md` — binding engineering contract
-3. `AGENTS.md` — agent operation rules
-4. `skills/<skill>/SKILL.md` — skill quick-start guide
-5. `skills/<skill>/docs/ARCHITECTURE.md` — full technical architecture
+1. `../docs/INDEX.md` — master documentation map
+2. `../docs/STRUCTURE.md` — annotated map of every file and folder
+3. `../docs/CODING_GUIDELINES_FINAL.md` — binding engineering contract
+4. `AGENTS.md` — agent operation rules
+5. `skills/<skill>/SKILL.md` — skill quick-start guide
+6. `skills/<skill>/docs/ARCHITECTURE.md` — full technical architecture
 
 ---
 

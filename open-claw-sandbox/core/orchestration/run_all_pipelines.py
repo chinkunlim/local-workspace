@@ -54,7 +54,7 @@ def _release_lock() -> None:
 def _notify_timeout(pipeline_name: str) -> None:
     """Try to send a Telegram notification for timeouts."""
     try:
-        from core.telegram_bot import send_message
+        from core.services.telegram_bot import send_message
 
         send_message(f"🚨 [Open Claw] {pipeline_name} 執行超時 (> 2 小時)，已強制中斷並釋放鎖。")
     except ImportError:

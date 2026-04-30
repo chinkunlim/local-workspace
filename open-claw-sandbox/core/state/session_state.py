@@ -14,7 +14,7 @@ States:
     FAILED        — unrecoverable crash / exception
 
 Usage (via PipelineBase — do not call directly in phase scripts):
-    from core.session_state import SessionState, write_session_state
+    from core.state.session_state import SessionState, write_session_state
     write_session_state(state_dir, SessionState.PAUSED, context={"phase": "p2"})
 """
 
@@ -25,7 +25,7 @@ from enum import Enum
 import os
 from typing import Any, Dict, Optional
 
-from core.atomic_writer import AtomicWriter
+from core.utils.atomic_writer import AtomicWriter
 
 # ---------------------------------------------------------------------------
 # State Enum

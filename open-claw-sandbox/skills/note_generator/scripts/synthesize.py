@@ -15,12 +15,12 @@ import sys
 
 # Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.bootstrap import ensure_core_path as _bootstrap
+from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
 from core import PipelineBase
-from core.text_utils import smart_split
+from core.utils.text_utils import smart_split
 
 
 class NoteGenerator(PipelineBase):
@@ -314,7 +314,7 @@ if __name__ == "__main__":
             input_text = pathlib.Path(args.input_file).read_text(encoding="utf-8")
             result = generator.run(input_text, subject=args.subject, label=args.label)
             if args.output_file:
-                from core.atomic_writer import AtomicWriter
+                from core.utils.atomic_writer import AtomicWriter
 
                 AtomicWriter.write_text(args.output_file, result)
                 print(f"✅ Note written to: {args.output_file}")

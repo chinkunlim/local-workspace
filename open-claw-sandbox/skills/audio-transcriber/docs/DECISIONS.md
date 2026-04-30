@@ -110,3 +110,33 @@
 2. Wraps `mlx_whisper.transcribe()` in `os.dup2` to redirect `fd 2` to `os.devnull`, cleanly suppressing OS-level `libmalloc` warnings without affecting Python exceptions.
 
 **Trade-off**: Multi-clip detection adds overhead (3 separate Whisper invocations). Mitigated by offering the `force_language` config option for homogenous datasets.
+
+---
+
+## [Legacy: 2026-04-08 to 04-14] `voice-memo` Architectural Decisions
+
+*Note: The following decisions were made during the `voice-memo` era before the skill was refactored and renamed to `audio-transcriber`. They are preserved here for historical context.*
+
+### Phase 18 — Bug Fix Design Decisions (2026-04-08)
+- **Decision**: Fix `transcribe_tool.py` to write `text_val.strip() + "\n"` instead of `text_val` for the non-timestamped transcript.
+- **Rationale**: The original code concatenated all Whisper segment texts into a single string with no separator, producing a wall of text that broke downstream word boundaries.
+
+- **Decision**: Implement a deduplication guard in `proofread_tool.py`'s change log assembly.
+- **Rationale**: Discovered the LLM hallucinated repetitive identical log headers/changes across chunk boundaries. A Python-level guard strips these out.
+
+- **Decision**: Phase 3 (`merge_tool.py`) now parses and accumulates a `## 📋 Phase 3 Change Log` change log identically to Phase 2.
+- **Rationale**: Phase 3 operations were previously invisible, risking silent hallucinations. This closes the accountability gap.
+
+### Phase 19 — Full Pipeline Review & Code Quality Hardening (2026-04-09)
+- **Decision**: Replace raw character-slice chunking with `smart_split(text, chunk_size)` in Phase 2, 3, and 4.
+- **Rationale**: Preserves sentence integrity at chunk boundaries.
+
+- **Decision**: Strip `## 📋 Phase 3 Change Log` from Phase 4's input, highlight only the body, then re-attach the log.
+- **Rationale**: Prevented Phase 4 from unnecessarily highlighting log metadata and bloating its context window.
+
+### Phase 20 — Deep Architecture Upgrade (OOP & DAG Cascade) (2026-04-12)
+- **Decision**: Eradicate procedural script redundancy by extracting a universal Object-Oriented Framework base `core/`.
+- **Rationale**: Over 60% of code was identical boilerplate (Hardware scanning, UI polling). Moving IO to `core/pipeline_base.py` fixed this. (Led to the V7.1 core extraction).
+
+- **Decision**: Redesign Task Checklist into `.pipeline_state.json` governed by DAG Hash State Tracking.
+- **Rationale**: Modifying a Phase 2 output mathematically requires re-running Phases 3-5. Enforcing Hash tracking instantly invalidates downstream states if a human edits an upstream file.

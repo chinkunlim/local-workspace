@@ -6,7 +6,7 @@ copy-pasting the 10-line boundary-safe `sys.path.insert` boilerplate.
 
 Usage (replace the entire Boundary-Safe Init block at the top of any script)::
 
-    from core.bootstrap import ensure_core_path
+    from core.utils.bootstrap import ensure_core_path
     ensure_core_path(__file__)
 
 That's it. The function is idempotent — safe to call multiple times.

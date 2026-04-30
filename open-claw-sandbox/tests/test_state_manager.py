@@ -1,7 +1,7 @@
 import os
 from unittest.mock import patch
 
-from core.state_manager import StateManager
+from core.state.state_manager import StateManager
 
 
 def test_load_state_corrupt_json(tmp_workspace):
@@ -33,7 +33,7 @@ def test_update_task_cascade_invalidation(tmp_workspace):
     assert sm.state["Math"]["file1.pdf"]["p1a"] == "✅"
 
 
-@patch("core.state_manager.AtomicWriter.write_text")
+@patch("core.state.state_manager.AtomicWriter.write_text")
 def test_render_checklist_atomic(mock_write_text, tmp_workspace):
     sm = StateManager(tmp_workspace, "doc-parser")
     sm.state = {"Math": {"test.pdf": {}}}

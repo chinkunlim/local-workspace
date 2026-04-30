@@ -1,10 +1,10 @@
 import os
 from unittest.mock import MagicMock, patch
 
-from core.task_queue import LocalTaskQueue
+from core.orchestration.task_queue import LocalTaskQueue
 
 
-@patch("core.task_queue.subprocess.run")
+@patch("core.orchestration.task_queue.subprocess.run")
 def test_task_queue_success(mock_run, tmp_workspace):
     mock_run.return_value = MagicMock(returncode=0)
 
@@ -22,8 +22,8 @@ def test_task_queue_success(mock_run, tmp_workspace):
     assert mock_run.call_count >= 1
 
 
-@patch("core.task_queue.subprocess.run")
-@patch("core.task_queue.shutil.move")
+@patch("core.orchestration.task_queue.subprocess.run")
+@patch("core.orchestration.task_queue.shutil.move")
 def test_task_queue_dlq_quarantine(mock_move, mock_run, tmp_workspace):
     # Simulate a process that always fails
     mock_run.return_value = MagicMock(returncode=1)

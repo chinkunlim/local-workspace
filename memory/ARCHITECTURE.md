@@ -1,8 +1,8 @@
 # ARCHITECTURE.md — Global System Architecture
 
 > **Scope:** Entire `local-workspace/` monorepo
-> **Last Updated:** 2026-04-19
-> **Audience:** All AI agents operating in this workspace
+> **Last Updated:** 2026-05-01
+> **Audience:** All AI agents and developers operating in this workspace
 
 ---
 
@@ -14,42 +14,52 @@
 local-workspace/                    ← Monorepo root (git repo)
 │
 ├── open-claw-sandbox/              ← Primary App: Open Claw AI Automation
-│   ├── core/                       ← Shared Python framework
-│   ├── skills/                     ← voice-memo, pdf-knowledge pipelines
-│   ├── memory/                     ← Sandbox-level AI memory (CLAUDE, HANDOFF, TASKS...)
-│   ├── docs/                       ← Sandbox documentation (STRUCTURE, CODING_GUIDELINES)
-│   └── ops/                        ← Sandbox quality checks (check.sh, bootstrap.sh)
+│   ├── core/                       ← Shared Python framework (sub-packages below)
+│   │   ├── ai/                     ← LLM clients, RAG, vector DB
+│   │   ├── cli/                    ← Terminal UI/UX, config wizards, arg parsing
+│   │   ├── config/                 ← YAML config managers and validators
+│   │   ├── orchestration/          ← RouterAgent, PipelineBase, TaskQueue, EventBus
+│   │   ├── services/               ← Background daemons: inbox_daemon, telegram_bot, hitl_manager
+│   │   ├── state/                  ← StateManager, ResumeManager, SessionState
+│   │   └── utils/                  ← AtomicWriter, PathBuilder, log_manager, bootstrap
+│   ├── skills/                     ← 9-skill AI pipeline ecosystem
+│   ├── ops/                        ← Sandbox quality gate (check.sh, bootstrap.sh)
+│   └── tests/                      ← Unit & integration tests (pytest)
 │
 ├── infra/                          ← Infrastructure layer (LLM services, UI, proxy)
 │   ├── litellm/                    ← LiteLLM OpenAI-compatible proxy (port 4000)
 │   ├── open-webui/                 ← Open WebUI chat interface (port 3000)
 │   ├── pipelines/                  ← Open WebUI Pipeline runner (port 9099)
-│   └── scripts/                   ← Lifecycle scripts: start.sh, stop.sh, watchdog.sh
+│   └── scripts/                    ← Lifecycle scripts: start.sh, stop.sh, watchdog.sh
 │
-├── docs/                           ← Global documentation
-│   ├── CODING_GUIDELINES_FINAL.md  ← Single source of truth for all development rules (v3.0.0)
-│   └── AI_Master_Guide_Final.md    ← System-wide AI ecosystem guide (v9)
+├── docs/                           ← Global documentation (SSoT)
+│   ├── INDEX.md                    ← Master navigation index for AI agents and humans
+│   ├── USER_MANUAL.md              ← End-user operational guide
+│   ├── CODING_GUIDELINES_FINAL.md  ← Engineering standards (v3.0.0)
+│   └── STRUCTURE.md                ← Monorepo directory structure reference
 │
 ├── memory/                         ← Global AI memory (this directory)
-│   ├── ARCHITECTURE.md             ← This file
-│   └── DECISIONS.md                ← Global architectural decisions
+│   ├── ARCHITECTURE.md             ← This file — single source of truth
+│   ├── DECISIONS.md                ← Global architectural decision log (ADR format)
+│   ├── HANDOFF.md                  ← Session handoff records
+│   ├── CLAUDE.md                   ← AI agent collaboration context
+│   └── TASKS.md                    ← Active task tracking
 │
-└── ops/                            ← Global quality scripts
-    └── check.sh                    ← Full monorepo quality gate
+└── ops/                            ← Global quality gate scripts
+    ├── check.sh                    ← Full monorepo quality gate
+    └── generate_tree.py            ← Workspace tree generator utility
 ```
 
 ---
 
-## Design Decisions (Summary)
+## Design Decisions
 
 ### Why `open-claw-sandbox/` is NOT inside `apps/`
 
-§11.2 of CODING_GUIDELINES_FINAL recommends an `apps/` directory for independently runnable subsystems. However, `open-claw-sandbox/` is placed directly at the monorepo root because:
-
-1. It is the **only** application in this monorepo (no sibling apps)
-2. It contains its own mature internal structure (`core/`, `skills/`, `memory/`, `ops/`)
-3. Adding an `apps/` wrapper adds indirection with no benefit at this scale
-4. `WORKSPACE_DIR` environment variables already point directly to the sandbox
+1. It is the **only** application in this monorepo (no sibling apps).
+2. It contains its own mature internal structure (`core/`, `skills/`, `ops/`, `tests/`).
+3. Adding an `apps/` wrapper adds indirection with no benefit at this scale.
+4. `WORKSPACE_DIR` environment variables already point directly to the sandbox.
 
 **If a second application is added in the future**, create `apps/` and move both into it at that time.
 
@@ -59,10 +69,23 @@ Open WebUI Pipelines is infrastructure (a plugin runner for the LLM proxy), not 
 
 ### Strict Extraction vs Processing Boundaries
 
-Skills are strictly divided into **Extraction** and **Processing** layers.
-- **Extraction Skills** (`audio-transcriber`, `doc-parser`): Responsible ONLY for generating high-fidelity Markdown from raw files. They must not perform summarization, highlighting, or formatting.
+Skills are strictly divided into **Extraction** and **Processing** layers:
+
+- **Extraction Skills** (`audio-transcriber`, `doc-parser`): Responsible ONLY for generating high-fidelity Markdown from raw files. They must not perform summarisation, highlighting, or formatting.
 - **Processing Skills** (`smart_highlighter`, `note_generator`): Responsible for taking raw Markdown and applying stylistic highlights, generating Cornell notes, or mapping core concepts.
 - **I/O Routing**: The `inbox_daemon` routes files purely by extension into a skill's `input/` directory. Direct writing to another skill's `output/` directory is strictly forbidden.
+
+### `core/` Sub-Package Refactoring (2026-05-01)
+
+The `core/` directory was refactored from a flat module into domain-specific sub-packages to enforce high cohesion and single responsibility. **All imports must use the full sub-package path:**
+
+| Old (broken) | New (correct) |
+|---|---|
+| `from core.atomic_writer import AtomicWriter` | `from core.utils.atomic_writer import AtomicWriter` |
+| `from core.pipeline_base import PipelineBase` | `from core.orchestration.pipeline_base import PipelineBase` |
+| `from core.state_manager import StateManager` | `from core.state.state_manager import StateManager` |
+| `from core.llm_client import OllamaClient` | `from core.ai.llm_client import OllamaClient` |
+| `from core.inbox_daemon import SystemInboxDaemon` | `from core.services.inbox_daemon import SystemInboxDaemon` |
 
 ---
 
@@ -74,9 +97,8 @@ Skills are strictly divided into **Extraction** and **Processing** layers.
 | LiteLLM Proxy | 4000 | `infra/litellm/` | `infra/scripts/start.sh` |
 | Open WebUI | 3000 | `infra/open-webui/` | `infra/scripts/start.sh` |
 | Pipelines | 9099 | `infra/pipelines/` | `infra/scripts/start.sh` |
-| Open Claw Dashboard | 5001 | `open-claw-sandbox/core/web_ui/` | `infra/scripts/start.sh` |
-| Inbox Daemon | — | `open-claw-sandbox/core/inbox_daemon.py` | `infra/scripts/start.sh` |
-| Watchdog (RAM guard) | — | `infra/scripts/watchdog.sh` | `infra/scripts/start.sh` |
+| Inbox Daemon | — | `open-claw-sandbox/core/services/inbox_daemon.py` | `infra/scripts/start.sh` |
+| RAM Watchdog | — | `infra/scripts/watchdog.sh` | `infra/scripts/start.sh` |
 
 ---
 
@@ -84,7 +106,124 @@ Skills are strictly divided into **Extraction** and **Processing** layers.
 
 | Agent starting point | When to use |
 |---|---|
-| `memory/ARCHITECTURE.md` (this file) | Understanding the whole monorepo |
-| `open-claw-sandbox/memory/CLAUDE.md` | Working inside the sandbox |
+| `memory/ARCHITECTURE.md` (this file) | Understanding the entire monorepo |
+| `docs/INDEX.md` | Navigating to any skill or global doc |
 | `open-claw-sandbox/AGENTS.md` | Sandbox rules and behaviour contract |
-| `docs/CODING_GUIDELINES_FINAL.md` | Development standards |
+| `docs/CODING_GUIDELINES_FINAL.md` | Engineering development standards |
+
+---
+
+## Core Framework (`core/`) Sub-Module Reference
+
+| Sub-package | Module | Responsibility |
+|---|---|---|
+| `core/orchestration/` | `pipeline_base.py` | Abstract base class for all skill phases |
+| `core/orchestration/` | `task_queue.py` | Single-threaded LocalTaskQueue with DLQ quarantine |
+| `core/orchestration/` | `run_all_pipelines.py` | PID-locked global pipeline orchestrator |
+| `core/orchestration/` | `router_agent.py` | LLM intent decomposition and DAG routing |
+| `core/orchestration/` | `event_bus.py` | Publish-subscribe event bus |
+| `core/state/` | `state_manager.py` | Per-file per-phase state persistence (atomic JSON) |
+| `core/state/` | `resume_manager.py` | Mid-run checkpoint save and restore |
+| `core/state/` | `session_state.py` | Volatile per-session state |
+| `core/utils/` | `atomic_writer.py` | Crash-safe file writes via `tempfile + os.replace()` |
+| `core/utils/` | `path_builder.py` | Canonical data path resolution from `WORKSPACE_DIR` |
+| `core/utils/` | `log_manager.py` | Structured logger factory with JSON mode |
+| `core/utils/` | `bootstrap.py` | Locates `core/` and inserts into `sys.path` (idempotent) |
+| `core/utils/` | `diff_engine.py` | Audit diff generation for content integrity checks |
+| `core/utils/` | `error_classifier.py` | Exception classification (recoverable / fatal / user-error) |
+| `core/ai/` | `llm_client.py` | Ollama/LM Studio client with exponential-backoff retry |
+| `core/ai/` | `hybrid_retriever.py` | RAG retrieval combining vector + keyword search |
+| `core/ai/` | `graph_store.py` | Knowledge graph persistence and query |
+| `core/config/` | `config_manager.py` | YAML config loading with environment override |
+| `core/config/` | `config_validation.py` | Pydantic-based config schema validation |
+| `core/cli/` | `cli.py` | Shared `argparse` factory for all skills |
+| `core/cli/` | `cli_runner.py` | Subprocess command builders for all skills |
+| `core/services/` | `inbox_daemon.py` | Watchdog daemon for universal inbox monitoring |
+| `core/services/` | `security_manager.py` | PDF sanitisation and path-traversal prevention |
+| `core/services/` | `telegram_bot.py` | Telegram bot long-polling daemon |
+
+---
+
+## Skill Ecosystem
+
+The 9 production skills form a complete knowledge production pipeline:
+
+```
+Human / Telegram
+    │
+    ▼
+data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
+    │
+    ├──► inbox_daemon.py      ← Routes by file extension
+    │         │
+    │    ┌────┴─────────────────────────────┐
+    │    │                                  │
+    │    ▼                                  ▼
+    │  audio-transcriber/input/       doc-parser/input/
+    │    │  (6-phase pipeline)          │  (7-phase pipeline)
+    │    │  P0: Glossary               │  P00a: Diagnostic
+    │    │  P1: MLX-Whisper            │  P01a: Docling extract
+    │    │  P2: Proofread              │  P01b: Vector charts
+    │    │  P3: Merge                  │  P01c: OCR gate
+    │    │  P4: Highlight ──────────► smart_highlighter
+    │    │  P5: Synthesis ──────────► note_generator
+    │    └────────────────┐           └──────────────────┐
+    │                     ▼                              ▼
+    │                  data/wiki/<Subject>/  ←────────────
+    │                     │  (Obsidian Vault)
+    │                     │
+    │    ┌────────────────┤────────────────────────────┐
+    │    │                │                            │
+    │    ▼                ▼                            ▼
+    │  knowledge-     interactive-reader/          ChromaDB
+    │  compiler/      note_generator/              (indexed by
+    │                 smart_highlighter/           telegram-kb-agent)
+    │                                                   │
+    │                                          telegram-kb-agent/
+    │                                          academic-edu-assistant/
+    │                                                   │
+    └───────────────────────────────────────────────────┘
+                            │
+                    Telegram / Open WebUI
+```
+
+---
+
+## Key Environment Variables
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `WORKSPACE_DIR` | Root of `open-claw-sandbox/` | auto-detected via `bootstrap.py` |
+| `HF_HOME` | Hugging Face model cache | `open-claw-sandbox/models/` |
+| `OLLAMA_HOST` | Ollama server URL | `http://localhost:11434` |
+| `OLLAMA_API_URL` | Full generate endpoint | `http://localhost:11434/api/generate` |
+| `OPENCLAW_API_URL` | Open Claw intent engine | `http://127.0.0.1:18789` |
+| `OPENCLAW_LOG_JSON` | Enable JSON structured logging | `0` (disabled) |
+
+---
+
+## Resilience Properties
+
+| Property | Implementation |
+|---|---|
+| **Idempotency** | `StateManager` tracks per-file per-phase status; completed phases are skipped unless `--force` is passed |
+| **Crash safety** | All file writes use `AtomicWriter` (`tempfile` + `os.replace()`); partial writes never corrupt state |
+| **LLM timeout** | `OllamaClient` enforces 600 s read timeout + 3-attempt exponential-backoff retry |
+| **OOM prevention** | `PipelineBase.check_system_health()` monitors RSS + swap; pauses pipeline if thresholds exceeded |
+| **Single-threaded execution** | `LocalTaskQueue` serialises all skill invocations; eliminates concurrent OOM risk |
+| **Import isolation** | `core/utils/bootstrap.py` walks directory tree upward to locate `core/`; path inserted once (idempotent) |
+
+---
+
+## Historical Architectural Evolution
+
+> The following milestones represent critical paradigm shifts implemented to harden the Open Claw ecosystem for production-grade robustness.
+
+- **OOM Defense & RAM Guard** (2026-04): Addressed Ollama-induced OOM crashes by implementing explicit model unloading (`keep_alive=0`), governing context windows, and deploying a RAM Guard that throttles tasks when available memory drops below 15%.
+- **Non-blocking Task Queue** (2026-04): Refactored to a single-threaded `LocalTaskQueue` with DLQ quarantine and 7200s timeout bounds, eliminating concurrent-execution OOM risks.
+- **Audio-Transcriber Anti-Hallucination Pipeline** (2026-04): Established three-tier defense (Native API constraints, VAD pre-processing, Repetition Detection) and multi-clip majority-vote language detection.
+- **Strict Sandboxed Routing & Decoupling** (2026-04): Remediated I/O data leakage in `inbox_daemon.py`; decoupled synthesis logic into `note_generator` and `smart_highlighter` standalone skills.
+- **Bidirectional Knowledge Ecosystem** (2026-04): Formalised integration pipeline with Open WebUI and Obsidian for local-first knowledge extraction and retrieval.
+- **WebUI to CLI Convergence** (2026-04): Achieved functional parity between WebUI and CLI; deprecated Flask web_ui in favour of pure-CLI autonomous operations.
+- **SSoT Documentation Consolidation** (2026-04): Merged all fragmented docs into root `docs/` and `memory/` directories as the single source of truth.
+- **`core/` Sub-Package Refactoring** (2026-05-01): Migrated `core/` from a flat module to domain sub-packages (`ai/`, `cli/`, `config/`, `orchestration/`, `services/`, `state/`, `utils/`) and fixed all import paths across the entire codebase.

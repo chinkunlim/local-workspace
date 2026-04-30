@@ -13,8 +13,8 @@ _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(_
 if _workspace_root not in sys.path:
     sys.path.insert(0, _workspace_root)
 
-from core.path_builder import PathBuilder
-from core.state_manager import StateManager
+from core.state.state_manager import StateManager
+from core.utils.path_builder import PathBuilder
 
 
 def get_full_status_report() -> str:

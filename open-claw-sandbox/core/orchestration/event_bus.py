@@ -16,7 +16,7 @@ Lifecycle:
 
 Example:
     # Publishing (in p02_proofread.py after final write):
-    from core.event_bus import DomainEvent, EventBus
+    from core.orchestration.event_bus import DomainEvent, EventBus
     EventBus.publish(DomainEvent(
         name="ProofreadCompleted",
         source_skill="audio-transcriber",
@@ -24,7 +24,7 @@ Example:
     ))
 
     # Subscribing (in note_generator/manifest.py):
-    from core.event_bus import EventBus
+    from core.orchestration.event_bus import EventBus
     EventBus.subscribe("ProofreadCompleted", my_handler)
 """
 

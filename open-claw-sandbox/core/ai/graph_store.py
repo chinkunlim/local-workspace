@@ -15,7 +15,7 @@ The active backend is selected at runtime from config.yaml:
       persist_path: "state/graph.gpickle"   # for NetworkX backend
 
 Usage:
-    from core.graph_store import get_graph_store
+    from core.ai.graph_store import get_graph_store
     gs = get_graph_store(workspace_root, skill_name="knowledge-compiler")
 
     gs.upsert_entity("認知心理學", labels=["Concept", "Psychology"], props={"source": "notes.md"})
@@ -288,7 +288,7 @@ def get_graph_store(workspace_root: str, skill_name: str = "knowledge-compiler")
     import sys
 
     sys.path.insert(0, workspace_root)
-    from core.config_manager import ConfigManager  # type: ignore[import]
+    from core.config.config_manager import ConfigManager  # type: ignore[import]
 
     cfg_mgr = ConfigManager(workspace_root, skill_name)
     graph_cfg: Dict[str, Any] = cfg_mgr.get_section("graph") or {}

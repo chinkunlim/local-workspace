@@ -1,7 +1,7 @@
 import json
 import os
 
-from core.resume_manager import ResumeManager
+from core.state.resume_manager import ResumeManager
 
 
 def test_resume_manager_lifecycle(tmp_workspace):

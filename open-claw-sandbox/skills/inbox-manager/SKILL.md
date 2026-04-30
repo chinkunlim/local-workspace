@@ -28,26 +28,27 @@ All rules live in `core/inbox_config.json`. This skill provides a clean CLI inte
 
 ```bash
 # Show all current routing rules
-python skills/inbox-manager/scripts/query.py --list
+python3 skills/inbox-manager/scripts/query.py --list
 
 # Add a new audio_ref pattern
-python skills/inbox-manager/scripts/query.py --add "_ppt" --routing audio_ref --description "PowerPoint slides"
+python3 skills/inbox-manager/scripts/query.py --add "_ppt" --routing audio_ref --description "PowerPoint slides"
 
 # Add a 'both' pattern (doc-parser + audio ref)
-python skills/inbox-manager/scripts/query.py --add "_units" --routing both --description "Course units"
+python3 skills/inbox-manager/scripts/query.py --add "_units" --routing both --description "Course units"
 
 # Remove a pattern
-python skills/inbox-manager/scripts/query.py --remove "_ppt"
+python3 skills/inbox-manager/scripts/query.py --remove "_ppt"
 ```
 
 ## Routing Modes
 
 | Mode | Behaviour |
 |---|---|
-| `audio_ref` | PDF sent to audio-transcriber as proofreading reference |
-| `doc_parser` | PDF sent to doc-parser for full Markdown parsing |
+| `audio_ref` | PDF sent to audio-transcriber as a proofreading reference only |
+| `doc_parser` | PDF sent to doc-parser for full Markdown extraction |
 | `both` | PDF copied to BOTH destinations simultaneously |
 
-## 全域標準化
+## Global Standards
 
-- **全域標準化介面 (Global Standardization)**: 採用統一的 CLI 狀態與 DAG 追蹤面板 (`📊 收件匣管理狀態與 DAG 追蹤面板`)，支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷保護。
+- **Unified CLI Interface**: Supports the standard DAG status tracking panel and `KeyboardInterrupt` graceful shutdown.
+- macOS native notifications (`osascript`) on completion.

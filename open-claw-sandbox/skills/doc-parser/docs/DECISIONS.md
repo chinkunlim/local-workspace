@@ -91,3 +91,24 @@
 **Context**: Running Tesseract on a digital-born PDF adds 30–120 seconds per page with zero benefit — Docling handles digital text extraction perfectly. Universally applying OCR would make the pipeline impractically slow.
 
 **Chosen approach**: Phase 0a classifies PDFs as `digital` or `scan` based on character density of the first page. Only `scan` PDFs proceed to Phase 1c. Digital PDFs skip directly to Phase 1d.
+
+---
+
+## [Legacy: 2026-04-13] `pdf-knowledge` v2.1 Architectural Decisions
+
+*Note: The following decisions were made during the `pdf-knowledge` v2.1 era before the skill was refactored and renamed to `doc-parser`. They are preserved here for historical context.*
+
+### PK-001: Execute lightweight diagnostic before deep extraction
+**Decision**: Execute lightweight diagnostic before deep extraction.
+**Rationale**: Catch malformed, encrypted, or low-value cases before expensive processing.
+**Impact**: Lower resource waste and earlier failure transparency. (Currently implemented as Phase 00a Diagnostic).
+
+### PK-002: Add vector chart supplementation path
+**Decision**: Add vector chart supplementation path.
+**Rationale**: Standard image extraction misses vector-only charts in many papers.
+**Impact**: Better chart coverage and downstream analysis quality. (Largely superseded by Docling's native figure detection).
+
+### PK-003: Add OCR confidence scoring pass
+**Decision**: Add OCR confidence scoring pass.
+**Rationale**: OCR uncertainty must be visible to operators and later synthesis steps.
+**Impact**: Clear low-confidence page signaling and reduced silent corruption risk.

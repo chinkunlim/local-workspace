@@ -17,7 +17,7 @@ _workspace_root = os.environ.get(
     "WORKSPACE_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 
-from core.path_builder import PathBuilder
+from core.utils.path_builder import PathBuilder
 
 
 def load_config(config_file):

@@ -41,7 +41,7 @@ class HybridRetriever:
         import sys
 
         sys.path.insert(0, workspace_root)
-        from core.config_manager import ConfigManager  # type: ignore[import]
+        from core.config.config_manager import ConfigManager  # type: ignore[import]
 
         cfg = ConfigManager(workspace_root, skill_name)
         hr = cfg.get_section("hybrid_retriever") or {}
@@ -77,14 +77,14 @@ class HybridRetriever:
 
     def _get_graph(self):
         if self._graph_store is None:
-            from core.graph_store import get_graph_store  # type: ignore[import]
+            from core.ai.graph_store import get_graph_store  # type: ignore[import]
 
             self._graph_store = get_graph_store(self.workspace_root, self.skill_name)
         return self._graph_store
 
     def _get_llm(self):
         if self._llm is None:
-            from core.llm_client import OllamaClient  # type: ignore[import]
+            from core.ai.llm_client import OllamaClient  # type: ignore[import]
 
             self._llm = OllamaClient(api_url=self._ollama_url)
         return self._llm

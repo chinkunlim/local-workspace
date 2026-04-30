@@ -31,8 +31,10 @@ import uuid
 # Exceptions
 # ---------------------------------------------------------------------------
 
+
 class HITLPendingInterrupt(Exception):  # noqa: N818
     """Raised when a HITL event is triggered, pausing pipeline execution."""
+
     def __init__(self, trace_id: str, message: str):
         super().__init__(message)
         self.trace_id = trace_id
@@ -125,7 +127,6 @@ class HITLManager:
                 pass  # HITL notification must never crash the pipeline
 
         raise HITLPendingInterrupt(event.trace_id, f"HITL event triggered: {event.trace_id}")
-
 
     def resolve(self, trace_id: str, resolution: str) -> Optional[Dict]:
         """Mark a pending event as resolved and return the session snapshot.

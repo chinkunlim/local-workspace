@@ -2,12 +2,12 @@ import json
 import os
 
 # Internal Core Bootstrap
-from core.bootstrap import ensure_core_path as _bootstrap
+from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
-from core.file_utils import encode_image_b64  # S3: DRY — replaces private _encode_image()
+from core.utils.file_utils import encode_image_b64  # S3: DRY — replaces private _encode_image()
 
 
 class Phase1dVLMVision(PipelineBase):
@@ -165,12 +165,17 @@ class Phase1dVLMVision(PipelineBase):
                         return idx, cols_list
 
                 async def _run_all():
-                    semaphore = asyncio.Semaphore(2)  # Max 2 concurrent VLM requests to avoid VRAM OOM
+                    semaphore = asyncio.Semaphore(
+                        2
+                    )  # Max 2 concurrent VLM requests to avoid VRAM OOM
+
                     async def _bounded_process(*args):
                         async with semaphore:
                             return await _process_img(*args)
 
-                    tasks = [_bounded_process(i, rel, cols, b64) for i, rel, cols, b64 in pending_tasks]
+                    tasks = [
+                        _bounded_process(i, rel, cols, b64) for i, rel, cols, b64 in pending_tasks
+                    ]
                     return await asyncio.gather(*tasks)
 
                 results = asyncio.run(_run_all())
@@ -188,7 +193,6 @@ class Phase1dVLMVision(PipelineBase):
             return True
         finally:
             self.llm.unload_model(self.vlm_model, logger=self)
-
 
 
 if __name__ == "__main__":

@@ -40,9 +40,9 @@ A synthesized Markdown note including:
 ## Map-Reduce Strategy
 
 If the input length exceeds `chunk_threshold` (e.g., 6000 chars), the skill
-automatically falls back to a Map-Reduce strategy:
-1. **Map**: split input into chunks, run `Phase 5 Part A: 分塊摘要提取指令` on each.
-2. **Reduce**: combine all chunk summaries, run `Phase 5: 筆記合成指令`.
+automatically switches to a Map-Reduce strategy:
+1. **Map**: Split input into chunks and extract key points from each.
+2. **Reduce**: Combine all chunk summaries into a final unified note.
 
 ## Agentic Mermaid Retry
 
@@ -58,7 +58,7 @@ to the LLM and asks it to correct the code (up to `mermaid_retry_max` times).
 | `chunk_threshold` | Max input size before switching to Map-Reduce |
 | `map_chunk_size` | Size of chunks during the Map phase |
 | `mermaid_retry_max` | Maximum LLM correction loops for broken Mermaid syntax |
-| `content_loss_threshold`| Guard: minimum output/input size ratio (e.g. 0.01) |
+| `content_loss_threshold` | Guard: minimum output/input size ratio (e.g. 0.01) |
 
 ## Consumer Skills
 
@@ -68,8 +68,10 @@ to the LLM and asks it to correct the code (up to `mermaid_retry_max` times).
 | `doc-parser` | P3 Synthesis | P2 Highlighted Markdown |
 
 ## Version
+
 - v1.0.0 — 2026-04-19: Extracted from audio-transcriber/p05 and doc-parser/p03
 
-## 全域標準化
+## Global Standards
 
-- **全域標準化介面 (Global Standardization)**: 採用統一的 CLI 狀態與 DAG 追蹤面板 (`📊 筆記生成狀態與 DAG 追蹤面板`)，支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷保護。
+- **Unified CLI Interface**: Supports the standard DAG status tracking panel and `KeyboardInterrupt` graceful shutdown.
+- macOS native notifications (`osascript`) on completion or error.

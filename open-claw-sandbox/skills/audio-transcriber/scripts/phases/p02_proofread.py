@@ -10,7 +10,7 @@ import sys
 
 # Group 2 — Internal Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.bootstrap import ensure_core_path as _bootstrap
+from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
@@ -19,7 +19,7 @@ from pypdf import PdfReader
 
 # Group 4 — Core imports
 from core import AtomicWriter, PipelineBase
-from core.text_utils import smart_split
+from core.utils.text_utils import smart_split
 
 
 class Phase2Proofread(PipelineBase):
@@ -143,8 +143,8 @@ class Phase2Proofread(PipelineBase):
                         "warn",
                     )
                     try:
-                        from core.hitl_manager import HITLEvent, HITLManager
-                        from core.telegram_bot import send_hitl_prompt
+                        from core.services.hitl_manager import HITLEvent, HITLManager
+                        from core.services.telegram_bot import send_hitl_prompt
 
                         hitl_mgr = HITLManager(base_dir=self.base_dir)
                         event = HITLEvent(

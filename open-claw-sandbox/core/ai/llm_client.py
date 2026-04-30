@@ -22,7 +22,7 @@ TimeoutType = Union[float, Tuple[float, float]]
 # Distributed Trace ID — Thread-local context variable (#12)
 # ---------------------------------------------------------------------------
 # Set this at the top of each orchestrator run_all.py invocation:
-#   from core.llm_client import TRACE_ID_VAR
+#   from core.ai.llm_client import TRACE_ID_VAR
 #   TRACE_ID_VAR.set(str(uuid.uuid4()))
 TRACE_ID_VAR: contextvars.ContextVar[str] = contextvars.ContextVar("openclaw_trace_id", default="")
 
@@ -156,7 +156,9 @@ class OllamaClient:
 
                 if risk_score > 0.8:
                     if logger:
-                        logger.error(f"{trace_pfx}🚨 LLMGuard 攔截到潛在的 Prompt Injection 攻擊！(風險值: {risk_score:.2f})")
+                        logger.error(
+                            f"{trace_pfx}🚨 LLMGuard 攔截到潛在的 Prompt Injection 攻擊！(風險值: {risk_score:.2f})"
+                        )
                     raise ValueError(f"Prompt injection detected (Risk: {risk_score:.2f})")
             except ImportError:
                 if logger:
@@ -249,7 +251,7 @@ class OllamaClient:
     @retry(
         wait=wait_exponential(multiplier=1, min=2, max=10),
         stop=stop_after_attempt(3),
-        retry=retry_if_exception_type((aiohttp.ClientError, TimeoutError, ValueError))
+        retry=retry_if_exception_type((aiohttp.ClientError, TimeoutError, ValueError)),
     )
     async def async_generate(
         self,
@@ -299,7 +301,9 @@ class OllamaClient:
 
                 if risk_score > 0.8:
                     if logger:
-                        logger.error(f"{trace_pfx}🚨 LLMGuard 攔截到潛在的 Prompt Injection 攻擊！(風險值: {risk_score:.2f})")
+                        logger.error(
+                            f"{trace_pfx}🚨 LLMGuard 攔截到潛在的 Prompt Injection 攻擊！(風險值: {risk_score:.2f})"
+                        )
                     raise ValueError(f"Prompt injection detected (Risk: {risk_score:.2f})")
             except ImportError:
                 if logger:
@@ -315,7 +319,9 @@ class OllamaClient:
                     _resp_json = await res.json()
 
                     if is_openai:
-                        response_text = _resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        response_text = (
+                            _resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        )
                         _token_count = _resp_json.get("usage", {}).get("completion_tokens", 0)
                     else:
                         response_text = _resp_json.get("response", "")
@@ -339,7 +345,9 @@ class OllamaClient:
                 if self._consecutive_failures >= self.CIRCUIT_BREAKER_THRESHOLD:
                     self._circuit_open = True
                     if logger:
-                        logger.error(f"{trace_pfx}⚡ Circuit Breaker 已開路！自動切換至 {self.fallback_model}")
+                        logger.error(
+                            f"{trace_pfx}⚡ Circuit Breaker 已開路！自動切換至 {self.fallback_model}"
+                        )
                 if logger:
                     logger.warning(f"{trace_pfx}LLM API 請求失敗 ({e})，觸發 Tenacity 退避重試...")
                 raise e

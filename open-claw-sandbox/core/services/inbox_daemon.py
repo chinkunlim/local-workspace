@@ -19,10 +19,10 @@ import os
 import sys
 import threading
 import time
-from typing import Dict
+from typing import Any, Dict, List, Optional
 
-from core.cli_runner import SkillRunner
-from core.task_queue import task_queue
+from core.cli.cli_runner import SkillRunner
+from core.orchestration.task_queue import task_queue
 
 # Path Resolution
 _core_dir = os.path.dirname(os.path.abspath(__file__))
@@ -31,7 +31,7 @@ _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.dirname(_core_dir))
 if _workspace_root not in sys.path:
     sys.path.insert(0, _workspace_root)
 
-from core.atomic_writer import AtomicWriter
+from core.utils.atomic_writer import AtomicWriter
 
 _logger = logging.getLogger("OpenClaw.InboxDaemon")
 if not _logger.handlers:
@@ -46,8 +46,8 @@ _POLL_INTERVAL_SEC = 2.0
 
 
 class SystemInboxDaemon:
-    def __init__(self):
-        self._observer = None
+    def __init__(self) -> None:
+        self._observer: Optional[Any] = None
         self._debounce_events: Dict[str, threading.Event] = {}
         self._lock = threading.Lock()
         # B-2 Fix: track files already dispatched to prevent dual-trigger
@@ -61,9 +61,9 @@ class SystemInboxDaemon:
         self.config_path = os.path.join(_core_dir, "inbox_config.json")
         self._load_config()
 
-    def _load_config(self):
+    def _load_config(self) -> None:
         self.routing_rules = {}
-        self.pdf_routing_rules = []  # list of {pattern, routing}
+        self.pdf_routing_rules: List[Dict[str, str]] = []  # list of {pattern, routing}
         if os.path.exists(self.config_path):
             try:
                 with open(self.config_path, encoding="utf-8") as f:
@@ -138,7 +138,7 @@ class SystemInboxDaemon:
                 filepath = os.path.join(root, filename)
                 self._process_file(filepath)
 
-    def start(self):
+    def start(self) -> None:
         try:
             from watchdog.events import FileSystemEventHandler
             from watchdog.observers import Observer

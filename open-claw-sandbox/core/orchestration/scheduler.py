@@ -14,7 +14,7 @@ Design:
   - bot_daemon.py exposes /schedule add|list|remove commands that delegate here.
 
 Usage:
-    from core.scheduler import scheduler
+    from core.orchestration.scheduler import scheduler
 
     # Add a daily RSS ingest job at 07:00
     scheduler.add_job(
@@ -109,7 +109,7 @@ class OpenClawScheduler:
 
     def _save_jobs(self) -> None:
         """Atomically persist all job records."""
-        from core.atomic_writer import AtomicWriter
+        from core.utils.atomic_writer import AtomicWriter
 
         payload = {
             "_schema_version": _JOBS_SCHEMA_VERSION,

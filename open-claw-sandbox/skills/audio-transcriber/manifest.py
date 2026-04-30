@@ -16,7 +16,7 @@ import sys
 # Ensure core is importable from the manifest context
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from core.skill_registry import SkillManifest
+from core.orchestration.skill_registry import SkillManifest
 
 
 def _run(**kwargs):

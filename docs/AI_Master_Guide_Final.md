@@ -29,14 +29,14 @@ Given the severe VRAM/RAM constraints of running local LLMs alongside heavy extr
 
 | Section                            | Change                                                                                      |
 | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| **open-claw-sandbox 架構**       | ✅ **UPDATED** — 完整重構：新增 `core/` 共享框架、`skills/` 技能目錄、`data/` 運行時資料分離 |
-| **Voice-Memo Pipeline (Part 11)**  | ✅ **UPDATED** — V3.6.1 → 現行版本：6 個 Phase (P0–P5)，MLX-Whisper，非 Docker 執行          |
-| **PDF Knowledge Skill (Part 11b)** | ✅ **ADDED** — 全新技能：7 個 Phase，Docling 深度提取 + VLM 圖像分析                         |
-| **Open Claw Dashboard (Part 10)**  | ✅ **ADDED** — Flask Web UI (port 5001)，含 Review Board 差異比對                            |
-| **Inbox Daemon (Part 10)**         | ✅ **ADDED** — 自動監聽 Inbox，有新檔案即觸發流水線                                          |
-| **start.sh / stop.sh**             | ✅ **UPDATED** — 現在啟動 7 個服務（含 Dashboard + Inbox Daemon）                            |
-| **watchdog.sh**                    | ✅ **UPDATED** — 支援多模型同時卸載 + Speculative pages 計算                                 |
-| **系統架構圖**                     | ✅ **UPDATED** — 新增 Open Claw Dashboard 層                                                 |
+| **open-claw-sandbox Architecture**       | ✅ **UPDATED** — Full refactor: added `core/` framework, `skills/` directory, `data/` runtime dataSeparation |
+| **Voice-Memo Pipeline (Part 11)**  | ✅ **UPDATED** — V3.6.1 → Current version: 6 Phases (P0-P5), MLX-Whisper, non-Docker execution Docker Execution          |
+| **PDF Knowledge Skill (Part 11b)** | ✅ **ADDED** — New skill: 7 Phases, Docling deep extraction + VLM image analysis                         |
+| **Open Claw Dashboard (Part 10)**  | ✅ **ADDED** — Flask Web UI (port 5001), including Review Board diff comparison                            |
+| **Inbox Daemon (Part 10)**         | ✅ **ADDED** — Auto-watches Inbox, triggers pipeline on new files                                          |
+| **start.sh / stop.sh**             | ✅ **UPDATED** — Now starts 7 services (including Dashboard + Inbox Daemon)                            |
+| **watchdog.sh**                    | ✅ **UPDATED** — Supports multi-model unload + Speculative pages calculation                                 |
+| **SystemArchitecture Diagram**                     | ✅ **UPDATED** — Added Open Claw Dashboard layer                                                 |
 
 ---
 
@@ -52,12 +52,12 @@ Watchdog:           .../local-workspace/watchdog.sh        (logs → logs/ram_wa
 Open Claw API:      openclaw gateway · port 18789
 Open Claw Dashboard:.../open-claw-sandbox/core/web_ui/   · port 5001
 Open Claw Workspace:.../local-workspace/open-claw-sandbox/
-  ├── core/         共享框架（所有 skills 共用）
+  ├── core/         Shared framework (shared by all skills)
   ├── skills/
-  │   ├── voice-memo/   🎙️ M4A → Notion Markdown（6 Phases）
-  │   └── pdf-knowledge/ 📄 PDF → Markdown KB（7 Phases）
-  ├── data/         運行時資料（不進 git）
-  └── models/       HuggingFace 模型快取
+  │   ├── audio-transcriber/   🎙️ M4A → Notion Markdown（6 Phases）
+  │   └── doc-parser/ 📄 PDF → Markdown KB（7 Phases）
+  ├── data/         Runtime data (excluded from git)
+  └── models/       HuggingFace model cache
 All venvs use uv, not pip. Always activate: source .venv/bin/activate
 Python dependencies: pip3 install -r open-claw-sandbox/ops/requirements.txt
 ```
@@ -87,7 +87,7 @@ Python dependencies: pip3 install -r open-claw-sandbox/ops/requirements.txt
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  LAYER 6 — SKILLS (open-claw-sandbox)                  │
-│  voice-memo (P0–P5) · pdf-knowledge (P0a–P3)             │
+│  audio-transcriber (P0–P5) · doc-parser (P0a–P3)             │
 │  core/ shared framework · Dashboard :5001                │
 │  Inbox Daemon · Review Board (diff UI)                   │
 ├──────────────────────────────────────────────────────────┤
@@ -118,7 +118,7 @@ Python dependencies: pip3 install -r open-claw-sandbox/ops/requirements.txt
 | Open WebUI                   | Router / Command centre — all models in one UI          |
 | LiteLLM                      | API gateway — 3 Gemini accounts as one endpoint         |
 | Cline + MCP Servers          | Agentic execution — file system, GitHub, Docker         |
-| open-claw-sandbox          | Skill sandbox — voice-memo + pdf-knowledge pipelines    |
+| open-claw-sandbox          | Skill sandbox — audio-transcriber + doc-parser pipelines    |
 | core/ framework              | Shared modules: PipelineBase, StateManager, DiffEngine… |
 | Open Claw Dashboard          | Web UI :5001 — status, live logs, Review Board diff     |
 | Inbox Daemon                 | Auto-trigger pipelines when new files appear in Inbox   |
@@ -163,15 +163,15 @@ ollama ps
 | `qwen3.5:9b`       | Multilingual dialogue                         | ~6GB  |
 
 ```bash
-# Pull all models (完整指令，確保抓取最新版本)
+# Pull all models (Full command, ensures fetching latest version)
 ollama pull qwen2.5-coder:7b
 ollama pull deepseek-r1:8b
 ollama pull gemma3:12b
 ollama pull deepseek-r1:14b
 ollama pull qwen3.5:9b
 
-# 如果需要下載特定量化版本 (GGUF)，請手動透過 huggingface-cli 下載並建立 Modelfile
-# 例如: huggingface-cli download unsloth/DeepSeek-R1-GGUF --include "*Q4_K_M.gguf"
+# If you need a specific quantised version (GGUF), download via huggingface-cli manually and create Modelfile
+# Example: huggingface-cli download unsloth/DeepSeek-R1-GGUF --include "*Q4_K_M.gguf"
 ```
 
 # Verify
@@ -275,7 +275,7 @@ curl http://localhost:1234/v1/models
 
 ```bash
 # ==========================================
-# 方案 A：使用 uvx 直接啟動 (推薦給 macOS 本地環境)
+# Option A: Start directly with uvx (Recommended for macOS local env)
 # ==========================================
 # Install uv first (if not installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -292,9 +292,9 @@ DATA_DIR=/Users/limchinkun/Desktop/local-workspace/open-webui \
 # Open WebUI runs on http://localhost:8080
 
 # ==========================================
-# 方案 B：使用 Docker 部署 (若需容器化環境)
+# Option B: Deploy via Docker (If containerised env is needed)
 # ==========================================
-# 必須使用 --network host (Linux) 或正確映射 port 確保能連線至 localhost 的 Ollama
+# Must use --network host (Linux) or map ports correctly to reach localhost Ollama
 # docker run -d -p 8080:8080 --add-host=host.docker.internal:host-gateway \
 #   -v /Users/limchinkun/Desktop/local-workspace/open-webui:/app/backend/data \
 #   --name open-webui --restart always ghcr.io/open-webui/open-webui:main
@@ -349,9 +349,9 @@ uv pip install psutil
 
 ### 4.2 Start Pipelines Server
 
-> **🔗 infra/scripts/ 聯動機制**：在日常操作中，你不應該手動啟動 Pipeline。請一律使用 `infra/scripts/start.sh`，它會自動為 Pipeline 與所有基礎設施建立正確的背景執行緒與日誌綁定。
+> **🔗 infra/scripts/ Integration Mechanism**：In daily operations, you should not start Pipeline manually. Always use `infra/scripts/start.sh`，it automatically provisions Pipeline andall infrastructure establishes correct backgroundExecution threads and log binding。
 
-手動測試指令如下：
+Manual test commands are as follows:
 ```bash
 cd /Users/limchinkun/Desktop/local-workspace/pipelines
 source .venv/bin/activate
@@ -377,11 +377,11 @@ Save as `RAM_Safety_Guard.py`, place in `~/Desktop/local-workspace/pipelines/pip
 
 ```python
 """
-Open WebUI Pipeline: RAM Safety Guard (記憶體安全守衛)
-功能：在每次發送對話請求前，自動檢查 Mac 的可用實體記憶體 (RAM)。
-如果可用 RAM 低於設定的警戒值，且使用者選擇了重型模型，
-系統將自動攔截請求，並強制替換為輕量級的安全模型，防止系統卡死。
-環境依賴: uv pip install psutil
+Open WebUI Pipeline: RAM Safety Guard (Memory Safety Guard)
+Function: Automatically checks Mac's available physical memory (RAM) before sending conversation requests.
+If available RAM is below the warning threshold, and the user selected a heavy model,
+The system will automatically intercept the request and force a fallback to a lightweight safety model to prevent system freeze.
+Dependencies: uv pip install psutil
 """
 import psutil
 from typing import Optional
@@ -389,12 +389,12 @@ from pydantic import BaseModel, Field
 
 class Pipeline:
     """
-    核心管線類別。
-    注意：Open WebUI 強制要求主類別必須命名為 'Pipeline'，不可使用 'Filter'。
+    Core pipeline class.
+    Note: Open WebUI mandates the main class must be named 'Pipeline', cannot use 'Filter'.
     """
     class Valves(BaseModel):
-        ram_threshold_mb: int = Field(default=4000, description='低記憶體警戒值 (MB)')
-        safety_model: str = Field(default='qwen2.5-coder:7b', description='觸發警戒時的輕量替換模型')
+        ram_threshold_mb: int = Field(default=4000, description='Low memory warning threshold (MB)')
+        safety_model: str = Field(default='qwen2.5-coder:7b', description='Lightweight fallback model when warning triggered')
 
     def __init__(self):
         self.valves: self.Valves = self.Valves()
@@ -418,9 +418,9 @@ Save as `Gemini_Cost_Guard.py`:
 
 ```python
 """
-Open WebUI Pipeline: Gemini Cost Guard (API 額度守衛)
-功能：自動追蹤並限制每日 Gemini API 的呼叫次數。
-當日使用次數達到設定的上限（預設 270 次）時，系統將攔截請求並轉發給本地替換模型。
+Open WebUI Pipeline: Gemini Cost Guard (API Quota Guard)
+Function: Automatically tracks and limits daily Gemini API calls.
+When daily usage reaches the limit (default 270), the system intercepts and forwards to local fallback model.
 """
 import json
 import datetime
@@ -430,12 +430,12 @@ from pydantic import BaseModel, Field
 
 class Pipeline:
     class Valves(BaseModel):
-        daily_limit: int = Field(default=270, description='每日 Gemini API 請求上限')
-        safety_buffer: int = Field(default=30, description='保留的安全緩衝次數')
-        fallback_model: str = Field(default='qwen2.5-coder:7b', description='額度用盡時的替換模型')
+        daily_limit: int = Field(default=270, description='Daily Gemini API request limit')
+        safety_buffer: int = Field(default=30, description='Reserved safety buffer count')
+        fallback_model: str = Field(default='qwen2.5-coder:7b', description='Fallback model when quota is exhausted')
         quota_file_path: str = Field(
             default='/tmp/gemini_quota.json',  # /tmp works in Docker containers
-            description='配額追蹤 JSON 檔案路徑'
+            description='Quota tracking JSON file path'
         )
 
     def __init__(self):
@@ -673,7 +673,7 @@ mkdir -p ~/Desktop/local-workspace/project_dev/ai-infrastructure
 
 ## Preferences
 - Always explain before writing code
-- Functions max 30 lines · 程式碼優先 · 始終提寫測試
+- Functions max 30 lines · Code first · Always write tests
 - Ask before deleting
 - Use Traditional Chinese (繁體中文) for conversations
 
@@ -1003,7 +1003,7 @@ bash ~/Desktop/local-workspace/start.sh
 | 6    | **Open Claw Dashboard** *(NEW)* | **5001** | `python3 core/web_ui/app.py`; logs → `logs/dashboard.log`     |
 | 7    | **Inbox Daemon** *(NEW)*        | —        | `python3 core/inbox_daemon.py`; PID → `logs/inbox_daemon.pid` |
 
-> The Inbox Daemon auto-triggers voice-memo and pdf-knowledge pipelines when new files appear in their Inbox directories.
+> The Inbox Daemon auto-triggers audio-transcriber and doc-parser pipelines when new files appear in their Inbox directories.
 
 ### 10.2 Stop Script Key Actions
 
@@ -1164,7 +1164,7 @@ open-claw-sandbox/
 │   └── web_ui/app.py              # Flask Dashboard (port 5001)
 │
 ├── skills/
-│   └── voice-memo/
+│   └── audio-transcriber/
 │       ├── SKILL.md               # Quick-start reference
 │       ├── config/
 │       │   ├── config.yaml        # Model profiles, paths, hardware thresholds
@@ -1182,7 +1182,7 @@ open-claw-sandbox/
 │               ├── p04_highlight.py   # Phase 4: Key-concept highlighting
 │               └── p05_synthesis.py   # Phase 5: Notion-ready synthesis
 │
-└── data/voice-memo/               # Runtime data (auto-created, not in git)
+└── data/audio-transcriber/               # Runtime data (auto-created, not in git)
     ├── input/<subject>/*.m4a      # Drop audio files here
     ├── output/
     │   ├── 01_transcript/<subject>/
@@ -1210,7 +1210,7 @@ export WORKSPACE_DIR="/Users/limchinkun/Desktop/local-workspace/open-claw-sandbo
 export HF_HOME="${WORKSPACE_DIR}/models"
 
 # Smoke test
-python3 skills/voice-memo/scripts/run_all.py --help
+python3 skills/audio-transcriber/scripts/run_all.py --help
 ```
 
 ### 11.3 Execution Commands
@@ -1219,22 +1219,22 @@ python3 skills/voice-memo/scripts/run_all.py --help
 cd ~/Desktop/local-workspace/open-claw-sandbox
 
 # Run full pipeline (all subjects)
-python3 skills/voice-memo/scripts/run_all.py
+python3 skills/audio-transcriber/scripts/run_all.py
 
 # Process specific subject only
-python3 skills/voice-memo/scripts/run_all.py --subject 助人歷程
+python3 skills/audio-transcriber/scripts/run_all.py --subject helping-process
 
 # Resume from last checkpoint (after interruption)
-python3 skills/voice-memo/scripts/run_all.py --resume
+python3 skills/audio-transcriber/scripts/run_all.py --resume
 
 # Force re-run (overwrite completed phases)
-python3 skills/voice-memo/scripts/run_all.py --force
+python3 skills/audio-transcriber/scripts/run_all.py --force
 
 # Interactive model switching
-python3 core/cli_config_wizard.py --skill voice-memo
+python3 core/cli_config_wizard.py --skill audio-transcriber
 
 # Check progress
-cat data/voice-memo/state/checklist.md
+cat data/audio-transcriber/state/checklist.md
 
 # Open Review Board (diff UI in browser)
 open http://localhost:5001
@@ -1260,15 +1260,15 @@ open http://localhost:5001
 | ③ SHA-256 content audit            | Only reprocess if file content actually changed                           |
 | ④ Atomic state persistence         | Write to disk before updating checklist — no false positives              |
 | ⑤ config.yaml hot-switch           | Model profiles switchable without code changes                            |
-| ⑥ Unified state per skill          | `data/voice-memo/state/` — single source of truth                         |
+| ⑥ Unified state per skill          | `data/audio-transcriber/state/` — single source of truth                         |
 | ⑦ `{INPUT_CONTENT}` placeholder    | Injects transcript mid-prompt — counters Lost-in-the-Middle               |
 | ⑧ Flat instruction format          | Numbered top-level list + (DO NOT SKIP) — prevents Gemma3 skipping blocks |
 
 ### 11.6 Config File Location
 
-- **Main config**: `skills/voice-memo/config/config.yaml` — model profiles, paths, hardware thresholds
-- **LLM prompts**: `skills/voice-memo/config/prompt.md` — Phase 2–5 system prompts
-- **Model switch**: `python3 core/cli_config_wizard.py --skill voice-memo`
+- **Main config**: `skills/audio-transcriber/config/config.yaml` — model profiles, paths, hardware thresholds
+- **LLM prompts**: `skills/audio-transcriber/config/prompt.md` — Phase 2–5 system prompts
+- **Model switch**: `python3 core/cli_config_wizard.py --skill audio-transcriber`
 
 ### 11.7 Troubleshooting
 
@@ -1278,7 +1278,7 @@ open http://localhost:5001
 | Whisper model re-downloads         | Slow on every run                         | Confirm `HF_HOME` env var points to `models/`                                                 |
 | Phase 5 outputs "Okay, Here is..." | LLM conversational filler                 | Check `prompt.md` bottom has CRITICAL FORMAT REQUIREMENT                                      |
 | Phase 5 missing Cornell/Feynman    | Incomplete output                         | Ensure prompt list is numbered 1–7 top-level with (DO NOT SKIP)                               |
-| Config profile switch ineffective  | Still uses old model                      | Run: `python3 -c "import yaml; yaml.safe_load(open('skills/voice-memo/config/config.yaml'))"` |
+| Config profile switch ineffective  | Still uses old model                      | Run: `python3 -c "import yaml; yaml.safe_load(open('skills/audio-transcriber/config/config.yaml'))"` |
 | Checklist false positive ✅         | Status shows done but output is empty     | Edit `.pipeline_state.json` manually; set phase back to `pending`                             |
 
 ---
@@ -1295,11 +1295,11 @@ open http://localhost:5001
 ### 11b.2 Directory Structure
 
 ```
-skills/pdf-knowledge/
+skills/doc-parser/
 ├── SKILL.md
 ├── config/
 │   ├── config.yaml            # Paths, model profiles, OCR thresholds, chunk size
-│   ├── priority_terms.json    # Cross-skill terminology (shared with voice-memo)
+│   ├── priority_terms.json    # Cross-skill terminology (shared with audio-transcriber)
 │   ├── security_policy.yaml   # PDF security scanning rules
 │   └── selectors.yaml         # Data source selector configuration
 ├── docs/
@@ -1316,7 +1316,7 @@ skills/pdf-knowledge/
         ├── p02_highlight.py       # Phase 2: LLM Anti-Tampering highlights → highlighted.md
         └── p03_synthesis.py       # Phase 3: Map-Reduce synthesis → content.md
 
-data/pdf-knowledge/
+data/doc-parser/
 ├── input/<subject>/*.pdf          # Drop PDF files here (by subject)
 ├── output/
 │   ├── 02_Processed/<subject>/<id>/   # Docling extraction (IMMUTABLE — do not edit)
@@ -1347,22 +1347,22 @@ brew install poppler tesseract tesseract-lang
 cd ~/Desktop/local-workspace/open-claw-sandbox
 
 # Drop PDF into Inbox first:
-cp textbook.pdf data/pdf-knowledge/input/AI_Papers/
+cp textbook.pdf data/doc-parser/input/AI_Papers/
 
 # Run full pipeline
-python3 skills/pdf-knowledge/scripts/run_all.py
+python3 skills/doc-parser/scripts/run_all.py
 
 # Process specific subject only
-python3 skills/pdf-knowledge/scripts/run_all.py --subject AI_Papers
+python3 skills/doc-parser/scripts/run_all.py --subject AI_Papers
 
 # Interactive mode (pause after Phase 1d for human chart review)
-python3 skills/pdf-knowledge/scripts/run_all.py --interactive
+python3 skills/doc-parser/scripts/run_all.py --interactive
 
 # Interactive model switching
-python3 core/cli_config_wizard.py --skill pdf-knowledge
+python3 core/cli_config_wizard.py --skill doc-parser
 
 # Check progress
-cat data/pdf-knowledge/state/checklist.md
+cat data/doc-parser/state/checklist.md
 
 # Open Review Board
 open http://localhost:5001
@@ -1644,7 +1644,7 @@ These 30-second habits keep the entire system's memory intact forever.
 
 *AI Ecosystem Master Guide — Version 9*  
 *Updated from V8 · Reflects current production architecture (April 2026)*  
-*voice-memo skill (6 phases · MLX-Whisper) · pdf-knowledge skill (7 phases · Docling)*  
+*audio-transcriber skill (6 phases · MLX-Whisper) · doc-parser skill (7 phases · Docling)*  
 *core/ shared framework · Open Claw Dashboard :5001 · Inbox Daemon · 7-service start.sh*  
 *MacBook Pro M5 · 16GB RAM · April 2026*
 

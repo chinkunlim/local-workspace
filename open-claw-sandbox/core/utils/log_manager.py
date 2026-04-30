@@ -75,8 +75,10 @@ def build_logger(
         logger.addHandler(file_handler)
 
     if console:
+        stream_handler: logging.Handler
         try:
             from rich.logging import RichHandler
+
             stream_handler = RichHandler(rich_tracebacks=True, markup=True, show_time=False)
         except ImportError:
             stream_handler = logging.StreamHandler()

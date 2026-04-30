@@ -1,10 +1,10 @@
 import os
 from unittest.mock import patch
 
-from core.inbox_daemon import SystemInboxDaemon
+from core.services.inbox_daemon import SystemInboxDaemon
 
 
-@patch("core.inbox_daemon.SystemInboxDaemon._schedule_trigger")
+@patch("core.services.inbox_daemon.SystemInboxDaemon._schedule_trigger")
 def test_process_file_dedup(mock_schedule, tmp_workspace):
     daemon = SystemInboxDaemon()
 
@@ -26,8 +26,8 @@ def test_process_file_dedup(mock_schedule, tmp_workspace):
     assert mock_schedule.call_count == 1
 
 
-@patch("core.inbox_daemon.AtomicWriter.write_text")
-@patch("core.inbox_daemon.task_queue.enqueue")
+@patch("core.services.inbox_daemon.AtomicWriter.write_text")
+@patch("core.services.inbox_daemon.task_queue.enqueue")
 def test_check_rewrite_status_atomic(mock_enqueue, mock_write_text, tmp_workspace):
     daemon = SystemInboxDaemon()
 

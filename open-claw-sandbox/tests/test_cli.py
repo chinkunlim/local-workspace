@@ -1,6 +1,6 @@
 import argparse
 
-from core.cli import build_skill_parser
+from core.cli.cli import build_skill_parser
 
 
 def test_build_skill_parser_default():

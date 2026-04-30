@@ -36,7 +36,7 @@ If code changes affect observable behavior, update corresponding documentation i
 | Data path, phase logic, or core module change | `skills/<skill>/docs/ARCHITECTURE.md` + `docs/STRUCTURE.md` |
 | Architectural decision made | `skills/<skill>/docs/DECISIONS.md` |
 | New pattern or rule established | `docs/CODING_GUIDELINES_FINAL.md` |
-| New skill or core module added | `docs/STRUCTURE.md`, `docs/ARCHITECTURE.md`, `skills/<skill>/SKILL.md` |
+| New skill or core module added | `docs/STRUCTURE.md`, `memory/ARCHITECTURE.md`, `skills/<skill>/SKILL.md` |
 
 ## 5. External Action Policy
 

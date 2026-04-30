@@ -10,7 +10,7 @@ CURRENT STATUS: Fully functional discovery + registration.
   are the remaining P3 integration tasks.
 
 Usage:
-    from core.skill_registry import SkillRegistry
+    from core.orchestration.skill_registry import SkillRegistry
 
     registry = SkillRegistry(skills_root="/path/to/skills")
     registry.discover()
@@ -43,7 +43,7 @@ class SkillManifest:
     variable named `MANIFEST` of this type.
 
     Example (skills/audio-transcriber/manifest.py):
-        from core.skill_registry import SkillManifest
+        from core.orchestration.skill_registry import SkillManifest
         from scripts.run_all import VoiceMemoOrchestrator
 
         MANIFEST = SkillManifest(

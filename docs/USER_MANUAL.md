@@ -1,249 +1,319 @@
-# Open Claw Knowledge Ecosystem: Comprehensive Operator's Manual
+# Open Claw PKMS — User Manual
 
-> **System Version**: V2 (Antigravity Checkpoint)  
-> **Status**: Production-Grade Headless Deployment
-
-Welcome to your "Personal AI Second Brain"! This system operates entirely on your local machine, ensuring extreme privacy and high customizability.
-
-This manual is divided into two sections: **[Part 1] Daily Operational Concepts** and **[Part 2] Complete CLI Operations**.
+> **System Version**: V8.1 (Antigravity Checkpoint)
+> **Status**: Production-Grade Headless CLI Deployment
+> **Last Updated**: 2026-05-01
 
 ---
 
-# Part 1: Daily Operational Concepts
-
-## 🚀 1. System Initialization and Shutdown
+## Quick Start (TL;DR)
 
 ```bash
+# Step 1: Start all services
 cd ~/Desktop/local-workspace
-
-# Start all core services
 ./infra/scripts/start.sh
 
-# Gracefully terminate all services
+# Step 2: Drop your files into the universal inbox
+cp lecture.m4a  open-claw-sandbox/data/raw/YourSubject/
+cp textbook.pdf open-claw-sandbox/data/raw/YourSubject/
+
+# Step 3: Wait — the system processes files automatically.
+# When complete, your notes appear in:
+open open-claw-sandbox/data/wiki/YourSubject/
+
+# Step 4: Shutdown
 ./infra/scripts/stop.sh
 ```
 
-The startup script automatically executes the following:
-1. Enables anti-sleep mode (`caffeinate`) to protect long-running computational tasks.
-2. Initializes Ollama, LiteLLM, and the underlying AI Pipelines.
-3. Launches the Open Claw API Gateway (Port 18789).
-4. Starts the `inbox_daemon` for 24/7 monitoring of your universal inbox.
+That's it. The rest of this manual explains what happens in between and how to use advanced features.
 
 ---
 
-## 🌊 2. Core Architecture: The Three Phases of Knowledge Flow
+## Part 1: How the System Works
+
+### The Three-Layer Data Flow
 
 ```
-Your Raw Files
-    │
-    ▼
-📥 data/raw/<Subject_Taxonomy>/          ← The ONLY manual entry point
-    │ (Auto-dispatched by inbox_daemon)
-    ├──► 🏭 data/audio-transcriber/      (Audio Factory Floor)
-    └──► 🏭 data/doc-parser/             (PDF Factory Floor)
-                │
-                ▼ (Automated Output)
-    🧠 data/wiki/<Subject_Taxonomy>/     ← Obsidian Vault (Final Synthesis)
+YOU
+ │
+ ▼
+📥 data/raw/<YourSubject>/        ← The ONLY folder you need to touch
+ │   Drop .m4a or .pdf files here
+ │
+ ▼  (inbox_daemon routes automatically, 24/7)
+ │
+ ├──► 🏭 audio-transcriber        (for .m4a / .mp3)
+ │         6-phase pipeline:
+ │         P0: Build glossary
+ │         P1: Transcribe with MLX-Whisper
+ │         P2: Proofread with LLM
+ │         P3: Merge segments
+ │         P4: Highlight key concepts
+ │         P5: Synthesise into study notes
+ │
+ └──► 🏭 doc-parser               (for .pdf)
+           7-phase pipeline:
+           P00a: Security check & metadata
+           P01a: Extract text with Docling
+           P01b: Detect and caption charts
+           P01c: OCR quality gate
+           P01d: Analyse figures with VLM
+           P02: Highlight key concepts
+           P03: Synthesise into study notes
+ │
+ ▼
+🧠 data/wiki/<YourSubject>/       ← Your Obsidian Vault (final output)
 ```
 
-### 📥 Phase 1: Universal Inbox
-- **Path**: `open-claw-sandbox/data/raw/<Subject_Taxonomy>/`
-- **Purpose**: This is the **only directory** where you need to manually drop files.
-- **Rule**: Create subdirectories named after the subject, e.g., `data/raw/Cognitive_Psychology/`.
+### What is `data/raw/`?
 
-### 🏭 Phase 2: Invisible Factory Floors
-- **Path**: `data/audio-transcriber/` and `data/doc-parser/`
-- **Purpose**: Background processing zones. You do **not** need to manage any files here.
+This is your **only manual input point**. You never need to touch any other data directory. Simply:
 
-### 🧠 Phase 3: Obsidian Vault (The Brain)
-- **Path**: `open-claw-sandbox/data/wiki/`
-- **Purpose**: The final destination for all synthesized Markdown notes. This acts directly as your Obsidian Vault.
+1. Create a subfolder named after your subject: `data/raw/Cognitive_Psychology/`
+2. Drop your files in: `data/raw/Cognitive_Psychology/lecture01.m4a`
+3. The system detects the file and starts processing automatically.
 
----
+### What is `data/wiki/`?
 
-## 📄 3. PDF Extension Routing Rules
-
-The `inbox_daemon` dynamically routes PDF files based on their filename suffixes. The rules are defined in `core/inbox_config.json`:
-
-| Suffix Example | Routing Mode | Description |
-|---|---|---|
-| `L1_slides.pdf`, `L1_ref.pdf`, `L1_handout.pdf` | `audio_ref` | Used strictly as audio calibration references. **Does NOT** generate standalone notes. |
-| `genetics_textbook.pdf`, `ch3_reading.pdf` | `both` | Sent to the `doc-parser` for standalone parsing **AND** used as an audio reference. |
-| (No specific suffix) | `doc_parser` | Default behavior: Routed exclusively to the `doc-parser` pipeline. |
-
-**Complete Suffix List (`audio_ref` mode)**:
-`_ref`, `_refs`, `_slides`, `_slide`, `_handout`, `_handouts`, `_lecturenotes`, `_transcript`, `_worksheet`, `_supplement`, `_appendix`, `_coursework`, `課件`, `講義`, `參考`
-
-**Complete Suffix List (`both` mode)**:
-`_textbook`, `_book`, `_chapter`, `_ch`, `_reading`, `_readings`, `_material`, `_materials`, `_guide`, `_notes`
+This is your finished knowledge base. Open it as an Obsidian vault to get:
+- Bi-directional `[[WikiLinks]]` between related concepts
+- Mermaid mind maps embedded in each note
+- Cornell-format lecture notes with YAML metadata
+- Highlighted key terms and definitions
 
 ---
 
-## 🤖 4. Mobile Access & Advanced Queries (Open Claw & Telegram)
+## Part 2: Starting and Stopping
 
-### Headless Telegram Operations & HITL
-Open Claw is designed to run silently in the background. The `telegram_bot.py` service provides asynchronous command-and-control capabilities via Telegram, allowing remote orchestration without risking RAM exhaustion.
-- `/status` — Polls the `inbox_daemon` and returns the real-time DAG state of all queues.
-- `/run` — Dispatches a global pipeline execution. The `core/orchestration/task_queue.py` guarantees sequential execution to mitigate Ollama OOM crashes.
-- `/pause` — Gracefully interrupts the current pipeline (`SIGTERM`), safely saving checkpoints before releasing VRAM.
-- `/query <text>` — Executes a semantic RAG query against the ChromaDB vector store.
-- **HITL (Human-in-the-Loop) Events**: When the system encounters low confidence data, it raises a `HITLPendingInterrupt`. The Telegram bot provides a real-time notification. Reply with `/hitl approve <trace_id>` to resume.
+### Start All Services
 
-### Open WebUI & Literature Matrix Synthesis
-1. **Ensure the Pipeline is Complete**: Verify via `/status` that your target PDFs have reached Phase 1d (VLM parsing complete).
-2. **Access Open WebUI**: Navigate to `localhost:8080`.
-3. **Select the Knowledge Compiler Model**: Choose the `knowledge-compiler` profile (enforces strict `temperature: 0` determinism).
-4. **Attach Context**: Use `#` to pull compiled `content.md` files from `data/doc-parser/output/05_Final_Knowledge/`.
-5. **Prompt Execution**: "Extract a Literature Matrix comparing the methodologies and constraints of the attached papers. Structure the output as a Markdown table."
-
----
-
-## 🔄 5. Full-Pipeline Integration Workflow (Obsidian ➡️ CLI ➡️ Open WebUI)
-
-Open Claw interfaces collaborate seamlessly:
-1. **Trigger (Obsidian)**: While reading `data/wiki/Cognitive_Psychology/lecture_01.md`, update the YAML frontmatter to `status: rewrite` and save.
-2. **Automation (Daemon Execution)**: `core/services/inbox_daemon.py` instantly detects the atomic write, locks the file (`status: processing`), and enqueues the `note_generator` skill. macOS native notifications (`osascript`) alert you to the pipeline's progress.
-3. **High-Level Analysis (Open WebUI)**: Navigate to Open WebUI and query: "Generate a quiz based on my latest Cognitive Psychology notes." The AI utilizes RAG against your freshly synthesized vault.
-
----
-
-## ⚙️ 6. Configuring Providers (v1.2.0)
-Configure your LLM providers in `config.yaml` or global `~/.openclaw/openclaw.json`. The new `core/ai/llm_client.py` automatically falls back to secondary models upon encountering rate limits (Circuit Breaker pattern).
-
----
-
-# Part 2: Complete CLI Operations
-
-> **Prerequisite**: Execute all commands from the root of the sandbox directory.
 ```bash
-cd ~/Desktop/local-workspace/open-claw-sandbox
+cd ~/Desktop/local-workspace
+./infra/scripts/start.sh
+```
+
+This launches:
+1. **Ollama** — local LLM inference engine
+2. **LiteLLM** — OpenAI-compatible proxy (port 4000)
+3. **Open WebUI** — Chat UI at `http://localhost:3000`
+4. **Pipelines** — Pipeline runner (port 9099)
+5. **Inbox Daemon** — 24/7 file watcher on `data/raw/`
+6. **RAM Watchdog** — Monitors memory; throttles tasks if RAM drops below 15%
+
+### Check Service Status
+
+```bash
+./ops/check.sh
+```
+
+### Stop All Services
+
+```bash
+./infra/scripts/stop.sh
 ```
 
 ---
 
-## 🎙️ CLI-1: Audio Transcription Pipeline (`audio-transcriber`)
+## Part 3: Processing Files Manually
 
-**Standard Command Signature**:
+While the inbox daemon runs automatically, you can also trigger pipelines manually via CLI.
+
+### Audio Transcriber
+
 ```bash
-python3 skills/audio-transcriber/scripts/run_all.py [OPTIONS]
+cd open-claw-sandbox
+
+# Process all pending audio files
+python3 skills/audio-transcriber/scripts/run_all.py --process-all
+
+# Process only one subject
+python3 skills/audio-transcriber/scripts/run_all.py --subject Cognitive_Psychology
+
+# Resume after an interruption
+python3 skills/audio-transcriber/scripts/run_all.py --process-all --resume
+
+# Force re-run (even completed files)
+python3 skills/audio-transcriber/scripts/run_all.py --process-all --force
+
+# Start from a specific phase (e.g., phase 2)
+python3 skills/audio-transcriber/scripts/run_all.py --from 2
+
+# Regenerate glossary only
+python3 skills/audio-transcriber/scripts/run_all.py --glossary
 ```
 
-### Basic Invocation
+### Doc Parser
+
 ```bash
-# Process all subjects and all audio files (Full Batch Mode)
-python3 skills/audio-transcriber/scripts/run_all.py
+cd open-claw-sandbox
 
-# Target a specific subject taxonomy
-python3 skills/audio-transcriber/scripts/run_all.py --subject "Cognitive Psychology"
-
-# Target a specific file precisely
-python3 skills/audio-transcriber/scripts/run_all.py     --subject "Cognitive Psychology"     --file lecture_01-1.m4a     --single
-
-# Force regeneration (bypasses idempotency checkpoints)
-python3 skills/audio-transcriber/scripts/run_all.py --force
-```
-
-### Checkpoint Resumption & Phase Control
-```bash
-# Resume from the last interrupted checkpoint
-python3 skills/audio-transcriber/scripts/run_all.py --resume
-
-# Start execution from a specific Phase (e.g., Phase 2 Calibration)
-python3 skills/audio-transcriber/scripts/run_all.py --subject "Cognitive Psychology" --from 2
-```
-
-### Domain Glossary Management
-```bash
-# Auto-generate professional terminology glossary
-python3 skills/audio-transcriber/scripts/run_all.py --subject "Cognitive Psychology" --glossary
-```
-
----
-
-## 📄 CLI-2: PDF Parsing Pipeline (`doc-parser`)
-
-**Standard Command Signature**:
-```bash
-python3 skills/doc-parser/scripts/run_all.py [OPTIONS]
-```
-
-### Basic Invocation
-```bash
-# Scan inbox for pending PDFs without processing
-python3 skills/doc-parser/scripts/run_all.py --scan
-
-# Run in Headless Batch Mode (Processes all pending files)
+# Process all pending PDFs
 python3 skills/doc-parser/scripts/run_all.py --process-all
 
-# Target a specific subject taxonomy
-python3 skills/doc-parser/scripts/run_all.py --subject "Cognitive Psychology"
+# Process only one subject
+python3 skills/doc-parser/scripts/run_all.py --subject AI_Papers
+
+# Force re-run
+python3 skills/doc-parser/scripts/run_all.py --process-all --force
 ```
 
----
+### Knowledge Compiler
 
-## 🧠 CLI-3: Knowledge Compilation (`knowledge-compiler`)
+Compiles all skill outputs into your Obsidian Vault with bi-directional WikiLinks:
 
-Compiles outputs from all individual skills and publishes them into the `data/wiki/` Obsidian Vault with bidirectional links.
 ```bash
-# Compile all subjects
-python3 skills/knowledge-compiler/scripts/run_all.py
+cd open-claw-sandbox
+
+python3 skills/knowledge-compiler/scripts/run_all.py --process-all
 ```
 
----
+### Telegram Knowledge Base Agent
 
-## ✏️ CLI-4: Smart Highlighting (`smart_highlighter`)
-
-Injects AI-driven smart highlights (`==keyword==`) into any Markdown document.
 ```bash
-python3 skills/smart_highlighter/scripts/highlight.py     --input-file data/wiki/Cognitive_Psychology/lecture_01.md     --output-file data/wiki/Cognitive_Psychology/lecture_01_highlighted.md
+cd open-claw-sandbox
+
+# Rebuild the vector index (run after new notes are generated)
+python3 skills/telegram-kb-agent/scripts/indexer.py
+
+# Start the Telegram bot daemon
+python3 skills/telegram-kb-agent/scripts/bot_daemon.py
 ```
 
----
+### Academic & Education Assistant
 
-## 📝 CLI-5: Note Generator (`note_generator`)
-
-Executes a Map-Reduce knowledge synthesis to output highly structured notes and Mermaid mind maps.
 ```bash
-python3 skills/note_generator/scripts/synthesize.py     --subject "Cognitive Psychology"     --label "lecture_01"     --input-file data/wiki/Cognitive_Psychology/lecture_01.md     --output-file data/wiki/Cognitive_Psychology/lecture_01_summary.md
+cd open-claw-sandbox
+
+# Place files to compare inside:
+# data/academic-edu-assistant/input/<YourSubjectName>/
+
+# Run the comparison + Anki card generation
+python3 skills/academic-edu-assistant/scripts/run_all.py
 ```
 
----
+### Interactive Reader (In-Note AI Annotations)
 
-## 📋 CLI-6: Inbox Routing Management (`inbox-manager`)
+Write a tag anywhere inside a Markdown note:
+```markdown
+> [AI: Summarise the key argument in this section]
+```
 
-Dynamically manages `core/config/inbox_config.json` routing constraints without manual JSON editing.
+Then run:
 ```bash
-# List all active routing rules
-python3 skills/inbox-manager/scripts/query.py list
-
-# Add a custom routing rule for 'both' processing
-python3 skills/inbox-manager/scripts/query.py add     --add _exam     --routing both     --description "Exam materials — parse + audio reference"
+cd open-claw-sandbox
+python3 skills/interactive-reader/scripts/run_all.py --process-all
 ```
+
+The AI response is appended below the tag automatically.
 
 ---
 
-## 📖 CLI-7: Interactive Reader (`interactive-reader`)
+## Part 4: PDF Routing Rules
 
-Batch processes Obsidian notes containing `> [AI: ...]` markers and writes responses inline.
+PDFs can be routed in three different ways depending on their content:
+
+| Mode | Behaviour |
+|---|---|
+| `audio_ref` | PDF is sent to `audio-transcriber` as a proofreading reference only |
+| `doc_parser` | PDF is fully extracted by `doc-parser` |
+| `both` | PDF is sent to BOTH simultaneously |
+
+### View Current Routing Rules
+
 ```bash
-python3 skills/interactive-reader/scripts/run_all.py
+cd open-claw-sandbox
+python3 skills/inbox-manager/scripts/query.py --list
 ```
 
----
+### Add a New Rule
 
-## 🔬 CLI-8: Academic Educational Assistant (`academic-edu-assistant`)
-
-Performs cross-document topic comparison and outputs Anki-formatted review flashcards.
 ```bash
-python3 skills/academic-edu-assistant/scripts/run_all.py     --query "Compare the core assumptions of Behaviorism and Cognitivism"     --anki
+python3 skills/inbox-manager/scripts/query.py --add "_slides" --routing audio_ref --description "Lecture slides"
+python3 skills/inbox-manager/scripts/query.py --add "_textbook" --routing both --description "Course textbook"
+```
+
+### Remove a Rule
+
+```bash
+python3 skills/inbox-manager/scripts/query.py --remove "_slides"
 ```
 
 ---
 
-## 🔔 Universal Notification & Unified Dashboard
+## Part 5: Checking Progress
 
-All Open Claw skills integrate a standardized architectural interface:
-1. **Preflight Checks**: Every orchestrator automatically executes a `✈️ Preflight Check` to validate dependencies, configurations, and connectivity (e.g. Ollama, `poppler-utils`) before processing begins.
-2. **Unified Dashboard & Code Self-Healing**: Every module renders a standardized `📊 [Skill Name] State & DAG Tracking Panel` in the terminal for consistent UX using `rich`. 
-3. **Interactive Selection UI**: If you execute a pipeline without arguments, the Orchestrator will display an interactive CLI menu allowing you to use numbers and ranges (e.g. `1,3,5` or `1-5`) to select pending tasks, or even choose previously completed tasks for reprocessing.
-4. **Graceful Interruptions & Notifications**: Press `Ctrl+C` to halt operations. The system intercepts `KeyboardInterrupt`, saves state checkpoints safely, and dispatches a macOS native alert (`Execution Interrupted`). Upon successful completion, a `Pipeline Execution Complete` notification is dispatched.
+### Check Pipeline Progress
+
+Each skill writes a checklist to its state directory:
+
+```bash
+# Audio transcriber progress
+cat open-claw-sandbox/data/audio-transcriber/state/checklist.md
+
+# Doc parser progress
+cat open-claw-sandbox/data/doc-parser/state/checklist.md
+```
+
+### Check System Logs
+
+```bash
+# Tail the inbox daemon log
+tail -f open-claw-sandbox/logs/openclaw.log
+
+# Check all logs
+ls open-claw-sandbox/logs/
+```
+
+---
+
+## Part 6: Obsidian Vault Setup
+
+1. Open **Obsidian** → `Open folder as vault`
+2. Navigate to: `~/Desktop/local-workspace/open-claw-sandbox/data/wiki/`
+3. Enable the **Mermaid** plugin for mind map rendering
+4. Enable **Dataview** (optional) for dynamic note queries
+
+Your knowledge base is fully structured with:
+- YAML frontmatter for filtering and queries
+- Mermaid mind maps for visual learning
+- `[[WikiLinks]]` for concept network navigation
+- Cornell-format tables for structured review
+
+---
+
+## Part 7: Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| Files not processing automatically | Check if `infra/scripts/start.sh` was run; verify `data/raw/` has files |
+| LLM timeout / slow processing | Normal for large files; check `data/<skill>/state/checklist.md` for progress |
+| `ModuleNotFoundError: No module named 'core'` | Run scripts from inside `open-claw-sandbox/` directory |
+| Out of memory / system freeze | Lower the Ollama context window in `config.yaml`; ensure `watchdog.sh` is running |
+| Corrupted state file | Delete `data/<skill>/state/` and re-run with `--force` |
+| Need to re-process a specific file | Use `--file <filename> --force` flag |
+
+---
+
+## Part 8: Monorepo Structure Reference
+
+```
+local-workspace/
+├── open-claw-sandbox/    ← Main application (all skill code lives here)
+│   ├── core/             ← Shared framework (do not edit unless necessary)
+│   ├── skills/           ← Individual skill pipelines
+│   ├── data/             ← Runtime data (gitignored)
+│   │   ├── raw/          ← 📥 YOUR INPUT FOLDER
+│   │   └── wiki/         ← 🧠 YOUR OUTPUT (Obsidian Vault)
+│   └── tests/            ← Unit tests
+│
+├── infra/
+│   ├── scripts/
+│   │   ├── start.sh      ← Start everything
+│   │   └── stop.sh       ← Stop everything
+│   ├── litellm/          ← LLM proxy config
+│   ├── open-webui/       ← Chat interface
+│   └── pipelines/        ← Pipeline plugins
+│
+├── docs/                 ← System documentation
+└── memory/               ← AI agent memory & architecture docs
+```

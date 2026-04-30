@@ -7,13 +7,13 @@ import time
 import requests
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.bootstrap import ensure_core_path as _bootstrap
+from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
-from core.hitl_manager import HITLManager
-from core.log_manager import build_logger
-from core.telegram_bot import _get_bot_config, send_inline_keyboard, send_message
+from core.services.hitl_manager import HITLManager
+from core.services.telegram_bot import _get_bot_config, send_inline_keyboard, send_message
+from core.utils.log_manager import build_logger
 
 _workspace_root = os.environ.get(
     "WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -113,7 +113,7 @@ def main():
 
                         def _handle_voice(_msg=msg, _cid=chat_id):
                             try:
-                                from core.telegram_bot import download_voice
+                                from core.services.telegram_bot import download_voice
 
                                 raw_inbox = os.path.join(_workspace_root, "data", "raw", "Telegram")
                                 local_path = download_voice(_msg, raw_inbox)
@@ -123,7 +123,7 @@ def main():
                                     _cid,
                                 )
                                 # SystemInboxDaemon will pick it up via watchdog or next scan
-                                from core.inbox_daemon import SystemInboxDaemon
+                                from core.services.inbox_daemon import SystemInboxDaemon
 
                                 SystemInboxDaemon()._process_file(local_path)
                             except Exception as _exc:
@@ -139,7 +139,7 @@ def main():
 
                         def _handle_photo(_msg=msg, _cid=chat_id):
                             try:
-                                from core.telegram_bot import download_file
+                                from core.services.telegram_bot import download_file
 
                                 # Largest photo is last in the array
                                 file_id = _msg["photo"][-1]["file_id"]
@@ -152,8 +152,8 @@ def main():
                                 # Encode and call VLM via OllamaClient
                                 import json as _json
 
-                                from core.file_utils import encode_image_b64
-                                from core.llm_client import OllamaClient
+                                from core.ai.llm_client import OllamaClient
+                                from core.utils.file_utils import encode_image_b64
 
                                 with open(
                                     os.path.expanduser("~/.openclaw/openclaw.json"),
@@ -365,7 +365,7 @@ def main():
 
                     # ── P2-3: /schedule commands ───────────────────────────────────
                     elif text.startswith("/schedule"):
-                        from core.scheduler import get_scheduler
+                        from core.orchestration.scheduler import get_scheduler
 
                         sched = get_scheduler(_workspace_root)
                         args = text.split(None, 4)  # /schedule <sub> [id] [cron] [skill] [desc]

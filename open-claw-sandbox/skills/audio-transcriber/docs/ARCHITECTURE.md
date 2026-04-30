@@ -1,84 +1,93 @@
 # Open Claw — Audio Transcriber Skill Architecture
 
-> Version: V8.1 | Last Updated: 2026-04-20
+> Version: V8.1 | Last Updated: 2026-05-01
 
-## 1. 概覽
+## 1. Overview
 
-Audio Transcriber Skill 是 Open Claw 的語音轉錄知識化流水線，負責將 `.m4a` 語音備忘錄逐步轉化為結構化的 Notion 知識文件。
+The Audio Transcriber skill is Open Claw's voice-to-knowledge pipeline. It progressively converts `.m4a` audio lecture recordings into structured Obsidian-ready study notes.
 
 ```
-01_raw_data/<subject>/lecture.m4a
+data/raw/<subject>/lecture.m4a
           │
-          ▼ P1: Whisper / MLX 轉錄 (V8.1 三層抗幻覺防禦)
-            ├─ Layer 0: Native API 防禦 (condition_on_previous_text=False)
-            ├─ Layer 1: VAD 前處理 (pydub 靜音切除 + 移除率安全閥)
-            ├─ 語言偵測: 多片段多數投票 (可透過 force_language 關閉)
-            └─ Layer 2: 局部重試 (N-gram/zlib 重複率偵測)
+          ▼ P0: Glossary initialisation (terminology sync)
           │
-01_transcript/<subject>/lecture.md
+          ▼ P1: MLX-Whisper transcription (V8.1 Triple-Layer Anti-Hallucination Defense)
+            ├─ Layer 0: Native API guard (condition_on_previous_text=False)
+            ├─ Layer 1: VAD pre-processing (pydub silence trimming + removal rate safety valve)
+            ├─ Language detection: multi-clip majority-vote (overridable via force_language)
+            └─ Layer 2: Local retry (N-gram / zlib repetition detection)
           │
-          ▼ P2: LLM 校對 + 術語保護
-02_proofread/<subject>/lecture.md
-          ▼ P3: 跨段合併精煉
-03_merged/<subject>/lecture.md
+data/audio-transcriber/output/01_transcript/<subject>/lecture.md
+          │
+          ▼ P2: LLM proofreading + glossary term protection
+data/audio-transcriber/output/02_proofread/<subject>/lecture.md
+          │
+          ▼ P3: Cross-segment merge and refinement
+data/audio-transcriber/output/03_merged/<subject>/lecture.md
+          │
+          ▼ P4: Highlight annotations (delegated to smart_highlighter)
+          ▼ P5: Synthesis (delegated to note_generator → data/wiki/)
 ```
 
 ---
 
-## 2. 目錄結構
+## 2. Directory Structure
 
 ```
 skills/audio-transcriber/
-├── SKILL.md                    # Quick-start 指南
+├── SKILL.md                    # Quick-start guide
 ├── config/
-│   ├── config.yaml             # 所有模型、路徑、閾值設定
-│   └── prompt.md               # Phase 2–5 LLM 指令模板
+│   ├── config.yaml             # All models, paths, thresholds
+│   └── prompt.md               # Phase 2–3 LLM instruction templates
 ├── docs/
-│   ├── ARCHITECTURE.md         # 本文件
-│   ├── DECISIONS.md            # 技術決策日誌
-│   └── CLAUDE.md               # AI 協作上下文
+│   ├── ARCHITECTURE.md         # This file
+│   ├── DECISIONS.md            # Architectural decision log (ADR format)
+│   └── CLAUDE.md               # AI collaboration context
 └── scripts/
-    ├── run_all.py              # Orchestrator — 互動式五階段執行器
+    ├── run_all.py              # Orchestrator — interactive 5-phase executor
     ├── phases/
-    │   ├── p00_glossary.py     # Phase 0: 術語表初始化
-    │   ├── p01_transcribe.py   # Phase 1: 音頻轉錄 (Whisper/MLX)
-    │   ├── p02_proofread.py    # Phase 2: LLM 智能校對
-    │   └── p03_merge.py        # Phase 3: 跨段合併精煉
+    │   ├── p00_glossary.py     # Phase 0: Glossary initialisation
+    │   ├── p01_transcribe.py   # Phase 1: Audio transcription (MLX-Whisper)
+    │   ├── p02_proofread.py    # Phase 2: LLM intelligent proofreading
+    │   └── p03_merge.py        # Phase 3: Cross-segment merge and refinement
     └── utils/
-        └── subject_manager.py  # 語音特有 CLI 互動 (reprocess prompts)
+        └── subject_manager.py  # Audio-specific CLI interaction helpers
 ```
 
 ---
 
-## 3. 核心架構原則與抗幻覺機制 (V8.1)
+## 3. Core Architecture — Anti-Hallucination Mechanism (V8.1)
 
-### 3.0 三層抗幻覺防禦 (Triple-Layer Anti-Hallucination Defense)
+### 3.0 Triple-Layer Anti-Hallucination Defense
 
-針對 Whisper 在高噪音/長靜音環境下容易產生的「無限重複迴圈 (Hallucination Loop)」，Phase 1 導入了三層防禦：
+Designed to counter the "Infinite Repetition Loop (Hallucination Loop)" that Whisper produces under high-noise or long-silence conditions.
 
-1. **Layer 0 (原生層)**: 啟用 `condition_on_previous_text=False` 與 `hallucination_silence_threshold` 等 MLX/Whisper 內建防禦參數。
-2. **Layer 1 (輸入層 - VAD)**: 使用 `pydub.silence` 在轉錄前切除靜音。設有 `vad_max_removal_ratio` (預設 90%) 作為安全閥，若切除過多將 Fallback 回原始音檔。
-3. **Layer 2 (後處理層 - 重複偵測)**: 使用 N-gram 與 zlib 壓縮率掃描生成的 Segments。若偵測到重複幻覺，自動以較高的 Temperature 針對該 Segment 執行局部重試 (`retry_segment`)。
-4. **語言偵測**: 採取「前中後 3 片段多數決投票」，避免單一片段靜音導致語言誤判（可於 `config.yaml` 透過 `force_language` 覆寫以加速）。
+1. **Layer 0 (Native API)**: Enables `condition_on_previous_text=False` and `hallucination_silence_threshold` — built-in MLX-Whisper defence parameters.
+2. **Layer 1 (Input — VAD)**: Uses `pydub.silence` to pre-trim silence before transcription. A `vad_max_removal_ratio` safety valve (default: 90%) is enforced; if the removal ratio exceeds this threshold, the system falls back to the original raw audio to prevent over-trimming.
+3. **Layer 2 (Post-processing — Repetition Detection)**: Scans generated segments using N-gram and zlib compression ratio analysis. If a hallucination loop is detected, the affected segment is automatically retried with a higher temperature (`retry_segment`).
+4. **Language Detection**: Uses a "first-middle-last 3-clip majority-vote" strategy to prevent single-clip silence from causing language misidentification (overridable in `config.yaml` via `force_language` to speed up processing).
 
----
+### 3.1 Inheritance Chain
 
-### 3.1 繼承關係
-
-每個 Phase 類別繼承自 `core.PipelineBase`：
+Every Phase class inherits from `core.orchestration.pipeline_base.PipelineBase`:
 
 ```python
+from core.utils.bootstrap import ensure_core_path
+ensure_core_path(__file__)
+
+from core.orchestration.pipeline_base import PipelineBase
+
 class Phase2Proofread(PipelineBase):
-    def __init__(self):
-        super().__init__(phase_key="p2", phase_name="智能校對")
-        # self.dirs["p2"] → data/audio-transcriber/output/02_proofread  (從 config.yaml 讀取)
-        # self.llm       → OllamaClient (自動配置)
-        # self.state_manager → StateManager (自動配置)
+    def __init__(self) -> None:
+        super().__init__(phase_key="p2", phase_name="Proofreading")
+        # self.dirs["p2"] → data/audio-transcriber/output/02_proofread (from config.yaml)
+        # self.llm        → OllamaClient (auto-configured)
+        # self.state_manager → StateManager (auto-configured)
 ```
 
-### 3.2 路徑解析 (Config-Driven)
+### 3.2 Config-Driven Path Resolution
 
-所有路徑從 `config.yaml` 的 `paths:` section 讀取，無任何 hardcode：
+All paths come from `config.yaml`'s `paths:` section. No hardcoded paths anywhere:
 
 ```yaml
 # skills/audio-transcriber/config/config.yaml
@@ -94,79 +103,82 @@ paths:
     p3: "output/03_merged"
 ```
 
-### 3.3 狀態追蹤
+### 3.3 State Tracking
 
-- `core.StateManager` 管理 `data/audio-transcriber/state/.pipeline_state.json`
-- 每個 Phase 完成後自動寫入 ✅ 符號
-- 手動修改輸出 `.md` 檔案時，SHA-256 異常會觸發 DAG Cascade 重置
-- `data/audio-transcriber/state/checklist.md` 是自動生成的人類可讀進度表
+- `core.state.state_manager.StateManager` manages `data/audio-transcriber/state/.pipeline_state.json`
+- Each phase writes a ✅ status automatically upon completion
+- SHA-256 hash changes in output `.md` files trigger a DAG cascade reset
+- `data/audio-transcriber/state/checklist.md` is auto-generated as a human-readable progress tracker
 
-### 3.4 中斷恢復 (Checkpoint Resume)
+### 3.4 Checkpoint Resume
 
-- `run_all.py` 支援 `Ctrl+C` 優雅停機（第一次）和強制停機（第二次）
-- 透過 `core.StateManager.save_checkpoint()` 記錄暫停位置
-- `--resume` flag 自動從上次中斷點繼續
+- `run_all.py` supports graceful shutdown on first `Ctrl+C`, and force-kill on second
+- Pause position is saved via `core.state.state_manager.StateManager.save_checkpoint()`
+- `--resume` flag automatically continues from the last interrupted point
 
 ---
 
-## 4. 資料流
+## 4. Data Flow
 
 ```
-[input/raw_data/subject/]  ──(Watchdog)──►  [InboxDaemon]
+data/raw/<subject>/         ──(Watchdog)──►  InboxDaemon
                                                   │
-                                            觸發 run_all.py
+                                           Triggers run_all.py
                                                   │
-                                     ┌─────────────┼─────────────┐
-                                   P0            P1             P2
-                               (術語表)        (轉錄)         (校對)
+                                   ┌──────────────┼──────────────┐
+                                  P0             P1             P2
+                             (Glossary)     (Transcribe)   (Proofread)
                                                   │
                                                   P3
-                                                (合併)
+                                               (Merge)
                                                   │
-                                        [output/03_merged/]
+                                    data/audio-transcriber/output/03_merged/
 ```
 
 ---
 
-## 5. 與 Core/Skills 的依賴關係
+## 5. Core Framework Dependencies
 
-| Core/Skill 模組 | Audio Transcriber 用途 |
+| Core Module | Usage in Audio Transcriber |
 |:---|:---|
-| `PipelineBase` | 所有 Phase 類別的基底 |
-| `StateManager(skill_name="audio-transcriber")` | P1-P3 進度追蹤，phases = `["p1"..."p3"]` |
-| `PathBuilder` | 從 config.yaml `paths.phases` 解析目錄 |
-| `OllamaClient` | P2-P3 LLM 推論 |
-| `GlossaryManager` | 術語表同步至 doc-parser |
-| `DiffEngine` | P1↔P2 差異檢視（Web UI Review Board）|
-| `SystemInboxDaemon` | 監聽 `input/raw_data/` 新增音檔 |
+| `core.orchestration.pipeline_base.PipelineBase` | Base class for all Phase classes |
+| `core.state.state_manager.StateManager` | P1–P3 progress tracking |
+| `core.utils.path_builder.PathBuilder` | Resolves directories from `config.yaml` |
+| `core.ai.llm_client.OllamaClient` | P2–P3 LLM inference |
+| `core.utils.glossary_manager.GlossaryManager` | Glossary sync with doc-parser |
+| `core.services.inbox_daemon.SystemInboxDaemon` | Watches `data/raw/` for new audio files |
 
 ---
 
-## 6. 執行方式
+## 6. CLI Usage
 
 ```bash
-# 進入 skill 目錄執行（推薦）
 cd open-claw-sandbox
-python3 skills/audio-transcriber/scripts/run_all.py
 
-# 只執行特定科目
-python3 skills/audio-transcriber/scripts/run_all.py --subject 助人歷程
+# Run full pipeline on all pending files
+python3 skills/audio-transcriber/scripts/run_all.py --process-all
 
-# 強制重跑（覆寫已完成的輸出）
-python3 skills/audio-transcriber/scripts/run_all.py --force
+# Process a specific subject only
+python3 skills/audio-transcriber/scripts/run_all.py --subject YourSubject
 
-# 從斷點恢復
+# Force full re-run
+python3 skills/audio-transcriber/scripts/run_all.py --process-all --force
+
+# Resume from checkpoint
 python3 skills/audio-transcriber/scripts/run_all.py --resume
 
-# 切換 LLM 模型設定
-python3 core/cli_config_wizard.py --skill audio-transcriber
+# Regenerate glossary only
+python3 skills/audio-transcriber/scripts/run_all.py --glossary
+
+# Switch LLM model profile interactively
+python3 core/cli/cli_config_wizard.py --skill audio-transcriber
 ```
 
 ---
 
-## 7. 設定切換模型
+## 7. Model Profile Switching
 
-`config.yaml` 使用 `active_profile` 機制：
+`config.yaml` uses an `active_profile` mechanism:
 
 ```yaml
 phase2:
@@ -180,4 +192,4 @@ phase2:
       chunk_size: 5000
 ```
 
-呼叫 `python3 core/cli_config_wizard.py --skill audio-transcriber` 可互動式切換。
+Call `python3 core/cli/cli_config_wizard.py --skill audio-transcriber` to switch profiles interactively.

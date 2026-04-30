@@ -4,41 +4,48 @@
 
 ## Available Skills
 
-| Skill | 輸入 | 輸出 | 狀態 |
+| Skill | Input | Output | Status |
 |:---|:---|:---|:---:|
-| [audio-transcriber](audio-transcriber/SKILL.md) | `.m4a` 語音錄音 | Notion-ready `.md` 知識文件 | ✅ Production |
-| [doc-parser](doc-parser/SKILL.md) | `.pdf` 學術/技術文件 | 結構化 Markdown 知識庫 | ✅ Production |
-| [smart-highlighter](smart-highlighter/SKILL.md) | 純文字 Markdown | 重點標記 Markdown (Anti-Tampering) | ✅ Production (Standalone) |
-| [note-generator](note-generator/SKILL.md) | 純文字 Markdown | 結構化 YAML/Mermaid 學習筆記 | ✅ Production (Standalone) |
+| [audio-transcriber](audio-transcriber/SKILL.md) | `.m4a` / `.mp3` audio recordings | Obsidian-ready `.md` knowledge notes | ✅ Production |
+| [doc-parser](doc-parser/SKILL.md) | `.pdf` academic / technical documents | Structured Markdown knowledge notes | ✅ Production |
+| [smart_highlighter](smart_highlighter/SKILL.md) | Plain Markdown text | Highlight-annotated Markdown (Anti-Tampering) | ✅ Production (Standalone) |
+| [note_generator](note_generator/SKILL.md) | Plain Markdown text | Structured YAML / Mermaid study notes | ✅ Production (Standalone) |
+| [knowledge-compiler](knowledge-compiler/SKILL.md) | Factory skill outputs | `data/wiki/` (Obsidian Vault) | ✅ Production |
+| [telegram-kb-agent](telegram-kb-agent/SKILL.md) | Telegram query via Open Claw | RAG text answer | ✅ Production |
+| [academic-edu-assistant](academic-edu-assistant/SKILL.md) | ChromaDB vector store | Comparison report + Anki CSV | ✅ Production |
+| [interactive-reader](interactive-reader/SKILL.md) | Markdown with `> [AI:]` tags | In-place resolved annotations | ✅ Production |
+| [inbox-manager](inbox-manager/SKILL.md) | `core/inbox_config.json` | Terminal output (routing rules) | ✅ Production |
 
-## Skill 通用結構
+## Standard Skill Directory Structure
 
-每個 skill 遵循以下標準目錄結構：
+Every skill follows this standardised layout:
 
 ```
 skills/<skill-name>/
-├── SKILL.md              # Quick-start 指南（必要）
+├── SKILL.md              # Quick-start guide (required)
+├── manifest.py           # Open Claw skill registration (required)
 ├── config/
-│   └── config.yaml       # 路徑、模型、閾值（必要）
+│   ├── config.yaml       # Paths, models, thresholds (required)
+│   └── prompt.md         # LLM system prompt (if LLM-dependent)
 ├── docs/
-│   ├── ARCHITECTURE.md   # 技術架構文件
-│   ├── DECISIONS.md      # 技術決策日誌
-│   └── CLAUDE.md         # AI 協作上下文
+│   ├── ARCHITECTURE.md   # Technical architecture document
+│   ├── DECISIONS.md      # Architectural decision log (ADR format)
+│   └── CLAUDE.md         # AI collaboration context & constraints
 └── scripts/
-    ├── run_all.py         # 入口點 Orchestrator
+    ├── run_all.py         # Entry-point orchestrator
     └── phases/
-        └── p<nn>_<name>.py  # Phase 腳本（p01_, p02_ 格式）
+        └── p<nn>_<name>.py  # Phase scripts (p00_, p01_, p02_ format)
 ```
 
-## 建立新 Skill 的步驟
+## Creating a New Skill
 
-### 1. 建立目錄
+### 1. Create Directories
 
 ```bash
 mkdir -p skills/my-skill/{config,docs,scripts/phases}
 ```
 
-### 2. 設定 `config/config.yaml`
+### 2. Configure `config/config.yaml`
 
 ```yaml
 paths:
@@ -56,11 +63,11 @@ runtime:
     timeout_seconds: 600
 ```
 
-### 3. 建立 Phase 腳本
+### 3. Write a Phase Script
 
 ```python
 # scripts/phases/p01_process.py
-from core.bootstrap import ensure_core_path
+from core.utils.bootstrap import ensure_core_path
 ensure_core_path(__file__)
 
 from core import PipelineBase
@@ -69,23 +76,24 @@ class Phase1Process(PipelineBase):
     def __init__(self):
         super().__init__(
             phase_key="p1",
-            phase_name="我的處理",
+            phase_name="My Processing Phase",
             skill_name="my-skill"
         )
-        # self.dirs["phase1"] 自動從 config.yaml 解析
+        # self.dirs["phase1"] is automatically resolved from config.yaml
 ```
 
-### 4. 建立 `run_all.py`
+### 4. Write `run_all.py`
 
-繼承 `PipelineBase`，在 `startup_check()` 後呼叫 `self.state_manager.sync_physical_files()` 初始化進度追蹤。
+Inherit `PipelineBase`. After `startup_check()`, call `self.state_manager.sync_physical_files()` to initialise progress tracking.
 
-### 5. 更新 `inbox_daemon.py`
+### 5. Register with `inbox_daemon`
 
-在 `core/inbox_daemon.py` 的 skill 設定中加入新 skill 的 Inbox 監聽路徑。
+Add the new skill's routing extension to `core/services/inbox_daemon.py` and to `core/inbox_config.json`.
 
-## 全域規範
+## Global Conventions
 
-- 所有 Phase 腳本第一行：`from core.bootstrap import ensure_core_path; ensure_core_path(__file__)`
-- 所有路徑透過 `self.dirs[key]` 存取，不得 hardcode
-- 輸出必須使用 `core.AtomicWriter` 寫入，避免寫入中斷留下破損檔案
-- 每個 Phase 完成後呼叫 `self.state_manager.update_task(subject, filename, phase_key, "✅")`
+- All phase scripts **must** start with: `from core.utils.bootstrap import ensure_core_path; ensure_core_path(__file__)`
+- All paths accessed via `self.dirs[key]` — never hardcode paths.
+- All file writes **must** use `core.utils.atomic_writer.AtomicWriter` to prevent partial-write corruption.
+- After each phase completes, call: `self.state_manager.update_task(subject, filename, phase_key, "✅")`
+- Use `core.utils.log_manager.build_logger()` — never use bare `print()` in production code.

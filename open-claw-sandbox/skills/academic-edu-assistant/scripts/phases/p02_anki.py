@@ -3,12 +3,12 @@ import sys
 
 # Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.bootstrap import ensure_core_path as _bootstrap
+from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
-from core.file_utils import write_csv_safe  # #10 Shared CSV utility
+from core.utils.file_utils import write_csv_safe  # #10 Shared CSV utility
 
 
 class Phase2Anki(PipelineBase):
@@ -144,7 +144,7 @@ class Phase2Anki(PipelineBase):
             if len(parts) == 2:
                 csv_rows.append([parts[0].strip().strip('"'), parts[1].strip().strip('"')])
 
-        from core.file_utils import write_csv_safe
+        from core.utils.file_utils import write_csv_safe
 
         write_csv_safe(path=out_path, rows=csv_rows, logger=self)
         self.info(

@@ -3,10 +3,15 @@ import os
 import subprocess
 from unittest.mock import MagicMock, patch
 
-from core.run_all_pipelines import _LOCK_FILE, _acquire_lock, _release_lock, run_pipelines
+from core.orchestration.run_all_pipelines import (
+    _LOCK_FILE,
+    _acquire_lock,
+    _release_lock,
+    run_pipelines,
+)
 
 
-@patch("core.run_all_pipelines.subprocess.run")
+@patch("core.orchestration.run_all_pipelines.subprocess.run")
 def test_run_pipelines_success(mock_run):
     mock_run.return_value = MagicMock(returncode=0)
 
@@ -22,7 +27,7 @@ def test_run_pipelines_success(mock_run):
     assert not os.path.exists(_LOCK_FILE)
 
 
-@patch("core.run_all_pipelines.subprocess.run")
+@patch("core.orchestration.run_all_pipelines.subprocess.run")
 def test_run_pipelines_timeout_handling(mock_run):
     # Simulate a timeout
     mock_run.side_effect = subprocess.TimeoutExpired(cmd=["test"], timeout=7200)

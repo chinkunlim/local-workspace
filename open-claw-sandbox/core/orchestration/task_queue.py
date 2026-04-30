@@ -17,7 +17,7 @@ import threading
 import time
 from typing import List, Optional
 
-from core.log_manager import build_logger
+from core.utils.log_manager import build_logger
 
 # Use workspace root to locate the data directory for quarantine
 _workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -79,7 +79,7 @@ class LocalTaskQueue:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
             try:
-                from core.telegram_bot import send_message
+                from core.services.telegram_bot import send_message
 
                 send_message(f"☠️ [隔離區] 發現毒藥檔案！\n已隔離: {filename}\n原因: {error_msg}")
             except ImportError:
@@ -118,7 +118,7 @@ class LocalTaskQueue:
                         msg = f"✅ [TaskQueue] 任務成功完成: {name} (耗時 {elapsed:.1f}s)"
                         _logger.info(msg)
                         try:
-                            from core.telegram_bot import send_message
+                            from core.services.telegram_bot import send_message
 
                             send_message(msg)
                         except ImportError:
@@ -150,7 +150,7 @@ class LocalTaskQueue:
             self.q.put(task)
 
             try:
-                from core.telegram_bot import send_message
+                from core.services.telegram_bot import send_message
 
                 send_message(error_msg + f"\n將進行第 {task['retry_count'] + 1} 次重試...")
             except ImportError:

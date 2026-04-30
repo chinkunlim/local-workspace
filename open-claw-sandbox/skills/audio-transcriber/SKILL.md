@@ -1,6 +1,6 @@
 ---
 name: audio-transcriber
-description: End-to-end voice processing pipeline. Converts .m4a audio into polished, MLX-Whisper transcribed Notion-ready study material.
+description: End-to-end voice processing pipeline. Converts .m4a audio into polished, MLX-Whisper transcribed Obsidian-ready study notes.
 metadata:
   {
     "openclaw":
@@ -12,58 +12,53 @@ metadata:
 
 # Audio Transcriber Skill
 
-> **Pipeline**: M4A → Transcript → Proofread → Merge
+> **Pipeline**: M4A → Glossary → Transcription → Proofread → Merge
 
 ## Quick Start
 
 ```bash
-# 1. 放音檔進 Inbox（Universal Drop Zone）
-cp lecture.m4a data/raw/助人歷程/
+# 1. Drop audio files into the Universal Inbox
+cp lecture.m4a data/raw/<SubjectName>/
 
-# 2. 執行流水線 (Headless Batch Mode)
+# 2. Run in headless batch mode
 python3 skills/audio-transcriber/scripts/run_all.py --process-all
 
-# 3. 查看進度
+# 3. Check pipeline progress
 cat data/audio-transcriber/state/checklist.md
 ```
 
-## 核心防禦機制 (V8.1 Anti-Hallucination)
+## Anti-Hallucination Defense Architecture (V8.1)
 
-| Phase | 腳本 | 功能 |
+| Phase | Script | Function |
 |:---:|:---|:---|
-| P0 | `p00_glossary.py` | 術語表初始化，防止 LLM 生造詞 |
-| P1 | `p01_transcribe.py` | 高精度轉錄。**VAD 靜音切除防護網**：使用 `pydub.silence` 預先切除雜音。若 `silence_ratio > max_removal_ratio`（預設 0.90）則自動 Fallback 至原始音檔，防止過度切除導致斷句。包含多片段多數決語言偵測。 |
-| P2 | `p02_proofread.py` | LLM 智能校對 + 術語保護 |
-| P3 | `p03_merge.py` | 跨段合併精煉 |
+| P0 | `p00_glossary.py` | Glossary initialisation — prevents LLM from fabricating domain-specific terms |
+| P1 | `p01_transcribe.py` | High-fidelity transcription via MLX-Whisper. **VAD silence-trimming guard**: uses `pydub.silence` to pre-strip noise. If `silence_ratio > max_removal_ratio` (default: 0.90), automatically falls back to the raw audio to prevent over-trimming. Includes multi-clip majority-vote language detection. |
+| P2 | `p02_proofread.py` | LLM-assisted intelligent proofreading with glossary term protection |
+| P3 | `p03_merge.py` | Cross-segment consolidation and refinement |
 
-## 常用指令
+## Common Commands
 
 ```bash
-# 只處理特定科目
-python3 skills/audio-transcriber/scripts/run_all.py --subject 助人歷程
-
-# 從斷點恢復
-python3 skills/audio-transcriber/scripts/run_all.py --resume
-
-# 背景批次執行 (自動處理全部)
+# Run full pipeline on all pending files
 python3 skills/audio-transcriber/scripts/run_all.py --process-all
 
-# 輸出 JSON 格式日誌 (Headless Telemetry)
-python3 skills/audio-transcriber/scripts/run_all.py --process-all --log-json
+# Run from a specific phase
+python3 skills/audio-transcriber/scripts/run_all.py --from 2
 
-# 強制重跑（覆寫已完成）
-python3 skills/audio-transcriber/scripts/run_all.py --force --subject 助人歷程
+# Force re-run on all files
+python3 skills/audio-transcriber/scripts/run_all.py --process-all --force
 
-# 互動切換模型
-python3 core/cli_config_wizard.py --skill audio-transcriber
+# Regenerate glossary only
+python3 skills/audio-transcriber/scripts/run_all.py --glossary
+
+# Process a single subject
+python3 skills/audio-transcriber/scripts/run_all.py --subject <SubjectName>
 ```
 
-## 設定檔位置
+## Global Standards
 
-- **主設定**: `config/config.yaml` — 模型選擇、路徑、閾值
-- **LLM 指令**: `config/prompt.md` — Phase 2–3 的 System Prompt
-- **詳細文件**: `docs/ARCHITECTURE.md`
-
-## 全域標準化
-
-- **全域標準化介面 (Global Standardization)**: 採用統一的 CLI 狀態與 DAG 追蹤面板 (`📊 語音轉錄狀態與 DAG 追蹤面板`)，支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷保護。
+- **Zero Temperature**: `config.yaml` enforces `temperature: 0` to guarantee deterministic, hallucination-free outputs.
+- **Headless CLI**: Supports `--process-all`, `--from`, `--force`, `--resume`, `--log-json` for full CI/CD compatibility.
+- **Preflight Check**: Validates all dependencies and config on every run before processing begins.
+- **Checkpoint Resume**: All phase completions are saved to `state/`; use `--resume` to continue after an interruption.
+- macOS native notifications (`osascript`) and graceful `KeyboardInterrupt` handling with checkpoint save.

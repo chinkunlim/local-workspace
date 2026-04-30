@@ -13,7 +13,7 @@ ResumeManager — OpenClaw Cross-Session Resume
 - ResumeManager: 管理「目前正在處理的 PDF 的 chunk-level 精細進度」
 
 Usage:
-    from core.resume_manager import ResumeManager
+    from core.state.resume_manager import ResumeManager
 
     rm = ResumeManager(base_dir="data/doc-parser")
 
@@ -36,7 +36,7 @@ import os
 import threading
 from typing import Any, Dict, Optional
 
-from core.atomic_writer import AtomicWriter
+from core.utils.atomic_writer import AtomicWriter
 
 _logger = logging.getLogger("OpenClaw.ResumeManager")
 

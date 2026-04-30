@@ -25,12 +25,12 @@ import re
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.bootstrap import ensure_core_path as _bootstrap
+from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
 from core import PipelineBase
-from core.graph_store import get_graph_store
+from core.ai.graph_store import get_graph_store
 
 # Regex patterns
 _WIKILINK_RE = re.compile(r"\[\[([^\[\]|#]+?)(?:\|[^\]]+?)?\]\]")
@@ -155,7 +155,7 @@ class Phase2ExtractGraph(PipelineBase):
 
         # Publish event for downstream consumers (P1-1 EventBus)
         try:
-            from core.event_bus import DomainEvent, EventBus
+            from core.orchestration.event_bus import DomainEvent, EventBus
 
             EventBus.publish(
                 DomainEvent(

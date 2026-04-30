@@ -10,39 +10,43 @@ metadata:
   }
 ---
 
-# Interactive Reader (互動式閱讀助手)
+# Interactive Reader
 
 **Open Claw Skill**
 
-## 角色與定位
-Interactive Reader 是一個協助你在 Markdown 筆記中「原地與 AI 協作」的工具。
-它會掃描檔案中特定的 AI 指令標籤，擷取周圍上下文，呼叫大語言模型生成回答（如總結、心智圖、解釋），並將結果自動安全地追加到該標籤下方。
+## Role & Purpose
 
-## 觸發方式
-透過 CLI 單檔執行，或透過 WebUI 排程。
+The Interactive Reader enables you to collaborate with the AI directly inside your Markdown notes. It scans for special `> [AI: ...]` command tags, extracts the surrounding context, calls the LLM to generate a response (e.g., a summary, mind map, or explanation), and safely appends the result below the tag in-place.
+
+## Usage
+
 ```bash
-# 處理單一檔案
-python3 skills/interactive-reader/scripts/run_all.py --file "你的筆記.md"
+# Process a single file
+python3 skills/interactive-reader/scripts/run_all.py --file "your_note.md"
 
-# 背景批次處理 (自動掃描所有筆記)
+# Batch process all notes (headless mode)
 python3 skills/interactive-reader/scripts/run_all.py --process-all
 ```
 
-## 核心防護 (V2.0 Antigravity)
-- **零溫決策 (Zero Temperature)**: 預設強制 `temperature: 0` 以杜絕 AI 幻覺，提供精確、可重複的上下文解析。
-- **無縫 CLI**: 支援統一的 `--process-all` 與 `--log-json` 以相容 Headless 架構。
+## Tag Syntax
 
-## 標籤語法
-在 Markdown 筆記中插入以下標籤：
-`> [AI: 請幫我解釋這段話的意思]`
+Insert the following tag anywhere inside a Markdown note:
 
-處理完成後，系統會將其標記為已處理，防止重複執行：
-`> [AI-DONE: 請幫我解釋這段話的意思]`
+```markdown
+> [AI: Please explain the key concept in this paragraph]
+```
 
-## 全域標準化 (Omega Integration)
+After processing, the tag is marked as resolved to prevent re-processing:
 
-- **統一 CLI 介面**: 所有啟動腳本皆具備三大標準機制：
-  1. **啟動前置檢查 (Preflight Check)**：驗證依賴與配置無誤。
-  2. **狀態與 DAG 追蹤面板 (Dashboard)**：即時視覺化顯示管線進度。
-  3. **互動選取與重跑機制 (Interactive Menu)**：可動態選擇 PENDING 或 COMPLETED 任務。
-- 支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷與斷點保存功能。
+```markdown
+> [AI-DONE: Please explain the key concept in this paragraph]
+> [AI-RESPONSE]
+> ... the LLM response appears here ...
+```
+
+## Global Standards
+
+- **Zero Temperature**: Enforces `temperature: 0` to guarantee precise, repeatable in-context annotations and eliminate hallucinations.
+- **Headless CLI**: Supports `--process-all` and `--log-json` for full CI/CD compatibility.
+- **Unified CLI Interface**: Supports standard Preflight Check, DAG status tracking panel, and interactive task selection.
+- macOS native notifications (`osascript`) and graceful `KeyboardInterrupt` handling with checkpoint save.

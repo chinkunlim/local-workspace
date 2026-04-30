@@ -11,7 +11,7 @@ Playwright 操作授權邊界管理器。
 - 所有 Playwright 動作記錄到 security_audit.log
 
 Usage:
-    from core.security_manager import SecurityManager, SecurityViolationError
+    from core.services.security_manager import SecurityManager, SecurityViolationError
 
     sm = SecurityManager(config_dir="skills/doc-parser/config")
     sm.validate_navigation("https://gemini.google.com/app")   # OK

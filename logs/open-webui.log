@@ -1,5 +1,0 @@
-error: Request failed after 3 retries in 21.7s
-  Caused by: Failed to fetch: `https://pypi.org/simple/open-webui/`
-  Caused by: error sending request for url (https://pypi.org/simple/open-webui/)
-  Caused by: client error (Connect)
-  Caused by: invalid peer certificate: UnknownIssuer

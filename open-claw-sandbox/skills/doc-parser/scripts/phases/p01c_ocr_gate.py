@@ -23,12 +23,12 @@ import tempfile
 from typing import Dict, List, Optional
 
 # Internal Core Bootstrap
-from core.bootstrap import ensure_core_path as _bootstrap
+from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
-from core.atomic_writer import AtomicWriter
-from core.pipeline_base import PipelineBase
+from core.orchestration.pipeline_base import PipelineBase
+from core.utils.atomic_writer import AtomicWriter
 
 # OCR settings are required from config.yaml.
 DEFAULT_CONFIDENCE_THRESHOLD = None
@@ -110,8 +110,8 @@ class Phase1cOCRQualityGate(PipelineBase):
             )
             # H3: Trigger HITL intervention — pipeline pauses; user approves/skips via Telegram
             try:
-                from core.hitl_manager import HITLEvent, HITLManager
-                from core.telegram_bot import send_hitl_prompt
+                from core.services.hitl_manager import HITLEvent, HITLManager
+                from core.services.telegram_bot import send_hitl_prompt
 
                 hitl_mgr = HITLManager(base_dir=self.base_dir)
                 event = HITLEvent(

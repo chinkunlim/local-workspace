@@ -25,13 +25,13 @@ from typing import Dict, List, Optional
 
 # Temporary path injection just to reach core/bootstrap.py from skills/doc-parser/scripts
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.bootstrap import ensure_core_path as _bootstrap
+from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
 from core import build_skill_parser
-from core.pipeline_base import PipelineBase
-from core.resume_manager import ResumeManager
+from core.orchestration.pipeline_base import PipelineBase
+from core.state.resume_manager import ResumeManager
 
 
 class PDFStatus(Enum):
@@ -557,7 +557,7 @@ if __name__ == "__main__":
             # 處理「已完成」的 PDF（可選擇重跑）
             done_tasks = [i for i in qm._queue if i["status"] == PDFStatus.COMPLETED.value]
             if done_tasks:
-                from core.cli_menu import batch_select_tasks
+                from core.cli.cli_menu import batch_select_tasks
 
                 reprocess_dict = batch_select_tasks(done_tasks, header="已完成的 PDF (重跑選取)")
                 if reprocess_dict:
@@ -568,7 +568,7 @@ if __name__ == "__main__":
             # 處理「待處理」的 PDF
             pending = [i for i in qm._queue if i["status"] == PDFStatus.PENDING.value]
             if pending:
-                from core.cli_menu import batch_select_tasks
+                from core.cli.cli_menu import batch_select_tasks
 
                 chosen_dict = batch_select_tasks(pending, header="待處理的 PDF")
                 if not chosen_dict:

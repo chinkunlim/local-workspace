@@ -36,19 +36,20 @@ import psutil
 @dataclass
 class PipelineResponse:
     """Standardized response object for all Pipeline executions (P4.3-3)."""
+
     status: str  # "success", "failed", "paused"
     data: Dict[str, Any] = field(default_factory=dict)
     errors: List[str] = field(default_factory=list)
 
 
-from core.config_manager import ConfigManager
-from core.config_validation import ConfigValidator
-from core.hitl_manager import HITLPendingInterrupt
-from core.llm_client import TRACE_ID_VAR, OllamaClient
-from core.log_manager import build_logger
-from core.path_builder import PathBuilder
-from core.session_state import SessionState, write_session_state
-from core.state_manager import StateManager
+from core.ai.llm_client import TRACE_ID_VAR, OllamaClient
+from core.config.config_manager import ConfigManager
+from core.config.config_validation import ConfigValidator
+from core.services.hitl_manager import HITLPendingInterrupt
+from core.state.session_state import SessionState, write_session_state
+from core.state.state_manager import StateManager
+from core.utils.log_manager import build_logger
+from core.utils.path_builder import PathBuilder
 
 
 class PipelineBase:
@@ -466,10 +467,9 @@ class PipelineBase:
                     self.save_checkpoint(next_task["subject"], next_task["filename"])
                 break
 
-
     def _batch_select_reprocess(self, done_tasks: List[Dict]) -> Dict[int, Dict]:
         """互動式批量選擇已完成任務是否重跑。"""
-        from core.cli_menu import batch_select_tasks
+        from core.cli.cli_menu import batch_select_tasks
 
         return batch_select_tasks(done_tasks, header=f"[{self.phase_key.upper()}] 已完成的檔案")
 
@@ -490,6 +490,7 @@ class PipelineBase:
     def create_spinner(self, desc: str):
         try:
             from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+
             progress = Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
