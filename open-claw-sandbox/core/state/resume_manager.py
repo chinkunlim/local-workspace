@@ -36,7 +36,7 @@ import os
 import threading
 from typing import Any, Dict, Optional
 
-from .atomic_writer import AtomicWriter
+from core.atomic_writer import AtomicWriter
 
 _logger = logging.getLogger("OpenClaw.ResumeManager")
 

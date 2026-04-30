@@ -14,7 +14,7 @@ Before making any change, read and apply the following files in order:
 3. `memory/HANDOFF.md` — last session progress and next steps
 4. `memory/TASKS.md` — current task list
 5. `docs/STRUCTURE.md` — annotated map of every file and folder in this workspace
-6. `AGENTS.md` — this file (non-negotiable behaviours and quality bar)
+6. `open-claw-sandbox/AGENTS.md` — this file (non-negotiable behaviours and quality bar)
 7. `skills/<skill>/SKILL.md` — skill quick-start, phases, and CLI reference (if executing a skill)
 
 ## 3. Non-Negotiable Behaviors
@@ -36,7 +36,7 @@ If code changes affect observable behavior, update corresponding documentation i
 | Data path, phase logic, or core module change | `skills/<skill>/docs/ARCHITECTURE.md` + `docs/STRUCTURE.md` |
 | Architectural decision made | `skills/<skill>/docs/DECISIONS.md` |
 | New pattern or rule established | `docs/CODING_GUIDELINES_FINAL.md` |
-| New skill or core module added | `docs/STRUCTURE.md`, `memory/ARCHITECTURE.md`, `skills/SKILL.md` |
+| New skill or core module added | `docs/STRUCTURE.md`, `docs/ARCHITECTURE.md`, `skills/<skill>/SKILL.md` |
 
 ## 5. External Action Policy
 

@@ -112,7 +112,7 @@ class RouterAgent:
     def resolve(self, manifest: TaskManifest) -> List[str]:
         """Resolve a manifest to an ordered list of skill names."""
         ext = os.path.splitext(manifest.source_path)[-1].lower()
-        
+
         # 1. Natural language decomposition if intent is not a simple keyword
         if manifest.intent not in ["auto", "study", "compile"] and len(manifest.intent) > 10:
             llm_chain = self._llm_decompose(manifest.intent, ext)

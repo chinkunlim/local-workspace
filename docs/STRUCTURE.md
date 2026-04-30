@@ -53,88 +53,58 @@ All skills import from `core/`. The `core/` package must remain skill-agnostic.
 
 ```
 core/
-├── __init__.py               ← Public API: imports all exported symbols for "from core import X"
+├── cli/                      ← Command-line interfaces and terminal UX
+│   ├── cli.py                ← Shared argparse builder
+│   ├── cli_menu.py           ← Interactive terminal menu
+│   ├── cli_runner.py         ← Service layer constructing subprocess commands
+│   ├── cli_config_wizard.py  ← Interactive TUI for switching model profiles
+│   └── check_status.py       ← CLI helper for querying pipeline status
 │
-├── bootstrap.py              ← ensure_core_path(__file__): one-liner sys.path fix
-│                                Replaces the old 10-line "Boundary-Safe Init" boilerplate.
+├── config/                   ← Environment and configuration management
+│   ├── config_manager.py     ← YAML/JSON config loader
+│   ├── config_validation.py  ← Validates config.yaml schema
+│   └── inbox_config.json     ← PDF routing rules
 │
-├── pipeline_base.py          ← Abstract base class for ALL Phase scripts and Orchestrators.
-│                                Provides: self.dirs, self.llm, self.state_manager,
-│                                self.info/warning/error logging, interrupt handling.
+├── state/                    ← State, memory, and persistence management
+│   ├── state_manager.py      ← Pipeline state tracking + checklist.md
+│   ├── state_backend.py      ← Backend interfaces (JSON/Redis)
+│   ├── session_state.py      ← Volatile per-session state tracking
+│   ├── memory_updater.py     ← Global AI memory update logic
+│   └── resume_manager.py     ← Checkpoint save/load for graceful mid-run resume
 │
-├── path_builder.py           ← Config-driven path resolver. Reads paths.phases from
-│                                config.yaml; no hardcoded if-skill_name branches.
-│                                Properties: canonical_dirs, phase_dirs, log_file, state_file.
+├── orchestration/            ← Central task management and DAG routing
+│   ├── router_agent.py       ← LLM-based DAG parser for intent routing
+│   ├── task_queue.py         ← LocalTaskQueue: Single-threaded execution lock with DLQ
+│   ├── scheduler.py          ← Task scheduling mechanisms
+│   ├── event_bus.py          ← Pub/Sub event dispatcher
+│   ├── pipeline_base.py      ← Abstract base class for ALL Phase scripts
+│   ├── run_all_pipelines.py  ← Global PID-locked pipeline orchestrator
+│   └── skill_registry.py     ← Dynamic skill discovery and registry
 │
-├── state_manager.py          ← Pipeline state tracking + checklist.md rendering.
-│                                Manages .pipeline_state.json per skill.
-│                                Supports skill-specific phase sets (voice: p1-p5, pdf: p1a-p2b).
+├── services/                 ← Background workers and security
+│   ├── telegram_bot.py       ← Telegram integration for notifications and RAG queries
+│   ├── inbox_daemon.py       ← Watchdog background process monitoring Inboxes
+│   ├── hitl_manager.py       ← Human-in-the-loop (HITL) interrupt management
+│   └── security_manager.py   ← Input security scanning (PDF sanitisation)
 │
-├── config_manager.py         ← YAML/JSON config loader with get_nested() and get_section().
+├── ai/                       ← LLM interactions and Knowledge Retrieval
+│   ├── llm_client.py         ← Ollama/OpenAI client with async and circuit breaker
+│   ├── hybrid_retriever.py   ← RAG retrieval engine
+│   ├── graph_store.py        ← Knowledge graph interactions
+│   └── knowledge_pusher.py   ← Helper to push final outputs to Obsidian/Wiki layout
 │
-├── config_validation.py      ← Validates config.yaml schema at pipeline startup.
-│
-├── llm_client.py             ← OllamaClient: generate(), unload_model(), retry logic, timeouts.
-│
-├── atomic_writer.py          ← AtomicWriter: write-then-rename for corruption-safe file writes.
-│
-├── diff_engine.py            ← DiffEngine (side-by-side HTML diff) + AuditEngine (changelog
-│                                aggregation). Skill-agnostic — any two text files.
-│
-├── glossary_manager.py       ← Cross-skill terminology synchronisation.
-│                                Reads/writes priority_terms.json shared between skills.
-│
-├── text_utils.py             ← smart_split(): context-aware text chunking for LLM prompts.
-│
-├── security_manager.py       ← Input security scanning (PDF sanitisation; path traversal guard).
-│
-├── resume_manager.py         ← Checkpoint save/load for graceful mid-run resume.
-│
-├── error_classifier.py       ← Categorises exceptions into recoverable / fatal / user-error.
-│
-├── log_manager.py            ← Structured logger factory (file + console, emoji prefixes).
-│
-├── data_layout.py            ← Ensures all canonical data directories exist before pipeline runs.
-│
-├── cli.py                    ← Shared argparse builder: adds --subject, --force, --resume,
-│                                --interactive flags to any skill's CLI.
-│
-├── cli_config_wizard.py      ← Interactive TUI for switching model profiles in config.yaml.
-│                                Run: python3 core/cli_config_wizard.py --skill <skill-name>
-│
-├── inbox_daemon.py           ← SystemInboxDaemon: watchdog background process that monitors
-│                                all skill Inboxes and triggers pipelines on new files.
-│                                Started/stopped by local-workspace/start.sh and stop.sh.
-│
-├── check_status.py           ← CLI helper for querying pipeline status without running them.
-│
-├── cli_menu.py               ← Interactive terminal menu for pipeline selection and options.
-│
-├── cli_runner.py             ← Service layer constructing subprocess commands for skills.
-│
-├── file_utils.py             ← DRY utility module (safe_read_json, managed_tmp_dir, ensure_dir).
-│
-├── knowledge_pusher.py       ← Helper to push final outputs to Obsidian/Wiki layout.
-│
-├── run_all_pipelines.py      ← Global PID-locked pipeline orchestrator; prevents OOM crashes.
-│
-├── session_state.py          ← Volatile per-session state tracking (current subject, flags).
-│
-├── subject_manager.py        ← Enumerates and validates subject/session directories.
-│
-├── task_queue.py             ← LocalTaskQueue: Single-threaded execution lock with DLQ.
-│
-├── telegram_bot.py           ← Telegram integration for notifications and RAG queries.
-│
-└── web_ui/
-    ├── app.py                ← Flask API server for the Central Dashboard (port 5001).
-    │                            Routes: /, /api/status, /api/logs, /api/start, /api/stop,
-    │                            /api/diff/phases, /api/diff/subjects, /api/diff/files, /api/diff
-    ├── execution_manager.py  ← Manages subprocess lifecycle: spawn, stdout streaming,
-    │                            SIGTERM/SIGKILL terminate, log buffer with cursor pagination.
-    └── templates/
-        └── index.html        ← Single-page dashboard: status panels, live log viewer,
-                                 Review Board with GitHub-style line-by-line diff rendering.
+└── utils/                    ← Stateless shared helpers
+    ├── file_utils.py         ← safe_read_json, managed_tmp_dir, ensure_dir
+    ├── text_utils.py         ← context-aware text chunking
+    ├── path_builder.py       ← Config-driven path resolver
+    ├── log_manager.py        ← Structured logger factory (rich)
+    ├── atomic_writer.py      ← write-then-rename for corruption-safe file writes
+    ├── error_classifier.py   ← Categorises exceptions into recoverable/fatal/user-error
+    ├── bootstrap.py          ← ensure_core_path(__file__)
+    ├── data_layout.py        ← Ensures all canonical data directories exist
+    ├── subject_manager.py    ← Enumerates and validates subject/session directories
+    ├── glossary_manager.py   ← Cross-skill terminology synchronisation
+    └── diff_engine.py        ← Side-by-side HTML diff + AuditEngine
 ```
 
 ---

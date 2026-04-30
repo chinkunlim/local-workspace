@@ -11,13 +11,13 @@ Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELI
 
 | Service | URL | Managed By |
 |:---|:---|:---|
-| Open Claw Dashboard | `http://127.0.0.1:5001` | `core/web_ui/app.py` |
+| Open Claw API Gateway | `http://127.0.0.1:18789` | `infra/scripts/start.sh` |
 | Ollama API | `http://127.0.0.1:11434` | External — `infra/scripts/start.sh` |
 | LiteLLM Proxy | `http://127.0.0.1:4000` | External — `infra/scripts/start.sh` |
 | Open WebUI | `http://127.0.0.1:3000` | External — `infra/scripts/start.sh` |
 | Pipelines | `http://127.0.0.1:9099` | External — `infra/scripts/start.sh` |
 
-> Ollama is the only **skill-runtime** dependency. Its availability is verified by `startup_check()` in each `run_all.py` orchestrator.
+> Ollama is the primary **skill-runtime** dependency. Its availability is verified by `startup_check()` in each `run_all.py` orchestrator (calls `http://127.0.0.1:11434/api/tags`).
 
 ---
 
@@ -26,11 +26,14 @@ Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELI
 | Item | Path |
 |:---|:---|
 | Workspace root | `open-claw-sandbox/` |
-| Shared core framework | `core/` |
-| Voice-memo skill | `skills/audio-transcriber/` |
-| PDF-knowledge skill | `skills/doc-parser/` |
-| Voice-memo runtime data | `data/audio-transcriber/` |
-| PDF-knowledge runtime data | `data/doc-parser/` |
+| Shared core framework | `core/` (7 sub-packages: cli/, config/, state/, orchestration/, services/, ai/, utils/) |
+| Audio-transcriber skill | `skills/audio-transcriber/` |
+| Doc-parser skill | `skills/doc-parser/` |
+| Universal Inbox | `data/raw/` (routed by `inbox_daemon`) |
+| Audio runtime data | `data/audio-transcriber/` |
+| PDF runtime data | `data/doc-parser/` |
+| Obsidian Wiki Vault | `data/wiki/` |
+| ChromaDB vector store | `data/doc-parser/output/vector_db/` |
 | Ops & maintenance scripts | `ops/` (sandbox), `../ops/` (global) |
 | Lifecycle scripts | `../infra/scripts/` |
 | Model cache (HuggingFace) | `models/` — set via `HF_HOME` env var |
@@ -42,10 +45,13 @@ Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELI
 
 | Variable | Default | Purpose |
 |:---|:---|:---|
-| `WORKSPACE_DIR` | auto-detected | Absolute path to `open-claw-sandbox/`; set by `local-workspace/start.sh` |
+| `WORKSPACE_DIR` | auto-detected | Absolute path to `open-claw-sandbox/`; set by `infra/scripts/start.sh` |
 | `HF_HOME` | `models/` | HuggingFace model cache location |
-| `DASHBOARD_HOST` | `127.0.0.1` | Flask dashboard bind host |
-| `DASHBOARD_PORT` | `5001` | Flask dashboard bind port |
+| `OPENCLAW_API_URL` | `http://127.0.0.1:18789` | Open Claw API gateway URL |
+| `TELEGRAM_BOT_TOKEN` | (required) | Telegram bot token — from `.env` file, never commit |
+| `TELEGRAM_CHAT_ID` | (required) | User's Telegram chat ID for HITL notifications |
+| `OPENCLAW_ENABLE_LLMGUARD` | `1` | Enable LLMGuard prompt injection scanning (`0` to disable) |
+| `OPENCLAW_LOG_JSON` | `0` | Enable structured JSON logging for upstream aggregation |
 
 ---
 

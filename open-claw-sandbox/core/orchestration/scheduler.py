@@ -109,7 +109,7 @@ class OpenClawScheduler:
 
     def _save_jobs(self) -> None:
         """Atomically persist all job records."""
-        from .atomic_writer import AtomicWriter
+        from core.atomic_writer import AtomicWriter
 
         payload = {
             "_schema_version": _JOBS_SCHEMA_VERSION,

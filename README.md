@@ -1,6 +1,17 @@
-# local-workspace
+# local-workspace (Open Claw Ecosystem)
 
-Local AI operations monorepo — Open Claw automation sandbox, LLM infrastructure, and skill-oriented pipelines.
+> An Event-driven, Human-in-the-Loop (HITL), Multi-Agent Orchestration Framework for local-first AI automation.
+
+## 🏗️ Architecture Data Flow
+```mermaid
+graph TD
+    User([User / Inbox]) -->|File Drop / Message| Core
+    Core[core/ Orchestration] -->|Parse Intent| RouterAgent
+    RouterAgent -->|Generate DAG| Skills[skills/ (Pipelines)]
+    Skills -->|Generate/Embed| LLM[LLM Client / Chroma]
+    Skills -->|Pause for Review| HITL[HITL Manager]
+    HITL -.->|Telegram Alert| User
+```
 
 ## Structure
 
@@ -14,21 +25,34 @@ local-workspace/
 └── tests/               ← E2E and integration test stubs
 ```
 
-## Quick Start
+## 🚀 Quick Start (Foolproof Setup)
 
-```bash
-# Start all services (Ollama, LiteLLM, Open WebUI, Pipelines, Open Claw API)
-./infra/scripts/start.sh
+1. **Clone the repository:**
+   ```bash
+   git clone <your-repo-url> local-workspace
+   cd local-workspace
+   ```
 
-# Stop all services
-./infra/scripts/stop.sh
+2. **Configure Environment:**
+   Copy the example environment file and fill in your API keys:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your favorite editor
+   ```
 
-# RAM watchdog (optional — auto-evicts models when memory is low)
-./infra/scripts/watchdog.sh
+3. **Install Dependencies:**
+   ```bash
+   cd open-claw-sandbox
+   pip install pip-tools
+   pip-sync requirements.txt
+   cd ..
+   ```
 
-# Run full quality check
-./ops/check.sh
-```
+4. **Start the Infrastructure:**
+   Start all services including Ollama, Open WebUI, Pipelines, and the Open Claw Daemon.
+   ```bash
+   ./infra/scripts/start.sh
+   ```
 
 ## Service Endpoints
 
@@ -39,11 +63,6 @@ local-workspace/
 | Ollama | http://127.0.0.1:11434 |
 | Pipelines | http://127.0.0.1:9099 |
 | Open Claw API | http://127.0.0.1:18789 |
-
-## Logs
-
-- Service logs: `logs/` (startup.log, openclaw.log, litellm.log, etc.)
-- Skill logs: `open-claw-sandbox/data/<skill>/logs/`
 
 ## Documentation
 

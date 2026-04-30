@@ -81,12 +81,13 @@ The `inbox_daemon` dynamically routes PDF files based on their filename suffixes
 
 ## 🤖 4. Mobile Access & Advanced Queries (Open Claw & Telegram)
 
-### Headless Telegram Operations
-Open Claw is designed to run silently in the background. The `BotDaemon` provides asynchronous command-and-control capabilities via Telegram, allowing remote orchestration without risking RAM exhaustion.
-- `/status` — Polls the `SystemInboxDaemon` and returns the real-time DAG state of all queues.
-- `/run` — Dispatches a global pipeline execution. The `LocalTaskQueue` guarantees sequential execution to mitigate Ollama OOM crashes.
+### Headless Telegram Operations & HITL
+Open Claw is designed to run silently in the background. The `telegram_bot.py` service provides asynchronous command-and-control capabilities via Telegram, allowing remote orchestration without risking RAM exhaustion.
+- `/status` — Polls the `inbox_daemon` and returns the real-time DAG state of all queues.
+- `/run` — Dispatches a global pipeline execution. The `core/orchestration/task_queue.py` guarantees sequential execution to mitigate Ollama OOM crashes.
 - `/pause` — Gracefully interrupts the current pipeline (`SIGTERM`), safely saving checkpoints before releasing VRAM.
 - `/query <text>` — Executes a semantic RAG query against the ChromaDB vector store.
+- **HITL (Human-in-the-Loop) Events**: When the system encounters low confidence data, it raises a `HITLPendingInterrupt`. The Telegram bot provides a real-time notification. Reply with `/hitl approve <trace_id>` to resume.
 
 ### Open WebUI & Literature Matrix Synthesis
 1. **Ensure the Pipeline is Complete**: Verify via `/status` that your target PDFs have reached Phase 1d (VLM parsing complete).
@@ -101,8 +102,13 @@ Open Claw is designed to run silently in the background. The `BotDaemon` provide
 
 Open Claw interfaces collaborate seamlessly:
 1. **Trigger (Obsidian)**: While reading `data/wiki/Cognitive_Psychology/lecture_01.md`, update the YAML frontmatter to `status: rewrite` and save.
-2. **Automation (CLI Background Execution)**: `inbox_daemon` instantly detects the atomic write, locks the file (`status: processing`), and enqueues the `note_generator` skill. macOS native notifications (`osascript`) alert you to the pipeline's progress.
+2. **Automation (Daemon Execution)**: `core/services/inbox_daemon.py` instantly detects the atomic write, locks the file (`status: processing`), and enqueues the `note_generator` skill. macOS native notifications (`osascript`) alert you to the pipeline's progress.
 3. **High-Level Analysis (Open WebUI)**: Navigate to Open WebUI and query: "Generate a quiz based on my latest Cognitive Psychology notes." The AI utilizes RAG against your freshly synthesized vault.
+
+---
+
+## ⚙️ 6. Configuring Providers (v1.2.0)
+Configure your LLM providers in `config.yaml` or global `~/.openclaw/openclaw.json`. The new `core/ai/llm_client.py` automatically falls back to secondary models upon encountering rate limits (Circuit Breaker pattern).
 
 ---
 
@@ -205,7 +211,7 @@ python3 skills/note_generator/scripts/synthesize.py     --subject "Cognitive Psy
 
 ## 📋 CLI-6: Inbox Routing Management (`inbox-manager`)
 
-Dynamically manages `core/inbox_config.json` routing constraints without manual JSON editing.
+Dynamically manages `core/config/inbox_config.json` routing constraints without manual JSON editing.
 ```bash
 # List all active routing rules
 python3 skills/inbox-manager/scripts/query.py list
@@ -238,15 +244,6 @@ python3 skills/academic-edu-assistant/scripts/run_all.py     --query "Compare th
 
 All Open Claw skills integrate a standardized architectural interface:
 1. **Preflight Checks**: Every orchestrator automatically executes a `✈️ Preflight Check` to validate dependencies, configurations, and connectivity (e.g. Ollama, `poppler-utils`) before processing begins.
-2. **Unified Dashboard & Code Self-Healing**: Every module renders a standardized `📊 [Skill Name] State & DAG Tracking Panel` in the terminal for consistent UX. 
+2. **Unified Dashboard & Code Self-Healing**: Every module renders a standardized `📊 [Skill Name] State & DAG Tracking Panel` in the terminal for consistent UX using `rich`. 
 3. **Interactive Selection UI**: If you execute a pipeline without arguments, the Orchestrator will display an interactive CLI menu allowing you to use numbers and ranges (e.g. `1,3,5` or `1-5`) to select pending tasks, or even choose previously completed tasks for reprocessing.
-4. **Graceful Interruptions & Notifications**: Press `Ctrl+C` to halt operations. The system intercepts `KeyboardInterrupt`, saves state checkpoints safely, and dispatches a macOS native alert (`Execution Interrupted`). Upon successful completion, a `Pipeline Execution Complete` notification is dispatched. **No additional software installation is required.**
-
-
-# Use-Case Driven Operations (v1.2.0)
-
-## Telegram Bot Integration
-The Telegram bot provides real-time notifications for Human-in-the-Loop (HITL) events. When the system encounters low confidence data, it will pause and message you. Reply with `/hitl approve <trace_id>` to resume.
-
-## Configuring Providers
-Configure your LLM providers in `config.yaml` or global `~/.openclaw/openclaw.json`. The new `llm_client` automatically falls back to secondary models upon encountering rate limits.
+4. **Graceful Interruptions & Notifications**: Press `Ctrl+C` to halt operations. The system intercepts `KeyboardInterrupt`, saves state checkpoints safely, and dispatches a macOS native alert (`Execution Interrupted`). Upon successful completion, a `Pipeline Execution Complete` notification is dispatched.

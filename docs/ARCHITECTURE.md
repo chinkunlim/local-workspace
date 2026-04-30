@@ -106,6 +106,18 @@ graph TD
 
 
 # Multi-Agent Architecture (v1.2.0)
-- `core/`: The heart of the system. Manages state (`state_manager`), queues (`task_queue`), config (`config_manager`), and LLM connections (`llm_client`).
+
+## The Core Sub-Modules (`core/`)
+The `core/` directory is the heart of the Multi-Agent framework, strictly modularized to enforce high cohesion and single responsibility:
+
+- `core/cli/`: Handles terminal UI/UX, formatting (`rich`), config wizards, and CLI option parsing.
+- `core/config/`: Manages environment variables and YAML configurations, ensuring strict Pydantic validation.
+- `core/state/`: Manages the global `MemoryPool`, session tracking, and atomic JSON/Redis locking mechanisms.
+- `core/orchestration/`: The command center. Contains the `RouterAgent` (for LLM intent decomposition/DAG), `PipelineBase` (base runner), `TaskQueue`, and `EventBus` (Pub/Sub).
+- `core/services/`: Background workers and interrupt handlers, including `inbox_daemon.py`, `telegram_bot.py`, and `hitl_manager.py`.
+- `core/ai/`: Wraps external LLM calls (`llm_client.py` with `aiohttp` & `tenacity`), RAG indexing, and Vector DB integrations.
+- `core/utils/`: Stateless helpers for path building, atomic writes, text formatting, and log aggregation.
+
+## The Interfaces
 - `infra/pipelines/`: Interface layer connecting external providers (OpenAI, Anthropic) and tools.
 - `skills/`: The concrete business logic implementation. Each skill has its own `config/`, `scripts/`, and `docs/`.

@@ -143,9 +143,9 @@ class Phase1dVLMVision(PipelineBase):
                 import asyncio
 
                 # async_batch_generate does not natively accept multiple images arrays out of the box in the signature,
-                # Wait, looking at async_batch_generate, it takes a single `images` list for ALL prompts? 
+                # Wait, looking at async_batch_generate, it takes a single `images` list for ALL prompts?
                 # Let's write a small wrapper here for concurrent execution.
-                
+
                 async def _process_img(idx, rel_path, cols_list, b64_img):
                     try:
                         res = await self.llm.async_generate(
@@ -169,12 +169,12 @@ class Phase1dVLMVision(PipelineBase):
                     async def _bounded_process(*args):
                         async with semaphore:
                             return await _process_img(*args)
-                    
+
                     tasks = [_bounded_process(i, rel, cols, b64) for i, rel, cols, b64 in pending_tasks]
                     return await asyncio.gather(*tasks)
 
                 results = asyncio.run(_run_all())
-                
+
                 for idx, new_cols in results:
                     lines[idx] = "| " + " | ".join(new_cols) + " |\n"
                     modifications += 1

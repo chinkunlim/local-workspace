@@ -6,6 +6,20 @@
 
 ---
 
+## [2026-04-30] P4 Sprint: Multi-Agent Architecture, Global State & HITL
+
+**Context:** The system originally consisted of isolated scripts that passed files sequentially through the `data/` directory. There was no global state sharing, meaning user preferences (e.g., via Telegram) could not be easily passed to the `doc-parser` or `audio-transcriber`. Furthermore, any interruption required killing the process, which lacked a robust Human-in-the-Loop (HITL) recovery mechanism.
+
+**Decision:**
+1. **Global State & Memory Pool**: Implemented `MemoryPool` in `core/state/state_manager.py` using `StateBackend` for atomic JSON/Redis locking. Skills can now read/write cross-skill states from a `_global_` namespace.
+2. **Intent Routing**: Introduced `core/orchestration/router_agent.py` to parse complex natural language intents using an LLM, generating a DAG (Directed Acyclic Graph) of skills to execute.
+3. **HITL Pipeline Resumption**: Created `HITLPendingInterrupt` in `core/services/hitl_manager.py`. When triggered, `PipelineBase` intercepts the error, checkpoints the state to `session.json`, and gracefully exits, waiting for a `/hitl approve` signal via Telegram.
+4. **Async LLM Client**: Overhauled `core/ai/llm_client.py` to use `aiohttp` and `tenacity` for exponential backoff, circuit breaking, and concurrent generation.
+
+**Rationale:** Transitioning to a Multi-Agent orchestration framework enables the system to handle complex, chained requests autonomously while allowing safe human intervention without losing computational progress.
+
+---
+
 ## [2026-04-19] `open-claw-sandbox/` placed at monorepo root (not inside `apps/`)
 
 **Context:** §11.2 of CODING_GUIDELINES_FINAL recommends an `apps/` directory.

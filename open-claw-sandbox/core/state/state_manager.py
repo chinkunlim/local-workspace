@@ -7,8 +7,8 @@ import os
 import threading
 from typing import Any, Dict, List, Optional
 
-from .atomic_writer import AtomicWriter
-from .state_backend import get_state_backend
+from core.atomic_writer import AtomicWriter
+from core.state_backend import get_state_backend
 
 _logger = logging.getLogger("OpenClaw.StateManager")
 

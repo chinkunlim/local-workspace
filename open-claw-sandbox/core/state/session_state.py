@@ -25,7 +25,7 @@ from enum import Enum
 import os
 from typing import Any, Dict, Optional
 
-from .atomic_writer import AtomicWriter
+from core.atomic_writer import AtomicWriter
 
 # ---------------------------------------------------------------------------
 # State Enum

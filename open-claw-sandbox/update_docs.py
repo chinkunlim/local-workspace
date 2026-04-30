@@ -4,7 +4,7 @@ docs_dir = '/Users/limchinkun/Desktop/local-workspace/docs'
 sandbox_dir = '/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox'
 
 # 1. Update AI_Master_Guide_Final.md
-with open(os.path.join(sandbox_dir, 'AGENTS.md'), 'r') as f:
+with open(os.path.join(sandbox_dir, 'AGENTS.md')) as f:
     agents_content = f.read()
 
 with open(os.path.join(docs_dir, 'AI_Master_Guide_Final.md'), 'a') as f:
@@ -49,7 +49,7 @@ root_changelog = os.path.join('/Users/limchinkun/Desktop/local-workspace', 'CHAN
 sandbox_changelog = os.path.join(sandbox_dir, 'CHANGELOG.md')
 
 if os.path.exists(sandbox_changelog):
-    with open(sandbox_changelog, 'r') as f:
+    with open(sandbox_changelog) as f:
         sandbox_content = f.read()
     with open(root_changelog, 'a') as f:
         f.write('\n\n')

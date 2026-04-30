@@ -31,7 +31,7 @@ import uuid
 # Exceptions
 # ---------------------------------------------------------------------------
 
-class HITLPendingInterrupt(Exception):
+class HITLPendingInterrupt(Exception):  # noqa: N818
     """Raised when a HITL event is triggered, pausing pipeline execution."""
     def __init__(self, trace_id: str, message: str):
         super().__init__(message)

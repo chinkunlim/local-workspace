@@ -15,8 +15,11 @@ Install these once via Homebrew:
 # Required: PDF rasterisation + OCR
 brew install poppler tesseract tesseract-lang
 
-# Required: verify Python 3.9+ is available
+# Required: verify Python 3.11+ is available
 python3 --version
+
+# Required: pip-tools for reproducible dependency locking
+pip3 install pip-tools
 ```
 
 ---
@@ -26,18 +29,21 @@ python3 --version
 ```bash
 cd /Users/limchinkun/Desktop/local-workspace/open-claw-sandbox
 
-# Install all skill and core dependencies
-pip3 install -r ops/requirements.txt
+# Install all locked dependencies via pip-tools (reproducible builds)
+pip-sync requirements.txt
 
-# Install code quality tools
+# Install code quality tools (if not already in requirements.txt)
 pip3 install ruff mypy pre-commit
 ```
 
-Or use the automated bootstrap script (if available):
+Or use the automated bootstrap script:
 
 ```bash
 bash ops/bootstrap.sh
 ```
+
+> **Note**: `requirements.txt` is generated from `requirements.in` via `pip-compile`.
+> To update dependencies: edit `requirements.in`, then run `pip-compile requirements.in`.
 
 ---
 
@@ -68,13 +74,17 @@ export HF_HOME="${WORKSPACE_DIR}/models"   # keep model cache inside workspace
 ## 6. Verify Installation
 
 ```bash
-# Smoke-test: confirm all core modules import cleanly
+# Smoke-test: confirm all core sub-packages import cleanly
 python3 -c "
-from core.bootstrap import ensure_core_path
+from core.utils.bootstrap import ensure_core_path
 ensure_core_path('.')
-from core import (PipelineBase, StateManager, PathBuilder,
-                  DiffEngine, AuditEngine, SystemInboxDaemon)
-print('✅ core: all modules OK')
+from core.orchestration.pipeline_base import PipelineBase
+from core.state.state_manager import StateManager
+from core.utils.path_builder import PathBuilder
+from core.utils.diff_engine import DiffEngine, AuditEngine
+from core.services.inbox_daemon import SystemInboxDaemon
+from core.ai.llm_client import OllamaClient
+print('✅ core: all sub-packages OK')
 "
 
 # Smoke-test: audio-transcriber CLI
@@ -83,10 +93,8 @@ python3 skills/audio-transcriber/scripts/run_all.py --help
 # Smoke-test: doc-parser CLI
 python3 skills/doc-parser/scripts/run_all.py --help
 
-# Smoke-test: dashboard
-python3 core/web_ui/app.py &
-curl -s http://127.0.0.1:5001/api/status | python3 -m json.tool
-kill %1
+# Smoke-test: Open Claw API gateway (started by infra/scripts/start.sh)
+curl -s http://127.0.0.1:18789/health || echo 'API not running — start with ../infra/scripts/start.sh'
 ```
 
 ---
@@ -98,8 +106,9 @@ Drop files here to begin processing:
 
 | Skill | Input location |
 |:---|:---|
-| audio-transcriber | `data/audio-transcriber/input/raw_data/<subject>/*.m4a` |
-| doc-parser | `data/doc-parser/input/01_Inbox/<subject>/*.pdf` |
+| **Universal Inbox** (recommended) | `data/raw/<subject>/` — `inbox_daemon` routes automatically |
+| audio-transcriber (direct) | `data/audio-transcriber/input/<subject>/*.m4a` |
+| doc-parser (direct) | `data/doc-parser/input/<subject>/*.pdf` |
 
 ---
 
@@ -118,11 +127,21 @@ After bootstrap, read in this order:
 ## 9. Starting the Full AI Ecosystem
 
 The broader AI stack (Ollama, Open WebUI, LiteLLM, Open Claw gateway) is managed
-by `local-workspace/start.sh` and `local-workspace/stop.sh` — outside this workspace.
-
-To start only the Open Claw Dashboard independently:
+by `local-workspace/infra/scripts/start.sh` and `stop.sh` — outside this sandbox.
 
 ```bash
-python3 core/web_ui/app.py
-# → http://127.0.0.1:5001
+# Start all services (run from local-workspace/ root)
+../infra/scripts/start.sh
+
+# Stop all services
+../infra/scripts/stop.sh
+
+# RAM watchdog (auto-evicts models when memory drops below 15%)
+../infra/scripts/watchdog.sh
+
+# Open Claw API gateway endpoint (after start.sh)
+curl http://127.0.0.1:18789/health
 ```
+
+> The legacy Flask dashboard (`core/web_ui/app.py`) has been **deprecated** and removed.
+> All pipeline orchestration is now via the Open Claw CLI and Telegram bot interface.

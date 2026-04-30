@@ -2115,27 +2115,17 @@ def _process_sub(sub):
 
 2. **State Immutability (狀態不可變性)**
    - During Pipeline execution, state objects (e.g., JSON files in `state/`) must NOT be mutated in-place by external scripts.
-   - Use atomic operations (`core/atomic_writer.py`) and write new copies.
-   - For `MemoryPool` global state, use the built-in locking provided by `StateManager`.
+   - Use atomic operations (`core.utils.atomic_writer`) and write new copies.
+   - For `MemoryPool` global state, use the built-in locking provided by `core.state.state_manager`.
 
-3. **Unified Logging (統一日誌)**
-   - `print()` is strictly forbidden in core pipeline logic.
-   - All standard output must flow through `PipelineBase.log()`, `info()`, `warning()`, or `error()`.
-   - Use `rich` for formatting terminal output (spinners, progress bars, colored text) in `cli_runner.py` or interactive scripts.
+3. **統一的技能介面 (Unified Skill Interface)**
+   - 在 `skills/` 下開發任何新功能時，核心腳本必須繼承 `core.orchestration.pipeline_base.PipelineBase`，並實作 `run()` 方法回傳 `PipelineResponse`。不允許撰寫不受框架控管的孤立 Python 腳本。
 
+4. **型別提示與註解 (Strict Type Hinting & Docstrings)**
+   - 要求所有新寫的函數必須寫明完整的 Type Hints (如 `-> str`, `Optional[Dict]`)。
+   - 所有類別與公共方法必須包含 Docstring 說明其意圖。
 
-## 🚨 P4 Sprint: Multi-Agent Architecture Rules (v1.2.0+)
-
-1. **Mandatory Async (強制非同步)**
-   - All external network requests (LLM API, Database) MUST use `asyncio` and `aiohttp`.
-   - Sequential processing of batches (like chunking in `doc-parser` or `audio-transcriber`) should utilize `async_batch_generate` with an `asyncio.Semaphore` to maximize throughput without causing OOM.
-
-2. **State Immutability (狀態不可變性)**
-   - During Pipeline execution, state objects (e.g., JSON files in `state/`) must NOT be mutated in-place by external scripts.
-   - Use atomic operations (`core/atomic_writer.py`) and write new copies.
-   - For `MemoryPool` global state, use the built-in locking provided by `StateManager`.
-
-3. **Unified Logging (統一日誌)**
-   - `print()` is strictly forbidden in core pipeline logic.
-   - All standard output must flow through `PipelineBase.log()`, `info()`, `warning()`, or `error()`.
-   - Use `rich` for formatting terminal output (spinners, progress bars, colored text) in `cli_runner.py` or interactive scripts.
+5. **統一日誌與嚴禁 print (Unified Logging)**
+   - 嚴禁使用 `print()`，即使是除錯也不允許保留。
+   - 強制要求呼叫 `core.utils.log_manager`。
+   - 在 Pipeline 執行階段，所有的標準輸出必須透過 `self.log()`, `self.info()`, `self.warning()`, 或 `self.error()` 處理。終端機 UI 呈現必須使用 `rich`。

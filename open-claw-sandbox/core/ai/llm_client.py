@@ -143,6 +143,25 @@ class OllamaClient:
             if images:
                 payload["images"] = images
 
+        # P1.1: Security Manager - LLMGuard Prompt Injection Filter
+        if os.environ.get("OPENCLAW_ENABLE_LLMGUARD", "1") == "1":
+            try:
+                from llm_guard.input_scanners import PromptInjection
+                from llm_guard.input_scanners.prompt_injection import MatchType
+
+                # We instantiate it lazily to avoid heavy loading on import.
+                # In a real production environment, this should be cached in SecurityManager.
+                scanner = PromptInjection(threshold=0.8, match_type=MatchType.FULL)
+                _, is_valid, risk_score = scanner.scan(prompt)
+
+                if risk_score > 0.8:
+                    if logger:
+                        logger.error(f"{trace_pfx}🚨 LLMGuard 攔截到潛在的 Prompt Injection 攻擊！(風險值: {risk_score:.2f})")
+                    raise ValueError(f"Prompt injection detected (Risk: {risk_score:.2f})")
+            except ImportError:
+                if logger:
+                    logger.debug(f"{trace_pfx}⚠️ llm-guard 未安裝，略過 Prompt Injection 檢查。")
+
         t_start = time.monotonic()  # P2-5: latency tracking
         for attempt in range(self.retries):
             try:
@@ -268,6 +287,23 @@ class OllamaClient:
                 payload["options"] = options
             if images:
                 payload["images"] = images
+
+        # P1.1: Security Manager - LLMGuard Prompt Injection Filter
+        if os.environ.get("OPENCLAW_ENABLE_LLMGUARD", "1") == "1":
+            try:
+                from llm_guard.input_scanners import PromptInjection
+                from llm_guard.input_scanners.prompt_injection import MatchType
+
+                scanner = PromptInjection(threshold=0.8, match_type=MatchType.FULL)
+                _, is_valid, risk_score = scanner.scan(prompt)
+
+                if risk_score > 0.8:
+                    if logger:
+                        logger.error(f"{trace_pfx}🚨 LLMGuard 攔截到潛在的 Prompt Injection 攻擊！(風險值: {risk_score:.2f})")
+                    raise ValueError(f"Prompt injection detected (Risk: {risk_score:.2f})")
+            except ImportError:
+                if logger:
+                    logger.debug(f"{trace_pfx}⚠️ llm-guard 未安裝，略過 Prompt Injection 檢查。")
 
         t_start = time.monotonic()
         timeout_val = self.timeout[0] if isinstance(self.timeout, tuple) else self.timeout

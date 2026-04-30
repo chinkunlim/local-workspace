@@ -92,7 +92,7 @@ class JsonStateBackend:
                 return None
 
     def set(self, key: str, value: Dict[str, Any]) -> None:
-        from .atomic_writer import AtomicWriter
+        from core.atomic_writer import AtomicWriter
 
         path = self._path(key)
         lock_path = path + ".lock"
