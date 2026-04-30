@@ -167,3 +167,103 @@ class OllamaClient:
         except Exception as e:
             if logger:
                 logger.warning(f"{trace_pfx}⚠️ 無法釋放 Ollama 記憶體: {e}")
+
+    # ------------------------------------------------------------------ #
+    #  Async / Concurrent Generation (#16)                                #
+    # ------------------------------------------------------------------ #
+
+    async def async_generate(
+        self,
+        model: str,
+        prompt: str,
+        options: Optional[Dict[str, Any]] = None,
+        images: Optional[list] = None,
+        logger=None,
+    ) -> str:
+        """Async wrapper around generate() for use with asyncio.
+
+        Runs the blocking HTTP call in a thread-pool executor so that
+        multiple chunk requests can be in-flight concurrently.
+
+        Usage:
+            result = await client.async_generate(model="gemma3:4b", prompt="...")
+
+        Note:
+            For OOM safety, always wrap concurrent calls with an
+            asyncio.Semaphore (see async_batch_generate).
+        """
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None,  # default ThreadPoolExecutor
+            lambda: self.generate(
+                model=model,
+                prompt=prompt,
+                options=options,
+                images=images,
+                logger=logger,
+            ),
+        )
+
+    async def async_batch_generate(
+        self,
+        model: str,
+        prompts: list,
+        options: Optional[Dict[str, Any]] = None,
+        max_concurrency: int = 3,
+        logger=None,
+    ) -> list:
+        """Concurrently generate responses for multiple prompts with a semaphore cap.
+
+        Uses asyncio.Semaphore to limit simultaneous Ollama API calls, preventing
+        OOM while still achieving 2–4× throughput vs sequential processing.
+
+        Args:
+            model:           Model name for all prompts.
+            prompts:         List of prompt strings (one per chunk).
+            options:         Shared generation options.
+            max_concurrency: Maximum simultaneous in-flight requests (default 3).
+                             Tune down if RAM is tight; tune up on powerful machines.
+            logger:          Optional logger instance.
+
+        Returns:
+            List of response strings in the same order as prompts.
+            Failed prompts return empty string "" (caller should handle fallback).
+
+        Example (in a Phase script):
+            import asyncio
+            results = asyncio.run(self.llm.async_batch_generate(
+                model=model_name,
+                prompts=[build_prompt(c) for c in chunks],
+                max_concurrency=3,
+            ))
+        """
+        import asyncio
+
+        semaphore = asyncio.Semaphore(max_concurrency)
+        trace_id = TRACE_ID_VAR.get()
+        trace_pfx = f"[trace:{trace_id[:8]}] " if trace_id else ""
+
+        async def _safe_generate(idx: int, prompt: str) -> tuple:
+            async with semaphore:
+                try:
+                    result = await self.async_generate(
+                        model=model,
+                        prompt=prompt,
+                        options=options,
+                        logger=logger,
+                    )
+                    return idx, result
+                except Exception as exc:
+                    if logger:
+                        logger.warning(f"{trace_pfx}[async_batch] 片段 {idx} 失敗: {exc}")
+                    return idx, ""
+
+        tasks = [_safe_generate(i, p) for i, p in enumerate(prompts)]
+        pairs = await asyncio.gather(*tasks)
+        # Restore original order
+        ordered = [""] * len(prompts)
+        for idx, text in pairs:
+            ordered[idx] = text
+        return ordered

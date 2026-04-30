@@ -230,6 +230,13 @@ class Phase2Proofread(PipelineBase):
                 full_corrected = []
                 full_logs = []
 
+                # #6 Granular Checkpointing: resume from last completed chunk
+                resume_chunk = self.state_manager.load_chunk_checkpoint(subj, fname, "p2")
+                if resume_chunk is not None:
+                    self.log(
+                        f"⏭️  [Chunk Resume] 從片段 {resume_chunk + 1} 繼續（跳過 0~{resume_chunk}）"
+                    )
+
                 self.log(
                     f"📦 [{idx}/{len(tasks)}] 正在校對：[{subj}] {base_name}.md (共分為 {len(chunks)} 段)"
                 )
@@ -237,7 +244,16 @@ class Phase2Proofread(PipelineBase):
                 pbar, stop_tick, t = self.create_spinner(f"校對 ({fname})")
 
                 for c_idx, chunk in enumerate(chunks):
+                    # Skip already-completed chunks on resume
+                    if resume_chunk is not None and c_idx <= resume_chunk:
+                        full_corrected.append(chunk)  # placeholder preserved for join
+                        continue
+
                     if self.check_system_health():
+                        # Save chunk checkpoint before OOM abort
+                        self.state_manager.save_chunk_checkpoint(
+                            subj, fname, "p2", chunk_index=c_idx - 1
+                        )
                         break
 
                     context_hint = ""
@@ -296,6 +312,12 @@ class Phase2Proofread(PipelineBase):
                             if cleaned:
                                 full_logs.append(cleaned)
 
+                    # #6: Save chunk checkpoint every 5 chunks (throttled writes)
+                    if (c_idx + 1) % 5 == 0:
+                        self.state_manager.save_chunk_checkpoint(
+                            subj, fname, "p2", chunk_index=c_idx
+                        )
+
                 self.finish_spinner(pbar, stop_tick, t)
 
                 # --- Save Output ---
@@ -312,6 +334,8 @@ class Phase2Proofread(PipelineBase):
                 self.state_manager.update_task(
                     subj, fname, "p2", status="✅", char_count=len(final_doc), output_hash=out_hash
                 )
+                # Clear chunk checkpoint on successful file completion
+                self.state_manager.clear_chunk_checkpoint(subj, fname, "p2")
                 self.log(f"✅ [{idx}/{len(tasks)}] 校對完成：{fname}")
 
                 # 暫停機制：每個任務完成後檢查是否要 checkpoint

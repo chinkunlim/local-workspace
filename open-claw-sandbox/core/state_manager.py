@@ -388,6 +388,85 @@ class StateManager:
             self._checkpoint = None
             self._save_state()
 
+    # ------------------------------------------------------------------ #
+    #  Granular Chunk-Level Checkpointing (#6)                            #
+    # ------------------------------------------------------------------ #
+
+    def save_chunk_checkpoint(
+        self,
+        subject: str,
+        filename: str,
+        phase_key: str,
+        chunk_index: int,
+        partial_output: Optional[str] = None,
+    ) -> None:
+        """Persist a chunk-level mid-file checkpoint for precise mid-phase resumption.
+
+        Extends the standard file-level _checkpoint with a chunk_index so that
+        a long proofreading or compilation job interrupted mid-file can resume
+        from the exact chunk, not from the start of the file.
+
+        Args:
+            subject:        Subject/directory name (e.g. "math").
+            filename:       Source filename (e.g. "lecture-01.m4a").
+            phase_key:      The phase being checkpointed (e.g. "p2").
+            chunk_index:    0-based index of the last *completed* chunk.
+            partial_output: Optional serialised partial output written so far
+                            (stored as a plain string; Phase scripts should
+                            use AtomicWriter to persist the actual file).
+        """
+        with self._lock:
+            self._checkpoint = {
+                "subject": subject,
+                "filename": filename,
+                "phase_key": phase_key,
+                "chunk_index": chunk_index,
+                "partial_output_len": len(partial_output) if partial_output else 0,
+                "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "granularity": "chunk",
+            }
+            self._save_state()
+
+    def load_chunk_checkpoint(self, subject: str, filename: str, phase_key: str) -> Optional[int]:
+        """Load the last saved chunk index for a specific file+phase combination.
+
+        Returns the 0-based index of the last completed chunk so the caller
+        can skip `chunks[:chunk_index+1]` and resume from `chunk_index+1`.
+
+        Returns:
+            int  — last completed chunk index (resume from chunk_index + 1).
+            None — no chunk checkpoint exists for this file (start from 0).
+        """
+        with self._lock:
+            cp = self._checkpoint
+            if cp is None:
+                return None
+            if (
+                cp.get("granularity") == "chunk"
+                and cp.get("subject") == subject
+                and cp.get("filename") == filename
+                and cp.get("phase_key") == phase_key
+            ):
+                return cp.get("chunk_index")
+            return None
+
+    def clear_chunk_checkpoint(self, subject: str, filename: str, phase_key: str) -> None:
+        """Clear the chunk checkpoint for a file once processing completes normally.
+
+        Leaves file-level checkpoints intact if they exist for a different file.
+        """
+        with self._lock:
+            cp = self._checkpoint
+            if (
+                cp is not None
+                and cp.get("granularity") == "chunk"
+                and cp.get("subject") == subject
+                and cp.get("filename") == filename
+                and cp.get("phase_key") == phase_key
+            ):
+                self._checkpoint = None
+                self._save_state()
+
     def _render_checklist(self) -> None:
         """Render read-only checklist.md — supports any skill's phase set."""
         phase_keys = self.PHASES
