@@ -22,6 +22,16 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 - **skills**: Purged highlight and synthesis prompts/configs from `audio-transcriber` and `doc-parser` to enforce pure extraction logic.
 - **skills**: Migrated and integrated the purged highlighting and Map-Reduce synthesis prompts into `smart_highlighter` and `note_generator`.
 
+### Architecture (Antigravity Context)
+- **OOM Defense & RAM Guard**: Addressed Ollama OOM crashes via explicit model unloading (`keep_alive=0`), Context Window bounds, and a proactive RAM Guard (throttles tasks below 15% available RAM).
+- **Non-blocking Task Queue**: Implemented a professional Job Queue for strictly sequential task execution, eliminating asynchronous blocking risks and introducing frontend status polling.
+- **Audio-Transcriber Anti-Hallucination**: Consolidated a three-tier defense (Native API tuning, VAD pre-processing, Repetition Detection), integrated multi-clip language detection, and updated to `mx.clear_cache` to resolve deprecation warnings.
+- **Strict Sandboxed Routing**: Resolved I/O data leakage ensuring pure single-responsibility isolation. `doc-parser` exclusively handles PDFs, decoupled from processing logic like `note_generator`.
+- **Bidirectional Ecosystem Integration**: Finalized local-first, zero-latency workflows synchronizing Open WebUI with the Obsidian Vault.
+- **WebUI to CLI Convergence**: Streamlined architecture post WebUI/CLI functional parity, standardizing entirely on headless CLI infrastructure and automated file routing.
+- **Omega Integration & Code Self-Healing**: Ported the `audio-transcriber` DAG dashboard, interactive selection UI, and preflight check mechanisms to all other skills (`doc-parser`, `interactive-reader`, `knowledge-compiler`, `academic-edu-assistant`).
+- **Global Documentation Consolidation**: Enforced the Anti-Truncation Protocol by executing a full-scale ingestion of `open-claw-sandbox/docs/` into the root `/docs/` repository, designating `/docs/` as the sole Single Source of Truth (SSoT).
+
 ---
 
 ## [0.9.0] — 2026-04-19

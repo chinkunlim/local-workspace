@@ -10,7 +10,7 @@
 
 ```text
 local-workspace/
-├── docs/                 ← 基礎設施與部署引導 (Root Docs) — 包含 AI_Master_Guide_Final.md, USER_MANUAL.md
+├── docs/                 ← Single Source of Truth (SSoT) 全域文件目錄 — 包含 ARCHITECTURE, STRUCTURE, USER_MANUAL 等所有核心文檔
 └── open-claw-sandbox/
     ├── AGENTS.md             ← Non-negotiable rules and startup context for AI agents
     ├── BOOTSTRAP.md          ← How to bring this workspace to operational state from scratch
@@ -39,7 +39,7 @@ local-workspace/
     ├── data/                 ← Runtime data: pipeline outputs (excluded from git)
     ├── models/               ← HuggingFace model cache (excluded from git)
     ├── logs/                 ← Service runtime logs from start.sh (excluded from git)
-    ├── docs/                 ← 代碼標準與架構核心 (Sandbox Docs) — 包含 STRUCTURE, CODING_GUIDELINES_FINAL
+    ├── docs/                 ← (DEPRECATED) 舊沙盒文件目錄，所有內容均已遷移至 root docs/
     └── ops/                  ← Automation scripts (bootstrap.sh, check.sh) — delete one-offs after use
 ```
 

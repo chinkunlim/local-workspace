@@ -39,6 +39,10 @@ python3 skills/interactive-reader/scripts/run_all.py --process-all
 處理完成後，系統會將其標記為已處理，防止重複執行：
 `> [AI-DONE: 請幫我解釋這段話的意思]`
 
-## 全域標準化
+## 全域標準化 (Omega Integration)
 
-- **全域標準化介面 (Global Standardization)**: 採用統一的 CLI 狀態與 DAG 追蹤面板 (`📊 互動式閱讀器狀態與 DAG 追蹤面板`)，支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷保護。
+- **統一 CLI 介面**: 所有啟動腳本皆具備三大標準機制：
+  1. **啟動前置檢查 (Preflight Check)**：驗證依賴與配置無誤。
+  2. **狀態與 DAG 追蹤面板 (Dashboard)**：即時視覺化顯示管線進度。
+  3. **互動選取與重跑機制 (Interactive Menu)**：可動態選擇 PENDING 或 COMPLETED 任務。
+- 支援 macOS 原生系統通知 (osascript)，並具備 `KeyboardInterrupt` 優雅中斷與斷點保存功能。

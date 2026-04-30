@@ -88,3 +88,18 @@ graph TD
 5. Python 腳本將結果 `print()` 至標準輸出，由 Open Claw 原路返回 Telegram。
 
 **此設計確保了 Telegram Bot Token 只有單一實例在運行（即 Open Claw 主程式），避免了 Long Polling 衝突。**
+
+---
+
+## 5. Google Antigravity 歷史架構演進 (Historical Architectural Evolution)
+
+> **Antigravity Context Digest**: The following architectural milestones represent critical paradigm shifts implemented to harden the Open Claw ecosystem for production-grade robustness.
+
+*   **OOM Defense & RAM Guard**: Addressed Ollama-induced Out-Of-Memory (OOM) crashes by implementing explicit model unloading (`keep_alive=0`), strictly governing the Context Window, and deploying a proactive RAM Guard that automatically monitors and throttles heavy tasks when available memory drops below 15%.
+*   **Non-blocking Task Queue**: Refactored Open Claw into a professional-grade PKMS featuring a non-blocking Job Queue. This completely eliminated asynchronous blocking and OOM risks while introducing a robust status polling mechanism to synchronize with frontend interfaces.
+*   **Audio-Transcriber Anti-Hallucination Pipeline**: Established a formidable three-tier defense perimeter (Native API constraints, Voice Activity Detection pre-processing, and Repetition Detection). Integrated multi-clip language detection to prevent misidentification, and resolved the `mx.metal.clear_cache` deprecation by modernizing the API to `mx.clear_cache`.
+*   **Strict Sandboxed Routing & Decoupling**: Remediated critical I/O data leakage in `inbox_daemon.py` to guarantee PDFs are exclusively routed to the `doc-parser`. Successfully decoupled high-level synthesis logic (`note_generator`, `smart_highlighter`) from raw extraction modules to enforce the Single Responsibility Principle.
+*   **Bidirectional Knowledge Ecosystem Integration**: Formalized a seamless, bidirectional integration pipeline with Open WebUI and Obsidian, solidifying a local-first architecture designed for zero-latency knowledge extraction and retrieval.
+*   **WebUI to CLI Convergence**: Upon achieving absolute functional parity between the Flask WebUI and the CLI, the architecture was decisively streamlined. This fortified the core CLI infrastructure, enabling autonomous pure-CLI operations and foolproof automated file routing.
+*   **Omega Integration (Self-Healing & UI Uniformity)**: Ported the interactive DAG tracking panel, Preflight Checks, and checkpoint-resume capabilities across all skills, ensuring identical user experience regardless of the pipeline executed.
+*   **Single Source of Truth (SSoT) Consolidation**: Concluded the Antigravity project by completely merging the experimental `open-claw-sandbox/docs/` into the root `/docs/`, designating it as the immutable single source of truth for all subsequent architectural reference.

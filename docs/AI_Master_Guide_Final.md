@@ -5,6 +5,26 @@
 
 ---
 
+## 🚀 NEW: Architectural Paradigm (V2 Antigravity Checkpoint)
+
+The Open Claw ecosystem has evolved from a monolithic Flask-bound application to a robust, headless asynchronous architecture designed for 24/7 continuous operation. As part of the **Google Antigravity** architectural evolution, the entire repository was migrated from the legacy `open-claw-workspace` nomenclature to the unified `local-workspace` implementation, structurally decoupling the Core engine from its Sandbox experimentation layers.
+
+### Headless Dual-Engine Orchestration
+- **`SystemInboxDaemon`**: A highly resilient, watchdog-driven background process. It monitors multiple `/input/` drop-zones utilizing atomic debouncing and strict lockfiles (`run_pipelines.lock`) to prevent race conditions during rapid I/O events.
+- **`BotDaemon`**: A Telegram-based command-and-control interface. It facilitates asynchronous dispatching (`/run`, `/pause`) and status telemetry (`/status`), entirely decoupling the user interface from the heavy processing logic.
+
+### Pipeline Decoupling (Strict Separation of Concerns)
+- **Extraction Skills** (`audio-transcriber`, `doc-parser`): Responsible solely for converting raw unstructured data (.m4a, .pdf) into structured, **immutable** Markdown intermediate representations.
+- **Synthesis Skills** (`note-generator`, `smart-highlighter`): Operate on the immutable outputs to generate context-aware knowledge artifacts (e.g., Literature Matrices, Anki cards).
+
+### RAM Safety Guard & OOM Defense
+Given the severe VRAM/RAM constraints of running local LLMs alongside heavy extraction engines, Open Claw implements a multi-tiered defense:
+- **Dead Letter Queue (DLQ)**: The `LocalTaskQueue` forces strictly sequential processing. Tasks exceeding `max_retries=3` are relocated to quarantine.
+- **Explicit Model Lifecycle Management**: Every Phase that initializes an Ollama model must wrap execution in a `try...finally` block that explicitly calls `self.llm.unload_model()`. `mx.clear_cache()` is invoked manually.
+- **Strict Temperature Control**: Data extraction and reasoning tasks are hardcoded to `temperature: 0` to enforce deterministic outputs and eliminate hallucination drift.
+
+---
+
 ## 📋 What Changed in Version 9 (This Document)
 
 | Section                            | Change                                                                                      |

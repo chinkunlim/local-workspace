@@ -66,6 +66,26 @@
 | **服務重啟確認** | 任何程式碼變更後，必須主動確認相關服務已重新載入，不可假設熱重載生效 |
 | **Commit 紀律** | 每次成功驗證的變更，必須立即以 Conventional Commits 格式 commit |
 | **環境衛生（Hygiene）** | 不留 `.bak`、`.tmp`、臨時測試檔；不留 `print()` 除錯語句；不留被大段註解掉的廢棄程式碼 |
+| **防精簡協議 (Anti-Truncation Protocol)** | 嚴禁將終端機指令（如 `pip install`, `chmod`）、環境變數（`.env`）、或程式碼區塊精簡為摘要文字，必須 100% 保留其完整性與可複製性，絕對禁止刪除現有條文。 |
+| **雙層文檔修改權限** | 嚴禁混修文檔。`docs/` (Root Docs) 專責環境部署與基礎設施引導；`open-claw-sandbox/docs/` (Sandbox Docs) 專責代碼規範與架構核心。 |
+
+### 0.3.1 防精簡協議 (Anti-Truncation Protocol)
+
+> **⚠️ 絕對鐵律：任何 AI Agent 在更新本專案文檔時，必須嚴格遵守以下防護機制，違者視為破壞系統完整性。**
+
+1. **禁止濃縮終端機指令**：所有的安裝、部署、啟動腳本（如 `pip install`, `uvx`, `docker run`, `chmod`）必須以完整的 Markdown 程式碼區塊保留。不准將三行指令縮減為一句「請安裝依賴」。
+2. **禁止假設環境設定**：不准假設使用者已經知道如何配置環境變數或啟動參數。所有的環境變數配置（例如 `launchctl setenv` 或 `.env` 檔案格式）必須 100% 保留。
+3. **強制還原**：在執行文檔同步時，若發現前面的版本不慎將細節精簡成了摘要，你有義務主動從程式碼庫或記憶中提取完整資訊並將其**還原**，絕不允許繼承被閹割的資訊。
+
+### 0.3.2 Single Source of Truth (SSoT) Documentation Strategy
+
+> **Global Consolidation Protocol Activated**
+
+The project has transitioned from a dual-layer documentation architecture to a unified **Single Source of Truth (SSoT)** under the `/docs/` directory. AI Agents must strictly adhere to this centralized structure:
+
+- **Unified `/docs/` Directory**: This is the absolute SSoT for the Open Claw ecosystem. It encompasses all architectural decisions (`ARCHITECTURE.md`), operator manuals (`USER_MANUAL.md`), structural registries (`STRUCTURE.md`), coding guidelines (`CODING_GUIDELINES_FINAL.md`), and AI operational parameters (`AI_Master_Guide_Final.md`).
+- **Deprecation of Sandbox Docs**: The `/open-claw-sandbox/docs/` directory is permanently deprecated. AI Agents must **never** create, read, or modify documentation within the sandbox directory.
+- **Immutable Context Rule**: When updating these unified documents, you must maintain all historical contexts, terminal commands, and structural details to ensure full traceability and operational continuity.
 
 ### 0.4 原則優先順序
 
@@ -1094,7 +1114,7 @@ from core.diff_engine import DiffEngine
 | 適用範疇 | 命名法則 | 範例 |
 |:---|:---|:---|
 | **資料目錄** (`data/<skill>/`) | `lower_snake_case` | `input`, `01_processed`, `error` |
-| **Skill 目錄** (`skills/`) | `kebab-case` | `pdf-knowledge`, `voice-memo` |
+| **Skill 目錄** (`skills/`) | `kebab-case` | `doc-parser`, `audio-transcriber` |
 | **Core 模組檔案** | `snake_case` | `pipeline_base.py`, `log_manager.py` |
 | **Phase 腳本檔案** | `snake_case` + 相位前綴 | `p01a_engine.py`, `p02_highlight.py` |
 | **Python 類別** | `PascalCase` | `Phase1aPDFEngine`, `ResumeManager` |
@@ -2054,8 +2074,35 @@ def _process_sub(sub):
 - 整合禁止模式與 Code Review Checklist（第 18 章）
 - 整合 Gemini 對話中的分析建議
 
+### v4.0.0（2026-04-30）—— Omega Integration (CLI UI Uniformity)
+
+- **新增 §19**：全鏈路自癒與互動介面操作 (Code Self-Healing and Interactive UI)，確保所有模組 CLI 啟動介面皆遵循單一標竿（如 `audio-transcriber` 的 DAG 面板、互動選取、前置檢查機制）。
+- 落實 SSoT 防精簡鐵律，確立 `/docs/` 唯一性，撤銷 Sandbox 目錄下的文檔。
+
 ---
 
-*本手冊版本：v3.0.0*
-*最後更新：2026-04-18*
-*維護者：Jinkun*
+## 19. CLI 介面與邏輯標竿 (Omega Integration)
+
+為確保 Open Claw 所有技能模組 (`skills/*`) 具備統一的操作體驗與防錯機制，所有 `run_all.py` 腳本必須嚴格實作以下三層架構：
+
+### 19.1 啟動前置檢查 (Preflight Check)
+必須在管線啟動的第一時間執行依賴與環境驗證：
+- 必須宣告 `startup_check(self) -> bool`。
+- 檢查包含：必要套件是否存在（如 `poppler-utils`、`pydub`）、配置檔是否設定正確（如 `chrome_profile`）、Ollama 伺服器是否可連線。
+- 成功需印出 `✈️ 進行啟動前置檢查...` 與 `✅ 前置檢查通過`。
+
+### 19.2 狀態與 DAG 追蹤面板 (Dashboard)
+管線啟動後，必須立即呈現當前工作狀態：
+- 調用 `self.state_manager.print_dashboard()` 渲染標準的 Markdown/Terminal 表格，顯示各 Phase 的完成比例（如 `✅ 25/25`, `⏳ 22/25`）。
+
+### 19.3 互動式選取與重跑機制 (Interactive Menu)
+當無帶入 `--force` 或 `--process-all` 等全量參數時，必須提供互動選單：
+- 必須偵測「已完成 (COMPLETED)」檔案與「待處理 (PENDING)」檔案。
+- 調用 `core.cli_menu.batch_select_tasks` 呈現清單，允許使用者透過數字與範圍（如 `1,3,5` 或 `1-5`）動態選擇要處理的檔案。
+- 若選擇了已完成檔案，必須強制將狀態覆寫為 `PENDING` 進行重跑 (Reprocess)。
+
+---
+
+*本手冊版本：v4.0.0*
+*最後更新：2026-04-30*
+*維護者：Jinkun & Antigravity*

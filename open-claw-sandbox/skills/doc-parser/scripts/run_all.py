@@ -201,8 +201,11 @@ class QueueManager(PipelineBase):
                 subject = "Default" if rel_path == "." else rel_path.replace(os.sep, "_")
 
                 # Layer 1: Check if already processed
-                if not self.force_mode and self._is_already_processed(pdf_id, subject):
-                    continue
+                is_completed = self._is_already_processed(pdf_id, subject)
+                if not self.force_mode and is_completed:
+                    status = PDFStatus.COMPLETED.value
+                else:
+                    status = PDFStatus.PENDING.value
 
                 # Layer 2: Check if already in queue
                 if any(item["pdf_id"] == pdf_id for item in self._queue):
@@ -210,8 +213,12 @@ class QueueManager(PipelineBase):
 
                 # Layer 3: MD5 hash dedup
                 pdf_hash = self._md5(pdf_path)
-                if not self.force_mode and pdf_hash in self._processed_hashes:
-                    continue
+                if (
+                    status == PDFStatus.PENDING.value
+                    and not self.force_mode
+                    and pdf_hash in self._processed_hashes
+                ):
+                    status = PDFStatus.COMPLETED.value
 
                 # Check for encryption
                 is_encrypted = self._quick_check_encrypted(pdf_path)
@@ -223,7 +230,7 @@ class QueueManager(PipelineBase):
                         "pdf_path": pdf_path,
                         "filename": filename,
                         "md5": pdf_hash,
-                        "status": PDFStatus.PENDING.value,
+                        "status": status,
                         "added_at": datetime.now().isoformat(),
                         "encrypted": is_encrypted,
                     }
@@ -546,6 +553,19 @@ if __name__ == "__main__":
         else:
             # 互動式選單 (當沒有帶入任何執行參數時)
             qm.state_manager.print_dashboard()
+
+            # 處理「已完成」的 PDF（可選擇重跑）
+            done_tasks = [i for i in qm._queue if i["status"] == PDFStatus.COMPLETED.value]
+            if done_tasks:
+                from core.cli_menu import batch_select_tasks
+
+                reprocess_dict = batch_select_tasks(done_tasks, header="已完成的 PDF (重跑選取)")
+                if reprocess_dict:
+                    # 將選中的任務標記為 PENDING
+                    for item in reprocess_dict.values():
+                        item["status"] = PDFStatus.PENDING.value
+
+            # 處理「待處理」的 PDF
             pending = [i for i in qm._queue if i["status"] == PDFStatus.PENDING.value]
             if pending:
                 from core.cli_menu import batch_select_tasks
