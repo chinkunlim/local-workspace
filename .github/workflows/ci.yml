@@ -1,0 +1,44 @@
+name: CI — Lint, Format & Type Check
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+defaults:
+  run:
+    working-directory: open-claw-sandbox
+
+jobs:
+  lint:
+    name: Ruff + Mypy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install ruff mypy types-requests
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Mypy type check (core/)
+        run: mypy core/ --ignore-missing-imports --no-strict-optional
+
+      - name: Run structural tests
+        run: |
+          pip install pytest
+          python -m pytest tests/ -v --tb=short --ignore=tests/eval -q

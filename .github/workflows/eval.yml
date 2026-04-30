@@ -1,0 +1,55 @@
+name: Eval — LLM Output Quality (DeepEval)
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "open-claw-sandbox/skills/audio-transcriber/**"
+      - "open-claw-sandbox/skills/doc-parser/**"
+      - "open-claw-sandbox/tests/eval/**"
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: "Skill to evaluate (leave blank = all)"
+        required: false
+        default: ""
+
+defaults:
+  run:
+    working-directory: open-claw-sandbox
+
+jobs:
+  eval:
+    name: LLM-as-a-Judge (DeepEval)
+    runs-on: ubuntu-latest
+    # Allow failures to not block CI — eval is advisory for now
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install eval dependencies
+        run: |
+          pip install --upgrade pip
+          pip install deepeval pytest
+
+      - name: Run eval golden-set tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}   # required by deepeval metrics
+          DEEPEVAL_TELEMETRY_OPT_OUT: "YES"
+        run: |
+          python -m pytest tests/eval/ -v --tb=short -q
+
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: open-claw-sandbox/.deepeval/
+          retention-days: 30

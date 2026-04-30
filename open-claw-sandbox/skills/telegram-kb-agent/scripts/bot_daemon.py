@@ -354,9 +354,88 @@ def main():
                             "[\u6a21\u578b\u7ba1\u7406]\n"
                             "/model <\u540d\u7a31> - \u5207\u63db LLM \u6a21\u578b (\u7a7a\u767d = \u67e5\u8a62\u76ee\u524d)\n\n"
                             "[HITL \u4ecb\u5165]\n"
-                            "/hitl approve|skip <trace_id> - \u56de\u61c9\u7cfb\u7d71\u66ab\u505c\u7684\u4ecb\u5165\u4e8b\u4ef6",
+                            "/hitl approve|skip <trace_id> - \u56de\u61c9\u7cfb\u7d71\u66ab\u505c\u7684\u4ecb\u5165\u4e8b\u4ef6\n\n"
+                            "[\u6392\u7a0b\u4ee3\u7406 P2]\n"
+                            "/schedule list - \u67e5\u770b\u6240\u6709\u6392\u7a0b\u4efb\u52d9\n"
+                            "/schedule add <id> <cron> <skill> <\u8aaa\u660e> - \u65b0\u589e\u6392\u7a0b\n"
+                            "/schedule remove <id> - \u522a\u9664\u6392\u7a0b\n"
+                            '  \u4f8b: /schedule add rss_daily "0 7 * * *" academic-edu-assistant \u6bcf\u65e5\u6293\u53d6',
                             chat_id,
                         )
+
+                    # ── P2-3: /schedule commands ───────────────────────────────────
+                    elif text.startswith("/schedule"):
+                        from core.scheduler import get_scheduler
+
+                        sched = get_scheduler(_workspace_root)
+                        args = text.split(None, 4)  # /schedule <sub> [id] [cron] [skill] [desc]
+                        sub = args[1].lower() if len(args) > 1 else "list"
+
+                        if sub == "list":
+                            send_message(sched.format_status(), chat_id)
+
+                        elif sub == "add" and len(args) >= 5:
+                            # /schedule add <id> <"cron expr"> <skill> [desc]
+                            job_id = args[2]
+                            # Support cron in quotes or bare (5 fields)
+                            rest = args[3] if len(args) > 3 else ""
+                            # Try to extract 5-field cron from start of rest
+                            rest_parts = rest.split()
+                            if len(rest_parts) >= 5:
+                                cron_expr = " ".join(rest_parts[:5])
+                                skill_name = (
+                                    rest_parts[5]
+                                    if len(rest_parts) > 5
+                                    else "academic-edu-assistant"
+                                )
+                                description = (
+                                    " ".join(rest_parts[6:]) if len(rest_parts) > 6 else ""
+                                )
+                            else:
+                                send_message(
+                                    "\u26a0\ufe0f \u683c\u5f0f: /schedule add <id> <\u5206 \u6642 \u65e5 \u6708 \u9031> <skill> [\u8aaa\u660e]",
+                                    chat_id,
+                                )
+                                continue  # type: ignore[misc]
+                            skill_dir = os.path.join(_workspace_root, "skills", skill_name)
+                            run_all = os.path.join(skill_dir, "scripts", "run_all.py")
+                            command = [sys.executable, run_all, "--process-all"]
+                            ok = sched.add_job(
+                                job_id=job_id,
+                                cron_expr=cron_expr,
+                                skill_name=skill_name,
+                                command=command,
+                                description=description,
+                            )
+                            if ok:
+                                send_message(
+                                    f"\u2705 \u6392\u7a0b\u5df2\u65b0\u589e: `{job_id}` ({cron_expr})",
+                                    chat_id,
+                                )
+                            else:
+                                send_message(
+                                    f"\u26a0\ufe0f job_id `{job_id}` \u5df2\u5b58\u5728\u3002",
+                                    chat_id,
+                                )
+
+                        elif sub == "remove" and len(args) >= 3:
+                            job_id = args[2]
+                            ok = sched.remove_job(job_id)
+                            msg = (
+                                f"\u2705 \u6392\u7a0b\u5df2\u522a\u9664: `{job_id}`"
+                                if ok
+                                else f"\u26a0\ufe0f \u627e\u4e0d\u5230\u6392\u7a0b: `{job_id}`"
+                            )
+                            send_message(msg, chat_id)
+
+                        else:
+                            send_message(
+                                "\u7528\u6cd5:\n"
+                                "/schedule list\n"
+                                "/schedule add <id> <\u5206 \u6642 \u65e5 \u6708 \u9031> <skill> [\u8aaa\u660e]\n"
+                                "/schedule remove <id>",
+                                chat_id,
+                            )
 
         except requests.exceptions.RequestException:
             # Network issue, retry silently

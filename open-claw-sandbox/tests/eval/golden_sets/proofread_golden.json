@@ -1,0 +1,75 @@
+# tests/eval/golden_sets/proofread_golden.json
+# Hand-validated input/output pairs for p02_proofread faithfulness evaluation.
+# Format: { "raw": <original transcript>, "corrected": <expected output> }
+[
+  {
+    "id": "cs_ai_001",
+    "subject": "ComputerScience",
+    "raw": "今天我們討論注意力機制的原理，self-attention通過query key value三個矩陣計算，softmax之後乘以V得到輸出。transformer就是堆疊很多這樣的layer。",
+    "corrected": "今天我們討論注意力機制的原理。Self-Attention 透過 Query、Key、Value 三個矩陣進行運算：將 Query 與 Key 做點積後，經 Softmax 正規化，再乘以 Value 矩陣以得到最終輸出。Transformer 架構即是由多層此類機制堆疊而成。",
+    "note": "Basic terminology correction — capitalize technical terms, fix punctuation"
+  },
+  {
+    "id": "cs_ai_002",
+    "subject": "ComputerScience",
+    "raw": "RLHF就是先pretraining再用人類feedback fine-tune reward model，然後用PPO算法更新policy，讓LLM輸出更符合人類偏好。",
+    "corrected": "RLHF（人類回饋強化學習）的流程為：首先對模型進行預訓練（Pre-training），接著收集人類回饋以微調獎勵模型（Reward Model），最後透過 PPO（近端策略最佳化）演算法更新策略（Policy），使大型語言模型的輸出更符合人類偏好。",
+    "note": "Expand abbreviations, correct structure"
+  },
+  {
+    "id": "cs_ai_003",
+    "subject": "ComputerScience",
+    "raw": "embedding就是把文字變成向量，相似的詞會在高維空間比較近，可以用cosine similarity來測量兩個向量的相似度，值越接近1代表越相似。",
+    "corrected": "詞嵌入（Embedding）是將文字轉換為高維向量的技術，語義相近的詞彙在向量空間中的距離較近。常用餘弦相似度（Cosine Similarity）來衡量兩個向量的相似程度，數值越趨近 1，代表兩者語義越相近。",
+    "note": "Term normalization, sentence restructuring"
+  },
+  {
+    "id": "cs_ai_004",
+    "subject": "ComputerScience",
+    "raw": "RAG的全名是Retrieval Augmented Generation，先從向量資料庫找到相關文件，然後把找到的context跟原始問題一起丟給LLM生成答案，可以減少幻覺問題。",
+    "corrected": "RAG（檢索增強生成，Retrieval-Augmented Generation）的運作流程為：首先從向量資料庫中檢索相關文件，再將所找到的上下文（Context）與原始問題一同輸入至大型語言模型，以生成更精準的答案，從而有效降低幻覺（Hallucination）問題。",
+    "note": "Full term expansion, structured sentence"
+  },
+  {
+    "id": "cs_ai_005",
+    "subject": "ComputerScience",
+    "raw": "knowledge distillation是把大模型當teacher，小模型當student，student學習teacher的soft label而不是hard label，這樣可以保留更多知識。",
+    "corrected": "知識蒸餾（Knowledge Distillation）的核心概念為：以大型模型作為「教師模型」（Teacher Model），小型模型作為「學生模型」（Student Model）。學生模型不學習硬標籤（Hard Label），而是學習教師模型輸出的軟標籤（Soft Label），以此保留更豐富的知識遷移效果。",
+    "note": "Role labels, contrast hard vs soft label"
+  },
+  {
+    "id": "psych_001",
+    "subject": "Psychology",
+    "raw": "認知負荷理論說人的工作記憶是有限的，大概只能同時處理七加減二個chunk，所以教學設計要避免extraneous load，讓資源集中在germane load上。",
+    "corrected": "認知負荷理論指出，人類的工作記憶容量有限，一般約可同時處理 7±2 個訊息區塊（Chunk）。因此，教學設計應盡量減少「外在認知負荷」（Extraneous Load），並將認知資源集中於有助於知識建構的「增益認知負荷」（Germane Load）上。",
+    "note": "7±2 notation, term normalization"
+  },
+  {
+    "id": "psych_002",
+    "subject": "Psychology",
+    "raw": "斯金納的操作制約告訴我們正增強是給予獎勵來增加行為，負增強是移除厭惡刺激來增加行為，跟懲罰不一樣，懲罰是為了減少行為。",
+    "corrected": "斯金納（B.F. Skinner）的操作制約理論中，「正增強」（Positive Reinforcement）指透過給予獎勵來增加目標行為的出現頻率；「負增強」（Negative Reinforcement）則是藉由移除厭惡刺激來達到相同效果。兩者均旨在增加行為，與「懲罰」（Punishment）以減少行為為目的有所不同。",
+    "note": "Author attribution, parallel structure"
+  },
+  {
+    "id": "bio_001",
+    "subject": "Biology",
+    "raw": "DNA複製是半保留複製，親代DNA的兩條鏈分開，各自當模板合成新鏈，所以子代DNA各含一條舊鏈和一條新鏈。",
+    "corrected": "DNA 複製採用半保留複製（Semi-conservative Replication）機制：親代 DNA 的雙股鏈分離後，各自作為模板合成新的互補鏈，因此每個子代 DNA 分子均含有一條來自親代的舊鏈與一條新合成的鏈。",
+    "note": "Scientific terminology, full stop"
+  },
+  {
+    "id": "bio_002",
+    "subject": "Biology",
+    "raw": "細胞週期分成G1 S G2和M期，S期是DNA合成期，M期是分裂期，checkpoint是確保每個階段都完成才繼續。",
+    "corrected": "細胞週期可分為 G1 期、S 期、G2 期與 M 期四個階段。其中 S 期（DNA 合成期）負責染色體 DNA 的複製，M 期（分裂期）則進行細胞分裂。各期之間設有「細胞週期檢查點」（Checkpoint）機制，確保每個階段均正確完成後方可進入下一階段。",
+    "note": "Period names, checkpoint explanation"
+  },
+  {
+    "id": "hist_001",
+    "subject": "History",
+    "raw": "第一次世界大戰的導火線是1914年6月28日薩拉耶佛刺殺事件，奧匈帝國的費迪南大公被塞爾維亞民族主義者普林西普暗殺，引發連鎖反應各國紛紛宣戰。",
+    "corrected": "第一次世界大戰的導火線為 1914 年 6 月 28 日的薩拉耶佛刺殺事件：奧匈帝國皇位繼承人法蘭茲·斐迪南大公（Archduke Franz Ferdinand）遭塞爾維亞民族主義者加夫里洛·普林西普（Gavrilo Princip）刺殺。此事件引發連鎖效應，各同盟國相繼宣戰，最終演變為全球規模的戰爭。",
+    "note": "Full proper names, chain reaction context"
+  }
+]

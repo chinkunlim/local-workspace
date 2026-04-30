@@ -10,7 +10,7 @@ V2.1 Changes:
 import contextvars
 import os
 import time
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, NamedTuple, Optional, Tuple, Union
 
 import requests
 
@@ -23,6 +23,47 @@ TimeoutType = Union[float, Tuple[float, float]]
 #   from core.llm_client import TRACE_ID_VAR
 #   TRACE_ID_VAR.set(str(uuid.uuid4()))
 TRACE_ID_VAR: contextvars.ContextVar[str] = contextvars.ContextVar("openclaw_trace_id", default="")
+
+
+# ---------------------------------------------------------------------------
+# P2-5: GenerateResult — enriched return type for observability
+# ---------------------------------------------------------------------------
+
+
+class GenerateResult(str):
+    """Immutable str subclass carrying LLM generation metadata.
+
+    Behaves exactly like a plain ``str`` so all existing callers
+    (``result.split()``, ``len(result)``, f-strings, etc.) continue to work
+    without modification.  Extra attributes are available for evaluation
+    pipelines and dashboards.
+
+    Attributes:
+        text:        The raw LLM response text (same as the str value).
+        latency_ms:  Wall-clock time from request start to first byte (ms).
+        token_count: Approximate token count from the API response, if available.
+        model:       The effective model that produced the response.
+    """
+
+    # Declare typed attributes so Mypy can resolve them
+    latency_ms: float
+    token_count: int
+    model: str
+
+    def __new__(cls, text: str, latency_ms: float = 0.0, token_count: int = 0, model: str = ""):
+        instance = super().__new__(cls, text)
+        instance.latency_ms = latency_ms
+        instance.token_count = token_count
+        instance.model = model
+        return instance
+
+    def __repr__(self) -> str:
+        return (
+            f"GenerateResult({str.__repr__(self)}, "
+            f"latency_ms={self.latency_ms:.0f}, "
+            f"token_count={self.token_count}, "
+            f"model={self.model!r})"
+        )
 
 
 class OllamaClient:
@@ -100,17 +141,22 @@ class OllamaClient:
             if images:
                 payload["images"] = images
 
+        t_start = time.monotonic()  # P2-5: latency tracking
         for attempt in range(self.retries):
             try:
                 res = requests.post(self.api_url, json=payload, timeout=self.timeout)
                 res.raise_for_status()
 
+                _resp_json = res.json()
                 if is_openai:
                     response_text = (
-                        res.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+                        _resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
                     )
+                    _token_count = _resp_json.get("usage", {}).get("completion_tokens", 0)
                 else:
-                    response_text = res.json().get("response", "")
+                    response_text = _resp_json.get("response", "")
+                    # P2-5: Ollama returns eval_count (output tokens) in generate response
+                    _token_count = _resp_json.get("eval_count", 0)
 
                 if not response_text or not response_text.strip():
                     raise ValueError(
@@ -120,7 +166,14 @@ class OllamaClient:
                 # Successful call — reset circuit breaker
                 self._consecutive_failures = 0
                 self._circuit_open = False
-                return response_text
+                # P2-5: Return GenerateResult (str subclass) with observability metadata
+                _latency_ms = (time.monotonic() - t_start) * 1000
+                return GenerateResult(
+                    response_text,
+                    latency_ms=_latency_ms,
+                    token_count=_token_count,
+                    model=effective_model,
+                )
 
             except requests.exceptions.RequestException as e:
                 error_body = ""
