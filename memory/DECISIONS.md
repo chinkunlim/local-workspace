@@ -22,7 +22,7 @@
 
 ## [2026-04-19] `open-claw-sandbox/` placed at monorepo root (not inside `apps/`)
 
-**Context:** §11.2 of CODING_GUIDELINES_FINAL recommends an `apps/` directory.
+**Context:** §11.2 of CODING_GUIDELINES recommends an `apps/` directory.
 
 **Decision:** Keep `open-claw-sandbox/` directly at root.
 

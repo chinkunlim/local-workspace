@@ -35,17 +35,17 @@
 
 ## Current System State
 
-| Attribute | Value |
-|---|---|
-| Git | Clean — synced with `origin/main` |
-| Import verification | ✅ 12/12 passed |
-| Python syntax | ✅ All files pass `ast.parse()` |
-| UTF-8 encoding headers | ✅ Present in all `.py` files |
-| Skill package names | `note_generator`, `smart_highlighter` (underscore convention) |
-| Inbox routing | Recursive subject-folder; triple PDF modes (`audio_ref` / `doc_parser` / `both`) |
-| Web UI | Removed — orchestration via Open Claw intent engine + Telegram |
-| Obsidian Vault | `open-claw-sandbox/data/wiki/` |
-| ChromaDB index | `open-claw-sandbox/data/chroma/` (rebuilt by `telegram_kb_agent`) |
+| Attribute              | Value                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| Git                    | Clean — synced with `origin/main`                                                |
+| Import verification    | ✅ 12/12 passed                                                                   |
+| Python syntax          | ✅ All files pass `ast.parse()`                                                   |
+| UTF-8 encoding headers | ✅ Present in all `.py` files                                                     |
+| Skill package names    | `note_generator`, `smart_highlighter` (underscore convention)                    |
+| Inbox routing          | Recursive subject-folder; triple PDF modes (`audio_ref` / `doc_parser` / `both`) |
+| Web UI                 | Removed — orchestration via Open Claw intent engine + Telegram                   |
+| Obsidian Vault         | `open-claw-sandbox/data/wiki/`                                                   |
+| ChromaDB index         | `open-claw-sandbox/data/chroma/` (rebuilt by `telegram_kb_agent`)                |
 
 ---
 
@@ -88,10 +88,10 @@ curl http://localhost:18789/health          # Open Claw API
 
 ## Previous Sessions (Condensed)
 
-| Date | Focus | Outcome |
-|---|---|---|
-| 2026-04-19 | Phase 6 Finalisation — Inbox routing + Web UI removal | `inbox_config.json`, `inbox_manager` skill, wiki output paths fixed |
-| 2026-04-19 | Skill Extraction | `smart_highlighter`, `note_generator` extracted as standalone packages |
-| 2026-04-19 | Deep Thought Hotfixes | `inbox_daemon` OOM guard, `state_manager` fcntl lock, debounce fix |
-| 2026-04-18 | Monorepo restructure + CODING_GUIDELINES_FINAL v3.0.0 | All config files promoted to root; docs consolidated |
-| 2026-04-15 | Core framework + dual-skill pipeline | `core/` shared framework; `audio_transcriber` + `doc_parser` fully operational |
+| Date       | Focus                                                 | Outcome                                                                        |
+| ---------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-04-19 | Phase 6 Finalisation — Inbox routing + Web UI removal | `inbox_config.json`, `inbox_manager` skill, wiki output paths fixed            |
+| 2026-04-19 | Skill Extraction                                      | `smart_highlighter`, `note_generator` extracted as standalone packages         |
+| 2026-04-19 | Deep Thought Hotfixes                                 | `inbox_daemon` OOM guard, `state_manager` fcntl lock, debounce fix             |
+| 2026-04-18 | Monorepo restructure + CODING_GUIDELINES_FINAL v3.0.0 | All config files promoted to root; docs consolidated                           |
+| 2026-04-15 | Core framework + dual-skill pipeline                  | `core/` shared framework; `audio_transcriber` + `doc_parser` fully operational |

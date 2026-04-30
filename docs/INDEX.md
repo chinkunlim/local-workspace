@@ -11,7 +11,7 @@ These documents define the universal rules and layout of the entire `local-works
 
 - **[Coding Guidelines & Protocols](../docs/CODING_GUIDELINES.md)**: The Single Source of Truth (SSoT) for all AI and Human engineering rules. Includes the Anti-Truncation Protocol.
 - **[System Structure Map](../docs/STRUCTURE.md)**: Annotated map of every critical file and folder.
-- **[AI Master Guide](../docs/INFRA_SETUP.md)**: Conceptual guide covering the AI's role and ecosystem vision.
+- **[Infrastructure Setup](../docs/INFRA_SETUP.md)**: Installation and configuration instructions for the underlying third-party infrastructure (Ollama, LM Studio, Open WebUI, LiteLLM, MCP Servers).
 - **[User Manual](../docs/USER_MANUAL.md)**: High-level usage guide for human operators.
 - **[Changelog](../CHANGELOG.md)**: The global chronological history of the project.
 

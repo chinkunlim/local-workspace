@@ -19,7 +19,7 @@ graph TD
 local-workspace/
 ├── open-claw-sandbox/   ← Open Claw AI automation (voice-memo, pdf-knowledge)
 ├── infra/               ← LiteLLM proxy, Open WebUI, Pipelines, lifecycle scripts
-├── docs/                ← Global documentation (CODING_GUIDELINES_FINAL, AI_Master_Guide)
+├── docs/                ← Global documentation (CODING_GUIDELINES, INFRA_SETUP)
 ├── memory/              ← Global AI memory (ARCHITECTURE, DECISIONS)
 ├── ops/                 ← Global quality gate (check.sh)
 └── tests/               ← E2E and integration test stubs
