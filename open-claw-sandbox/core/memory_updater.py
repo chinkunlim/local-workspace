@@ -24,8 +24,11 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 import json
+import logging
 import os
 from typing import Optional
+
+_logger = logging.getLogger("OpenClaw.MemoryUpdater")
 
 # ---------------------------------------------------------------------------
 # Data Contracts
@@ -40,6 +43,7 @@ class CorrectionEvent:
     correct_term: str
     skill_name: str
     subject: Optional[str] = None
+    context: Optional[str] = None  # P3: text snippet around the term
     phase: str = "unknown"
     source: str = "hitl"  # "hitl" | "manual" | "auto"
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -150,11 +154,80 @@ class MemoryUpdater:
                 count += 1
         return count
 
-    def sync_vector_db(self, event: CorrectionEvent) -> None:
-        """(Future P3) Upsert a correction into the vector DB for semantic dedup.
+    def sync_vector_db(self, event: CorrectionEvent) -> None:  # noqa: F821
+        """(P3-5) Upsert a correction event into the ChromaDB vector store.
 
-        This stub is intentionally a no-op until the embedding pipeline
-        (infra/open-webui/vector_db/) is integrated in P3.
+        Embeds ``event.correct_term`` via the Ollama embeddings endpoint and
+        upserts the document into the ``wiki_knowledge`` collection so future
+        RAG queries can find the corrected terminology.
+
+        Degrades gracefully: logs a warning and returns if ChromaDB or Ollama
+        is not available, so pipeline execution is never blocked.
         """
-        # TODO (P3): embed event.correct_term and upsert to vector store
-        pass
+        try:
+            import chromadb as _chromadb  # type: ignore[import]
+        except ImportError:
+            _logger.debug("[MemoryUpdater] chromadb not installed — skipping sync_vector_db.")
+            return
+
+        # Locate ChromaDB via environment or default path
+        db_path = os.environ.get(
+            "OPENCLAW_VECTOR_DB_PATH",
+            os.path.join(self.base_dir, "..", "telegram-kb-agent", "state", "chroma_db"),
+        )
+        db_path = os.path.realpath(db_path)
+        if not os.path.exists(db_path):
+            _logger.debug("[MemoryUpdater] ChromaDB not found at %s — skipping.", db_path)
+            return
+
+        try:
+            client = _chromadb.PersistentClient(path=db_path)
+            collection = client.get_or_create_collection(name="wiki_knowledge")
+        except Exception as exc:
+            _logger.warning("[MemoryUpdater] sync_vector_db: could not open ChromaDB: %s", exc)
+            return
+
+        # Get embedding from Ollama
+        embed_model = "nomic-embed-text"
+        ollama_url = os.environ.get("OLLAMA_API_URL", "http://127.0.0.1:11434/api")
+        try:
+            import requests
+
+            doc_text = f"{event.wrong_term} → {event.correct_term}"
+            if getattr(event, "context", None):
+                doc_text += f"\n{event.context}"
+            resp = requests.post(
+                f"{ollama_url}/embeddings",
+                json={"model": embed_model, "prompt": doc_text},
+                timeout=20,
+            )
+            if not resp.ok:
+                _logger.warning("[MemoryUpdater] Embedding request failed: %s", resp.text)
+                return
+            embedding = resp.json().get("embedding")
+            if not embedding:
+                return
+        except Exception as exc:
+            _logger.warning("[MemoryUpdater] sync_vector_db: embedding failed: %s", exc)
+            return
+
+        # Upsert into collection
+        doc_id = f"correction_{event.subject}_{event.wrong_term}_{event.correct_term}"
+        doc_id = "".join(c if c.isalnum() else "_" for c in doc_id)[:128]
+        try:
+            collection.upsert(
+                ids=[doc_id],
+                documents=[doc_text],
+                embeddings=[embedding],
+                metadatas=[
+                    {
+                        "subject": event.subject,
+                        "wrong_term": event.wrong_term,
+                        "correct_term": event.correct_term,
+                        "source": "correction_pipeline",
+                    }
+                ],
+            )
+            _logger.info("[MemoryUpdater] sync_vector_db: upserted '%s'", event.correct_term)
+        except Exception as exc:
+            _logger.warning("[MemoryUpdater] sync_vector_db: upsert failed: %s", exc)

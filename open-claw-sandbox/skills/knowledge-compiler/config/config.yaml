@@ -1,7 +1,41 @@
-# Open Claw Configuration
+# Open Claw — Knowledge Compiler Configuration
+
+models:
+  default: "qwen2.5-coder:7b"
+  fallback: "gemma3:4b"
 
 phase01:
   model: "qwen2.5-coder:7b"
   options:
     temperature: 0
     num_predict: 2048
+
+runtime:
+  ollama:
+    api_url: "http://127.0.0.1:11434/api/generate"
+    timeout_seconds: 600
+    retries: 3
+    backoff_seconds: 5
+
+# Output paths
+output:
+  wiki_dir: ""          # Leave blank to use default: data/<skill>/wiki/
+
+# P3-1: Knowledge Graph Backend
+# backend: "networkx"  — local/dev (zero config, persists to graph.gpickle)
+# backend: "neo4j"     — production (requires neo4j driver + running instance)
+graph:
+  backend: "networkx"
+  persist_path: "state/graph.gpickle"
+  neo4j:
+    uri: "bolt://localhost:7687"
+    user: "neo4j"
+    password: ""        # Set via OPENCLAW_NEO4J_PASSWORD env var in prod
+
+# P3-3: Hybrid Retrieval (used by core/hybrid_retriever.py)
+hybrid_retriever:
+  vector_top_k: 10
+  graph_max_hops: 1
+  rerank: true
+  rerank_model: "qwen2.5-coder:7b"
+  rerank_top_n: 5
