@@ -19,6 +19,7 @@ class Phase1Compile(PipelineBase):
         )
         self.wiki_dir = os.path.abspath(os.path.join(self.base_dir, "..", "wiki"))
         os.makedirs(self.wiki_dir, exist_ok=True)
+        self.model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
 
         # We also create an INDEX.md if it doesn't exist
         self.index_file = os.path.join(self.wiki_dir, "INDEX.md")
@@ -74,8 +75,7 @@ class Phase1Compile(PipelineBase):
 
         pbar, stop_tick, t = self.create_spinner(f"LLM 編譯中 ({fname})")
         try:
-            # We use Qwen2.5-Coder:7b or similar default model
-            final_doc = self.llm.generate(model="qwen2.5-coder:7b", prompt=prompt)
+            final_doc = self.llm.generate(model=self.model_name, prompt=prompt)
 
             # Extract title to name the file in wiki/
             title_match = re.search(r"^#\s+(.+)$", final_doc, re.MULTILINE)
@@ -102,15 +102,17 @@ class Phase1Compile(PipelineBase):
             self.error(f"❌ 編譯失敗 {fname}: {e}")
         finally:
             self.finish_spinner(pbar, stop_tick, t)
-            self.llm.unload_model("qwen2.5-coder:7b", logger=self)
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.info("✨ 啟動 Phase 1：知識庫編譯與雙向連結")
-        self.process_tasks(
-            self._process_file,
-            force=force,
-            subject_filter=subject,
-            file_filter=file_filter,
-            single_mode=single_mode,
-            resume_from=resume_from,
-        )
+        try:
+            self.process_tasks(
+                self._process_file,
+                force=force,
+                subject_filter=subject,
+                file_filter=file_filter,
+                single_mode=single_mode,
+                resume_from=resume_from,
+            )
+        finally:
+            self.llm.unload_model(self.model_name, logger=self)

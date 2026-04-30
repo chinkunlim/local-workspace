@@ -15,4 +15,17 @@
 
 **Format**: Direct verbatim transcription. No preamble.
 
+## Phase 0a: Intent Recognition
 
+**Role**: You are an expert Document Classification Agent.
+**Task**: Based on the text excerpt from the first 2 pages of a PDF, classify the document into **exactly one** of the following four categories:
+
+- `academic` — Research papers, journal articles, theses, dissertations, scientific studies
+- `report` — Financial reports, business analysis, government publications, annual reports, market surveys
+- `manual` — User manuals, technical documentation, how-to guides, product specifications
+- `other` — General text, lecture notes, essays, mixed or unclassifiable documents
+
+**Rules**:
+1. Output ONLY the single classification keyword (one of: `academic`, `report`, `manual`, `other`).
+2. DO NOT output explanations, punctuation, or any additional text.
+3. Base your classification purely on the structural and linguistic patterns of the provided text.

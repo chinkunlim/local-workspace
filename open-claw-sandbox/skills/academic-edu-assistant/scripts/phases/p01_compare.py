@@ -12,9 +12,6 @@ _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
 
-# A-7 Fix: promote hardcoded model name to a named constant
-_ANALYSIS_MODEL = "qwen2.5-coder:7b"
-
 
 class Phase1Compare(PipelineBase):
     def __init__(self):
@@ -83,12 +80,12 @@ class Phase1Compare(PipelineBase):
             [f"[來源: {m.get('filename')}]\n{d}" for d, m in zip(documents, metadatas)]
         )
 
-        prompt = f"""
-你是一個嚴謹的學術研究助理。請根據以下「參考資料」，針對使用者的「查詢字串」進行深度的交叉比對與綜合分析。
-你必須：
-1. 提取出核心的對立或關聯觀點。
-2. 找出文獻之間的「共同點」與「相異點」。
-3. 最後必須輸出一個 Markdown 比較表格總結差異。
+        prompt_tpl = self.get_prompt("Phase 1: RAG 交叉比對")
+        if not prompt_tpl:
+            self.error("❌ 找不到 prompt 指令，請確認 prompt.md 存在")
+            return
+
+        prompt = f"""{prompt_tpl}
 
 【參考資料開始】
 {context_str}
@@ -98,16 +95,18 @@ class Phase1Compare(PipelineBase):
 
 請以繁體中文撰寫結構嚴謹的比較報告：
 """
-        pbar, stop_tick, t = self.create_spinner("LLM 分析與生成報告中...")
+        model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
+
+        pbar, stop_tick, t = self.create_spinner(f"LLM 分析與生成報告中 ({model_name})...")
         try:
-            response = self.llm.generate(model=_ANALYSIS_MODEL, prompt=prompt)
+            response = self.llm.generate(model=model_name, prompt=prompt)
         except Exception as e:
             self.error(f"❌ 生成失敗: {e}")
             return
         finally:
             self.finish_spinner(pbar, stop_tick, t)
             # C Fix: unload model after use to release VRAM
-            self.llm.unload_model(_ANALYSIS_MODEL, logger=self)
+            self.llm.unload_model(model_name, logger=self)
 
         # Write to output/01_comparison/<query>.md
         safe_name = (

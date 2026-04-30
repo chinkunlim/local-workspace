@@ -73,156 +73,166 @@ class Phase2Proofread(PipelineBase):
         self.log(f"📋 Phase 2 共有 {len(tasks)} 個檔案待校對。")
         models_used = set()
 
-        for idx, task in enumerate(tasks, 1):
-            if self.check_system_health():
-                break
-
-            subj, fname = task["subject"], task["filename"]
-
-            config = self.get_config("phase2", subject_name=subj)
-            model_name = config.get("model")
-            chunk_size = int(config.get("chunk_size"))
-            if not model_name:
-                raise RuntimeError(f"phase2 config missing model for {subj}")
-            if chunk_size <= 0:
-                raise RuntimeError(f"phase2 config chunk_size must be > 0 for {subj}")
-            options = config.get("options", {})
-            models_used.add(model_name)
-
-            base_name = fname.replace(".m4a", "")
-
-            # --- Load Extra Context ---
-            glossary_text = self._get_glossary(subj)
-            pdf_text = ""
-            ref_dir = self.dirs.get("p0_ref", os.path.join(self.base_dir, "output", "00_glossary"))
-            pdf_path = os.path.join(ref_dir, subj, f"{base_name}.pdf")
-
-            if os.path.exists(pdf_path):
-                try:
-                    reader = PdfReader(pdf_path)
-                    pdf_text = "\n".join(
-                        [p.extract_text() for p in reader.pages[:20] if p.extract_text()]
-                    )[:20000]
-                    self.log(f"📖 已載入 PDF 參考 ({len(pdf_text)} 字元)")
-                except Exception as e:
-                    self.log(f"⚠️ PDF 讀取錯誤: {e}", "warn")
-            else:
-                m = re.match(r"^(.+)-(\d+)$", base_name)
-                if m:
-                    lecture_base = m.group(1)
-                    shared_pdf = os.path.join(ref_dir, subj, f"{lecture_base}.pdf")
-                    if os.path.exists(shared_pdf):
-                        try:
-                            reader = PdfReader(shared_pdf)
-                            pdf_text = "\n".join(
-                                [p.extract_text() for p in reader.pages[:20] if p.extract_text()]
-                            )[:20000]
-                            self.log(f"📖 已載入共用 PDF ({lecture_base}.pdf)")
-                        except Exception:
-                            pass
-
-            # --- Load P1 Transform ---
-            in_path = os.path.join(self.dirs["p1"], subj, f"{base_name}.md")
-            if not os.path.exists(in_path):
-                self.log(f"⚠️ 找不到 P1 來源: {in_path}", "warn")
-                continue
-
-            with open(in_path, encoding="utf-8") as f:
-                raw_text = f.read()
-
-            chunks = smart_split(raw_text, chunk_size)
-            full_corrected = []
-            full_logs = []
-
-            self.log(
-                f"📦 [{idx}/{len(tasks)}] 正在校對：[{subj}] {base_name}.md (共分為 {len(chunks)} 段)"
-            )
-
-            pbar, stop_tick, t = self.create_spinner(f"校對 ({fname})")
-
-            for c_idx, chunk in enumerate(chunks):
+        try:
+            for idx, task in enumerate(tasks, 1):
                 if self.check_system_health():
                     break
 
-                context_hint = ""
-                if c_idx > 0:
-                    prev_tail = raw_text[
-                        max(0, c_idx * chunk_size - self.LOOKBACK_CHARS) : c_idx * chunk_size
-                    ]
-                    context_hint = f"【前段結尾上下文（僅供參考，請勿在輸出中重複此段）】：\n...{prev_tail}\n\n"
+                subj, fname = task["subject"], task["filename"]
 
-                pdf_block = f"【講義 PDF 參考】：\n{pdf_text}\n\n" if pdf_text else ""
-                gloss_block = f"{glossary_text}\n\n" if glossary_text else ""
+                config = self.get_config("phase2", subject_name=subj)
+                model_name = config.get("model")
+                chunk_size = int(config.get("chunk_size"))
+                if not model_name:
+                    raise RuntimeError(f"phase2 config missing model for {subj}")
+                if chunk_size <= 0:
+                    raise RuntimeError(f"phase2 config chunk_size must be > 0 for {subj}")
+                options = config.get("options", {})
+                models_used.add(model_name)
 
-                full_prompt = f"{prompt_tpl}\n\n{gloss_block}{pdf_block}{context_hint}【本段逐字稿原文】：\n{chunk}"
+                base_name = fname.replace(".m4a", "")
 
-                try:
-                    res = self.llm.generate(model=model_name, prompt=full_prompt, options=options)
+                # --- Load Extra Context ---
+                glossary_text = self._get_glossary(subj)
+                pdf_text = ""
+                ref_dir = self.dirs.get(
+                    "p0_ref", os.path.join(self.base_dir, "output", "00_glossary")
+                )
+                pdf_path = os.path.join(ref_dir, subj, f"{base_name}.pdf")
 
-                    corrected = res
-                    expl = ""
-                    if "---" in res:
-                        parts = res.split("---", 1)
-                        corrected = parts[0].strip()
-                        expl = parts[1].strip()
+                if os.path.exists(pdf_path):
+                    try:
+                        reader = PdfReader(pdf_path)
+                        pdf_text = "\n".join(
+                            [p.extract_text() for p in reader.pages[:20] if p.extract_text()]
+                        )[:20000]
+                        self.log(f"📖 已載入 PDF 參考 ({len(pdf_text)} 字元)")
+                    except Exception as e:
+                        self.log(f"⚠️ PDF 讀取錯誤: {e}", "warn")
+                else:
+                    m = re.match(r"^(.+)-(\d+)$", base_name)
+                    if m:
+                        lecture_base = m.group(1)
+                        shared_pdf = os.path.join(ref_dir, subj, f"{lecture_base}.pdf")
+                        if os.path.exists(shared_pdf):
+                            try:
+                                reader = PdfReader(shared_pdf)
+                                pdf_text = "\n".join(
+                                    [
+                                        p.extract_text()
+                                        for p in reader.pages[:20]
+                                        if p.extract_text()
+                                    ]
+                                )[:20000]
+                                self.log(f"📖 已載入共用 PDF ({lecture_base}.pdf)")
+                            except Exception:
+                                pass
 
-                    if len(corrected) < len(chunk) * self.VERBATIM_THRESHOLD:
-                        self.log(f"⚠️ 片段 {c_idx + 1} 觸發守衛: 過短，保留原文", "warn")
+                # --- Load P1 Transform ---
+                in_path = os.path.join(self.dirs["p1"], subj, f"{base_name}.md")
+                if not os.path.exists(in_path):
+                    self.log(f"⚠️ 找不到 P1 來源: {in_path}", "warn")
+                    continue
+
+                with open(in_path, encoding="utf-8") as f:
+                    raw_text = f.read()
+
+                chunks = smart_split(raw_text, chunk_size)
+                full_corrected = []
+                full_logs = []
+
+                self.log(
+                    f"📦 [{idx}/{len(tasks)}] 正在校對：[{subj}] {base_name}.md (共分為 {len(chunks)} 段)"
+                )
+
+                pbar, stop_tick, t = self.create_spinner(f"校對 ({fname})")
+
+                for c_idx, chunk in enumerate(chunks):
+                    if self.check_system_health():
+                        break
+
+                    context_hint = ""
+                    if c_idx > 0:
+                        prev_tail = raw_text[
+                            max(0, c_idx * chunk_size - self.LOOKBACK_CHARS) : c_idx * chunk_size
+                        ]
+                        context_hint = f"【前段結尾上下文（僅供參考，請勿在輸出中重複此段）】：\n...{prev_tail}\n\n"
+
+                    pdf_block = f"【講義 PDF 參考】：\n{pdf_text}\n\n" if pdf_text else ""
+                    gloss_block = f"{glossary_text}\n\n" if glossary_text else ""
+
+                    full_prompt = f"{prompt_tpl}\n\n{gloss_block}{pdf_block}{context_hint}【本段逐字稿原文】：\n{chunk}"
+
+                    try:
+                        res = self.llm.generate(
+                            model=model_name, prompt=full_prompt, options=options
+                        )
+
+                        corrected = res
+                        expl = ""
+                        if "---" in res:
+                            parts = res.split("---", 1)
+                            corrected = parts[0].strip()
+                            expl = parts[1].strip()
+
+                        if len(corrected) < len(chunk) * self.VERBATIM_THRESHOLD:
+                            self.log(f"⚠️ 片段 {c_idx + 1} 觸發守衛: 過短，保留原文", "warn")
+                            full_corrected.append(chunk)
+                        else:
+                            full_corrected.append(corrected)
+                            if expl:
+                                cleaned_lines = []
+                                seen_last = None
+                                for line in expl.splitlines():
+                                    s = line.strip()
+                                    s_lower = s.lower().replace("*", "").replace(":", "").strip()
+                                    if s_lower in (
+                                        "explanation of changes",
+                                        "彙整修改日誌",
+                                        "修改說明",
+                                        "修改日誌",
+                                    ):
+                                        continue
+                                    if s == seen_last:
+                                        continue
+                                    seen_last = s
+                                    cleaned_lines.append(line)
+                                cleaned = "\n".join(cleaned_lines).strip()
+                                if cleaned:
+                                    full_logs.append(cleaned)
+
+                    except Exception as e:
+                        self.log(f"❌ 片段 {c_idx + 1} 失敗: {e}", "error")
                         full_corrected.append(chunk)
-                    else:
-                        full_corrected.append(corrected)
-                        if expl:
-                            cleaned_lines = []
-                            seen_last = None
-                            for line in expl.splitlines():
-                                s = line.strip()
-                                s_lower = s.lower().replace("*", "").replace(":", "").strip()
-                                if s_lower in (
-                                    "explanation of changes",
-                                    "彙整修改日誌",
-                                    "修改說明",
-                                    "修改日誌",
-                                ):
-                                    continue
-                                if s == seen_last:
-                                    continue
-                                seen_last = s
-                                cleaned_lines.append(line)
-                            cleaned = "\n".join(cleaned_lines).strip()
-                            if cleaned:
-                                full_logs.append(cleaned)
 
-                except Exception as e:
-                    self.log(f"❌ 片段 {c_idx + 1} 失敗: {e}", "error")
-                    full_corrected.append(chunk)
+                self.finish_spinner(pbar, stop_tick, t)
 
-            self.finish_spinner(pbar, stop_tick, t)
+                # --- Save Output ---
+                final_doc = "\n".join(full_corrected)
+                if full_logs:
+                    final_doc += "\n\n---\n\n## 📋 彙整修改日誌\n\n" + "\n\n".join(full_logs)
 
-            # --- Save Output ---
-            final_doc = "\n".join(full_corrected)
-            if full_logs:
-                final_doc += "\n\n---\n\n## 📋 彙整修改日誌\n\n" + "\n\n".join(full_logs)
+                out_path = os.path.join(self.dirs["p2"], subj, f"{base_name}.md")
+                os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
-            out_path = os.path.join(self.dirs["p2"], subj, f"{base_name}.md")
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                AtomicWriter.write_text(out_path, final_doc)
 
-            AtomicWriter.write_text(out_path, final_doc)
+                out_hash = self.state_manager.get_file_hash(out_path)
+                self.state_manager.update_task(
+                    subj, fname, "p2", status="✅", char_count=len(final_doc), output_hash=out_hash
+                )
+                self.log(f"✅ [{idx}/{len(tasks)}] 校對完成：{fname}")
 
-            out_hash = self.state_manager.get_file_hash(out_path)
-            self.state_manager.update_task(
-                subj, fname, "p2", status="✅", char_count=len(final_doc), output_hash=out_hash
-            )
-            self.log(f"✅ [{idx}/{len(tasks)}] 校對完成：{fname}")
+                # 暫停機制：每個任務完成後檢查是否要 checkpoint
+                if self.stop_requested:
+                    if self.pause_requested and idx < len(tasks):
+                        next_task = tasks[idx]  # idx 已是 1-based，下一個剛好
+                        self.save_checkpoint(next_task["subject"], next_task["filename"])
+                    break
 
-            # 暫停機制：每個任務完成後檢查是否要 checkpoint
-            if self.stop_requested:
-                if self.pause_requested and idx < len(tasks):
-                    next_task = tasks[idx]  # idx 已是 1-based，下一個剛好
-                    self.save_checkpoint(next_task["subject"], next_task["filename"])
-                break
-
-        for m in models_used:
-            self.llm.unload_model(m, logger=self)
+        finally:
+            for m in models_used:
+                self.llm.unload_model(m, logger=self)
 
 
 if __name__ == "__main__":

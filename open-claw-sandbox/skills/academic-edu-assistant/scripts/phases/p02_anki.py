@@ -9,9 +9,6 @@ _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
 
-# A-7 Fix: shared constant — must match p01_compare
-_ANALYSIS_MODEL = "qwen2.5-coder:7b"
-
 
 class Phase2Anki(PipelineBase):
     def __init__(self):
@@ -33,30 +30,28 @@ class Phase2Anki(PipelineBase):
         with open(in_path, encoding="utf-8") as f:
             content = f.read()
 
-        prompt = f"""
-你是一個專門製作 Anki 記憶卡片的專家。
-請將以下「比較報告」中的核心知識點、專有名詞、以及重要觀念，轉換為一問一答的 Anki 卡片格式。
+        prompt_tpl = self.get_prompt("Phase 2: Anki 卡片生成")
+        if not prompt_tpl:
+            self.error("❌ 找不到 prompt 指令，請確認 prompt.md 存在")
+            return
 
-規則：
-1. 每一張卡片必須獨立成一行。
-2. 格式必須嚴格為 CSV：`問題,答案` (用半形逗號分隔)。如果答案或問題中包含逗號，請用雙引號 `""` 包起來。
-3. 問題必須簡短明確，答案必須精準（適合背誦）。
-4. 不要輸出任何其他的解釋或前言，直接輸出 CSV 內容。
+        prompt = f"""{prompt_tpl}
 
 【比較報告開始】
 {content}
 【比較報告結束】
 """
-        pbar, stop_tick, t = self.create_spinner(f"生成 Anki 卡片 ({fname})...")
+        model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
+        pbar, stop_tick, t = self.create_spinner(f"生成 Anki 卡片 ({fname}) using {model_name}...")
         try:
-            response = self.llm.generate(model=_ANALYSIS_MODEL, prompt=prompt)
+            response = self.llm.generate(model=model_name, prompt=prompt)
         except Exception as e:
             self.error(f"❌ 生成失敗: {e}")
             return
         finally:
             self.finish_spinner(pbar, stop_tick, t)
             # C Fix: unload model after use to release VRAM
-            self.llm.unload_model(_ANALYSIS_MODEL, logger=self)
+            self.llm.unload_model(model_name, logger=self)
 
         out_dir = os.path.join(self.base_dir, "output", "02_anki")
         os.makedirs(out_dir, exist_ok=True)

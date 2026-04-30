@@ -1,5 +1,5 @@
 """
-pdf_diagnostic.py — Phase 0a: 輕量 PDF 診斷
+pdf_diagnostic.py — Phase 0a: 輕量 PDF 診斷 + 文件意圖識別
 =============================================
 目標：在 Docling（~2.5GB RAM，3-5分鐘）啟動之前，
 用 poppler-utils 在 < 50MB、< 5秒 內完成六項診斷：
@@ -10,6 +10,8 @@ pdf_diagnostic.py — Phase 0a: 輕量 PDF 診斷
   4. pdfimages   → raster 圖片統計
   5. 向量圖偵測  → 有文字但 pdfimages 無圖的頁面 = 可能有向量圖 → 標記頁碼
   6. 多欄偵測    → pdftotext -layout 行寬分析
+  7. 意圖識別   → LLM 分類文件類型（academic / report / manual / other），
+                   自動選擇最佳 VLM Prompt 路由
 
 結果寫入 scan_report.json，供所有後續 Phase 讀取。
 
@@ -67,6 +69,10 @@ class DiagnosticReport:
 
     # downstream (filled by later phases)
     low_confidence_pages: List[int] = field(default_factory=list)
+
+    # intent recognition (step 7)
+    document_class: str = "unknown"  # "academic" | "report" | "manual" | "other"
+    vlm_prompt_route: str = "default"  # key for VLM prompt selection
 
     # status
     error: Optional[str] = None
@@ -143,6 +149,9 @@ class Phase0aDiagnostic(PipelineBase):
 
             # 6. Multi-column detection
             self._detect_multi_column(pdf_path, report)
+
+            # 7. Intent Recognition (LLM document classification)
+            self._classify_intent(pdf_path, report)
 
         except Exception as e:
             report.error = str(e)
@@ -325,6 +334,50 @@ class Phase0aDiagnostic(PipelineBase):
 
         status = "疑似多欄 ⚠️" if report.likely_multi_column else "單欄 ✅"
         self.info(f"📋 [Diagnose] 多欄偵測: {status}")
+
+    def _classify_intent(self, pdf_path: str, report: DiagnosticReport):
+        """
+        Step 7: LLM-based Document Intent Recognition.
+        Analyzes the first 2 pages to classify document type and route VLM prompts.
+        Document classes: academic | report | manual | other
+        """
+        # Extract first 2 pages text as context
+        sample_text = self._run_tool(["pdftotext", "-f", "1", "-l", "2", pdf_path, "-"])
+        if not sample_text or len(sample_text.strip()) < 50:
+            self.info("📋 [Diagnose] 意圖識別: 文字內容不足，使用 default 路由")
+            report.document_class = "other"
+            report.vlm_prompt_route = "default"
+            return
+
+        sample = sample_text.strip()[:3000]
+        intent_prompt = self.get_prompt("Phase 0a: Intent Recognition")
+        if not intent_prompt:
+            self.info("⚠️ [Diagnose] 找不到 Intent Recognition prompt，使用 default 路由")
+            report.document_class = "other"
+            report.vlm_prompt_route = "default"
+            return
+
+        model_name = (
+            self.config_manager.get_nested("models", "diagnostic_classifier")
+            or self.config_manager.get_nested("models", "default")
+            or "qwen2.5-coder:7b"
+        )
+
+        prompt = f"{intent_prompt}\n\n【文件前兩頁摘要】:\n{sample}\n\n請只輸出分類結果（academic/report/manual/other），不要輸出任何解釋。"
+        try:
+            raw = self.llm.generate(model=model_name, prompt=prompt)
+            doc_class = raw.strip().lower().split()[0] if raw.strip() else "other"
+            if doc_class not in ("academic", "report", "manual", "other"):
+                doc_class = "other"
+            report.document_class = doc_class
+            report.vlm_prompt_route = doc_class  # 1-to-1 mapping for now
+            self.info(f"🧠 [Diagnose] 意圖識別完成: 文件類型 → [{doc_class}]")
+        except Exception as e:
+            self.warning(f"⚠️ [Diagnose] 意圖識別 LLM 呼叫失敗: {e}，使用 default 路由")
+            report.document_class = "other"
+            report.vlm_prompt_route = "default"
+        finally:
+            self.llm.unload_model(model_name, logger=self)
 
     # ------------------------------------------------------------------ #
     #  Output                                                              #

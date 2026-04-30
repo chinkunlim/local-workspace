@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Open Claw Workspace - macOS Bootstrap Script
+set -euo pipefail
 
 # 設定 WORKSPACE_DIR 環境變數
 WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

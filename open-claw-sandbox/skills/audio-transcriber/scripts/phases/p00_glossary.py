@@ -97,79 +97,80 @@ class Phase0Glossary(PipelineBase):
         self.log(f"📋 Phase 0 將處理 {len(subs)} 個科目：{subs}")
         models_used = set()
 
-        for idx, subj in enumerate(subs, 1):
-            if self.check_system_health():
-                break
+        try:
+            for idx, subj in enumerate(subs, 1):
+                if self.check_system_health():
+                    break
 
-            config = self.get_config("phase0", subject_name=subj)
-            model_name = config.get("model")
-            if not model_name:
-                raise RuntimeError(f"phase0 config missing model for {subj}")
-            options = config.get("options", {})
-            models_used.add(model_name)
+                config = self.get_config("phase0", subject_name=subj)
+                model_name = config.get("model")
+                if not model_name:
+                    raise RuntimeError(f"phase0 config missing model for {subj}")
+                options = config.get("options", {})
+                models_used.add(model_name)
 
-            out_path = os.path.join(ref_dir, subj, "glossary.json")
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            existing = {}
-            if os.path.exists(out_path):
+                out_path = os.path.join(ref_dir, subj, "glossary.json")
+                os.makedirs(os.path.dirname(out_path), exist_ok=True)
+                existing = {}
+                if os.path.exists(out_path):
+                    try:
+                        with open(out_path, encoding="utf-8") as f:
+                            existing = json.load(f)
+                    except json.JSONDecodeError as exc:
+                        self.log(f"⚠️ 現有詞庫檔案損毀，將重建: {exc}", "warn")
+                    except OSError as exc:
+                        self.log(f"⚠️ 無法讀取現有詞庫: {exc}", "warn")
+
+                if os.path.exists(out_path) and not force and not merge:
+                    self.log(
+                        f"⏭️  [{idx}/{len(subs)}] 已有詞庫，跳過：{subj} (可使用 --force 覆蓋, 或 --merge 合併)"
+                    )
+                    continue
+
+                sample = self._build_sample(subj)
+                if not sample:
+                    self.log(f"⚠️  [{idx}/{len(subs)}] 找不到 {subj} 的逐字稿，跳過。", "warn")
+                    continue
+
+                prompt = f"{self.prompt_tpl}\n\n【科目名稱】: {subj}\n\n【逐字稿樣本】:\n{sample}"
+                self.log(f"🧠 [{idx}/{len(subs)}] 正在分析誤聽詞 ({model_name})：{subj}...")
+
+                pbar, stop_tick, t = self.create_spinner(f"生成 ({subj})")
                 try:
-                    with open(out_path, encoding="utf-8") as f:
-                        existing = json.load(f)
-                except json.JSONDecodeError as exc:
-                    self.log(f"⚠️ 現有詞庫檔案損毀，將重建: {exc}", "warn")
-                except OSError as exc:
-                    self.log(f"⚠️ 無法讀取現有詞庫: {exc}", "warn")
+                    res = self.llm.generate(
+                        model=model_name, prompt=prompt, options=options, logger=self
+                    )
+                except Exception as e:
+                    self.log(f"❌ LLM 失敗 ({subj}): {e}", "error")
+                    continue
+                finally:
+                    self.finish_spinner(pbar, stop_tick, t)
 
-            if os.path.exists(out_path) and not force and not merge:
-                self.log(
-                    f"⏭️  [{idx}/{len(subs)}] 已有詞庫，跳過：{subj} (可使用 --force 覆蓋, 或 --merge 合併)"
-                )
-                continue
+                suggested = self._parse_json(res)
+                suggested = {k: v for k, v in suggested.items() if k.strip() != v.strip()}
 
-            sample = self._build_sample(subj)
-            if not sample:
-                self.log(f"⚠️  [{idx}/{len(subs)}] 找不到 {subj} 的逐字稿，跳過。", "warn")
-                continue
+                if merge and existing:
+                    merged = dict(existing)
+                    added = 0
+                    for k, v in suggested.items():
+                        if k not in merged:
+                            merged[k] = v
+                            added += 1
+                    final_gloss = merged
+                    self.log(f"   合併模式：加入 {added} 筆新條目 (保留 {len(existing)} 筆現有)")
+                else:
+                    final_gloss = suggested
 
-            prompt = f"{self.prompt_tpl}\n\n【科目名稱】: {subj}\n\n【逐字稿樣本】:\n{sample}"
-            self.log(f"🧠 [{idx}/{len(subs)}] 正在分析誤聽詞 ({model_name})：{subj}...")
-
-            pbar, stop_tick, t = self.create_spinner(f"生成 ({subj})")
-            try:
-                res = self.llm.generate(
-                    model=model_name, prompt=prompt, options=options, logger=self
-                )
-            except Exception as e:
-                self.log(f"❌ LLM 失敗 ({subj}): {e}", "error")
-                continue
-            finally:
-                self.finish_spinner(pbar, stop_tick, t)
-
-            suggested = self._parse_json(res)
-            suggested = {k: v for k, v in suggested.items() if k.strip() != v.strip()}
-
-            if merge and existing:
-                merged = dict(existing)
-                added = 0
-                for k, v in suggested.items():
-                    if k not in merged:
-                        merged[k] = v
-                        added += 1
-                final_gloss = merged
-                self.log(f"   合併模式：加入 {added} 筆新條目 (保留 {len(existing)} 筆現有)")
-            else:
-                final_gloss = suggested
-
-            try:
-                AtomicWriter.write_json(out_path, final_gloss)
-                self.log(
-                    f"✅ [{idx}/{len(subs)}] 詞庫已儲存：{subj}/glossary.json (共 {len(final_gloss)} 筆)"
-                )
-            except OSError as e:
-                self.log(f"❌ 寫入失敗: {e}", "error")
-
-        for m in models_used:
-            self.llm.unload_model(m, logger=self)
+                try:
+                    AtomicWriter.write_json(out_path, final_gloss)
+                    self.log(
+                        f"✅ [{idx}/{len(subs)}] 詞庫已儲存：{subj}/glossary.json (共 {len(final_gloss)} 筆)"
+                    )
+                except OSError as e:
+                    self.log(f"❌ 寫入失敗: {e}", "error")
+        finally:
+            for m in models_used:
+                self.llm.unload_model(m, logger=self)
 
 
 if __name__ == "__main__":

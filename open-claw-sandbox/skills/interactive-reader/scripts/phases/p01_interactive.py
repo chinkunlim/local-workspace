@@ -15,6 +15,7 @@ class Phase1Interactive(PipelineBase):
     def __init__(self):
         super().__init__(phase_key="p1", phase_name="互動標籤處理", skill_name="interactive-reader")
         self.wiki_dir = os.path.abspath(os.path.join(self.base_dir, "..", "wiki"))
+        self.model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
 
     def _process_file(self, idx: int, task: dict, total: int):
         fname = task["filename"]
@@ -73,9 +74,8 @@ class Phase1Interactive(PipelineBase):
 """
             pbar, stop_tick, t = self.create_spinner(f"AI 思考中 ({instruction[:10]}...)")
             try:
-                # We use qwen2.5-coder:7b or similar
                 response = self.llm.generate(
-                    model="qwen2.5-coder:7b", prompt=f"{system_prompt}\n\n使用者指令：{instruction}"
+                    model=self.model_name, prompt=f"{system_prompt}\n\n使用者指令：{instruction}"
                 )
 
                 # Format the replacement
@@ -103,17 +103,19 @@ class Phase1Interactive(PipelineBase):
             AtomicWriter.write_text(in_path, modified_content)
             self.info(f"✅ [{idx}/{total}] 回寫完成：{fname}")
 
-        # Unload model and update status
-        self.llm.unload_model("qwen2.5-coder:7b", logger=self)
+        # Update status
         self.state_manager.update_task("Wiki", fname, self.phase_key)
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.info("✨ 啟動 Phase 1：互動閱讀與原地協作")
-        self.process_tasks(
-            self._process_file,
-            force=force,
-            subject_filter=subject,
-            file_filter=file_filter,
-            single_mode=single_mode,
-            resume_from=resume_from,
-        )
+        try:
+            self.process_tasks(
+                self._process_file,
+                force=force,
+                subject_filter=subject,
+                file_filter=file_filter,
+                single_mode=single_mode,
+                resume_from=resume_from,
+            )
+        finally:
+            self.llm.unload_model(self.model_name, logger=self)
