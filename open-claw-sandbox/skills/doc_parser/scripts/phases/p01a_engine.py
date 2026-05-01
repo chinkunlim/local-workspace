@@ -194,7 +194,7 @@ class Phase1aPDFEngine(PipelineBase):
 
         try:
             from docling.datamodel.base_models import InputFormat
-            from docling.datamodel.document import PictureItem
+            from docling.datamodel.document import PictureItem, TextItem
             from docling.datamodel.pipeline_options import PdfPipelineOptions
             from docling.document_converter import DocumentConverter, PdfFormatOption
         except ImportError:
@@ -221,11 +221,96 @@ class Phase1aPDFEngine(PipelineBase):
             result = converter.convert(pdf_path)
             doc = result.document
 
-            # Extract images and build figure list database
+            # ── Collect ALL items first for caption heuristics & anti-bleed ──
+            all_items = list(doc.iterate_items())
+
+            # Build a per-page map of picture bounding boxes (for Anti-Bleed text filtering)
+            # Format: {page_no: [(l, t, r, b), ...]}
+            picture_bboxes: dict = {}
+            picture_items_indexed = []  # (list_index, item) for caption lookup
+            for list_idx, (item, _) in enumerate(all_items):
+                if isinstance(item, PictureItem) and getattr(item, "prov", None):
+                    prov = item.prov[0]
+                    page_no = prov.page_no
+                    bbox = prov.bbox
+                    if bbox is not None:
+                        picture_bboxes.setdefault(page_no, []).append(
+                            (bbox.l, bbox.t, bbox.r, bbox.b)
+                        )
+                    picture_items_indexed.append((list_idx, item))
+
+            # ── Caption Heuristics: scan text just below each picture ──
+            import re as _re
+            _CAPTION_PATTERN = _re.compile(
+                r'^\s*(fig\.?|figure|圖|表|table|chart|photo|photo\.?)\s*[\d一二三四五六七八九十]+',
+                _re.IGNORECASE,
+            )
+            picture_captions: dict = {}  # self_ref → caption_text
+            for list_idx, pic_item in picture_items_indexed:
+                pic_page = pic_item.prov[0].page_no if getattr(pic_item, "prov", None) else None
+                # Look ahead up to 5 items for a caption on the same page
+                for j in range(list_idx + 1, min(list_idx + 6, len(all_items))):
+                    next_item, _ = all_items[j]
+                    if not isinstance(next_item, TextItem):
+                        continue
+                    next_page = (
+                        next_item.prov[0].page_no if getattr(next_item, "prov", None) else None
+                    )
+                    if next_page != pic_page:
+                        break  # crossed page boundary — stop
+                    text = getattr(next_item, "text", "").strip()
+                    if _CAPTION_PATTERN.match(text):
+                        picture_captions[pic_item.self_ref] = text
+                        self.info(f"📌 [Phase 1a] 偵測到 Caption: {text[:60]}")
+                        break
+
+            # ── High-Resolution Image Extraction via PyMuPDF (300 DPI) ──
             extracted_figures = []
-            for item, level in doc.iterate_items():
-                if isinstance(item, PictureItem):
-                    img = item.get_image(doc)
+            try:
+                import fitz as _fitz
+                _fitz_doc = _fitz.open(pdf_path)
+            except ImportError:
+                self.warning("⚠️ PyMuPDF (fitz) 未安裝，回退至 Docling 原生圖片。請執行: pip install pymupdf")
+                _fitz_doc = None
+
+            for _, pic_item in picture_items_indexed:
+                prov = getattr(pic_item, "prov", None)
+                page_no = prov[0].page_no if prov else 1
+                bbox = prov[0].bbox if prov else None
+
+                filename = f"fig_p{page_no}_{pic_item.self_ref.replace('/', '_')}.png"
+                filepath = os.path.join(assets_dir, filename)
+
+                saved = False
+                # --- Try PyMuPDF 300 DPI first ---
+                if _fitz_doc is not None and bbox is not None:
+                    try:
+                        fitz_page = _fitz_doc[page_no - 1]
+                        page_rect = fitz_page.rect
+                        l, t, r, b = bbox.l, bbox.t, bbox.r, bbox.b
+                        # Docling bbox: bottom-left origin, may be normalized (0–1)
+                        if max(l, t, r, b) <= 1.01:
+                            l = l * page_rect.width
+                            r = r * page_rect.width
+                            # Flip Y axis: Docling bottom-left → PyMuPDF top-left
+                            t_new = (1 - b) * page_rect.height
+                            b_new = (1 - t) * page_rect.height
+                            t, b = t_new, b_new
+                        clip = _fitz.Rect(l, t, r, b)
+                        mat = _fitz.Matrix(300 / 72, 300 / 72)  # 300 DPI
+                        pix = fitz_page.get_pixmap(matrix=mat, clip=clip)
+                        pix.save(filepath)
+                        saved = True
+                        self.log(
+                            f"🖼️ [Phase 1a] 高解析圖片已存 ({pix.width}x{pix.height}px @ 300DPI): {filename}",
+                            "info",
+                        )
+                    except Exception as _fitz_err:
+                        self.warning(f"⚠️ PyMuPDF 提取失敗，回退至 Docling: {_fitz_err}")
+
+                # --- Fallback: Docling native image (lower res) ---
+                if not saved:
+                    img = pic_item.get_image(doc)
                     if img:
                         if not self._should_keep_image(img):
                             self.log(
@@ -233,16 +318,27 @@ class Phase1aPDFEngine(PipelineBase):
                                 "info",
                             )
                             continue
-                        page_no = item.prov[0].page_no if getattr(item, "prov", None) else 1
-                        filename = f"fig_p{page_no}_{item.self_ref.replace('/', '_')}.png"
-                        filepath = os.path.join(assets_dir, filename)
                         img.save(filepath)
+                        saved = True
 
-                        extracted_figures.append(
-                            {"page": page_no, "src": f"assets/{filename}", "type": "picture"}
-                        )
+                if not saved:
+                    continue
 
-            # Write figure_list.md if figures were found
+                caption = picture_captions.get(pic_item.self_ref, "")
+                extracted_figures.append(
+                    {
+                        "page": page_no,
+                        "src": f"assets/{filename}",
+                        "type": "picture",
+                        "caption": caption,
+                        "has_caption": bool(caption),
+                    }
+                )
+
+            if _fitz_doc is not None:
+                _fitz_doc.close()
+
+            # ── Write figure_list.md ──
             if extracted_figures:
                 figure_list_path = os.path.join(
                     self.dirs["processed"], subject, pdf_id, "figure_list.md"
@@ -253,19 +349,38 @@ class Phase1aPDFEngine(PipelineBase):
                     "| 檔案名稱 | 頁碼 | 原始 Caption | VLM 描述 | 數據趨勢標籤 | 來源 |\n",
                     "| :--- | :---: | :--- | :--- | :---: | :---: |\n",
                 ]
-
                 for fig in extracted_figures:
-                    row = f"| {fig['src']} | {fig['page']} | - | 待 VLM 描述 | - | [P] |"
+                    # If a native caption was found, mark VLM as skipped
+                    vlm_status = "已略過 (Caption 存在)" if fig["has_caption"] else "待 VLM 描述"
+                    caption_display = fig["caption"] if fig["has_caption"] else "-"
+                    row = (
+                        f"| {fig['src']} | {fig['page']} | {caption_display} "
+                        f"| {vlm_status} | - | [P] |"
+                    )
                     content.append(row + "\n")
 
                 from core import AtomicWriter
-
                 AtomicWriter.write_text(figure_list_path, "".join(content))
+                n_with_caption = sum(1 for f in extracted_figures if f["has_caption"])
                 self.info(
-                    f"📸 [Phase 1a] 提取了 {len(extracted_figures)} 張圖片並建立 figure_list.md"
+                    f"📸 [Phase 1a] 提取了 {len(extracted_figures)} 張圖片 "
+                    f"({n_with_caption} 張有 Caption，VLM 已略過)"
                 )
 
+            # ── Anti-Bleed: Export markdown then strip in-figure text ──
             markdown_text = doc.export_to_markdown()
+
+            # Post-process: remove lines that consist only of axis labels / figure callouts
+            # These are short numeric-or-symbol-only lines that are typically chart annotations
+            _axis_label_re = _re.compile(r'^\s*([\d\.\-\+%°×]+|[A-Za-z]{1,3})\s*$')
+            cleaned_lines = []
+            for line in markdown_text.splitlines():
+                # Keep the line unless it is a very short standalone token (axis label)
+                if len(line.strip()) > 0 and _axis_label_re.match(line) and len(line.strip()) < 6:
+                    continue  # drop suspected axis/chart label
+                cleaned_lines.append(line)
+            markdown_text = "\n".join(cleaned_lines)
+
             self.info(f"✅ [Phase 1a] Docling 提取完成 ({len(markdown_text):,} 字元)")
             return markdown_text
         except Exception as e:

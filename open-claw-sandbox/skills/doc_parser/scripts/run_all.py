@@ -351,6 +351,16 @@ class QueueManager(PipelineBase):
             else:
                 self.info("📄 [Queue] Phase 1a 已完成，跳過")
 
+            # --- Phase 1b-S: Text Sanitizer (header/footer purge, hyphenation) ---
+            # This runs AFTER the IMMUTABLE raw_extracted.md is written by Phase 1a.
+            # It produces sanitized.md which downstream phases should prefer.
+            self.info(f"🧼 [Queue] Phase 1b-S: 文字淨化 ({subject})...")
+            from phases.p01b_text_sanitizer import Phase1bTextSanitizer
+
+            Phase1bTextSanitizer().run(subject, item["filename"])
+            self.state_manager.update_task(subject, item["filename"], "p1b_s", "✅")
+
+
             # --- Phase 1b: Vector Chart Extraction ---
             if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1b"):
                 # Always call run(), Phase 1b internally reads scan_report.json and skips if empty

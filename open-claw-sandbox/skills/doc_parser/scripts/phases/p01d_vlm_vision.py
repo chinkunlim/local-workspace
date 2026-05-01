@@ -136,6 +136,9 @@ class Phase1dVLMVision(PipelineBase):
                     else:
                         b64_image = encode_image_b64(abs_img_path)
                         pending_tasks.append((i, rel_img_path, cols, b64_image))
+                elif "已略過" in cols[vlm_col] or "Caption" in cols[vlm_col]:
+                    # Native caption found in Phase 1a — skip VLM entirely
+                    self.info(f"⏭️  [Phase 1d] 已有 Caption，略過 VLM: {cols[filename_col]}")
 
             modifications = 0
             if pending_tasks:
