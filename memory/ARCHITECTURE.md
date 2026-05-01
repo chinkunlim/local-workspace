@@ -1,7 +1,7 @@
 # ARCHITECTURE.md — Global System Architecture
 
 > **Scope:** Entire `local-workspace/` monorepo
-> **Last Updated:** 2026-05-01
+> **Last Updated:** 2026-05-02
 > **Audience:** All AI agents and developers operating in this workspace
 
 ---
@@ -122,6 +122,7 @@ The `core/` directory was refactored from a flat module into domain-specific sub
 | `core/orchestration/` | `run_all_pipelines.py` | PID-locked global pipeline orchestrator |
 | `core/orchestration/` | `router_agent.py` | LLM intent decomposition and DAG routing |
 | `core/orchestration/` | `event_bus.py` | Publish-subscribe event bus |
+| `core/orchestration/` | `human_gate.py` | **Ephemeral WebUI Verification Gate** — pauses pipeline for human-in-the-loop review; side-by-side Ollama diff with click-to-play audio timestamps |
 | `core/state/` | `state_manager.py` | Per-file per-phase state persistence (atomic JSON) |
 | `core/state/` | `resume_manager.py` | Mid-run checkpoint save and restore |
 | `core/state/` | `session_state.py` | Volatile per-session state |
@@ -162,8 +163,13 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
     │  audio_transcriber/input/       doc_parser/input/
     │    │  (6-phase pipeline)          │  (7-phase pipeline)
     │    │  P0: Glossary               │  P00a: Diagnostic
-    │    │  P1: MLX-Whisper            │  P01a: Docling extract
-    │    │  P2: Proofread              │  P01b: Vector charts
+    │    │  P1: MLX-Whisper [VERBATIM] │  P01a: Docling extract (300DPI)
+    │    │     └─ Word timestamps      │     └─ Caption heuristics
+    │    │     └─ Low-conf [? flags ?] │     └─ Anti-bleed post-proc
+    │    │  P2: Proofread+Gate ────────┤  P01b-S: Text sanitizer
+    │    │     └─ Disfluency purge     │     └─ Header/footer purge
+    │    │     └─ Flag resolution      │     └─ Hyphenation repair
+    │    │     └─ VerificationGate     │  P01b: Vector charts
     │    │  P3: Merge                  │  P01c: OCR gate
     │    │  P4: Highlight ──────────► smart_highlighter
     │    │  P5: Synthesis ──────────► note_generator
@@ -227,3 +233,9 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
 - **WebUI to CLI Convergence** (2026-04): Achieved functional parity between WebUI and CLI; deprecated Flask web_ui in favour of pure-CLI autonomous operations.
 - **SSoT Documentation Consolidation** (2026-04): Merged all fragmented docs into root `docs/` and `memory/` directories as the single source of truth.
 - **`core/` Sub-Package Refactoring** (2026-05-01): Migrated `core/` from a flat module to domain sub-packages (`ai/`, `cli/`, `config/`, `orchestration/`, `services/`, `state/`, `utils/`) and fixed all import paths across the entire codebase.
+- **GIGO Prevention & Verification Gate Architecture** (2026-05-02): Implemented production-grade HITL (Human-in-the-Loop) framework to eliminate Garbage-In-Garbage-Out risks:
+  - `core/orchestration/human_gate.py`: Universal Ephemeral WebUI that pauses any pipeline phase for side-by-side Ollama diff review with click-to-play audio timestamps.
+  - `audio_transcriber` V8.2: Word-level timestamps, low-confidence `[? token | ts ?]` flagging, light diarization (pause-based paragraph breaks), disfluency purge prompt, and VerificationGate integration at Phase 2.
+  - `doc_parser` V2.0: PyMuPDF 300 DPI image extraction via bbox, native caption heuristics, axis-label anti-bleed, new immutable `raw_extracted.md` + sanitized `sanitized.md` Phase 1b-S, VLM bypass for captioned figures.
+  - `knowledge_compiler`: WikiLink dead-link guard that downgrades `[[Dead Links]]` to plain text before vault write.
+  - `academic_edu_assistant`: VerificationGate at Anki card generation for human approval before AnkiConnect push.

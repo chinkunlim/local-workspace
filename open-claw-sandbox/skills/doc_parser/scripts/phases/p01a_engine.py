@@ -241,8 +241,9 @@ class Phase1aPDFEngine(PipelineBase):
 
             # ── Caption Heuristics: scan text just below each picture ──
             import re as _re
+
             _CAPTION_PATTERN = _re.compile(
-                r'^\s*(fig\.?|figure|圖|表|table|chart|photo|photo\.?)\s*[\d一二三四五六七八九十]+',
+                r"^\s*(fig\.?|figure|圖|表|table|chart|photo|photo\.?)\s*[\d一二三四五六七八九十]+",
                 _re.IGNORECASE,
             )
             picture_captions: dict = {}  # self_ref → caption_text
@@ -268,9 +269,12 @@ class Phase1aPDFEngine(PipelineBase):
             extracted_figures = []
             try:
                 import fitz as _fitz
+
                 _fitz_doc = _fitz.open(pdf_path)
             except ImportError:
-                self.warning("⚠️ PyMuPDF (fitz) 未安裝，回退至 Docling 原生圖片。請執行: pip install pymupdf")
+                self.warning(
+                    "⚠️ PyMuPDF (fitz) 未安裝，回退至 Docling 原生圖片。請執行: pip install pymupdf"
+                )
                 _fitz_doc = None
 
             for _, pic_item in picture_items_indexed:
@@ -360,6 +364,7 @@ class Phase1aPDFEngine(PipelineBase):
                     content.append(row + "\n")
 
                 from core import AtomicWriter
+
                 AtomicWriter.write_text(figure_list_path, "".join(content))
                 n_with_caption = sum(1 for f in extracted_figures if f["has_caption"])
                 self.info(
@@ -372,7 +377,7 @@ class Phase1aPDFEngine(PipelineBase):
 
             # Post-process: remove lines that consist only of axis labels / figure callouts
             # These are short numeric-or-symbol-only lines that are typically chart annotations
-            _axis_label_re = _re.compile(r'^\s*([\d\.\-\+%°×]+|[A-Za-z]{1,3})\s*$')
+            _axis_label_re = _re.compile(r"^\s*([\d\.\-\+%°×]+|[A-Za-z]{1,3})\s*$")
             cleaned_lines = []
             for line in markdown_text.splitlines():
                 # Keep the line unless it is a very short standalone token (axis label)

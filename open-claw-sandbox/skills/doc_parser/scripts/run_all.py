@@ -360,7 +360,6 @@ class QueueManager(PipelineBase):
             Phase1bTextSanitizer().run(subject, item["filename"])
             self.state_manager.update_task(subject, item["filename"], "p1b_s", "✅")
 
-
             # --- Phase 1b: Vector Chart Extraction ---
             if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1b"):
                 # Always call run(), Phase 1b internally reads scan_report.json and skips if empty

@@ -19,8 +19,8 @@ from pypdf import PdfReader
 
 # Group 4 — Core imports
 from core import AtomicWriter, PipelineBase
-from core.utils.text_utils import smart_split
 from core.orchestration.human_gate import VerificationGate
+from core.utils.text_utils import smart_split
 
 
 class Phase2Proofread(PipelineBase):
@@ -402,7 +402,6 @@ class Phase2Proofread(PipelineBase):
 
                 self.finish_spinner(pbar, stop_tick, t)
 
-
                 # --- Verification Gate (Ollama-first, Human-approve) ---
                 # Build the Ollama-proofread draft first
                 final_doc = "\n".join(full_corrected)
@@ -410,9 +409,7 @@ class Phase2Proofread(PipelineBase):
                     final_doc += "\n\n---\n\n## 📋 彙整修改日誌\n\n" + "\n\n".join(full_logs)
 
                 # Then open the ephemeral WebUI for human review
-                audio_path_for_gate = os.path.join(
-                    self.dirs.get("p0", ""), subj, fname
-                )
+                audio_path_for_gate = os.path.join(self.dirs.get("p0", ""), subj, fname)
                 if not os.path.exists(audio_path_for_gate):
                     audio_path_for_gate = None  # degrade gracefully if audio missing
 
@@ -421,8 +418,8 @@ class Phase2Proofread(PipelineBase):
                 )
                 gate = VerificationGate(
                     skill_name="audio_transcriber / p02_proofread",
-                    original_text=raw_text,    # verbatim P1 output (left pane)
-                    llm_text=final_doc,         # Ollama-proofread P2 draft (right pane, editable)
+                    original_text=raw_text,  # verbatim P1 output (left pane)
+                    llm_text=final_doc,  # Ollama-proofread P2 draft (right pane, editable)
                     audio_path=audio_path_for_gate,
                 )
                 approved_text = gate.start()
@@ -440,7 +437,6 @@ class Phase2Proofread(PipelineBase):
                 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
                 AtomicWriter.write_text(out_path, final_doc)
-
 
                 out_hash = self.state_manager.get_file_hash(out_path)
                 self.state_manager.update_task(

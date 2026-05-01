@@ -8,6 +8,7 @@ from core.utils.bootstrap import ensure_core_path as _bootstrap
 _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
+from core.orchestration.human_gate import VerificationGate
 from core.utils.file_utils import write_csv_safe  # #10 Shared CSV utility
 
 
@@ -135,6 +136,21 @@ class Phase2Anki(PipelineBase):
         # F3: Use write_csv_safe so commas/quotes inside card content are properly escaped.
         # Re-parse LLM output to build typed rows for the csv module.
         csv_text = response.strip()
+
+        # --- Verification Gate: human reviews generated Anki cards before finalising ---
+        self.info("⏸️  [Verification Gate] 正在開啟 Anki 卡片審核視窗...")
+        gate = VerificationGate(
+            skill_name="academic_edu_assistant / p02_anki",
+            original_text=content,  # source comparison report (left pane)
+            llm_text=csv_text,  # LLM-generated CSV (right pane, editable)
+        )
+        approved = gate.start()
+        if approved and approved.strip():
+            csv_text = approved
+            self.info("✅ [Verification Gate] 人工審核完成，使用核准內容。")
+        else:
+            self.info("⚠️  [Verification Gate] 未提交，保留 LLM 生成結果。", "warn")
+
         csv_rows = []
         for line in csv_text.splitlines():
             line = line.strip()

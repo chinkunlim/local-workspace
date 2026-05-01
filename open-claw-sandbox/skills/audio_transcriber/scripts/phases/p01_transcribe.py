@@ -658,7 +658,7 @@ class Phase1Transcribe(PipelineBase):
 
                     start_m, start_s = int(start_val // 60), int(start_val % 60)
                     end_m, end_s = int(end_val // 60), int(end_val % 60)
-                    
+
                     # ── Light Diarization (Speaker Separation on Pauses) ──
                     if last_segment_end is not None and (start_val - last_segment_end > 1.5):
                         pure_text += "\n\n"
@@ -689,7 +689,7 @@ class Phase1Transcribe(PipelineBase):
                             log_fn=self.log,
                         )
                         text_val = repaired  # None = 重試仍失敗
-                        words = [] # Clear words if we retry, since retry doesn't guarantee word timestamps
+                        words = []  # Clear words if we retry, since retry doesn't guarantee word timestamps
 
                     # ── Low-Confidence Flagging (<60%) ──
                     formatted_text = ""
@@ -699,14 +699,14 @@ class Phase1Transcribe(PipelineBase):
                                 w_text = w["word"] if isinstance(w, dict) else w.word
                                 w_prob = w["probability"] if isinstance(w, dict) else w.probability
                                 w_start = w["start"] if isinstance(w, dict) else w.start
-                                
+
                                 if w_prob < 0.60:
                                     formatted_text += f"[? {w_text.strip()} | {w_start:.1f} ?] "
                                 else:
                                     formatted_text += w_text
                         else:
                             formatted_text = text_val
-                            
+
                         formatted_text = formatted_text.strip()
 
                     # ── 分層輸出策略 ─────────────────────────────────────

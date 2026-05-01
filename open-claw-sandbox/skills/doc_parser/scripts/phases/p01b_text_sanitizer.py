@@ -13,9 +13,9 @@ Operations:
   2. Hyphenation Repair   — merge end-of-line hyphenated words
 """
 
+from collections import Counter
 import os
 import re
-from collections import Counter
 from typing import Optional
 
 from core.utils.bootstrap import ensure_core_path as _bootstrap

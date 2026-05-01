@@ -11,6 +11,8 @@ _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
 
+WIKILINK_RE = re.compile(r"\[\[([^\]|]+?)(?:\|[^\]]+)?\]\]")
+
 
 class Phase1Compile(PipelineBase):
     def __init__(self):
@@ -74,6 +76,32 @@ class Phase1Compile(PipelineBase):
         except Exception as e:
             self.error(f"\u274c \u7121\u6cd5\u66f4\u65b0 INDEX.md: {e}")
 
+    def _validate_wikilinks(self, text: str) -> tuple[str, int]:
+        """Downgrade [[Dead Link]] to plain text if the target .md does not exist in wiki_dir.
+
+        Prevents Obsidian from showing broken links after knowledge compilation.
+        Returns (validated_text, count_downgraded).
+        """
+        downgraded = 0
+
+        def _check(match: re.Match) -> str:
+            nonlocal downgraded
+            target = match.group(1).strip()
+            # Resolve expected filename: try exact + .md
+            target_path = os.path.join(self.wiki_dir, f"{target}.md")
+            if not os.path.exists(target_path):
+                # Also check if file exists without .md suffix (edge-case)
+                alt_path = os.path.join(self.wiki_dir, target)
+                if not os.path.exists(alt_path):
+                    downgraded += 1
+                    return target  # plain text — strip [[  ]]
+            return match.group(0)  # keep as-is
+
+        validated = WIKILINK_RE.sub(_check, text)
+        if downgraded:
+            self.info(f"\U0001f517 [WikiLink Guard] {downgraded} 個死連結已降級為純文字")
+        return validated, downgraded
+
     def _process_file(self, idx: int, task: dict, total: int):
         subj = task["subject"]
         fname = task["filename"]
@@ -111,6 +139,9 @@ class Phase1Compile(PipelineBase):
 
             out_filename = f"{safe_title}.md"
             out_path = os.path.join(self.wiki_dir, out_filename)
+
+            # WikiLink Guard: downgrade dead [[Links]] before writing to vault
+            final_doc, _ = self._validate_wikilinks(final_doc)
 
             AtomicWriter.write_text(out_path, final_doc)
 
