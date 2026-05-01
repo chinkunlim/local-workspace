@@ -22,7 +22,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import os
+import sys
 from typing import Callable, Dict, List, Optional
+
+from core.cli.cli_runner import SkillRunner
+from core.orchestration.event_bus import DomainEvent, EventBus
+from core.orchestration.task_queue import task_queue
 
 # ---------------------------------------------------------------------------
 # Data Contracts
@@ -81,6 +86,9 @@ class RouterAgent:
         self._registry = registry
         self._llm = llm_client
 
+        # Subscribe to EventBus to continue chains
+        EventBus.subscribe("PipelineCompleted", self._on_pipeline_completed)
+
     def _llm_decompose(self, intent: str, ext: str) -> List[str]:
         """Use LLM to decompose a natural language request into a skill pipeline."""
         if not self._llm:
@@ -134,6 +142,73 @@ class RouterAgent:
         chain = _ROUTING_TABLE.get(key) or _ROUTING_TABLE.get(fallback_key) or []
         return chain
 
+    def _on_pipeline_completed(self, event: DomainEvent) -> None:
+        """Handle EventBus handoff to trigger the next skill in the chain."""
+        payload = event.payload
+        chain = payload.get("chain", [])
+
+        if len(chain) <= 1:
+            print(f"🏁 [RouterAgent] 整個路由計畫已完成: {event.source_skill}")
+            return
+
+        # The chain has remaining skills. The next skill is at index 1.
+        current_skill = chain[0]
+        next_skill = chain[1]
+        remaining_chain = chain[1:]
+        subject = payload.get("subject", "Default")
+        filepath = payload.get("filepath", "")
+        file_id = os.path.splitext(os.path.basename(filepath))[0]
+
+        print(f"🗺️  [RouterAgent] 接力觸發: {current_skill} -> {next_skill}")
+
+        try:
+            # Auto-discover the output of current_skill to use as input for next_skill
+            # We assume next_skill is note-generator or knowledge_compiler
+            # In V8 architecture, SkillRunner provides standard resolution.
+            if next_skill == "note_generator":
+                input_path, output_path = SkillRunner.resolve_synthesize_paths(
+                    current_skill, subject, file_id
+                )
+                cmd = SkillRunner.run_note_generator(
+                    input_file=input_path, output_file=output_path, subject=subject
+                )
+                cwd = os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                    "skills",
+                    "note_generator",
+                )
+                task_queue.enqueue(
+                    name=f"Note Generator Pipeline ({subject})",
+                    cmd=cmd,
+                    cwd=cwd,
+                    filepath=input_path,
+                    skill="note_generator",
+                    chain=remaining_chain,
+                    subject=subject,
+                )
+            elif next_skill == "knowledge_compiler":
+                # For knowledge_compiler, the input is just the subject/file from the previous step.
+                cmd = [sys.executable, "scripts/run_all.py", "--subject", subject]
+                cwd = os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                    "skills",
+                    "knowledge_compiler",
+                )
+                task_queue.enqueue(
+                    name=f"Knowledge Compiler Pipeline ({subject})",
+                    cmd=cmd,
+                    cwd=cwd,
+                    filepath=filepath,
+                    skill="knowledge_compiler",
+                    chain=remaining_chain,
+                    subject=subject,
+                )
+            else:
+                print(f"⚠️ [RouterAgent] 尚不支援自動接力到 {next_skill}，請手動觸發。")
+
+        except Exception as e:
+            print(f"❌ [RouterAgent] 接力失敗: {e}")
+
     def dispatch(self, manifest: TaskManifest, dry_run: bool = False) -> Dict:
         """Dispatch a TaskManifest through the resolved skill chain."""
         chain = self.resolve(manifest)
@@ -144,19 +219,65 @@ class RouterAgent:
         if dry_run or not chain:
             return {"plan": chain, "results": []}
 
-        for skill_name in chain:
-            if self._registry is None:
-                results.append({"skill": skill_name, "status": "skipped", "reason": "no registry"})
-                continue
-            try:
-                run_fn = self._registry.get_run_fn(skill_name)
-                # Pass intent metadata to the skill if it supports it
-                kwargs = {"subject": manifest.subject}
-                run_fn(**kwargs)
-                results.append({"skill": skill_name, "status": "success"})
-            except Exception as exc:
-                results.append({"skill": skill_name, "status": "error", "error": str(exc)})
-                print(f"❌ [RouterAgent] {skill_name} 失敗: {exc}")
-                break
+        # Event-driven architecture: we ONLY enqueue the first skill in the chain.
+        # The subsequent skills are triggered via EventBus by the skill's manifest listener.
+        # But wait, RouterAgent only routes the file to the first skill's input directory,
+        # then enqueues the first skill.
+        first_skill = chain[0]
+        if self._registry is None:
+            results.append({"skill": first_skill, "status": "skipped", "reason": "no registry"})
+            return {"plan": chain, "results": results}
+
+        try:
+            skill_manifest = self._registry.get(first_skill)
+            if not skill_manifest:
+                raise KeyError(f"Skill '{first_skill}' not found in registry.")
+
+            # Route the physical file
+            target_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                "data",
+                first_skill,
+                "input",
+                manifest.subject or "Default",
+            )
+            os.makedirs(target_dir, exist_ok=True)
+            target_path = os.path.join(target_dir, os.path.basename(manifest.source_path))
+
+            # Move file if it's not already there
+            if manifest.source_path != target_path:
+                os.rename(manifest.source_path, target_path)
+
+            cwd = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                "skills",
+                first_skill,
+            )
+
+            # Build command from cli_entry or fallback
+            if skill_manifest.cli_entry:
+                script_path = os.path.join(cwd, skill_manifest.cli_entry)
+            else:
+                script_path = os.path.join(cwd, "scripts", "run_all.py")
+
+            cmd = [sys.executable, script_path]
+            # Some skills expect --process-all (e.g. doc_parser)
+            if first_skill == "doc_parser":
+                cmd.append("--process-all")
+
+            task_queue.enqueue(
+                name=f"{first_skill} Pipeline",
+                cmd=cmd,
+                cwd=cwd,
+                filepath=target_path,
+                skill=first_skill,
+                chain=chain,
+                subject=manifest.subject or "Default",
+            )
+
+            results.append({"skill": first_skill, "status": "enqueued"})
+        except Exception as exc:
+            results.append({"skill": first_skill, "status": "error", "error": str(exc)})
+            print(f"❌ [RouterAgent] {first_skill} 分發失敗: {exc}")
 
         return {"plan": chain, "results": results}

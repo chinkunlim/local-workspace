@@ -22,6 +22,8 @@ import time
 from typing import Any, Dict, List, Optional
 
 from core.cli.cli_runner import SkillRunner
+from core.orchestration.router_agent import RouterAgent, TaskManifest
+from core.orchestration.skill_registry import SkillRegistry
 from core.orchestration.task_queue import task_queue
 
 # Path Resolution
@@ -57,6 +59,11 @@ class SystemInboxDaemon:
         self.raw_path = os.path.join(_workspace_root, "data", "raw")
         os.makedirs(self.raw_path, exist_ok=True)
 
+        # Initialize Registry and Router
+        self.registry = SkillRegistry(os.path.join(_workspace_root, "skills"))
+        self.registry.discover()
+        self.router = RouterAgent(registry=self.registry)
+
         # Load Config
         self.config_path = os.path.join(_core_dir, "inbox_config.json")
         self._load_config()
@@ -91,8 +98,6 @@ class SystemInboxDaemon:
 
     def _process_file(self, filepath: str) -> None:
         """Route a single raw file to its target skill's input directory."""
-        self._load_config()  # Reload config on fly
-
         # B-2 Fix: deduplicate files already dispatched by scan_all or watchdog
         with self._lock:
             if filepath in self._seen_files:
@@ -100,18 +105,21 @@ class SystemInboxDaemon:
             self._seen_files.add(filepath)
 
         filename = os.path.basename(filepath)
-        ext = os.path.splitext(filename)[1].lower()
 
         # Extract Subject from relative path
         rel_path = os.path.relpath(filepath, self.raw_path)
         parts = rel_path.split(os.sep)
         subject = parts[0] if len(parts) > 1 else "Default"
 
-        target_skill = self.routing_rules.get(ext)
+        # Ask RouterAgent to resolve the intent based on file
+        manifest = TaskManifest(source_path=filepath, subject=subject)
+        chain = self.router.resolve(manifest)
 
-        if not target_skill:
-            _logger.info("未知格式，忽略: %s", filepath)
+        if not chain:
+            _logger.info("未知格式或無法路由，忽略: %s", filepath)
             return
+
+        target_skill = chain[0]
 
         # Strict Sandbox Routing
         target_dir = os.path.join(_workspace_root, "data", target_skill, "input", subject)
@@ -231,20 +239,16 @@ class SystemInboxDaemon:
         self._trigger_pipeline(skill, filepath)
 
     def _trigger_pipeline(self, skill: str, filepath: str) -> None:
-        """Route trigger through the single-threaded Task Queue to prevent OOM."""
-        _logger.info("偵測到新檔案: %s (%s)", filepath, skill)
+        """Route trigger through RouterAgent."""
+        _logger.info("檔案已穩定，開始分發: %s (%s)", filepath, skill)
 
-        cwd = os.path.join(_workspace_root, "skills", skill)
+        # Re-extract subject since it might have changed
+        rel_path = os.path.relpath(filepath, os.path.join(_workspace_root, "data", skill, "input"))
+        parts = rel_path.split(os.sep)
+        subject = parts[0] if len(parts) > 1 else "Default"
 
-        if skill == "audio_transcriber":
-            cmd = SkillRunner.run_audio_transcriber()
-        elif skill == "doc_parser":
-            cmd = SkillRunner.run_doc_parser()
-        else:
-            script_path = os.path.join(cwd, "scripts", "run_all.py")
-            cmd = [sys.executable, script_path, "--process-all"]
-
-        task_queue.enqueue(f"{skill} Pipeline", cmd, cwd, filepath=filepath, skill=skill)
+        manifest = TaskManifest(source_path=filepath, subject=subject)
+        self.router.dispatch(manifest)
 
     def _check_rewrite_status(self, filepath: str) -> None:
         """Watch for YAML `status: rewrite` to trigger note_generator.

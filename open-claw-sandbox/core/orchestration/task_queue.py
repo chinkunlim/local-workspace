@@ -17,6 +17,7 @@ import threading
 import time
 from typing import List, Optional
 
+from core.orchestration.event_bus import DomainEvent, EventBus
 from core.utils.log_manager import build_logger
 
 # Use workspace root to locate the data directory for quarantine
@@ -117,6 +118,21 @@ class LocalTaskQueue:
                     if result.returncode == 0:
                         msg = f"✅ [TaskQueue] 任務成功完成: {name} (耗時 {elapsed:.1f}s)"
                         _logger.info(msg)
+
+                        # 廣播事件讓 EventBus 接手（觸發下一個 Skill）
+                        if task.get("skill") and task.get("filepath"):
+                            EventBus.publish(
+                                DomainEvent(
+                                    name="PipelineCompleted",
+                                    source_skill=task["skill"],
+                                    payload={
+                                        "filepath": task["filepath"],
+                                        "chain": task.get("chain", []),
+                                        "subject": task.get("subject", "Default"),
+                                    },
+                                )
+                            )
+
                         try:
                             from core.services.telegram_bot import send_message
 
@@ -163,6 +179,8 @@ class LocalTaskQueue:
         cwd: str,
         filepath: Optional[str] = None,
         skill: Optional[str] = None,
+        chain: Optional[List[str]] = None,
+        subject: str = "Default",
     ):
         """
         Add a task to the queue.
@@ -174,9 +192,12 @@ class LocalTaskQueue:
                 "cwd": cwd,
                 "filepath": filepath,
                 "skill": skill,
+                "chain": chain or [],
+                "subject": subject,
                 "retry_count": 0,
             }
         )
+
         _logger.info("📥 [TaskQueue] 任務已排入佇列 (等候中: %d): %s", self.q.qsize(), name)
 
     def join(self):
