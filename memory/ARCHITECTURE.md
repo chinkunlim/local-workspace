@@ -71,9 +71,11 @@ Open WebUI Pipelines is infrastructure (a plugin runner for the LLM proxy), not 
 
 Skills are strictly divided into **Extraction** and **Processing** layers:
 
-- **Extraction Skills** (`audio_transcriber`, `doc_parser`): Responsible ONLY for generating high-fidelity Markdown from raw files. They must not perform summarisation, highlighting, or formatting.
-- **Processing Skills** (`smart_highlighter`, `note_generator`): Responsible for taking raw Markdown and applying stylistic highlights, generating Cornell notes, or mapping core concepts.
-- **I/O Routing**: The `inbox_daemon` routes files purely by extension into a skill's `input/` directory. Direct writing to another skill's `output/` directory is strictly forbidden.
+1. **Ingestion (`inbox_daemon.py`)**: Watches `data/raw/` for stabilized files.
+2. **Routing (`router_agent.py`)**: Resolves file intent to a skill chain (e.g., `audio_transcriber -> note_generator`) and moves the file to the initial skill's input directory.
+3. **Execution (`task_queue.py`)**: Enqueues the first skill as an isolated subprocess. Upon success (exit code 0), emits a `PipelineCompleted` event carrying the remaining chain.
+4. **Handoff (`router_agent.py`)**: Subscribes to `PipelineCompleted`, pops the finished skill from the chain, resolves the input/output paths, and enqueues the next skill automatically.
+5. **GIGO Prevention**: Each phase enforces strict checkpoints, VAD/Hallucination guards, and Verification Gates (HITL).
 
 ### `core/` Sub-Package Refactoring (2026-05-01)
 
@@ -118,10 +120,10 @@ The `core/` directory was refactored from a flat module into domain-specific sub
 | Sub-package | Module | Responsibility |
 |---|---|---|
 | `core/orchestration/` | `pipeline_base.py` | Abstract base class for all skill phases |
-| `core/orchestration/` | `task_queue.py` | Single-threaded LocalTaskQueue with DLQ quarantine |
+| `core/orchestration/` | `task_queue.py` | Single-threaded queue handling subprocess execution. Emits `PipelineCompleted` upon successful task completion. DLQ quarantine |
 | `core/orchestration/` | `run_all_pipelines.py` | PID-locked global pipeline orchestrator |
-| `core/orchestration/` | `router_agent.py` | LLM intent decomposition and DAG routing |
-| `core/orchestration/` | `event_bus.py` | Publish-subscribe event bus |
+| `core/orchestration/` | `router_agent.py` | Routes incoming files and manages skill chains (Intents). Subscribes to `PipelineCompleted` to trigger subsequent skills in a multi-skill pipeline via TaskQueue. |
+| `core/orchestration/` | `event_bus.py` | In-process Pub/Sub for decoupling components. |
 | `core/orchestration/` | `human_gate.py` | **Ephemeral WebUI Verification Gate** — pauses pipeline for human-in-the-loop review; side-by-side Ollama diff with click-to-play audio timestamps |
 | `core/state/` | `state_manager.py` | Per-file per-phase state persistence (atomic JSON) |
 | `core/state/` | `resume_manager.py` | Mid-run checkpoint save and restore |
