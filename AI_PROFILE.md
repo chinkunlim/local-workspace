@@ -60,7 +60,7 @@
   - `docs/STRUCTURE.md` and `docs/INDEX.md` (if any directory or file structure changes)
   - `CHANGELOG.md` (for any meaningful feature, fix, or refactor)
   - Skill-level `SKILL.md`, `ARCHITECTURE.md`, `CLAUDE.md`, `DECISIONS.md` (if a specific skill is modified)
-  - `docs/USER_MANUAL.md` or `docs/INFRA_SETUP.md` (if user-facing operations or setup changes)
+  - `docs/USER_MANUAL.md` or `docs/INFRA_SETUP.md` (if user-facing operations or setup changes). **Note: User manuals must be extremely detailed, step-by-step, and exhaustive, especially for autonomous pipelines and HITL interfaces.**
 - **Continuous Profile Update**: When the user mentions new habits, workflows, or explicitly asks to "update md files" regarding their requirements, the AI MUST continuously integrate these new rules into `AI_PROFILE.md`.
 
 ---

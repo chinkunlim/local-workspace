@@ -1,8 +1,8 @@
 # Open Claw PKMS — User Manual
 
-> **System Version**: V8.1 (Antigravity Checkpoint)
+> **System Version**: V8.2 (Intent-Driven RouterAgent Checkpoint)
 > **Status**: Production-Grade Headless CLI Deployment
-> **Last Updated**: 2026-05-01
+> **Last Updated**: 2026-05-02
 
 ---
 
@@ -17,7 +17,9 @@ cd ~/Desktop/local-workspace
 cp lecture.m4a  open-claw-sandbox/data/raw/YourSubject/
 cp textbook.pdf open-claw-sandbox/data/raw/YourSubject/
 
-# Step 3: Wait — the system processes files automatically.
+# Step 3: Wait — the system parses your intent and routes files automatically.
+# Through the magic of the RouterAgent and EventBus, your file will be processed through
+# extraction, note generation, and knowledge compilation automatically.
 # When complete, your notes appear in:
 open open-claw-sandbox/data/wiki/YourSubject/
 
@@ -25,44 +27,29 @@ open open-claw-sandbox/data/wiki/YourSubject/
 ./infra/scripts/stop.sh
 ```
 
-That's it. The rest of this manual explains what happens in between and how to use advanced features.
+That's it. The rest of this manual explains what happens in between, how the system routes files, and how to interact with Human-in-the-Loop gates.
 
 ---
 
-## Part 1: How the System Works
+## Part 1: How the System Works (V8.2 Intent-Driven Architecture)
 
-### The Three-Layer Data Flow
+### The Fully Automated Data Flow
 
-```
-YOU
- │
- ▼
-📥 data/raw/<YourSubject>/        ← The ONLY folder you need to touch
- │   Drop .m4a or .pdf files here
- │
- ▼  (inbox_daemon routes automatically, 24/7)
- │
- ├──► 🏭 audio_transcriber        (for .m4a / .mp3)
- │         6-phase pipeline:
- │         P0: Build glossary
- │         P1: Transcribe with MLX-Whisper
- │         P2: Proofread with LLM
- │         P3: Merge segments
- │         P4: Highlight key concepts
- │         P5: Synthesise into study notes
- │
- └──► 🏭 doc_parser               (for .pdf)
-           7-phase pipeline:
-           P00a: Security check & metadata
-           P01a: Extract text with Docling
-           P01b: Detect and caption charts
-           P01c: OCR quality gate
-           P01d: Analyse figures with VLM
-           P02: Highlight key concepts
-           P03: Synthesise into study notes
- │
- ▼
-🧠 data/wiki/<YourSubject>/       ← Your Obsidian Vault (final output)
+Open Claw now uses an **Intent-Driven RouterAgent** and an **EventBus** to automatically chain multiple skills together. You no longer need to trigger downstream processing manually.
+
+```mermaid
+graph TD
+    A[📥 Drop file in data/raw/Subject] --> B[👁️ Inbox Daemon (File Stabilisation)]
+    B --> C[🗺️ RouterAgent (Intent Resolution)]
+    
+    C -- "Chain 1: Audio" --> D[🎧 audio_transcriber]
+    C -- "Chain 2: PDF" --> E[📄 doc_parser]
+    
+    D -- "Event: PipelineCompleted" --> F[📝 note_generator]
+    E -- "Event: PipelineCompleted" --> F
+    
+    F -- "Event: PipelineCompleted" --> G[🧠 knowledge_compiler]
+    G --> H[📚 Obsidian Vault (data/wiki)]
 ```
 
 ### What is `data/raw/`?
@@ -71,7 +58,9 @@ This is your **only manual input point**. You never need to touch any other data
 
 1. Create a subfolder named after your subject: `data/raw/Cognitive_Psychology/`
 2. Drop your files in: `data/raw/Cognitive_Psychology/lecture01.m4a`
-3. The system detects the file and starts processing automatically.
+3. The `inbox_daemon` detects the file, waits for it to stabilize (debounce), and hands it to the `RouterAgent`.
+4. The `RouterAgent` resolves the required Skill Chain (e.g. `[audio_transcriber, note_generator, knowledge_compiler]`) and enqueues the first task.
+5. As each skill successfully completes, it fires a `PipelineCompleted` event, which automatically triggers the next skill in the chain.
 
 ### What is `data/wiki/`?
 
@@ -83,7 +72,26 @@ This is your finished knowledge base. Open it as an Obsidian vault to get:
 
 ---
 
-## Part 2: Starting and Stopping
+## Part 2: Human-in-the-Loop (HITL) Verification Gates
+
+Open Claw enforces strict GIGO (Garbage-In, Garbage-Out) prevention. Before allowing potentially hallucinated data to pollute your knowledge base, the system will pause and ask for your verification.
+
+### How to use the Verification Gate
+
+When a skill (like `audio_transcriber` Phase 2, or `academic_edu_assistant` Anki export) reaches a critical juncture, it will spawn a temporary Web UI and pause the pipeline:
+
+1. You will see a terminal message like: `🌐 啟動 Human-in-the-Loop 驗證閘門: http://localhost:8080`
+2. Open your browser and navigate to `http://localhost:8080`.
+3. You will see a side-by-side diff:
+   - **Left Side**: The original raw text (or source audio with click-to-play timestamps).
+   - **Right Side**: The AI's proposed corrections or generated Anki cards.
+4. Review the changes. You can manually edit the text on the right side if the AI made a mistake.
+5. Click **"Approve & Resume Pipeline"**.
+6. The web server shuts down instantly, and the pipeline resumes using your approved, high-integrity data.
+
+---
+
+## Part 3: Starting and Stopping
 
 ### Start All Services
 
@@ -96,9 +104,8 @@ This launches:
 1. **Ollama** — local LLM inference engine
 2. **LiteLLM** — OpenAI-compatible proxy (port 4000)
 3. **Open WebUI** — Chat UI at `http://localhost:3000`
-4. **Pipelines** — Pipeline runner (port 9099)
-5. **Inbox Daemon** — 24/7 file watcher on `data/raw/`
-6. **RAM Watchdog** — Monitors memory; throttles tasks if RAM drops below 15%
+4. **Inbox Daemon** — 24/7 file watcher on `data/raw/` (Includes RouterAgent)
+5. **RAM Watchdog** — Monitors memory; throttles tasks if RAM drops below 15%
 
 ### Check Service Status
 
@@ -114,9 +121,9 @@ This launches:
 
 ---
 
-## Part 3: Processing Files Manually
+## Part 4: Processing Files Manually (Advanced)
 
-While the inbox daemon runs automatically, you can also trigger pipelines manually via CLI.
+While the `RouterAgent` handles automatic chaining, you can also trigger pipelines manually via CLI. This is useful for forcing re-runs or resuming from checkpoints.
 
 ### Audio Transcriber
 
@@ -137,9 +144,6 @@ python3 skills/audio_transcriber/scripts/run_all.py --process-all --force
 
 # Start from a specific phase (e.g., phase 2)
 python3 skills/audio_transcriber/scripts/run_all.py --from 2
-
-# Regenerate glossary only
-python3 skills/audio_transcriber/scripts/run_all.py --glossary
 ```
 
 ### Doc Parser
@@ -152,99 +156,30 @@ python3 skills/doc_parser/scripts/run_all.py --process-all
 
 # Process only one subject
 python3 skills/doc_parser/scripts/run_all.py --subject AI_Papers
-
-# Force re-run
-python3 skills/doc_parser/scripts/run_all.py --process-all --force
 ```
 
 ### Knowledge Compiler
 
-Compiles all skill outputs into your Obsidian Vault with bi-directional WikiLinks:
+Compiles all skill outputs into your Obsidian Vault with bi-directional WikiLinks. (Note: The RouterAgent usually triggers this automatically at the end of a chain).
 
 ```bash
 cd open-claw-sandbox
-
 python3 skills/knowledge_compiler/scripts/run_all.py --process-all
-```
-
-### Telegram Knowledge Base Agent
-
-```bash
-cd open-claw-sandbox
-
-# Rebuild the vector index (run after new notes are generated)
-python3 skills/telegram_kb_agent/scripts/indexer.py
-
-# Start the Telegram bot daemon
-python3 skills/telegram_kb_agent/scripts/bot_daemon.py
-```
-
-### Academic & Education Assistant
-
-```bash
-cd open-claw-sandbox
-
-# Place files to compare inside:
-# data/academic_edu_assistant/input/<YourSubjectName>/
-
-# Run the comparison + Anki card generation
-python3 skills/academic_edu_assistant/scripts/run_all.py
-```
-
-### Interactive Reader (In-Note AI Annotations)
-
-Write a tag anywhere inside a Markdown note:
-```markdown
-> [AI: Summarise the key argument in this section]
-```
-
-Then run:
-```bash
-cd open-claw-sandbox
-python3 skills/interactive_reader/scripts/run_all.py --process-all
-```
-
-The AI response is appended below the tag automatically.
-
----
-
-## Part 4: PDF Routing Rules
-
-PDFs can be routed in three different ways depending on their content:
-
-| Mode | Behaviour |
-|---|---|
-| `audio_ref` | PDF is sent to `audio_transcriber` as a proofreading reference only |
-| `doc_parser` | PDF is fully extracted by `doc_parser` |
-| `both` | PDF is sent to BOTH simultaneously |
-
-### View Current Routing Rules
-
-```bash
-cd open-claw-sandbox
-python3 skills/inbox_manager/scripts/query.py --list
-```
-
-### Add a New Rule
-
-```bash
-python3 skills/inbox_manager/scripts/query.py --add "_slides" --routing audio_ref --description "Lecture slides"
-python3 skills/inbox_manager/scripts/query.py --add "_textbook" --routing both --description "Course textbook"
-```
-
-### Remove a Rule
-
-```bash
-python3 skills/inbox_manager/scripts/query.py --remove "_slides"
 ```
 
 ---
 
 ## Part 5: Checking Progress
 
-### Check Pipeline Progress
+### Task Queue Status
+Because tasks are executed in a single-threaded queue to prevent memory blowouts (OOM), you can view the queue activity in the main inbox daemon logs:
 
-Each skill writes a checklist to its state directory:
+```bash
+tail -f open-claw-sandbox/logs/openclaw.log
+```
+
+### Skill State Checklists
+Each skill writes a persistent JSON/MD checklist to its state directory:
 
 ```bash
 # Audio transcriber progress
@@ -252,16 +187,6 @@ cat open-claw-sandbox/data/audio_transcriber/state/checklist.md
 
 # Doc parser progress
 cat open-claw-sandbox/data/doc_parser/state/checklist.md
-```
-
-### Check System Logs
-
-```bash
-# Tail the inbox daemon log
-tail -f open-claw-sandbox/logs/openclaw.log
-
-# Check all logs
-ls open-claw-sandbox/logs/
 ```
 
 ---
@@ -285,12 +210,11 @@ Your knowledge base is fully structured with:
 
 | Problem | Solution |
 |---|---|
-| Files not processing automatically | Check if `infra/scripts/start.sh` was run; verify `data/raw/` has files |
-| LLM timeout / slow processing | Normal for large files; check `data/<skill>/state/checklist.md` for progress |
-| `ModuleNotFoundError: No module named 'core'` | Run scripts from inside `open-claw-sandbox/` directory |
-| Out of memory / system freeze | Lower the Ollama context window in `config.yaml`; ensure `watchdog.sh` is running |
-| Corrupted state file | Delete `data/<skill>/state/` and re-run with `--force` |
-| Need to re-process a specific file | Use `--file <filename> --force` flag |
+| Files not processing automatically | Check if `infra/scripts/start.sh` was run; verify `data/raw/` has files. Check `openclaw.log` for EventBus or RouterAgent errors. |
+| LLM timeout / slow processing | Normal for large files; check `data/<skill>/state/checklist.md` for progress. |
+| `ModuleNotFoundError: No module named 'core'` | Run scripts from inside `open-claw-sandbox/` directory. |
+| Out of memory / system freeze | The single-threaded `task_queue` should prevent this. If it happens, ensure `watchdog.sh` is running to throttle processes. |
+| Corrupted state file | Delete `data/<skill>/state/` and re-run with `--force`. |
 
 ---
 
@@ -299,17 +223,15 @@ Your knowledge base is fully structured with:
 ```
 local-workspace/
 ├── open-claw-sandbox/    ← Main application (all skill code lives here)
-│   ├── core/             ← Shared framework (do not edit unless necessary)
-│   ├── skills/           ← Individual skill pipelines
+│   ├── core/             ← Shared framework (RouterAgent, TaskQueue, EventBus)
+│   ├── skills/           ← Individual skill plugins (dynamically loaded via manifest.py)
 │   ├── data/             ← Runtime data (gitignored)
 │   │   ├── raw/          ← 📥 YOUR INPUT FOLDER
 │   │   └── wiki/         ← 🧠 YOUR OUTPUT (Obsidian Vault)
 │   └── tests/            ← Unit tests
 │
 ├── infra/
-│   ├── scripts/
-│   │   ├── start.sh      ← Start everything
-│   │   └── stop.sh       ← Stop everything
+│   ├── scripts/          ← Start/Stop scripts
 │   ├── litellm/          ← LLM proxy config
 │   ├── open-webui/       ← Chat interface
 │   └── pipelines/        ← Pipeline plugins

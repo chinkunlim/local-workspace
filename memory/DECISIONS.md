@@ -6,6 +6,19 @@
 
 ---
 
+## [2026-05-01] Intent-Driven Routing & EventBus Task Handoff
+
+**Context:** The system originally relied on hardcoded rules in `inbox_daemon.py` (e.g., `if ext == '.m4a': route to audio_transcriber`). This coupled the daemon tightly to specific skills and prevented multi-skill pipelining. Furthermore, because skills run in isolated subprocesses (to prevent OOM), they couldn't natively trigger the next skill without modifying `inbox_daemon.py`.
+
+**Decision:**
+1. **Dynamic Intent Resolution**: `inbox_daemon.py` was stripped of hardcoded rules. It now delegates all routing to `RouterAgent`, which dynamically resolves intents using the `SkillRegistry`.
+2. **EventBus Subprocess Bridging**: Instead of skills calling the EventBus directly from inside their isolated subprocess (which fails due to memory isolation), the main `TaskQueue` worker was modified. When a subprocess exits successfully (`returncode == 0`), `TaskQueue` emits a `PipelineCompleted` event on the `EventBus`.
+3. **Automated Handoffs**: `RouterAgent` subscribes to the `PipelineCompleted` event. Upon receiving it, it inspects the skill chain, uses `SkillRunner.resolve_synthesize_paths()` to determine the input/output handoff, and enqueues the next skill automatically.
+
+**Rationale:** This solves the critical IPC (Inter-Process Communication) problem. We maintain the strict OOM protection of subprocess isolation while achieving a completely decoupled, event-driven multi-skill orchestration.
+
+---
+
 ## [2026-04-30] P4 Sprint: Multi-Agent Architecture, Global State & HITL
 
 **Context:** The system originally consisted of isolated scripts that passed files sequentially through the `data/` directory. There was no global state sharing, meaning user preferences (e.g., via Telegram) could not be easily passed to the `doc_parser` or `audio_transcriber`. Furthermore, any interruption required killing the process, which lacked a robust Human-in-the-Loop (HITL) recovery mechanism.

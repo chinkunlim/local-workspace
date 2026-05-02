@@ -9,6 +9,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V8.2] — 2026-05-02: Intent-Driven RouterAgent & EventBus Handoff
+
+### Added
+- **`EventBus` Subprocess Bridging**: `TaskQueue` now emits a `PipelineCompleted` event natively when an isolated subprocess completes successfully (`returncode == 0`), solving IPC memory isolation issues.
+- **Dynamic Handoff Execution**: `RouterAgent` now subscribes to `PipelineCompleted`, pops the finished skill from the resolved skill chain, determines input/output paths via `SkillRunner.resolve_synthesize_paths()`, and automatically enqueues the next skill.
+- **Skill Manifests**: Every skill now exposes a `manifest.py` containing its `cli_entry`, `file_types`, and phases, enabling pure dynamic discovery by `SkillRegistry`.
+
+### Changed
+- **`inbox_daemon.py`**: Completely stripped of all hardcoded extension routing rules (e.g. `.m4a`/`.pdf`). All incoming files are now delegated to `RouterAgent` for intent parsing and dynamic skill chain resolution.
+- **Documentation**: Comprehensive SSoT update across `USER_MANUAL.md`, `STRUCTURE.md`, `INDEX.md`, `DECISIONS.md`, and `HANDOFF.md` to formally deprecate the legacy static routing architecture and document the new autonomous DAG orchestration.
+
+---
+
 ## [2.0.0] — 2026-05-02: GIGO Prevention & Verification Gate Architecture
 
 ### Added

@@ -8,28 +8,20 @@
 
 ## Final Sign-off Summary
 
-**Date:** 2026-04-19
-**Milestone:** v0.9.0 — Pre-flight Verification & Engineering Documentation Pass
+**Date:** 2026-05-02
+**Milestone:** v8.2 — Intent-Driven Architecture & Documentation Sync
 
 ### Completed This Session
 
-- [x] **Pre-flight Execution Sandbox** — 12/12 import checks passed (zero `ModuleNotFoundError`)
-- [x] Renamed `skills/note-generator/` → `skills/note_generator/` (Python-legal identifiers)
-- [x] Renamed `skills/smart-highlighter/` → `skills/smart_highlighter/`
-- [x] Created `skills/__init__.py` and all sub-package `__init__.py` files
-- [x] Fixed bare `from path_builder import` → `from core.path_builder import` in `cli_runner.py` and `inbox_daemon.py`
-- [x] Fixed infinite re-ingestion loop: `p05_synthesis.py` and `p03_synthesis.py` now write to `data/wiki/` (not `data/raw/`)
-- [x] Installed `watchdog 6.0.0`; declared `watchdog>=4.0.0` and `requests>=2.31.0` in `requirements.txt`
-- [x] Removed stale `flask>=3.0.0` from `requirements.txt`
-- [x] **Defensive Audit (Phase 1):**
-  - Resource leaks: all `open()` calls use context managers; `Popen` is intentional fire-and-forget
-  - Idempotency: `StateManager.get_tasks()` skips completed phases; `AtomicWriter` uses `os.replace()`
-  - Graceful degradation: `OllamaClient` enforces 600 s timeout + 3-attempt exponential-backoff
+- [x] **Architecture Overhaul** — Migrated from hardcoded `.m4a`/`.pdf` rules in `inbox_daemon.py` to a dynamic `RouterAgent`.
+- [x] **Event-Driven Handoffs** — Integrated `EventBus` with `TaskQueue` to emit `PipelineCompleted` upon subprocess success, allowing `RouterAgent` to auto-enqueue downstream skills without OOM risks.
+- [x] **Manifest Standardisation** — All skills now expose a `manifest.py` for dynamic discovery via `SkillRegistry`.
 - [x] **Engineering-grade documentation update:**
-  - `CHANGELOG.md` — v0.9.0 release block added
-  - `memory/ARCHITECTURE.md` — full rewrite in English; stale `web_ui/` removed; new components documented
-  - `memory/HANDOFF.md` — this file
-  - `memory/TASKS.md` — all integration milestones marked complete
+  - `USER_MANUAL.md` — Extended with automated routing and HITL verification guides.
+  - `STRUCTURE.md` & `INDEX.md` — Updated to reflect the Intent-Driven orchestrator roles.
+  - `DECISIONS.md` — ADR added for EventBus IPC bridging.
+  - `CHANGELOG.md` — v8.2 release block added.
+  - `memory/TASKS.md` & `memory/HANDOFF.md` — Updated for session handoff.
 
 ---
 
@@ -42,8 +34,9 @@
 | Python syntax          | ✅ All files pass `ast.parse()`                                                   |
 | UTF-8 encoding headers | ✅ Present in all `.py` files                                                     |
 | Skill package names    | `note_generator`, `smart_highlighter` (underscore convention)                    |
-| Inbox routing          | Recursive subject-folder; triple PDF modes (`audio_ref` / `doc_parser` / `both`) |
-| Web UI                 | Removed — orchestration via Open Claw intent engine + Telegram                   |
+| Inbox routing          | Intent-Driven via `RouterAgent` and `SkillRegistry`                              |
+| Pipeline Handoff       | Autonomous via `EventBus` (TaskQueue emits `PipelineCompleted`)                  |
+| Web UI                 | Ephemeral Human-in-the-Loop (HITL) gates for verification                        |
 | Obsidian Vault         | `open-claw-sandbox/data/wiki/`                                                   |
 | ChromaDB index         | `open-claw-sandbox/data/chroma/` (rebuilt by `telegram_kb_agent`)                |
 
@@ -90,6 +83,8 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date       | Focus                                                 | Outcome                                                                        |
 | ---------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-02 | Documentation SSoT Sync                               | `USER_MANUAL.md`, `STRUCTURE.md`, `DECISIONS.md` fully updated                 |
+| 2026-05-01 | Intent-Driven Architecture Migration                  | `RouterAgent` + `EventBus` auto-handoff implemented; Inbox hardcoding removed  |
 | 2026-04-19 | Phase 6 Finalisation — Inbox routing + Web UI removal | `inbox_config.json`, `inbox_manager` skill, wiki output paths fixed            |
 | 2026-04-19 | Skill Extraction                                      | `smart_highlighter`, `note_generator` extracted as standalone packages         |
 | 2026-04-19 | Deep Thought Hotfixes                                 | `inbox_daemon` OOM guard, `state_manager` fcntl lock, debounce fix             |

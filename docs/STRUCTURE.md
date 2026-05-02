@@ -73,18 +73,18 @@ core/
 │   └── resume_manager.py     ← Checkpoint save/load for graceful mid-run resume
 │
 ├── orchestration/            ← Central task management and DAG routing
-│   ├── router_agent.py       ← LLM-based DAG parser for intent routing
-│   ├── task_queue.py         ← LocalTaskQueue: Single-threaded execution lock with DLQ
+│   ├── router_agent.py       ← Intent parsing and skill chain resolution; subscribes to PipelineCompleted for auto-handoff
+│   ├── task_queue.py         ← Single-threaded execution lock with DLQ; broadcasts PipelineCompleted event on success
 │   ├── scheduler.py          ← Task scheduling mechanisms
-│   ├── event_bus.py          ← Pub/Sub event dispatcher
+│   ├── event_bus.py          ← In-process Pub/Sub event dispatcher for bridging sub-process outputs
 │   ├── pipeline_base.py      ← Abstract base class for ALL Phase scripts
 │   ├── run_all_pipelines.py  ← Global PID-locked pipeline orchestrator
-│   └── skill_registry.py     ← Dynamic skill discovery and registry
+│   └── skill_registry.py     ← Dynamic skill discovery via manifest.py
 │
 ├── services/                 ← Background workers and security
 │   ├── telegram_bot.py       ← Telegram integration for notifications and RAG queries
-│   ├── inbox_daemon.py       ← Watchdog background process monitoring Inboxes
-│   ├── hitl_manager.py       ← Human-in-the-loop (HITL) interrupt management
+│   ├── inbox_daemon.py       ← Watchdog background process monitoring Inboxes; delegates routing to RouterAgent
+│   ├── hitl_manager.py       ← Human-in-the-loop (HITL) interrupt management (Web UI Gates)
 │   └── security_manager.py   ← Input security scanning (PDF sanitisation)
 │
 ├── ai/                       ← LLM interactions and Knowledge Retrieval

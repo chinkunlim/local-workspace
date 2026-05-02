@@ -9,15 +9,15 @@
 ## Project Overview
 
 `open-claw-sandbox` is a production-grade local AI automation sandbox running on macOS with 16 GB RAM.
-It orchestrates two skills — **audio_transcriber** and **doc_parser** — through a shared `core/` framework,
-with a Central Dashboard (port 5001) and a background Inbox Daemon for automatic file processing.
+It orchestrates 9 skills (e.g., **audio_transcriber**, **doc_parser**, **note_generator**) through a shared `core/` framework,
+using an Intent-Driven **RouterAgent** and **EventBus** for automatic multi-skill file processing. It is completely Headless (CLI-first) with Ephemeral WebUI gates for Human-in-the-Loop verification.
 
 **Tech stack:**
-- Language: Python
+- Language: Python 3.9+
 - LLM Backend: Ollama (Qwen3:14B, gemma3:12b)
 - Transcription: MLX-Whisper (native, no Docker)
 - PDF Extraction: Docling
-- Web UI: Flask (port 5001)
+- Verification Gates: Built-in `http.server`
 - Linting: Ruff + Mypy
 - Config: YAML per skill
 

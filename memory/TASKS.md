@@ -28,6 +28,18 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-02: Comprehensive Documentation SSoT Sync
+  - `USER_MANUAL.md` updated with Intent-Driven architecture and HITL guide
+  - `STRUCTURE.md` and `INDEX.md` updated with `RouterAgent`, `EventBus`, and `TaskQueue` documentation
+  - `DECISIONS.md`, `TASKS.md`, and `HANDOFF.md` updated
+
+- [x] 2026-05-01: Intent-Driven RouterAgent & EventBus Handoff Migration
+  - Replaced hardcoded `.m4a`/`.pdf` routing rules in `inbox_daemon.py`
+  - Upgraded `RouterAgent` to parse intents and generate dynamic skill chains
+  - Implemented `TaskQueue` success listener to emit `PipelineCompleted` on `EventBus`
+  - Configured `RouterAgent` to auto-enqueue subsequent skills for completely autonomous end-to-end workflows
+  - Standardized `manifest.py` across all skills
+
 - [x] 2026-04-19: Final Sign-off (v0.9.0) — Engineering documentation pass
   - `CHANGELOG.md` — v0.9.0 release block written
   - `memory/ARCHITECTURE.md` — full English rewrite; all new components documented
