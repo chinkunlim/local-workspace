@@ -205,12 +205,34 @@ skills/
 │   └── scripts/
 │       └── query.py                ← Routing rule CLI (add/remove/list rules)
 │
-└── interactive_reader/             ← In-place [AI:] annotation resolver
-    ├── SKILL.md
-    └── scripts/
-        ├── run_all.py              ← Orchestrator
-        └── phases/
-            └── p01_interactive.py  ← Phase 1: Resolve in-file AI annotations
+├── academic_library_agent/ # Institution library scraper via Playwright
+│   ├── manifest.py       # "academic_library_agent" declaration
+│   ├── config/           # YAML profile for browser timeout/URLs
+│   └── scripts/
+│       ├── run_all.py    # Standard CLI entry point
+│       └── phases/
+│           └── p01_search_literature.py # Athens login & snapshot extract
+│
+├── gemini_verifier_agent/  # Multi-turn Gemini AI debate via Playwright
+│   ├── manifest.py       # "gemini_verifier_agent" declaration
+│   ├── config/           # YAML profile for Gemini parameters
+│   └── scripts/
+│       ├── run_all.py    # Standard CLI entry point
+│       └── phases/
+│           └── p01_ai_debate.py # AI-to-AI dialogue loop & archiving
+│
+├── student_researcher/     # Orchestrates academic synthesis and APA formatting
+│   ├── manifest.py       # "student_researcher" declaration
+│   ├── config/           # Prompts and LLM profiles
+│   └── scripts/
+│       ├── run_all.py    # Standard CLI entry point
+│       └── phases/
+│           ├── p01_claim_extraction.py # Extracts claims from raw notes
+│           └── p02_synthesis.py        # Compiles debates, APA, and Obsidian tags
+│
+└── academic_edu_assistant/ # (Legacy) Conversational tutoring
+    ├── manifest.py       # "academic_edu_assistant"
+    └── scripts/          # Legacy CLI interactive loop
 ```
 
 ---

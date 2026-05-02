@@ -1,0 +1,17 @@
+# config/config.yaml for student_researcher
+model_profile: default
+models:
+  default:
+    name: "qwen2.5-coder:7b"
+    temperature: 0.0
+
+directories:
+  input: "data/student_researcher/input"
+  output: "data/student_researcher/output"
+  state: "data/student_researcher/state"
+
+phases:
+  p01_claim_extraction:
+    enabled: true
+  p02_synthesis:
+    enabled: true

@@ -1,0 +1,17 @@
+# config/config.yaml for academic_library_agent
+model_profile: default
+models:
+  default:
+    name: "qwen2.5-coder:7b"
+    temperature: 0.0
+
+directories:
+  input: "data/academic_library_agent/input"
+  output: "data/academic_library_agent/output"
+  state: "data/academic_library_agent/state"
+
+phases:
+  p01_search_literature:
+    enabled: true
+    timeout_seconds: 60
+    base_url: "https://www.sciencedirect.com"

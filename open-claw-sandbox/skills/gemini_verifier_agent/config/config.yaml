@@ -1,0 +1,17 @@
+# config/config.yaml for gemini_verifier_agent
+model_profile: default
+models:
+  default:
+    name: "qwen2.5-coder:7b"
+    temperature: 0.0
+
+directories:
+  input: "data/gemini_verifier_agent/input"
+  output: "data/gemini_verifier_agent/output"
+  state: "data/gemini_verifier_agent/state"
+
+phases:
+  p01_ai_debate:
+    enabled: true
+    timeout_seconds: 120
+    gemini_url: "https://gemini.google.com"

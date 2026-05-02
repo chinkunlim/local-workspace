@@ -175,8 +175,15 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
     │    │  P3: Merge                  │  P01c: OCR gate
     │    │  P4: Highlight ──────────► smart_highlighter
     │    │  P5: Synthesis ──────────► note_generator
-    │    └────────────────┐           └──────────────────┐
-    │                     ▼                              ▼
+    │    └────────────────┐           └───────────┬──────┘
+    │                     ▼                       │
+    │               [ Academic Research Pipeline ]◄
+    │                 ├─► student_researcher (Claim Extraction)
+    │                 ├─► academic_library_agent (Elsevier/ScienceDirect Scraper via Playwright)
+    │                 ├─► gemini_verifier_agent (AI-to-AI Debate via Gemini Playwright)
+    │                 └─► student_researcher (APA Synthesis & Obsidian Tags)
+    │                     │
+    │                     ▼
     │                  data/wiki/<Subject>/  ←────────────
     │                     │  (Obsidian Vault)
     │                     │
@@ -241,3 +248,8 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
   - `doc_parser` V2.0: PyMuPDF 300 DPI image extraction via bbox, native caption heuristics, axis-label anti-bleed, new immutable `raw_extracted.md` + sanitized `sanitized.md` Phase 1b-S, VLM bypass for captioned figures.
   - `knowledge_compiler`: WikiLink dead-link guard that downgrades `[[Dead Links]]` to plain text before vault write.
   - `academic_edu_assistant`: VerificationGate at Anki card generation for human approval before AnkiConnect push.
+- **Academic Research Pipeline (2026-05-02)**: Introduced an autonomous AI-to-AI deep research architecture.
+  - Replaced traditional MCPs with **Playwright Persistent Contexts** to seamlessly bypass Elsevier/ScienceDirect and Google Gemini login walls without API keys.
+  - Integrated `academic_library_agent` for Paywall traversal and clean text snapshotting (minimizing Token limits).
+  - Integrated `gemini_verifier_agent` for multi-turn local-Ollama vs cloud-Gemini AI debate and chat archival.
+  - Integrated `student_researcher` as the master orchestrator to inject strict APA citations and Obsidian WikiLinks into the final compiled notes.

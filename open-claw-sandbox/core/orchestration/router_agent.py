@@ -60,11 +60,38 @@ class SkillCall:
 # Maps (file_extension, intent) → ordered list of SkillCall names.
 # Populated at registration time by SkillRegistry (#17).
 _ROUTING_TABLE: Dict[str, List[str]] = {
-    ".m4a:auto": ["audio_transcriber", "note_generator", "knowledge_compiler"],
-    ".mp3:auto": ["audio_transcriber", "note_generator", "knowledge_compiler"],
-    ".pdf:auto": ["doc_parser", "note_generator", "knowledge_compiler"],
+    ".m4a:auto": [
+        "audio_transcriber",
+        "note_generator",
+        "student_researcher",
+        "academic_library_agent",
+        "gemini_verifier_agent",
+        "knowledge_compiler",
+    ],
+    ".mp3:auto": [
+        "audio_transcriber",
+        "note_generator",
+        "student_researcher",
+        "academic_library_agent",
+        "gemini_verifier_agent",
+        "knowledge_compiler",
+    ],
+    ".pdf:auto": [
+        "doc_parser",
+        "note_generator",
+        "student_researcher",
+        "academic_library_agent",
+        "gemini_verifier_agent",
+        "knowledge_compiler",
+    ],
     ".pdf:study": ["doc_parser", "academic_edu_assistant"],
     ".md:compile": ["knowledge_compiler"],
+    ".md:research": [
+        "student_researcher",
+        "academic_library_agent",
+        "gemini_verifier_agent",
+        "knowledge_compiler",
+    ],
 }
 
 
@@ -100,6 +127,9 @@ class RouterAgent:
             "- audio_transcriber: 將語音轉為文字\n"
             "- doc_parser: 將 PDF 解析為文字\n"
             "- note_generator: 根據文字產生摘要與筆記\n"
+            "- student_researcher: 萃取需要學術查證的論點\n"
+            "- academic_library_agent: 操作 Playwright 抓取 Elsevier/ScienceDirect 文獻\n"
+            "- gemini_verifier_agent: 與 Gemini 進行 AI-to-AI 辯證與查證\n"
             "- knowledge_compiler: 將筆記編譯進知識庫並做雙向連結\n"
             "- telegram_kb_agent: 提供知識庫問答\n\n"
             "請將任務拆解為執行順序清單，只輸出技能名稱，以逗號分隔，例如：\n"
@@ -120,6 +150,9 @@ class RouterAgent:
                     "knowledge_compiler",
                     "telegram_kb_agent",
                     "academic_edu_assistant",
+                    "student_researcher",
+                    "academic_library_agent",
+                    "gemini_verifier_agent",
                 ]
             ]
         except Exception as e:
@@ -200,6 +233,27 @@ class RouterAgent:
                     cwd=cwd,
                     filepath=filepath,
                     skill="knowledge_compiler",
+                    chain=remaining_chain,
+                    subject=subject,
+                )
+            elif next_skill in [
+                "student_researcher",
+                "academic_library_agent",
+                "gemini_verifier_agent",
+            ]:
+                # These skills use the unified interface
+                cmd = [sys.executable, "scripts/run_all.py", "--subject", subject]
+                cwd = os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                    "skills",
+                    next_skill,
+                )
+                task_queue.enqueue(
+                    name=f"{next_skill} ({subject})",
+                    cmd=cmd,
+                    cwd=cwd,
+                    filepath=filepath,
+                    skill=next_skill,
                     chain=remaining_chain,
                     subject=subject,
                 )

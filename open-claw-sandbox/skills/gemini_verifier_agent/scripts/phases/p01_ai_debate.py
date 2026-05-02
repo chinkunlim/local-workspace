@@ -1,0 +1,135 @@
+import asyncio
+import json
+import os
+
+from core import PhaseBase
+from core.ai.llm_client import OllamaClient
+from core.utils.playwright_utils import get_persistent_context
+
+
+class Phase1AIDebate(PhaseBase):
+    def __init__(self) -> None:
+        super().__init__(
+            phase_key="p01_ai_debate",
+            phase_name="AI-to-AI Debate and Verification",
+            skill_name="gemini_verifier_agent",
+        )
+        self.llm = OllamaClient()
+
+    async def _debate_gemini(self, claim: str, evidence: str) -> str:
+        archive_dir = os.path.join(self.base_dir, "data", "gemini_verifier_agent", "archives")
+        os.makedirs(archive_dir, exist_ok=True)
+
+        async with get_persistent_context(headless=True) as context:
+            page = await context.new_page()
+            print("🤖 連線至 Gemini 進行查證...")
+            try:
+                await page.goto(
+                    "https://gemini.google.com/app", wait_until="domcontentloaded", timeout=60000
+                )
+
+                # Wait for the chat input box (Gemini uses rich-textarea or contenteditable div)
+                await page.wait_for_selector('div[contenteditable="true"]', timeout=30000)
+
+                initial_prompt = (
+                    f"請以學術標準驗證以下宣稱 (Claim): '{claim}'\n"
+                    f"這是我們擷取到的文獻快照: {evidence}\n"
+                    "請告訴我這份文獻是否支持該宣稱？有沒有矛盾之處？請引用文中的確切字句 (Exact Quote)。"
+                )
+
+                # Type into the input box
+                await page.fill('div[contenteditable="true"]', initial_prompt)
+                await page.keyboard.press("Enter")
+
+                # Wait for response to generate (Gemini UI typically has a response container)
+                # This is a heuristic: wait for the stop generating button to appear and disappear, or wait for text.
+                print("⏳ 等待 Gemini 回覆...")
+                await asyncio.sleep(15)  # Wait for network and generation
+
+                # Extract the last response message
+                response_elements = await page.query_selector_all("message-content")
+                if response_elements:
+                    last_response = await response_elements[-1].inner_text()
+                else:
+                    # Fallback to body extraction
+                    last_response = await page.evaluate("document.body.innerText")
+
+                # Debate Loop (Local LLM thinking about Gemini's response)
+                debate_history = [
+                    f"**Student (Local LLM)**: {initial_prompt}\n",
+                    f"**Professor (Gemini)**: {last_response}\n",
+                ]
+
+                # Turn 2: Local LLM generates follow-up
+                reflection_prompt = (
+                    "You are a critical university student. Read Gemini's response:\n"
+                    f"{last_response}\n\n"
+                    "Does this fully answer the claim? Generate a short follow-up question to ask Gemini to deepen the analysis or clarify a doubt. If it is perfect, output 'NO_QUESTIONS'."
+                )
+                followup = self.llm.generate(model="qwen2.5-coder:7b", prompt=reflection_prompt)
+
+                if "NO_QUESTIONS" not in followup:
+                    print(f"🤔 本地模型追問: {followup}")
+                    await page.fill('div[contenteditable="true"]', followup)
+                    await page.keyboard.press("Enter")
+                    await asyncio.sleep(15)
+
+                    response_elements = await page.query_selector_all("message-content")
+                    if response_elements:
+                        second_response = await response_elements[-1].inner_text()
+                        debate_history.append(f"**Student (Local LLM)**: {followup}\n")
+                        debate_history.append(f"**Professor (Gemini)**: {second_response}\n")
+                        last_response = second_response
+
+                # Archive the debate
+                archive_path = os.path.join(
+                    archive_dir, f"debate_{claim[:15].replace(' ', '_')}.md"
+                )
+                with open(archive_path, "w", encoding="utf-8") as f:
+                    f.write("\n".join(debate_history))
+
+                print(f"✅ 辯證完成，已歸檔至: {archive_path}")
+                return archive_path
+
+            except Exception as e:
+                print(f"⚠️ Gemini 互動失敗: {e}")
+                return ""
+
+    def run(self, force: bool = False, **kwargs) -> None:
+        input_dir = self.phase_dirs["input"]
+
+        for root, _, files in os.walk(input_dir):
+            for file in files:
+                if not file.endswith(".json"):
+                    continue
+
+                filepath = os.path.join(root, file)
+                print(f"\n📂 處理查證清單: {file}")
+
+                with open(filepath, encoding="utf-8") as f:
+                    data = json.load(f)
+
+                results = []
+                for item in data.get("verified_claims", []):
+                    claim_id = item.get("claim_id")
+                    query = item.get("query")
+                    snapshot = item.get("snapshot")
+
+                    # Debate Gemini synchronously via asyncio.run
+                    archive_path = asyncio.run(self._debate_gemini(query, snapshot))
+
+                    results.append(
+                        {
+                            "claim_id": claim_id,
+                            "debate_archive": archive_path,
+                            "evidence_file": item.get("evidence_file"),
+                        }
+                    )
+
+                out_path = self._get_output_path(filepath, ext=".json")
+                with open(out_path, "w", encoding="utf-8") as f:
+                    json.dump({"debated_claims": results}, f, ensure_ascii=False, indent=2)
+
+                print(f"✅ AI 辯證階段完成，輸出至: {out_path}")
+
+        self.state_manager.sync_physical_files()
