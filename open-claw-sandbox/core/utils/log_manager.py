@@ -6,7 +6,35 @@ import json
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import re
 from typing import Optional
+
+# Patterns that must never appear in log output.
+_SECRET_PATTERNS = [
+    re.compile(r"(Bearer\s)\S+", re.IGNORECASE),
+    re.compile(r"(Authorization:\s*\S+\s)\S+", re.IGNORECASE),
+    re.compile(r"(sk-|sk_)\w+"),
+    re.compile(r"(api[_-]?key[=:\s]+)\S+", re.IGNORECASE),
+]
+_REDACTED = "[REDACTED]"
+
+
+def _mask_secrets(text: str) -> str:
+    """Replace any secret-looking strings in *text* with ``[REDACTED]``."""
+    for pattern in _SECRET_PATTERNS:
+        text = pattern.sub(lambda m: m.group(1) + _REDACTED if m.lastindex else _REDACTED, text)
+    return text
+
+
+class SecretMaskingFilter(logging.Filter):
+    """Logging filter that scrubs API keys and tokens from all log records."""
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: A003
+        record.msg = _mask_secrets(str(record.msg))
+        record.args = tuple(
+            _mask_secrets(str(a)) if isinstance(a, str) else a for a in (record.args or ())
+        )
+        return True
 
 
 class EmojiFormatter(logging.Formatter):
@@ -72,6 +100,7 @@ def build_logger(
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(file_level or level)
+        file_handler.addFilter(SecretMaskingFilter())
         logger.addHandler(file_handler)
 
     if console:
@@ -84,6 +113,7 @@ def build_logger(
             stream_handler = logging.StreamHandler()
             stream_handler.setFormatter(formatter)
         stream_handler.setLevel(console_level or level)
+        stream_handler.addFilter(SecretMaskingFilter())
         logger.addHandler(stream_handler)
 
     return logger

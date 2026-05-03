@@ -12,6 +12,7 @@ from core.utils.bootstrap import ensure_core_path as _bootstrap
 _bootstrap(__file__)
 
 from core.ai.llm_client import OllamaClient
+from core.services.security_manager import SecurityManager
 
 WORKSPACE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
@@ -30,7 +31,11 @@ def main():
     parser.add_argument("--query", type=str, required=True, help="User's question")
     args = parser.parse_args()
 
-    query = args.query
+    # ── Security: sanitize external user input before it touches the LLM ──
+    query = SecurityManager.sanitize_user_input(args.query)
+    if not query:
+        print("❌ 輸入內容在安全清洗後為空白，已拒絕。")
+        sys.exit(1)
 
     ollama_api_url = "http://127.0.0.1:11434/api"
     ollama_client = OllamaClient(api_url=f"{ollama_api_url}/generate")

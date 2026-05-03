@@ -26,6 +26,18 @@ from typing import Optional
 
 import yaml
 
+# ---------------------------------------------------------------------------
+# Prompt Injection Defense
+# ---------------------------------------------------------------------------
+
+# Known injection delimiter tokens used by common LLM chat formats.
+_INJECTION_PATTERNS = re.compile(
+    r"(<\s*/?(system|user|assistant|s|inst|SYS|INST)\s*>|\[INST\]|\[/INST\]|"
+    r"###\s*(System|User|Assistant)|\{\{.*?\}\})",
+    re.IGNORECASE,
+)
+_MAX_INPUT_CHARS = 4000
+
 
 class SecurityViolationError(Exception):
     """Raised when a Playwright action violates the security policy."""
@@ -128,6 +140,31 @@ class SecurityManager:
 
         self._audit(action_upper, "ALLOWED", target)
         return True
+
+    @staticmethod
+    def sanitize_user_input(text: str, max_chars: int = _MAX_INPUT_CHARS) -> str:
+        """Sanitize unstructured external text before passing it to an LLM.
+
+        Performs three operations in order:
+        1. Truncates to ``max_chars`` to prevent context-window attacks.
+        2. Removes control characters (null bytes, escape sequences, etc.).
+        3. Strips known LLM chat-format delimiter tokens that could hijack the
+           system prompt boundary (e.g. ``[INST]``, ``<system>``, ``{{...}}``).
+
+        Args:
+            text:      Raw user-supplied string (e.g. from Telegram message).
+            max_chars: Hard ceiling on length. Defaults to 4000 characters.
+
+        Returns:
+            Sanitized string, safe to embed inside an LLM prompt.
+        """
+        # 1. Truncate
+        text = text[:max_chars]
+        # 2. Strip ASCII control characters (keep printable + CJK)
+        text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
+        # 3. Remove injection delimiters
+        text = _INJECTION_PATTERNS.sub("", text)
+        return text.strip()
 
     def validate_download(self, file_path: str) -> bool:
         """

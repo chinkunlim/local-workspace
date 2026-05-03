@@ -510,3 +510,90 @@ class PipelineBase:
             pbar.stop()
         else:
             self.log("✅ 完成", "info")
+
+    # ------------------------------------------------------------------ #
+    #  Template Method — Unified Skill Orchestration Loop (V2.4)          #
+    # ------------------------------------------------------------------ #
+
+    @classmethod
+    def run_skill_pipeline(
+        cls,
+        phases: "list[type]",
+        args: "Any",
+        start_phase: int = 1,
+    ) -> None:
+        """Unified skill pipeline runner — replaces boilerplate in every run_all.py.
+
+        Executes each phase class in ``phases`` in sequence, starting from
+        ``start_phase`` (1-indexed). Handles:
+        - Health checks between phases
+        - Graceful stop / pause detection
+        - SessionState persistence on every transition
+        - macOS completion notification
+
+        Args:
+            phases:      Ordered list of PipelineBase subclass **types** (not instances).
+            args:        Parsed argparse Namespace from ``build_skill_parser()``.
+            start_phase: 1-indexed phase to start from (supports ``--start-phase`` CLI flag).
+
+        Example::
+
+            class MyOrchestrator(PipelineBase):
+                ...
+
+            PipelineBase.run_skill_pipeline(
+                phases=[Phase1Foo, Phase2Bar],
+                args=args,
+            )
+        """
+        import subprocess
+
+        any_stopped = False
+        for idx, PhaseClass in enumerate(phases, start=1):
+            if idx < start_phase:
+                continue
+
+            phase_obj: PipelineBase = PhaseClass()  # type: ignore[call-arg]
+            phase_obj.log(f"\n{'=' * 50}")
+            phase_obj.log(f"🚀 Phase {idx}: {phase_obj.phase_name}")
+            phase_obj.log(f"{'=' * 50}")
+
+            try:
+                phase_obj.run(  # type: ignore[attr-defined]
+                    force=getattr(args, "force", False),
+                    subject=getattr(args, "subject", None),
+                    file_filter=getattr(args, "file", None),
+                    single_mode=getattr(args, "single", False),
+                    resume_from=None,
+                )
+            except Exception as exc:
+                phase_obj._write_session_state(SessionState.FAILED, context={"error": str(exc)})
+                phase_obj.log(f"💥 Phase {idx} 失敗: {exc}", "error")
+                any_stopped = True
+                break
+
+            if phase_obj.stop_requested:
+                if phase_obj.pause_requested:
+                    phase_obj._write_session_state(SessionState.PAUSED)
+                    phase_obj.log("💾 Pipeline 已暫停並儲存進度。")
+                else:
+                    phase_obj._write_session_state(SessionState.STOPPED)
+                    phase_obj.log("🛑 Pipeline 已停止。")
+                any_stopped = True
+                break
+
+            phase_obj._write_session_state(SessionState.COMPLETED)
+
+        if not any_stopped:
+            print("🏁 Pipeline 執行完畢。")
+            try:
+                subprocess.run(
+                    [
+                        "osascript",
+                        "-e",
+                        'display notification "Pipeline 執行完畢" with title "Open-Claw"',
+                    ],
+                    check=False,
+                )
+            except Exception:
+                pass
