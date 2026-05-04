@@ -8,8 +8,8 @@ description: A pipeline for retrieving relevant information from a knowledge bas
 requirements: llama-index
 """
 
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
+from collections.abc import Generator, Iterator
+from typing import List, Union
 
 
 class Pipeline:
@@ -23,7 +23,7 @@ class Pipeline:
         # Set the OpenAI API key
         os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
-        from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+        from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 
         self.documents = SimpleDirectoryReader("./data").load_data()
         self.index = VectorStoreIndex.from_documents(self.documents)

@@ -1,6 +1,9 @@
-from typing import List, Union, Generator, Iterator, Optional
+from collections.abc import Generator, Iterator
+import json
 from pprint import pprint
-import requests, json, warnings
+from typing import List, Optional, Union
+
+import requests
 
 # Uncomment to disable SSL verification warnings if needed.
 # warnings.filterwarnings('ignore', message='Unverified HTTPS request')
@@ -9,17 +12,17 @@ class Pipeline:
     def __init__(self):
         self.name = "Dify Agent Pipeline"
         self.api_url = "http://dify.hostname/v1/workflows/run"     # Set correct hostname
-        self.api_key = "app-dify-key"                              # Insert your actual API key here.v 
+        self.api_key = "app-dify-key"                              # Insert your actual API key here.v
         self.api_request_stream = True                             # Dify support stream
         self.verify_ssl = True
         self.debug = False
-    
+
     async def on_startup(self):
         # This function is called when the server is started.
         print(f"on_startup: {__name__}")
         pass
-    
-    async def on_shutdown(self): 
+
+    async def on_shutdown(self):
         # This function is called when the server is shutdown.
         print(f"on_shutdown: {__name__}")
         pass
@@ -46,7 +49,7 @@ class Pipeline:
 
     def pipe(self, user_message: str, model_id: str, messages: List[dict], body: dict) -> Union[str, Generator, Iterator]:
         print(f"pipe: {__name__}")
-        
+
         if self.debug:
             print(f"pipe: {__name__} - received message from user: {user_message}")
 

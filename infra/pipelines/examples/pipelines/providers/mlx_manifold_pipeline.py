@@ -8,15 +8,17 @@ description: A pipeline for generating text using Apple MLX Framework with dynam
 requirements: requests, mlx-lm, huggingface-hub, psutil
 """
 
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
+from collections.abc import Generator, Iterator
+import logging
+import subprocess
+import time
+from typing import List, Union
+
+from huggingface_hub import login
+import psutil
 from pydantic import BaseModel
 import requests
-import subprocess
-import logging
-from huggingface_hub import login
-import time
-import psutil
+
 
 class Pipeline:
     class Valves(BaseModel):
@@ -65,9 +67,9 @@ class Pipeline:
             ]
             result = subprocess.run(cmd, capture_output=True, text=True)
             lines = result.stdout.strip().split('\n')
-            
+
             content_lines = [line for line in lines if line and not line.startswith('-')]
-            
+
             models = []
             for line in content_lines[2:]:  # Skip header lines
                 parts = line.split()

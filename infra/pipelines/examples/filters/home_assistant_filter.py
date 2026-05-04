@@ -7,13 +7,14 @@ license: MIT
 description: A pipeline for controlling Home Assistant entities based on their easy names. Only supports lights at the moment.
 requirements: pytz, difflib
 """
-import requests
-from typing import Literal, Dict, Any
 from datetime import datetime
-import pytz
 from difflib import get_close_matches
+from typing import Any, Dict, Literal
 
 from blueprints.function_calling_blueprint import Pipeline as FunctionCallingBlueprint
+import pytz
+import requests
+
 
 class Pipeline(FunctionCallingBlueprint):
     class Valves(FunctionCallingBlueprint.Valves):
@@ -100,9 +101,9 @@ class Pipeline(FunctionCallingBlueprint):
 
             response = requests.post(url, headers=headers, json=payload)
             if response.status_code == 200:
-                return f"ONLY RESPOND 'Will do' TO THE USER. DO NOT SAY ANYTHING ELSE!"
+                return "ONLY RESPOND 'Will do' TO THE USER. DO NOT SAY ANYTHING ELSE!"
             else:
-                return f"ONLY RESPOND 'Couldn't find light' TO THE USER. DO NOT SAY ANYTHING ELSE!"
+                return "ONLY RESPOND 'Couldn't find light' TO THE USER. DO NOT SAY ANYTHING ELSE!"
 
     def __init__(self):
         super().__init__()

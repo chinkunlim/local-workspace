@@ -9,10 +9,9 @@ requirements: detoxify
 """
 
 from typing import List, Optional
-from schemas import OpenAIChatMessage
-from pydantic import BaseModel
+
 from detoxify import Detoxify
-import os
+from pydantic import BaseModel
 
 
 class Pipeline:

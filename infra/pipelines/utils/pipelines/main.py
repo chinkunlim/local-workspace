@@ -1,16 +1,12 @@
-import uuid
-import time
-
-from typing import List
-from schemas import OpenAIChatMessage
-
 import inspect
-from typing import get_type_hints, Literal, Tuple
+import time
+from typing import List, Tuple, get_type_hints
+import uuid
 
 
 def stream_message_template(model: str, message: str):
     return {
-        "id": f"{model}-{str(uuid.uuid4())}",
+        "id": f"{model}-{uuid.uuid4()!s}",
         "object": "chat.completion.chunk",
         "created": int(time.time()),
         "model": model,

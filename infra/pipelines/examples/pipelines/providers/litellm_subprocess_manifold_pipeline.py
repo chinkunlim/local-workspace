@@ -8,15 +8,14 @@ description: A manifold pipeline that uses LiteLLM as a subprocess.
 requirements: yaml, litellm[proxy]
 """
 
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
+import asyncio
+from collections.abc import Generator, Iterator
+import os
+import subprocess
+from typing import List, Union
+
 from pydantic import BaseModel
 import requests
-
-
-import os
-import asyncio
-import subprocess
 import yaml
 
 
@@ -43,7 +42,7 @@ class Pipeline:
         self.name = "LiteLLM: "
 
         # Initialize Valves
-        self.valves = self.Valves(**{"LITELLM_CONFIG_DIR": f"./litellm/config.yaml"})
+        self.valves = self.Valves(**{"LITELLM_CONFIG_DIR": "./litellm/config.yaml"})
         self.background_process = None
         pass
 
@@ -68,7 +67,7 @@ class Pipeline:
                 f"Config file not found. Created a default config file at {self.valves.LITELLM_CONFIG_DIR}"
             )
 
-        with open(self.valves.LITELLM_CONFIG_DIR, "r") as file:
+        with open(self.valves.LITELLM_CONFIG_DIR) as file:
             litellm_config = yaml.safe_load(file)
 
         self.valves.litellm_config = litellm_config
@@ -87,7 +86,7 @@ class Pipeline:
 
         print(f"on_valves_updated:{__name__}")
 
-        with open(self.valves.LITELLM_CONFIG_DIR, "r") as file:
+        with open(self.valves.LITELLM_CONFIG_DIR) as file:
             litellm_config = yaml.safe_load(file)
 
         self.valves.litellm_config = litellm_config

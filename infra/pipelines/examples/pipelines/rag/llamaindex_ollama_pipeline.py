@@ -8,9 +8,9 @@ description: A pipeline for retrieving relevant information from a knowledge bas
 requirements: llama-index, llama-index-llms-ollama, llama-index-embeddings-ollama
 """
 
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
+from collections.abc import Generator, Iterator
 import os
+from typing import List, Union
 
 from pydantic import BaseModel
 
@@ -35,9 +35,9 @@ class Pipeline:
         )
 
     async def on_startup(self):
+        from llama_index.core import Settings, SimpleDirectoryReader, VectorStoreIndex
         from llama_index.embeddings.ollama import OllamaEmbedding
         from llama_index.llms.ollama import Ollama
-        from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader
 
         Settings.embed_model = OllamaEmbedding(
             model_name=self.valves.LLAMAINDEX_EMBEDDING_MODEL_NAME,

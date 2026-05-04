@@ -1,6 +1,9 @@
-from typing import List, Union, Generator, Iterator, Optional
+from collections.abc import Generator, Iterator
+import json
 from pprint import pprint
-import requests, json, warnings
+from typing import List, Optional, Union
+
+import requests
 
 # Uncomment to disable SSL verification warnings if needed.
 # warnings.filterwarnings('ignore', message='Unverified HTTPS request')
@@ -18,8 +21,8 @@ class Pipeline:
         # This function is called when the server is started.
         print(f"on_startup: {__name__}")
         pass
-    
-    async def on_shutdown(self): 
+
+    async def on_shutdown(self):
         # This function is called when the server is shutdown.
         print(f"on_shutdown: {__name__}")
         pass
@@ -47,10 +50,10 @@ class Pipeline:
     def pipe(self, user_message: str, model_id: str, messages: List[dict], body: dict) -> Union[str, Generator, Iterator]:
         # This is where you can add your custom pipelines like RAG.
         print(f"pipe: {__name__}")
-        
+
         if self.debug:
             print(f"pipe: {__name__} - received message from user: {user_message}")
-        
+
         # This function triggers the workflow using the specified API.
         headers = {
             'Authorization': f'Bearer {self.api_key}',
@@ -73,7 +76,7 @@ class Pipeline:
                         if 'output' in json_data:
                             yield json_data['output']
             except json.JSONDecodeError as e:
-                print(f"Failed to parse JSON from line. Error: {str(e)}")
+                print(f"Failed to parse JSON from line. Error: {e!s}")
                 yield "Error in JSON parsing."
         else:
             yield f"Workflow request failed with status code: {response.status_code}"

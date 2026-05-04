@@ -9,10 +9,11 @@ requirements: requests
 environment_variables: COHERE_API_KEY
 """
 
-import os
+from collections.abc import Generator, Iterator
 import json
-from schemas import OpenAIChatMessage
-from typing import List, Union, Generator, Iterator
+import os
+from typing import List, Union
+
 from pydantic import BaseModel
 import requests
 

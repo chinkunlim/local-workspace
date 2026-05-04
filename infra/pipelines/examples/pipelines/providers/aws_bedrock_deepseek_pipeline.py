@@ -9,18 +9,16 @@ requirements: boto3
 environment_variables: 
 """
 
+from collections.abc import Generator, Iterator
 import json
 import logging
-
-from typing import List, Union, Generator, Iterator, Dict, Optional, Any
+import os
+from typing import List, Optional, Union
 
 import boto3
-
 from pydantic import BaseModel
-
-import os
-
 from utils.pipelines.main import pop_system_message
+
 
 class Pipeline:
     class Valves(BaseModel):

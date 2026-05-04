@@ -1,8 +1,7 @@
 import os
 from typing import List, Optional
+
 from pydantic import BaseModel
-from schemas import OpenAIChatMessage
-import time
 
 
 class Pipeline:

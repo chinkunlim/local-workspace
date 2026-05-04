@@ -9,12 +9,12 @@ requirements: ddtrace
 environment_variables: DD_LLMOBS_AGENTLESS_ENABLED, DD_LLMOBS_ENABLED, DD_LLMOBS_APP_NAME, DD_API_KEY, DD_SITE 
 """
 
-from typing import List, Optional
 import os
+from typing import List, Optional
 
-from utils.pipelines.main import get_last_user_message, get_last_assistant_message
-from pydantic import BaseModel
 from ddtrace.llmobs import LLMObs
+from pydantic import BaseModel
+from utils.pipelines.main import get_last_assistant_message, get_last_user_message
 
 
 class Pipeline:

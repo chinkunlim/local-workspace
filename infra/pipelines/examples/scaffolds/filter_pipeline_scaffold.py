@@ -9,8 +9,8 @@ requirements: requests
 """
 
 from typing import List, Optional
+
 from pydantic import BaseModel
-from schemas import OpenAIChatMessage
 
 
 class Pipeline:

@@ -1,23 +1,12 @@
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import HTTPException, status, Depends
-
-
-from pydantic import BaseModel
-from typing import Union, Optional
-
-
-from passlib.context import CryptContext
 from datetime import datetime, timedelta
-import jwt
-import logging
 import os
+from typing import Optional, Union
 
-import requests
-import uuid
-
-
-from config import API_KEY, PIPELINES_DIR
-
+from config import API_KEY
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import jwt
+from passlib.context import CryptContext
 
 SESSION_SECRET = os.getenv("SESSION_SECRET", " ")
 ALGORITHM = "HS256"
@@ -55,7 +44,7 @@ def decode_token(token: str) -> Optional[dict]:
     try:
         decoded = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
         return decoded
-    except Exception as e:
+    except Exception:
         return None
 
 

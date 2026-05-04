@@ -9,11 +9,11 @@ requirements: llm-guard
 """
 
 from typing import List, Optional
-from schemas import OpenAIChatMessage
-from pydantic import BaseModel
+
 from llm_guard.input_scanners import PromptInjection
 from llm_guard.input_scanners.prompt_injection import MatchType
-import os
+from pydantic import BaseModel
+
 
 class Pipeline:
     def __init__(self):
@@ -75,7 +75,7 @@ class Pipeline:
         # Filter out prompt injection messages
         sanitized_prompt, is_valid, risk_score = self.model.scan(user_message)
 
-        if risk_score > 0.8: 
+        if risk_score > 0.8:
             raise Exception("Prompt injection detected")
 
         return body

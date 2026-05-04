@@ -10,14 +10,16 @@ requirements: azure-ai-inference
 environment_variables: AZURE_INFERENCE_CREDENTIAL, AZURE_INFERENCE_ENDPOINT, MODEL_ID
 """
 
-import os
+from collections.abc import Generator, Iterator
 import json
 import logging
-from typing import List, Union, Generator, Iterator, Tuple
-from pydantic import BaseModel
+import os
+from typing import List, Tuple, Union
+
 from azure.ai.inference import ChatCompletionsClient
+from azure.ai.inference.models import AssistantMessage, SystemMessage, UserMessage
 from azure.core.credentials import AzureKeyCredential
-from azure.ai.inference.models import SystemMessage, UserMessage, AssistantMessage
+from pydantic import BaseModel
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -143,7 +145,7 @@ class Pipeline:
             else:
                 return self.get_completion(jais_messages, filtered_body)
         except Exception as e:
-            logger.error(f"Error in pipe: {str(e)}", exc_info=True)
+            logger.error(f"Error in pipe: {e!s}", exc_info=True)
             return json.dumps({"error": str(e)})
 
     def stream_response(self, jais_messages: List[Union[SystemMessage, UserMessage, AssistantMessage]], params: dict) -> str:
@@ -160,7 +162,7 @@ class Pipeline:
                         complete_response += delta_content
             return complete_response
         except Exception as e:
-            logger.error(f"Error in stream_response: {str(e)}", exc_info=True)
+            logger.error(f"Error in stream_response: {e!s}", exc_info=True)
             return json.dumps({"error": str(e)})
 
     def get_completion(self, jais_messages: List[Union[SystemMessage, UserMessage, AssistantMessage]], params: dict) -> str:
@@ -176,7 +178,7 @@ class Pipeline:
                 logger.warning("No choices in completion response")
                 return ""
         except Exception as e:
-            logger.error(f"Error in get_completion: {str(e)}", exc_info=True)
+            logger.error(f"Error in get_completion: {e!s}", exc_info=True)
             return json.dumps({"error": str(e)})
 
 

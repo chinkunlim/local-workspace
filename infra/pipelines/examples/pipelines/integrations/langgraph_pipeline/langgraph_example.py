@@ -11,20 +11,18 @@ licence: MIT
 """
 
 
-import os
-import json
 import getpass
+import json
+import os
 from typing import Annotated, Literal
-from typing_extensions import TypedDict
 
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
 from langchain_openai import ChatOpenAI
 from langgraph.config import get_stream_writer
-
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
+from typing_extensions import TypedDict
 
 '''
 Define LLM API key
@@ -58,7 +56,7 @@ def chatbot(state: State):
     return {"messages": [normal_response]}
 
 # Define graph
-graph_builder = StateGraph(State)   
+graph_builder = StateGraph(State)
 
 # Define nodes
 graph_builder.add_node("chatbot", chatbot)
@@ -89,46 +87,46 @@ async def stream(inputs: State):
     async def event_stream():
         try:
             stream_start_msg = {
-                'choices': 
+                'choices':
                     [
                         {
-                            'delta': {}, 
+                            'delta': {},
                             'finish_reason': None
                         }
                     ]
                 }
 
             # Stream start
-            yield f"data: {json.dumps(stream_start_msg)}\n\n"            
+            yield f"data: {json.dumps(stream_start_msg)}\n\n"
 
             # Processing langgraph stream response with <think> block support
             async for event in graph.astream(input=inputs, stream_mode="custom"):
                 print(event)
                 think_content = event.get("think", None)
                 normal_content = event.get("normal", None)
-    
+
                 think_msg = {
-                    'choices': 
+                    'choices':
                     [
                         {
                             'delta':
                             {
-                                'reasoning_content': think_content, 
+                                'reasoning_content': think_content,
                             },
-                            'finish_reason': None                            
+                            'finish_reason': None
                         }
                     ]
                 }
 
                 normal_msg = {
-                    'choices': 
+                    'choices':
                     [
                         {
                             'delta':
                             {
-                                'content': normal_content, 
+                                'content': normal_content,
                             },
-                            'finish_reason': None                            
+                            'finish_reason': None
                         }
                     ]
                 }
@@ -138,9 +136,9 @@ async def stream(inputs: State):
 
             # End of the stream
             stream_end_msg = {
-                'choices': [ 
+                'choices': [
                     {
-                        'delta': {}, 
+                        'delta': {},
                         'finish_reason': 'stop'
                     }
                 ]
@@ -152,7 +150,7 @@ async def stream(inputs: State):
             print(f"An error occurred: {e}")
 
     return StreamingResponse(
-        event_stream(), 
+        event_stream(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

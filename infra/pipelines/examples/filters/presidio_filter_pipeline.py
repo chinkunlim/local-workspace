@@ -10,11 +10,12 @@ requirements: presidio-analyzer, presidio-anonymizer
 
 import os
 from typing import List, Optional
-from pydantic import BaseModel
-from schemas import OpenAIChatMessage
+
 from presidio_analyzer import AnalyzerEngine
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
+from pydantic import BaseModel
+
 
 class Pipeline:
     class Valves(BaseModel):
@@ -22,7 +23,7 @@ class Pipeline:
         priority: int = 0
         enabled_for_admins: bool = False
         entities_to_redact: List[str] = [
-            "PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER", "US_SSN", 
+            "PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER", "US_SSN",
             "CREDIT_CARD", "IP_ADDRESS", "US_PASSPORT", "LOCATION",
             "DATE_TIME", "NRP", "MEDICAL_LICENSE", "URL"
         ]

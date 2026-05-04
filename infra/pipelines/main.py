@@ -1,35 +1,27 @@
-from fastapi import FastAPI, Request, Depends, status, HTTPException, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
+from collections.abc import Generator, Iterator
+from contextlib import asynccontextmanager
+import importlib.util
+import json
+import logging
+import os
+import shutil
+import subprocess
+import sys
+import time
+from urllib.parse import urlparse
+import uuid
+
+import aiohttp
+from config import API_KEY, LOG_LEVELS, PIPELINES_DIR
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
-
-
-from starlette.responses import StreamingResponse, Response
-from pydantic import BaseModel, ConfigDict
-from typing import List, Union, Generator, Iterator
-
-
-from utils.pipelines.auth import bearer_security, get_current_user
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from schemas import FilterForm, OpenAIChatCompletionForm
+from starlette.responses import StreamingResponse
+from utils.pipelines.auth import get_current_user
 from utils.pipelines.main import get_last_user_message, stream_message_template
 from utils.pipelines.misc import convert_to_raw_url
-
-from contextlib import asynccontextmanager
-from concurrent.futures import ThreadPoolExecutor
-from schemas import FilterForm, OpenAIChatCompletionForm
-from urllib.parse import urlparse
-
-import shutil
-import aiohttp
-import os
-import importlib.util
-import logging
-import time
-import json
-import uuid
-import sys
-import subprocess
-
-
-from config import API_KEY, PIPELINES_DIR, LOG_LEVELS
 
 if not os.path.exists(PIPELINES_DIR):
     os.makedirs(PIPELINES_DIR)
@@ -46,7 +38,7 @@ logging.basicConfig(level=LOG_LEVELS[log_level])
 
 def get_all_pipelines():
     pipelines = {}
-    for pipeline_id in PIPELINE_MODULES.keys():
+    for pipeline_id in PIPELINE_MODULES:
         pipeline = PIPELINE_MODULES[pipeline_id]
 
         if hasattr(pipeline, "type"):
@@ -134,7 +126,7 @@ async def load_module_from_path(module_name, module_path):
 
     try:
         # Read the module content
-        with open(module_path, "r") as file:
+        with open(module_path) as file:
             content = file.read()
 
         # Parse frontmatter
@@ -198,7 +190,7 @@ async def load_modules_from_directory(directory):
             if pipeline:
                 # Overwrite pipeline.valves with values from valves.json
                 if os.path.exists(valves_json_path):
-                    with open(valves_json_path, "r") as f:
+                    with open(valves_json_path) as f:
                         valves_json = json.load(f)
                         if hasattr(pipeline, "valves"):
                             ValvesModel = pipeline.valves.__class__
@@ -371,15 +363,14 @@ async def download_file(url: str, dest_folder: str):
 
     file_path = os.path.join(dest_folder, filename)
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status != 200:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Failed to download file",
-                )
-            with open(file_path, "wb") as f:
-                f.write(await response.read())
+    async with aiohttp.ClientSession() as session, session.get(url) as response:
+        if response.status != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to download file",
+            )
+        with open(file_path, "wb") as f:
+            f.write(await response.read())
 
     return file_path
 
@@ -475,7 +466,7 @@ async def delete_pipeline(
         )
 
     pipeline_id = form_data.id
-    pipeline_name = PIPELINE_NAMES.get(pipeline_id.split(".")[0], None)
+    pipeline_name = PIPELINE_NAMES.get(pipeline_id.split(".")[0])
 
     if PIPELINE_MODULES[pipeline_id]:
         if hasattr(PIPELINE_MODULES[pipeline_id], "on_shutdown"):
@@ -586,7 +577,7 @@ async def update_valves(pipeline_id: str, form_data: dict):
         print(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"{str(e)}",
+            detail=f"{e!s}",
         )
 
     return pipeline.valves
@@ -620,7 +611,7 @@ async def filter_inlet(pipeline_id: str, form_data: FilterForm):
         print(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"{str(e)}",
+            detail=f"{e!s}",
         )
 
 
@@ -652,7 +643,7 @@ async def filter_outlet(pipeline_id: str, form_data: FilterForm):
         print(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"{str(e)}",
+            detail=f"{e!s}",
         )
 
 
@@ -725,7 +716,7 @@ async def generate_openai_chat_completion(form_data: OpenAIChatCompletionForm):
 
                 if isinstance(res, str) or isinstance(res, Generator):
                     finish_message = {
-                        "id": f"{form_data.model}-{str(uuid.uuid4())}",
+                        "id": f"{form_data.model}-{uuid.uuid4()!s}",
                         "object": "chat.completion.chunk",
                         "created": int(time.time()),
                         "model": form_data.model,
@@ -740,7 +731,7 @@ async def generate_openai_chat_completion(form_data: OpenAIChatCompletionForm):
                     }
 
                     yield f"data: {json.dumps(finish_message)}\n\n"
-                    yield f"data: [DONE]"
+                    yield "data: [DONE]"
 
             return StreamingResponse(stream_content(), media_type="text/event-stream")
         else:
@@ -769,7 +760,7 @@ async def generate_openai_chat_completion(form_data: OpenAIChatCompletionForm):
 
                 logging.info(f"stream:false:{message}")
                 return {
-                    "id": f"{form_data.model}-{str(uuid.uuid4())}",
+                    "id": f"{form_data.model}-{uuid.uuid4()!s}",
                     "object": "chat.completion",
                     "created": int(time.time()),
                     "model": form_data.model,

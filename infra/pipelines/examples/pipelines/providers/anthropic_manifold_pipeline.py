@@ -9,13 +9,14 @@ requirements: requests, sseclient-py
 environment_variables: ANTHROPIC_API_KEY, ANTHROPIC_THINKING_BUDGET_TOKENS, ANTHROPIC_ENABLE_THINKING
 """
 
-import os
-import requests
+from collections.abc import Generator, Iterator
 import json
-from typing import List, Union, Generator, Iterator
-from pydantic import BaseModel
-import sseclient
+import os
+from typing import List, Union
 
+from pydantic import BaseModel
+import requests
+import sseclient
 from utils.pipelines.main import pop_system_message
 
 REASONING_EFFORT_BUDGET_TOKEN_MAP = {
@@ -173,17 +174,16 @@ class Pipeline:
                 **({"system": str(system_message)} if system_message else {}),
                 "stream": body.get("stream", False),
             }
-            
+
             # Add optional parameters only if explicitly provided
             if "top_k" in body:
                 payload["top_k"] = body["top_k"]
-            
+
             # Only include top_p if explicitly set (not both temperature and top_p)
             if "top_p" in body:
                 payload["top_p"] = body["top_p"]
                 # Remove temperature if top_p is explicitly set
-                if "temperature" in payload:
-                    del payload["temperature"]
+                payload.pop("temperature", None)
 
             if body.get("stream", False):
                 supports_thinking = any(model in model_id for model in self.get_thinking_supported_models())
@@ -194,7 +194,7 @@ class Pipeline:
                 if (
                     not budget_tokens
                     and reasoning_effort is not None
-                    and reasoning_effort not in REASONING_EFFORT_BUDGET_TOKEN_MAP.keys()
+                    and reasoning_effort not in REASONING_EFFORT_BUDGET_TOKEN_MAP
                 ):
                     try:
                         budget_tokens = int(reasoning_effort)
@@ -219,10 +219,8 @@ class Pipeline:
                     }
                     # Thinking requires temperature 1.0 and does not support top_p, top_k
                     payload["temperature"] = 1.0
-                    if "top_k" in payload:
-                        del payload["top_k"]
-                    if "top_p" in payload:
-                        del payload["top_p"]
+                    payload.pop("top_k", None)
+                    payload.pop("top_p", None)
                 return self.stream_response(payload)
             else:
                 return self.get_completion(payload)
@@ -258,7 +256,7 @@ class Pipeline:
                             break
                     except json.JSONDecodeError:
                         print(f"Failed to parse JSON: {event.data}")
-                        yield f"Error: Failed to parse JSON response"
+                        yield "Error: Failed to parse JSON response"
                     except KeyError as e:
                         print(f"Unexpected data structure: {e} for payload {payload}")
                         print(f"Full data: {data}")
@@ -268,7 +266,7 @@ class Pipeline:
                 print(error_message)
                 yield error_message
         except Exception as e:
-            error_message = f"Error: {str(e)}"
+            error_message = f"Error: {e!s}"
             print(error_message)
             yield error_message
 
@@ -288,6 +286,6 @@ class Pipeline:
                 print(error_message)
                 return error_message
         except Exception as e:
-            error_message = f"Error: {str(e)}"
+            error_message = f"Error: {e!s}"
             print(error_message)
             return error_message

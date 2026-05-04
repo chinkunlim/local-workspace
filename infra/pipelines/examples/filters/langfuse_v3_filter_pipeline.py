@@ -8,15 +8,13 @@ description: A filter pipeline that uses Langfuse v3.
 requirements: langfuse>=3.0.0
 """
 
-from typing import List, Optional
 import os
+from typing import List, Optional
 import uuid
-import json
 
-
-from utils.pipelines.main import get_last_assistant_message
-from pydantic import BaseModel
 from langfuse import Langfuse
+from pydantic import BaseModel
+from utils.pipelines.main import get_last_assistant_message
 
 
 def get_last_assistant_message_obj(messages: List[dict]) -> dict:
@@ -176,13 +174,13 @@ class Pipeline:
         # Extract and store both model name and ID if available
         model_info = metadata.get("model", {})
         model_id = body.get("model")
-        
+
         # Store model information for this chat
         if chat_id not in self.model_names:
             self.model_names[chat_id] = {"id": model_id}
         else:
             self.model_names[chat_id]["id"] = model_id
-            
+
         if isinstance(model_info, dict) and "name" in model_info:
             self.model_names[chat_id]["name"] = model_info["name"]
             self.log(f"Stored model info - name: '{model_info['name']}', id: '{model_id}' for chat_id: {chat_id}")
@@ -212,7 +210,7 @@ class Pipeline:
                     "session_id": chat_id,
                     "interface": "open-webui",
                 }
-                
+
                 # Create trace with all necessary information
                 trace = self.langfuse.start_span(
                     name=f"chat:{chat_id}",
@@ -256,7 +254,7 @@ class Pipeline:
         # Log user input as event
         try:
             trace = self.chat_traces[chat_id]
-            
+
             # Create complete event metadata
             event_metadata = {
                 **metadata,
@@ -266,9 +264,9 @@ class Pipeline:
                 "session_id": chat_id,
                 "event_id": str(uuid.uuid4()),
             }
-            
+
             event_span = trace.start_span(
-                name=f"user_input:{str(uuid.uuid4())}",
+                name=f"user_input:{uuid.uuid4()!s}",
                 metadata=event_metadata,
                 input=body["messages"],
             )
@@ -329,10 +327,10 @@ class Pipeline:
 
         # Update the trace with complete output information
         trace = self.chat_traces[chat_id]
-        
+
         metadata["type"] = task_name
         metadata["interface"] = "open-webui"
-        
+
         # Create complete trace metadata with all information
         complete_trace_metadata = {
             **metadata,
@@ -341,7 +339,7 @@ class Pipeline:
             "interface": "open-webui",
             "task": task_name,
         }
-        
+
         # Update trace with output and complete metadata
         trace.update_trace(
             output=assistant_message,
@@ -368,7 +366,7 @@ class Pipeline:
         # Create LLM generation for the response
         try:
             trace = self.chat_traces[chat_id]
-            
+
             # Create complete generation metadata
             generation_metadata = {
                 **complete_trace_metadata,
@@ -377,9 +375,9 @@ class Pipeline:
                 "model_name": model_name,
                 "generation_id": str(uuid.uuid4()),
             }
-            
+
             generation = trace.start_generation(
-                name=f"llm_response:{str(uuid.uuid4())}",
+                name=f"llm_response:{uuid.uuid4()!s}",
                 model=model_value,
                 input=body["messages"],
                 output=assistant_message,

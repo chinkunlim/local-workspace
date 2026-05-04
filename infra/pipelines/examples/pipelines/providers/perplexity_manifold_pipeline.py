@@ -1,8 +1,9 @@
-from typing import List, Union, Generator, Iterator
-from pydantic import BaseModel
+from collections.abc import Generator, Iterator
 import os
-import requests
+from typing import List, Union
 
+from pydantic import BaseModel
+import requests
 from utils.pipelines.main import pop_system_message
 
 
@@ -102,12 +103,9 @@ class Pipeline:
             "return_images": True
         }
 
-        if "user" in payload:
-            del payload["user"]
-        if "chat_id" in payload:
-            del payload["chat_id"]
-        if "title" in payload:
-            del payload["title"]
+        payload.pop("user", None)
+        payload.pop("chat_id", None)
+        payload.pop("title", None)
 
         print(payload)
 

@@ -1,13 +1,12 @@
-from typing import List, Optional
-from pydantic import BaseModel
-from schemas import OpenAIChatMessage
-import os
-import requests
 import json
+import os
+from typing import List, Optional
 
+from pydantic import BaseModel
+import requests
 from utils.pipelines.main import (
-    get_last_user_message,
     add_or_update_system_message,
+    get_last_user_message,
     get_tools_specs,
 )
 

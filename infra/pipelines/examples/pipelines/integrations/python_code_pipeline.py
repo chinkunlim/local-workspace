@@ -1,6 +1,6 @@
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
+from collections.abc import Generator, Iterator
 import subprocess
+from typing import List, Union
 
 
 class Pipeline:

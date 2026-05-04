@@ -8,11 +8,13 @@ description: A filter that processes user messages and stores them as long term 
 requirements: pydantic, ollama, mem0ai
 """
 
-from typing import List, Optional
-from pydantic import BaseModel
 import json
-from mem0 import Memory
 import threading
+from typing import List, Optional
+
+from mem0 import Memory
+from pydantic import BaseModel
+
 
 class Pipeline:
     class Valves(BaseModel):

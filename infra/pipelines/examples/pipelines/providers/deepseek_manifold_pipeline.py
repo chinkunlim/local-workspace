@@ -10,13 +10,14 @@ environment_variables: DEEPSEEK_API_KEY
 """
 
 
-import os
-import requests
+from collections.abc import Generator, Iterator
 import json
-from typing import List, Union, Generator, Iterator
-from pydantic import BaseModel
-import sseclient
+import os
+from typing import List, Union
 
+from pydantic import BaseModel
+import requests
+import sseclient
 from utils.pipelines.main import pop_system_message
 
 
@@ -78,7 +79,7 @@ class Pipeline:
                     # DeepSeek currently doesn't support multi-modal inputs
                     # Combine all text content
                     text_content = " ".join(
-                        item["text"] for item in message["content"] 
+                        item["text"] for item in message["content"]
                         if item["type"] == "text"
                     )
                     processed_messages.append({

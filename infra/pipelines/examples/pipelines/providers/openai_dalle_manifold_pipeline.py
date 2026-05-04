@@ -1,10 +1,11 @@
 """A manifold to integrate OpenAI's ImageGen models into Open-WebUI"""
 
-from typing import List, Union, Generator, Iterator
-
-from pydantic import BaseModel
+from collections.abc import Generator, Iterator
+from typing import List, Union
 
 from openai import OpenAI
+from pydantic import BaseModel
+
 
 class Pipeline:
     """OpenAI ImageGen pipeline"""

@@ -8,13 +8,13 @@ description: A filter pipeline that uses Opik for LLM observability.
 requirements: opik
 """
 
-from typing import List, Optional
-import os
-import uuid
 import json
+import os
+from typing import List, Optional
+import uuid
 
-from pydantic import BaseModel
 from opik import Opik
+from pydantic import BaseModel
 
 
 def get_last_assistant_message_obj(messages: List[dict]) -> dict:

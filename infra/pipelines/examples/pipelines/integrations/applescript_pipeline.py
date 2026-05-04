@@ -1,9 +1,8 @@
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
-import requests
-
-
+from collections.abc import Generator, Iterator
 from subprocess import call
+from typing import List, Union
+
+import requests
 
 
 class Pipeline:
@@ -65,7 +64,7 @@ class Pipeline:
                 "messages": [
                     {
                         "role": "system",
-                        "content": f"You are an agent of the AppleScript Pipeline. You have the power to control the volume of the system.",
+                        "content": "You are an agent of the AppleScript Pipeline. You have the power to control the volume of the system.",
                     },
                     {"role": "user", "content": user_message},
                 ],

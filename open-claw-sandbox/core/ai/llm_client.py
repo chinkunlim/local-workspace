@@ -8,7 +8,9 @@ V2.1 Changes:
 """
 
 import contextvars
+import hashlib
 import os
+import sqlite3
 import time
 from typing import Any, Dict, NamedTuple, Optional, Tuple, Union
 
@@ -68,6 +70,68 @@ class GenerateResult(str):
         )
 
 
+# ---------------------------------------------------------------------------
+# Semantic Cache (SQLite)
+# ---------------------------------------------------------------------------
+
+
+class SqliteSemanticCache:
+    """Thread-safe SQLite cache for deterministic LLM generation."""
+
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+        os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+        self._init_db()
+
+    def _init_db(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS semantic_cache (
+                    hash_key TEXT PRIMARY KEY,
+                    model TEXT,
+                    prompt TEXT,
+                    response TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            conn.commit()
+
+    def _hash(self, model: str, prompt: str) -> str:
+        raw = f"{model}::{prompt}".encode()
+        return hashlib.sha256(raw).hexdigest()
+
+    def get(self, model: str, prompt: str) -> Optional[str]:
+        hash_key = self._hash(model, prompt)
+        try:
+            with sqlite3.connect(self.db_path, timeout=5) as conn:
+                cursor = conn.execute(
+                    "SELECT response FROM semantic_cache WHERE hash_key = ?", (hash_key,)
+                )
+                row = cursor.fetchone()
+                if row:
+                    return row[0]
+        except Exception:
+            pass
+        return None
+
+    def set(self, model: str, prompt: str, response: str) -> None:
+        hash_key = self._hash(model, prompt)
+        try:
+            with sqlite3.connect(self.db_path, timeout=5) as conn:
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO semantic_cache (hash_key, model, prompt, response)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (hash_key, model, prompt, response),
+                )
+                conn.commit()
+        except Exception:
+            pass
+
+
 class OllamaClient:
     # Number of consecutive failures before triggering circuit breaker
     CIRCUIT_BREAKER_THRESHOLD = 3
@@ -93,6 +157,11 @@ class OllamaClient:
         self._consecutive_failures: int = 0
         self._circuit_open: bool = False
 
+        # Semantic cache initialization
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        cache_db_path = os.path.join(workspace_root, "data", "llm_cache.sqlite3")
+        self._cache = SqliteSemanticCache(cache_db_path)
+
     def generate(
         self,
         model: str,
@@ -112,12 +181,14 @@ class OllamaClient:
         trace_id = TRACE_ID_VAR.get()
         trace_pfx = f"[trace:{trace_id[:8]}] " if trace_id else ""
 
+        # Context-Aware Routing Override
+        effective_model = os.environ.get("OPENCLAW_ROUTER_MODEL", model)
+
         # Circuit breaker: if open and fallback available, switch model silently
-        effective_model = model
-        if self._circuit_open and self.fallback_model and self.fallback_model != model:
+        if self._circuit_open and self.fallback_model and self.fallback_model != effective_model:
             if logger:
                 logger.warning(
-                    f"{trace_pfx}⚡ Circuit Breaker 已觸發：自動切換 {model} → {self.fallback_model}"
+                    f"{trace_pfx}⚡ Circuit Breaker 已觸發：自動切換 {effective_model} → {self.fallback_model}"
                 )
             effective_model = self.fallback_model
 
@@ -164,6 +235,20 @@ class OllamaClient:
                 if logger:
                     logger.debug(f"{trace_pfx}⚠️ llm-guard 未安裝，略過 Prompt Injection 檢查。")
 
+        # Semantic Caching Check (only for deterministic calls)
+        temperature = (options or {}).get("temperature", 0)
+        if temperature == 0:
+            cached_response = self._cache.get(effective_model, prompt)
+            if cached_response:
+                if logger:
+                    logger.info(f"{trace_pfx}⚡ 命中語意快取 (Semantic Cache)，跳過推理。")
+                return GenerateResult(
+                    cached_response,
+                    latency_ms=1.0,
+                    token_count=0,
+                    model=effective_model,
+                )
+
         t_start = time.monotonic()  # P2-5: latency tracking
         for attempt in range(self.retries):
             try:
@@ -189,8 +274,14 @@ class OllamaClient:
                 # Successful call — reset circuit breaker
                 self._consecutive_failures = 0
                 self._circuit_open = False
+
                 # P2-5: Return GenerateResult (str subclass) with observability metadata
                 _latency_ms = (time.monotonic() - t_start) * 1000
+
+                # Cache deterministic responses
+                if temperature == 0:
+                    self._cache.set(effective_model, prompt, response_text)
+
                 return GenerateResult(
                     response_text,
                     latency_ms=_latency_ms,
@@ -265,8 +356,10 @@ class OllamaClient:
         trace_id = TRACE_ID_VAR.get()
         trace_pfx = f"[trace:{trace_id[:8]}] " if trace_id else ""
 
-        effective_model = model
-        if self._circuit_open and self.fallback_model and self.fallback_model != model:
+        # Context-Aware Routing Override
+        effective_model = os.environ.get("OPENCLAW_ROUTER_MODEL", model)
+
+        if self._circuit_open and self.fallback_model and self.fallback_model != effective_model:
             effective_model = self.fallback_model
 
         is_openai = "/v1" in self.api_url or "chat/completions" in self.api_url
@@ -309,6 +402,20 @@ class OllamaClient:
                 if logger:
                     logger.debug(f"{trace_pfx}⚠️ llm-guard 未安裝，略過 Prompt Injection 檢查。")
 
+        # Semantic Caching Check (only for deterministic calls)
+        temperature = (options or {}).get("temperature", 0)
+        if temperature == 0:
+            cached_response = self._cache.get(effective_model, prompt)
+            if cached_response:
+                if logger:
+                    logger.info(f"{trace_pfx}⚡ 命中語意快取 (Semantic Cache)，跳過推理 (Async)。")
+                return GenerateResult(
+                    cached_response,
+                    latency_ms=1.0,
+                    token_count=0,
+                    model=effective_model,
+                )
+
         t_start = time.monotonic()
         timeout_val = self.timeout[0] if isinstance(self.timeout, tuple) else self.timeout
 
@@ -333,6 +440,10 @@ class OllamaClient:
                     self._consecutive_failures = 0
                     self._circuit_open = False
                     _latency_ms = (time.monotonic() - t_start) * 1000
+
+                    # Cache deterministic responses
+                    if temperature == 0:
+                        self._cache.set(effective_model, prompt, response_text)
 
                     return GenerateResult(
                         response_text,

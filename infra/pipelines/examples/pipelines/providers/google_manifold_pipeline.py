@@ -9,16 +9,16 @@ requirements: google-genai
 environment_variables: GOOGLE_API_KEY
 """
 
-from typing import List, Union, Iterator
+import base64
+from collections.abc import Iterator
+from io import BytesIO
 import os
-
-from pydantic import BaseModel, Field
+from typing import List, Union
 
 from google import genai
 from google.genai import types
 from PIL import Image
-from io import BytesIO
-import base64
+from pydantic import BaseModel, Field
 
 
 class Pipeline:
@@ -111,7 +111,7 @@ class Pipeline:
             print(f"Stream mode: {body.get('stream', False)}")
 
             system_message = next((msg["content"] for msg in messages if msg["role"] == "system"), None)
-            
+
             contents = []
             for message in messages:
                 if message["role"] != "system":
@@ -181,7 +181,7 @@ class Pipeline:
                     elif part.inline_data is not None:
                         try:
                             image_data = base64.b64decode(part.inline_data.data)
-                            image = Image.open(BytesIO((image_data)))
+                            image = Image.open(BytesIO(image_data))
                             content_type = part.inline_data.mime_type
                             return "Image not supported yet."
                         except Exception as e:

@@ -8,10 +8,10 @@ description: A pipeline for retrieving relevant information from a knowledge bas
 requirements: llama-index, llama-index-llms-ollama, llama-index-embeddings-ollama, llama-index-readers-github
 """
 
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
-import os
 import asyncio
+from collections.abc import Generator, Iterator
+import os
+from typing import List, Union
 
 
 class Pipeline:
@@ -20,10 +20,10 @@ class Pipeline:
         self.index = None
 
     async def on_startup(self):
+        from llama_index.core import Settings, VectorStoreIndex
         from llama_index.embeddings.ollama import OllamaEmbedding
         from llama_index.llms.ollama import Ollama
-        from llama_index.core import VectorStoreIndex, Settings
-        from llama_index.readers.github import GithubRepositoryReader, GithubClient
+        from llama_index.readers.github import GithubClient, GithubRepositoryReader
 
         Settings.embed_model = OllamaEmbedding(
             model_name="nomic-embed-text",

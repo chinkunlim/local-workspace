@@ -1,10 +1,9 @@
+import os
 from typing import List, Optional
-from schemas import OpenAIChatMessage
+
 from pydantic import BaseModel
 import requests
-import os
-
-from utils.pipelines.main import get_last_user_message, get_last_assistant_message
+from utils.pipelines.main import get_last_assistant_message, get_last_user_message
 
 
 class Pipeline:

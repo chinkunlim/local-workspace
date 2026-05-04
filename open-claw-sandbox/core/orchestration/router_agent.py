@@ -42,6 +42,7 @@ class TaskManifest:
     intent: str = "auto"  # e.g. "transcribe_and_compile", "parse_pdf", "study"
     subject: Optional[str] = None
     metadata: Dict = field(default_factory=dict)
+    model: Optional[str] = None
 
 
 @dataclass
@@ -181,6 +182,13 @@ class RouterAgent:
         """Resolve a manifest to an ordered list of skill names."""
         ext = os.path.splitext(manifest.source_path)[-1].lower()
 
+        # Context-Aware Model Routing (P4)
+        complex_keywords = ["debate", "research", "feynman", "analyze", "deep", "study"]
+        if any(k in manifest.intent.lower() for k in complex_keywords):
+            manifest.model = "deepseek-r1:14b"
+        else:
+            manifest.model = "qwen2.5-coder:7b"
+
         # 1. Natural language decomposition if intent is not a simple keyword
         if manifest.intent not in ["auto", "study", "compile"] and len(manifest.intent) > 10:
             llm_chain = self._llm_decompose(manifest.intent, ext)
@@ -209,8 +217,10 @@ class RouterAgent:
         subject = payload.get("subject", "Default")
         filepath = payload.get("filepath", "")
         file_id = os.path.splitext(os.path.basename(filepath))[0]
+        model = payload.get("model") or "qwen2.5-coder:7b"
+        env = {"OPENCLAW_ROUTER_MODEL": model}
 
-        print(f"🗺️  [RouterAgent] 接力觸發: {current_skill} -> {next_skill}")
+        print(f"🗺️  [RouterAgent] 接力觸發: {current_skill} -> {next_skill} (Model: {model})")
 
         try:
             # Auto-discover the output of current_skill to use as input for next_skill
@@ -236,6 +246,7 @@ class RouterAgent:
                     skill="note_generator",
                     chain=remaining_chain,
                     subject=subject,
+                    env=env,
                 )
             elif next_skill == "knowledge_compiler":
                 # For knowledge_compiler, the input is just the subject/file from the previous step.
@@ -253,6 +264,7 @@ class RouterAgent:
                     skill="knowledge_compiler",
                     chain=remaining_chain,
                     subject=subject,
+                    env=env,
                 )
             elif next_skill in [
                 "student_researcher",
@@ -275,6 +287,7 @@ class RouterAgent:
                     skill=next_skill,
                     chain=remaining_chain,
                     subject=subject,
+                    env=env,
                 )
             else:
                 print(f"⚠️ [RouterAgent] 尚不支援自動接力到 {next_skill}，請手動觸發。")
@@ -346,6 +359,7 @@ class RouterAgent:
                 skill=first_skill,
                 chain=chain,
                 subject=manifest.subject or "Default",
+                env={"OPENCLAW_ROUTER_MODEL": manifest.model} if manifest.model else None,
             )
 
             results.append({"skill": first_skill, "status": "enqueued"})

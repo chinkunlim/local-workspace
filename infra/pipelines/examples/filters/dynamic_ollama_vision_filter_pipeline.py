@@ -8,11 +8,13 @@ description: A pipeline for dynamically processing images when current model is 
 requirements: pydantic, aiohttp
 """
 
-from typing import List, Optional
-from pydantic import BaseModel
 import json
+from typing import List, Optional
+
 import aiohttp
+from pydantic import BaseModel
 from utils.pipelines.main import get_last_user_message
+
 
 class Pipeline:
     class Valves(BaseModel):
@@ -72,7 +74,7 @@ class Pipeline:
         # Ensure the body is a dictionary
         if isinstance(body, str):
             body = json.loads(body)
-        
+
         model = body.get("model", "")
 
         # Get the content of the most recent message
@@ -87,5 +89,5 @@ class Pipeline:
                     llava_response = f"REPEAT THIS BACK: {raw_llava_response}"
                     message["content"] = llava_response
                     message.pop("images", None)  # This will safely remove the 'images' key if it exists
-        
+
         return body

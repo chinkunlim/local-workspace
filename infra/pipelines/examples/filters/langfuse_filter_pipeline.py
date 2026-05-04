@@ -8,15 +8,15 @@ description: A filter pipeline that uses Langfuse.
 requirements: langfuse<3.0.0
 """
 
-from typing import List, Optional
-import os
-import uuid
 import json
+import os
+from typing import List, Optional
+import uuid
 
-from utils.pipelines.main import get_last_assistant_message
-from pydantic import BaseModel
 from langfuse import Langfuse
 from langfuse.api.resources.commons.errors.unauthorized_error import UnauthorizedError
+from pydantic import BaseModel
+from utils.pipelines.main import get_last_assistant_message
 
 
 def get_last_assistant_message_obj(messages: List[dict]) -> dict:
@@ -138,13 +138,13 @@ class Pipeline:
         # Extract and store both model name and ID if available
         model_info = metadata.get("model", {})
         model_id = body.get("model")
-        
+
         # Store model information for this chat
         if chat_id not in self.model_names:
             self.model_names[chat_id] = {"id": model_id}
         else:
             self.model_names[chat_id]["id"] = model_id
-            
+
         if isinstance(model_info, dict) and "name" in model_info:
             self.model_names[chat_id]["name"] = model_info["name"]
             self.log(f"Stored model info - name: '{model_info['name']}', id: '{model_id}' for chat_id: {chat_id}")
@@ -197,16 +197,16 @@ class Pipeline:
             # Determine which model value to use based on the use_model_name valve
             model_id = self.model_names.get(chat_id, {}).get("id", body["model"])
             model_name = self.model_names.get(chat_id, {}).get("name", "unknown")
-            
+
             # Pick primary model identifier based on valve setting
             model_value = model_name if self.valves.use_model_name_instead_of_id_for_generation else model_id
-            
+
             # Add both values to metadata regardless of valve setting
             metadata["model_id"] = model_id
             metadata["model_name"] = model_name
-            
+
             generation_payload = {
-                "name": f"{task_name}:{str(uuid.uuid4())}",
+                "name": f"{task_name}:{uuid.uuid4()!s}",
                 "model": model_value,
                 "input": body["messages"],
                 "metadata": metadata,
@@ -221,7 +221,7 @@ class Pipeline:
         else:
             # Otherwise, log it as an event
             event_payload = {
-                "name": f"{task_name}:{str(uuid.uuid4())}",
+                "name": f"{task_name}:{uuid.uuid4()!s}",
                 "metadata": metadata,
                 "input": body["messages"],
             }
@@ -286,17 +286,17 @@ class Pipeline:
             # Determine which model value to use based on the use_model_name valve
             model_id = self.model_names.get(chat_id, {}).get("id", body.get("model"))
             model_name = self.model_names.get(chat_id, {}).get("name", "unknown")
-            
+
             # Pick primary model identifier based on valve setting
             model_value = model_name if self.valves.use_model_name_instead_of_id_for_generation else model_id
-            
+
             # Add both values to metadata regardless of valve setting
             metadata["model_id"] = model_id
             metadata["model_name"] = model_name
-            
+
             # If it's an LLM generation
             generation_payload = {
-                "name": f"{task_name}:{str(uuid.uuid4())}",
+                "name": f"{task_name}:{uuid.uuid4()!s}",
                 "model": model_value,   # <-- Use model name or ID based on valve setting
                 "input": body["messages"],
                 "metadata": metadata,
@@ -313,7 +313,7 @@ class Pipeline:
         else:
             # Otherwise log as an event
             event_payload = {
-                "name": f"{task_name}:{str(uuid.uuid4())}",
+                "name": f"{task_name}:{uuid.uuid4()!s}",
                 "metadata": metadata,
                 "input": body["messages"],
             }

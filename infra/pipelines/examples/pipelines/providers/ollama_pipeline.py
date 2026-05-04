@@ -1,5 +1,6 @@
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
+from collections.abc import Generator, Iterator
+from typing import List, Union
+
 import requests
 
 

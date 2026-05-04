@@ -13,12 +13,13 @@ usage_instructions:
   - For use outside of Google Cloud: Set the GOOGLE_APPLICATION_CREDENTIALS environment variable to the path of the service account key file.
 """
 
-import os
 import base64
-from typing import Iterator, List, Union
+from collections.abc import Iterator
+import os
+from typing import List, Union
 
-import vertexai
 from pydantic import BaseModel, Field
+import vertexai
 from vertexai.generative_models import (
     Content,
     GenerationConfig,
@@ -93,7 +94,7 @@ class Pipeline:
             print(f"Pipe function called for model: {model_id}")
             print(f"Stream mode: {body.get('stream', False)}")
             print(f"Received {len(messages)} messages from OpenWebUI")
-            
+
             # Debug: Log message structure
             for i, msg in enumerate(messages):
                 print(f"Message {i}: role={msg.get('role')}, content type={type(msg.get('content'))}")
@@ -163,7 +164,7 @@ class Pipeline:
 
         except Exception as e:
             print(f"Error generating content: {e}")
-            return f"An error occurred: {str(e)}"
+            return f"An error occurred: {e!s}"
 
     def stream_response(self, response):
         for chunk in response:
@@ -196,21 +197,21 @@ class Pipeline:
                                 header, image_data = image_url.split(',', 1)
                                 mime_type = header.split(':')[1].split(';')[0]
                                 print(f"Detected image MIME type: {mime_type}")
-                                
+
                                 # Validate supported image formats
                                 supported_formats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
                                 if mime_type not in supported_formats:
                                     print(f"ERROR: Unsupported image format: {mime_type}")
                                     continue
-                                
+
                                 # Decode the base64 image data
                                 decoded_image_data = base64.b64decode(image_data)
                                 print(f"Successfully decoded image data: {len(decoded_image_data)} bytes")
-                                
-                                # Create the Part object with the image data 
+
+                                # Create the Part object with the image data
                                 image_part = Part.from_data(decoded_image_data, mime_type=mime_type)
                                 parts.append(image_part)
-                                print(f"Successfully added image part to conversation")
+                                print("Successfully added image part to conversation")
                             except Exception as e:
                                 print(f"ERROR processing image: {e}")
                                 import traceback

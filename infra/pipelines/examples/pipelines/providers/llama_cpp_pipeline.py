@@ -8,8 +8,8 @@ description: A pipeline for generating responses using the Llama C++ library.
 requirements: llama-cpp-python
 """
 
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
+from collections.abc import Generator, Iterator
+from typing import List, Union
 
 
 class Pipeline:

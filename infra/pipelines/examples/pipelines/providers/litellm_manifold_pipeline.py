@@ -7,11 +7,12 @@ license: MIT
 description: A manifold pipeline that uses LiteLLM.
 """
 
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
+from collections.abc import Generator, Iterator
+import os
+from typing import List, Union
+
 from pydantic import BaseModel
 import requests
-import os
 
 
 class Pipeline:

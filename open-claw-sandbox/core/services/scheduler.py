@@ -14,7 +14,7 @@ import sys
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from core.orchestration.task_queue import task_queue
 from core.services.sm2 import SM2Engine
 from core.services.telegram_bot import send_message
 from core.utils.log_manager import build_logger
@@ -47,16 +47,32 @@ def push_due_cards():
         send_message(f"...and {len(due) - 5} more.")
 
 
+def trigger_anki_push():
+    """Enqueue the Anki push task into the global single-threaded queue to prevent OOM."""
+    workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    cmd = [
+        sys.executable,
+        "-c",
+        "from core.services.scheduler import push_due_cards; push_due_cards()",
+    ]
+    task_queue.enqueue(
+        name="Daily Anki SM-2 Push",
+        cmd=cmd,
+        cwd=workspace_root,
+        subject="System",
+    )
+
+
 def main():
     logger.info("Starting Open Claw Scheduler...")
     scheduler = BlockingScheduler()
 
-    # Schedule the Anki push every day at 09:00 AM
-    scheduler.add_job(push_due_cards, "cron", hour=9, minute=0)
+    # Schedule the Anki push every day at 09:00 AM via TaskQueue
+    scheduler.add_job(trigger_anki_push, "cron", hour=9, minute=0)
 
     try:
         # We also run it immediately once on startup just to verify it works
-        push_due_cards()
+        trigger_anki_push()
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         logger.info("Scheduler stopped.")

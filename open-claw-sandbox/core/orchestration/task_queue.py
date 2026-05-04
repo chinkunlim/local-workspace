@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import threading
 import time
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from core.orchestration.event_bus import DomainEvent, EventBus
 from core.utils.log_manager import build_logger
@@ -111,8 +111,13 @@ class LocalTaskQueue:
 
                 start_time = time.time()
                 try:
+                    # Merge current environment with task specific env
+                    run_env = os.environ.copy()
+                    if task.get("env"):
+                        run_env.update(task["env"])
+
                     # Execute with timeout to prevent Playwright/Selenium deadlocks
-                    result = subprocess.run(cmd, cwd=cwd, timeout=self.timeout_sec)
+                    result = subprocess.run(cmd, cwd=cwd, env=run_env, timeout=self.timeout_sec)
                     elapsed = time.time() - start_time
 
                     if result.returncode == 0:
@@ -129,6 +134,9 @@ class LocalTaskQueue:
                                         "filepath": task["filepath"],
                                         "chain": task.get("chain", []),
                                         "subject": task.get("subject", "Default"),
+                                        "model": task.get("env", {}).get("OPENCLAW_ROUTER_MODEL")
+                                        if task.get("env")
+                                        else None,
                                     },
                                 )
                             )
@@ -162,15 +170,23 @@ class LocalTaskQueue:
             _logger.error("🚫 [TaskQueue] 達到最大重試次數，放棄任務: %s", name)
             self._quarantine_file(task, error_msg)
         else:
-            _logger.warning("🔄 [TaskQueue] 準備重試任務 (將排入佇列尾端): %s", name)
-            self.q.put(task)
+            backoff_sec = 5 * (2 ** task["retry_count"])
+            _logger.warning(
+                "🔄 [TaskQueue] 準備重試任務 (等待 %ds 後排入佇列尾端): %s", backoff_sec, name
+            )
 
             try:
                 from core.services.telegram_bot import send_message
 
-                send_message(error_msg + f"\n將進行第 {task['retry_count'] + 1} 次重試...")
+                send_message(
+                    error_msg
+                    + f"\n將於 {backoff_sec} 秒後進行第 {task['retry_count'] + 1} 次重試..."
+                )
             except ImportError:
                 pass
+
+            time.sleep(backoff_sec)
+            self.q.put(task)
 
     def enqueue(
         self,
@@ -181,6 +197,7 @@ class LocalTaskQueue:
         skill: Optional[str] = None,
         chain: Optional[List[str]] = None,
         subject: str = "Default",
+        env: Optional[Dict[str, str]] = None,
     ):
         """
         Add a task to the queue.
@@ -194,6 +211,7 @@ class LocalTaskQueue:
                 "skill": skill,
                 "chain": chain or [],
                 "subject": subject,
+                "env": env,
                 "retry_count": 0,
             }
         )

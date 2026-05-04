@@ -11,16 +11,18 @@ licence: MIT
 """
 
 
+from collections.abc import Generator, Iterator
 import os
-import requests
+from typing import List, Union
+
 from pydantic import BaseModel, Field
-from typing import List, Union, Generator, Iterator
+import requests
 
 
 class Pipeline:
     class Valves(BaseModel):
         API_URL: str = Field(default="http://127.0.0.1:9000/stream", description="Langgraph API URL")
-    
+
     def __init__(self):
         self.id = "LangGraph stream"
         self.name = "LangGraph stream"
@@ -33,31 +35,31 @@ class Pipeline:
         # This function is called when the server is started.
         print(f"on_startup: {__name__}")
         pass
-    
-    async def on_shutdown(self): 
+
+    async def on_shutdown(self):
         # This function is called when the server is shutdown.
         print(f"on_shutdown: {__name__}")
         pass
 
     def pipe(
-        self, 
-        user_message: str, 
-        model_id: str, 
-        messages: List[dict], 
+        self,
+        user_message: str,
+        model_id: str,
+        messages: List[dict],
         body: dict
             ) -> Union[str, Generator, Iterator]:
 
         data = {
             "messages": [[msg['role'], msg['content']] for msg  in messages],
             }
-        
+
         headers = {
             'accept': 'text/event-stream',
             'Content-Type': 'application/json',
         }
-        
+
         response = requests.post(self.valves.API_URL, json=data, headers=headers, stream=True)
-        
+
         response.raise_for_status()
-        
+
         return response.iter_lines()

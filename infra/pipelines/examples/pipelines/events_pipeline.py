@@ -1,6 +1,7 @@
-from typing import List, Union, Generator, Iterator, Optional
+from collections.abc import Generator, Iterator
 from pprint import pprint
 import time
+from typing import List, Optional, Union
 
 # Uncomment to disable SSL verification warnings if needed.
 # warnings.filterwarnings('ignore', message='Unverified HTTPS request')

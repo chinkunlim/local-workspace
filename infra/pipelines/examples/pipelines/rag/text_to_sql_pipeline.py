@@ -8,12 +8,14 @@ description: A pipeline for using text-to-SQL for retrieving relevant informatio
 requirements: llama_index, sqlalchemy, psycopg2-binary
 """
 
-from typing import List, Union, Generator, Iterator
-import os 
-from pydantic import BaseModel
-from llama_index.llms.ollama import Ollama
+from collections.abc import Generator, Iterator
+import os
+from typing import List, Union
+
+from llama_index.core import PromptTemplate, SQLDatabase
 from llama_index.core.query_engine import NLSQLTableQueryEngine
-from llama_index.core import SQLDatabase, PromptTemplate
+from llama_index.llms.ollama import Ollama
+from pydantic import BaseModel
 from sqlalchemy import create_engine
 
 
@@ -22,14 +24,14 @@ class Pipeline:
         DB_HOST: str
         DB_PORT: str
         DB_USER: str
-        DB_PASSWORD: str        
+        DB_PASSWORD: str
         DB_DATABASE: str
         DB_TABLE: str
         OLLAMA_HOST: str
-        TEXT_TO_SQL_MODEL: str 
+        TEXT_TO_SQL_MODEL: str
 
 
-    # Update valves/ environment variables based on your selected database 
+    # Update valves/ environment variables based on your selected database
     def __init__(self):
         self.name = "Database RAG Pipeline"
         self.engine = None
@@ -40,13 +42,13 @@ class Pipeline:
             **{
                 "pipelines": ["*"],                                                           # Connect to all pipelines
                 "DB_HOST": os.getenv("DB_HOST", "http://localhost"),                     # Database hostname
-                "DB_PORT": os.getenv("DB_PORT", 5432),                                        # Database port 
+                "DB_PORT": os.getenv("DB_PORT", 5432),                                        # Database port
                 "DB_USER": os.getenv("DB_USER", "postgres"),                                  # User to connect to the database with
                 "DB_PASSWORD": os.getenv("DB_PASSWORD", "password"),                          # Password to connect to the database with
                 "DB_DATABASE": os.getenv("DB_DATABASE", "postgres"),                          # Database to select on the DB instance
-                "DB_TABLE": os.getenv("DB_TABLE", "table_name"),                            # Table(s) to run queries against 
+                "DB_TABLE": os.getenv("DB_TABLE", "table_name"),                            # Table(s) to run queries against
                 "OLLAMA_HOST": os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434"), # Make sure to update with the URL of your Ollama host, such as http://localhost:11434 or remote server address
-                "TEXT_TO_SQL_MODEL": os.getenv("TEXT_TO_SQL_MODEL", "llama3.1:latest")            # Model to use for text-to-SQL generation      
+                "TEXT_TO_SQL_MODEL": os.getenv("TEXT_TO_SQL_MODEL", "llama3.1:latest")            # Model to use for text-to-SQL generation
             }
         )
 
@@ -98,11 +100,11 @@ class Pipeline:
         text_to_sql_template = PromptTemplate(text_to_sql_prompt)
 
         query_engine = NLSQLTableQueryEngine(
-            sql_database=sql_database, 
+            sql_database=sql_database,
             tables=[self.valves.DB_TABLE],
-            llm=llm, 
-            embed_model="local", 
-            text_to_sql_prompt=text_to_sql_template, 
+            llm=llm,
+            embed_model="local",
+            text_to_sql_prompt=text_to_sql_template,
             streaming=True
         )
 

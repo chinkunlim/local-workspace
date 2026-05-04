@@ -1,10 +1,9 @@
-import os
-import requests
-from typing import Literal, List, Optional
 from datetime import datetime
-
+import os
+from typing import Literal
 
 from blueprints.function_calling_blueprint import Pipeline as FunctionCallingBlueprint
+import requests
 
 
 class Pipeline(FunctionCallingBlueprint):

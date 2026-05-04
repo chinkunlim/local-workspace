@@ -9,14 +9,16 @@ requirements: requests, mlx-lm, huggingface-hub
 environment_variables: MLX_HOST, MLX_PORT, MLX_SUBPROCESS
 """
 
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
-from pydantic import BaseModel
-import requests
+from collections.abc import Generator, Iterator
+import logging
 import os
 import subprocess
-import logging
+from typing import List, Union
+
 from huggingface_hub import login
+from pydantic import BaseModel
+import requests
+
 
 class Pipeline:
     class Valves(BaseModel):

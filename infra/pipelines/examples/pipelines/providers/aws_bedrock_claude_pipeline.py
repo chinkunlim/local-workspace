@@ -9,18 +9,16 @@ requirements: requests, boto3
 environment_variables: AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION_NAME
 """
 import base64
+from collections.abc import Generator, Iterator
+from io import BytesIO
 import json
 import logging
-from io import BytesIO
-from typing import List, Union, Generator, Iterator, Optional, Any
+import os
+from typing import List, Optional, Union
 
 import boto3
-
 from pydantic import BaseModel
-
-import os
 import requests
-
 from utils.pipelines.main import pop_system_message
 
 REASONING_EFFORT_BUDGET_TOKEN_MAP = {
@@ -180,14 +178,14 @@ class Pipeline:
                 },
                 "additionalModelRequestFields": {}
             }
-            
+
             # Handle top_p and temperature conflict
             if "top_p" in body:
                 payload["inferenceConfig"]["topP"] = body["top_p"]
                 # Remove temperature if top_p is explicitly set
                 if "temperature" in payload["inferenceConfig"]:
                     del payload["inferenceConfig"]["temperature"]
-                    
+
             # Add top_k if explicitly provided
             if "top_k" in body:
                 payload["additionalModelRequestFields"]["top_k"] = body["top_k"]
@@ -204,7 +202,7 @@ class Pipeline:
                 if (
                     not budget_tokens
                     and reasoning_effort is not None
-                    and reasoning_effort not in REASONING_EFFORT_BUDGET_TOKEN_MAP.keys()
+                    and reasoning_effort not in REASONING_EFFORT_BUDGET_TOKEN_MAP
                 ):
                     try:
                         budget_tokens = int(reasoning_effort)

@@ -8,10 +8,9 @@ description: A pipeline for retrieving relevant information from a knowledge bas
 requirements: r2r
 """
 
-from typing import List, Union, Generator, Iterator
-from schemas import OpenAIChatMessage
+from collections.abc import Generator, Iterator
 import os
-import asyncio
+from typing import List, Union
 
 
 class Pipeline:

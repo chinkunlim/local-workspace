@@ -1,7 +1,9 @@
-from typing import List, Union, Generator, Iterator
+from collections.abc import Generator, Iterator
+import os
+from typing import List, Union
+
 from pydantic import BaseModel
 import requests
-import os
 
 
 class Pipeline:
@@ -34,7 +36,7 @@ class Pipeline:
         pass
 
     async def on_valves_updated(self):
-        self.set_pipelines()        
+        self.set_pipelines()
 
     async def on_startup(self):
         # This function is called when the server is started.

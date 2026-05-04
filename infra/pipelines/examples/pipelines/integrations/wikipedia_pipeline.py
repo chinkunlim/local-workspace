@@ -11,16 +11,17 @@ licence: MIT
 """
 
 
-from typing import List, Union, Generator, Iterator
+from collections.abc import Generator, Iterator
+from datetime import datetime
+from logging import getLogger
+import os
+import re
+import time
+from typing import List, Union
+
 from pydantic import BaseModel, Field
 import wikipedia
-import requests
-import os
-from datetime import datetime
-import time
-import re
 
-from logging import getLogger
 logger = getLogger(__name__)
 logger.setLevel("DEBUG")
 
@@ -73,10 +74,10 @@ class Pipeline:
         return True
 
     def pipe(
-        self, 
-        user_message: str, 
-        model_id: str, 
-        messages: List[dict], 
+        self,
+        user_message: str,
+        model_id: str,
+        messages: List[dict],
         body: dict
     ) -> Union[str, Generator, Iterator]:
         """
@@ -97,11 +98,11 @@ class Pipeline:
         logger.info(f"User Message: {user_message}")
         # logger.info(f"Messages: {messages}")
         # [{'role': 'user', 'content': 'history of ibm'}]
-        
+
         # logger.info(f"Body: {body}")
-        #  {'stream': True, 'model': 'wikipedia_pipeline', 
-        #   'messages': [{'role': 'user', 'content': 'history of ibm'}], 
-        #   'user': {'name': 'User', 'id': '235a828f-84a3-44a0-b7af-721ee8be6571', 
+        #  {'stream': True, 'model': 'wikipedia_pipeline',
+        #   'messages': [{'role': 'user', 'content': 'history of ibm'}],
+        #   'user': {'name': 'User', 'id': '235a828f-84a3-44a0-b7af-721ee8be6571',
         #            'email': 'admin@localhost', 'role': 'admin'}}
 
         dt_start = datetime.now()
@@ -127,7 +128,7 @@ class Pipeline:
                 for chunk in self.stream_retrieve(query, dt_start):
                     context += chunk
             multi_part = True
-        
+
         if not streaming:
             return context if context else "No information found"
 
@@ -203,7 +204,7 @@ class Pipeline:
         else:
             yield summary_full + "\n"
 
-        # the more you know! link to further reading        
+        # the more you know! link to further reading
         yield "### Learn More" + "\n"
         yield f"* [Read more on Wikipedia...]({wiki_page.url})\n"
 
