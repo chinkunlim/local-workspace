@@ -9,7 +9,7 @@ paths:
     p2: "output/02_anki"
 
 models:
-  default: "qwen2.5-coder:7b"
+  default: "qwen3:8b"
   fallback: "gemma3:4b"   # Circuit Breaker fallback (#11)
 
 options:

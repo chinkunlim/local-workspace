@@ -72,7 +72,7 @@ class Phase2Synthesis(PhaseBase):
 
                 print("✍️  正在綜合學習與生成最終筆記...")
                 try:
-                    final_note = self.llm.generate(model="qwen2.5-coder:7b", prompt=prompt)
+                    final_note = self.llm.generate(model="qwen3:8b", prompt=prompt)
                 except Exception as e:
                     print(f"❌ 生成失敗: {e}")
                     continue

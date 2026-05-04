@@ -20,7 +20,7 @@ import os
 from core import PhaseBase
 from core.ai.llm_client import OllamaClient
 
-_SYNTHESIS_MODEL = "qwen2.5-coder:7b"
+_SYNTHESIS_MODEL = "qwen3:8b"
 
 
 class Phase2DebateSynthesis(PhaseBase):

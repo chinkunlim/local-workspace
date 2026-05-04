@@ -1,5 +1,5 @@
 models:
-  default: "qwen2.5-coder:7b"
+  default: "qwen3:8b"
   vlm: "llava:7b"
   whisper: "mlx-community/whisper-large-v3-turbo"
 

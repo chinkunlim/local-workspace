@@ -41,7 +41,7 @@ class Phase1ClaimExtraction(PhaseBase):
 
                 print("🧠 正在萃取需查證之論點...")
                 try:
-                    response = self.llm.generate(model="qwen2.5-coder:7b", prompt=prompt)
+                    response = self.llm.generate(model="qwen3:8b", prompt=prompt)
 
                     # Clean up JSON
                     start_idx = response.find("[")

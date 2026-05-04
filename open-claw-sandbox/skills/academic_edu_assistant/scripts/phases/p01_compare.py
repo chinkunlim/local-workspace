@@ -114,7 +114,7 @@ class Phase1Compare(PipelineBase):
 
 請以繁體中文撰寫結構嚴謹的比較報告：
 """
-        model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
+        model_name = self.config_manager.get_nested("models", "default") or "qwen3:8b"
 
         pbar, stop_tick, t = self.create_spinner(f"LLM 分析與生成報告中 ({model_name})...")
         try:

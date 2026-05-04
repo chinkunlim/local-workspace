@@ -15,7 +15,7 @@ class Phase1Interactive(PipelineBase):
     def __init__(self):
         super().__init__(phase_key="p1", phase_name="互動標籤處理", skill_name="interactive_reader")
         self.wiki_dir = os.path.abspath(os.path.join(self.base_dir, "..", "wiki"))
-        self.model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
+        self.model_name = self.config_manager.get_nested("models", "default") or "qwen3:8b"
 
     def _process_file(self, idx: int, task: dict, total: int):
         fname = task["filename"]

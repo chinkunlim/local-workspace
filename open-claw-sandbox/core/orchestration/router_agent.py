@@ -156,7 +156,7 @@ class RouterAgent:
         try:
             # Use the complexity-selected model for routing decomposition only.
             # This does NOT affect downstream skills, which use their own config.yaml models.
-            routing_model = os.environ.get("OPENCLAW_ROUTER_MODEL", "qwen2.5-coder:7b")
+            routing_model = os.environ.get("OPENCLAW_ROUTER_MODEL", "qwen3:8b")
             raw = self._llm.generate(model=routing_model, prompt=prompt)
             skills = [s.strip() for s in raw.split(",") if s.strip()]
             return [
@@ -189,7 +189,7 @@ class RouterAgent:
         if any(k in manifest.intent.lower() for k in complex_keywords):
             manifest.model = "deepseek-r1:14b"
         else:
-            manifest.model = "qwen2.5-coder:7b"
+            manifest.model = "qwen3:8b"
 
         # 1. Natural language decomposition if intent is not a simple keyword
         if manifest.intent not in ["auto", "study", "compile"] and len(manifest.intent) > 10:
@@ -219,7 +219,7 @@ class RouterAgent:
         subject = payload.get("subject", "Default")
         filepath = payload.get("filepath", "")
         file_id = os.path.splitext(os.path.basename(filepath))[0]
-        model = payload.get("model") or "qwen2.5-coder:7b"
+        model = payload.get("model") or "qwen3:8b"
         env = {"OPENCLAW_ROUTER_MODEL": model}
 
         print(f"🗺️  [RouterAgent] 接力觸發: {current_skill} -> {next_skill} (Model: {model})")

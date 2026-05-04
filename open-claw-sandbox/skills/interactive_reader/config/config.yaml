@@ -1,7 +1,7 @@
 # Open Claw Configuration
 
 phase01:
-  model: "qwen2.5-coder:7b"
+  model: "qwen3:8b"
   options:
     temperature: 0
     num_predict: 2048

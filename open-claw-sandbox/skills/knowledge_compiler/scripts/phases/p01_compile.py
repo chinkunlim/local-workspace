@@ -27,7 +27,7 @@ class Phase1Compile(PipelineBase):
         self.wiki_dir = os.path.realpath(output_cfg.get("wiki_dir", default_wiki))
         os.makedirs(self.wiki_dir, exist_ok=True)
 
-        self.model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
+        self.model_name = self.config_manager.get_nested("models", "default") or "qwen3:8b"
 
         # P1-6: Load system prompt from prompt.md (externalised — no more inline string literals)
         self._prompt_tpl = ""

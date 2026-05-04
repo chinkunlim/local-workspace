@@ -1,11 +1,11 @@
 # Open Claw — Knowledge Compiler Configuration
 
 models:
-  default: "qwen2.5-coder:7b"
+  default: "qwen3:8b"
   fallback: "gemma3:4b"
 
 phase01:
-  model: "qwen2.5-coder:7b"
+  model: "qwen3:8b"
   options:
     temperature: 0
     num_predict: 2048
@@ -37,5 +37,5 @@ hybrid_retriever:
   vector_top_k: 10
   graph_max_hops: 1
   rerank: true
-  rerank_model: "qwen2.5-coder:7b"
+  rerank_model: "qwen3:8b"
   rerank_top_n: 5

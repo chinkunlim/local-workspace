@@ -40,7 +40,7 @@ def main():
     ollama_api_url = "http://127.0.0.1:11434/api"
     ollama_client = OllamaClient(api_url=f"{ollama_api_url}/generate")
     embed_model = "nomic-embed-text"
-    generate_model = "qwen2.5-coder:7b"
+    generate_model = "qwen3:8b"
 
     db_path = os.path.join(WORKSPACE_ROOT, "data", "telegram_kb_agent", "state", "chroma_db")
     if not os.path.exists(db_path):

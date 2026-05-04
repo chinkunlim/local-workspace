@@ -16,5 +16,5 @@ python3 skills/feynman_simulator/scripts/run_all.py --process-all
 
 ## Config Pointers
 
-- `config/config.yaml`: Sets model choices (e.g., `qwen2.5-coder:7b`) and debate rounds limit.
+- `config/config.yaml`: Sets model choices (e.g., `qwen3:8b`) and debate rounds limit.
 - Playwright persistent context is used for Gemini interaction.

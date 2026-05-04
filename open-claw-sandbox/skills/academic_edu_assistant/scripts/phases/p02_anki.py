@@ -120,7 +120,7 @@ class Phase2Anki(PipelineBase):
 {content}
 【比較報告結束】
 """
-        model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
+        model_name = self.config_manager.get_nested("models", "default") or "qwen3:8b"
         pbar, stop_tick, t = self.create_spinner(f"生成 Anki 卡片 ({fname}) using {model_name}...")
         try:
             response = self.llm.generate(model=model_name, prompt=prompt)

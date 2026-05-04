@@ -2,7 +2,7 @@
 model_profile: default
 models:
   default:
-    name: "qwen2.5-coder:7b"
+    name: "qwen3:8b"
     temperature: 0.0
 
 directories:

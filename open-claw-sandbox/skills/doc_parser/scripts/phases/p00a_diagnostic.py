@@ -360,7 +360,7 @@ class Phase0aDiagnostic(PipelineBase):
         model_name = (
             self.config_manager.get_nested("models", "diagnostic_classifier")
             or self.config_manager.get_nested("models", "default")
-            or "qwen2.5-coder:7b"
+            or "qwen3:8b"
         )
 
         prompt = f"{intent_prompt}\n\n【文件前兩頁摘要】:\n{sample}\n\n請只輸出分類結果（academic/report/manual/other），不要輸出任何解釋。"

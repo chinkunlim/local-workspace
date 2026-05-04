@@ -61,7 +61,7 @@ class Phase2ExtractGraph(PipelineBase):
         self.wiki_dir = os.path.realpath(output_cfg.get("wiki_dir", default_wiki))
         self.graph = get_graph_store(self.workspace_root, skill_name="knowledge_compiler")
         self.llm = OllamaClient()
-        self.model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
+        self.model_name = self.config_manager.get_nested("models", "default") or "qwen3:8b"
 
     # ── Parsing ───────────────────────────────────────────────────────────
 

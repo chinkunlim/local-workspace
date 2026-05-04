@@ -8,7 +8,7 @@ Config (config.yaml):
       vector_top_k: 10
       graph_max_hops: 1
       rerank: true
-      rerank_model: "qwen2.5-coder:7b"
+      rerank_model: "qwen3:8b"
       rerank_top_n: 5
     vector_db:
       path: "skills/telegram_kb_agent/state/chroma_db"
@@ -48,7 +48,7 @@ class HybridRetriever:
         self._vector_top_k: int = hr.get("vector_top_k", 10)
         self._graph_max_hops: int = hr.get("graph_max_hops", 1)
         self._rerank: bool = hr.get("rerank", True)
-        self._rerank_model: str = hr.get("rerank_model", "qwen2.5-coder:7b")
+        self._rerank_model: str = hr.get("rerank_model", "qwen3:8b")
         self._rerank_top_n: int = hr.get("rerank_top_n", 5)
 
         vec = cfg.get_section("vector_db") or {}
