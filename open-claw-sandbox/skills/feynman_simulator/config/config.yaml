@@ -1,8 +1,9 @@
 model_profile: default
 models:
   default:
-    name: "qwen2.5-coder:7b"
-    temperature: 0.3        # Slightly non-zero: creativity helps explanation diversity
+    # name: "qwen2.5-coder:7b"   # previous — lightweight but weaker reasoning
+    name: "deepseek-r1:8b"        # chain-of-thought reasoning; better for Socratic debate
+    temperature: 0.3              # Slightly non-zero: creativity helps explanation diversity
 
 directories:
   input: "data/feynman_simulator/input"
