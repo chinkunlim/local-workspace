@@ -71,7 +71,7 @@ class PipelineBase:
         self.logger = logger
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        default_workspace = os.path.abspath(os.path.join(script_dir, ".."))
+        default_workspace = os.path.abspath(os.path.join(script_dir, "..", ".."))
         self.workspace_root = os.environ.get("WORKSPACE_DIR", default_workspace)
 
         self.path_builder = PathBuilder(self.workspace_root, skill_name)

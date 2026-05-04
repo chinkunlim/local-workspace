@@ -33,7 +33,7 @@ def _find_openclawed_root(script_file: str) -> str:
             return candidate
     # Fallback: WORKSPACE_DIR env or cwd
     return os.environ.get(
-        "WORKSPACE_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        "WORKSPACE_DIR", os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     )
 
 
