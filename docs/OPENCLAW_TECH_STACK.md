@@ -56,3 +56,24 @@
 * **SSoT (Single Source of Truth) Documentation**: Strict governance over `ARCHITECTURE.md` and `DECISIONS.md`. Abandoned concepts are labeled `[ABANDONED]`, never deleted.
 * **Git Hygiene**: `.gitignore` strategies to exclude VRAM caches, DB files, and secrets (`.env`). Conventional Commits format enforced.
 * **Daemon Processes**: `inbox_daemon.py` and `watchdog.sh` for event-driven architecture, moving away from manual script execution to background automation.
+
+## 9. Software Design Patterns
+* **Template Method Pattern**: Implemented in `PipelineBase.run_skill_pipeline()`. The core engine defines the immutable skeleton of execution (health checks, logging, DAG tracking, graceful exit), while subclasses (`Phase1Transcribe`, `Phase2Proofread`) only override the specific business logic.
+* **Observer / Event-Driven Pattern**: Managed by `inbox_daemon.py`. The system reacts to file system events asynchronously rather than requiring manual polling or cron jobs.
+* **Dependency Injection (DI)**: `PipelineBase.__init__` accepts `llm_client`, `state_manager`, and `config_manager` as constructor arguments. This allows injecting Mock objects during Pytest execution, adhering strictly to the Dependency Inversion Principle (DIP).
+* **Singleton (Resource Bottleneck)**: `LocalTaskQueue` acts as a global singleton. All parallel background events are funneled into this single lane to enforce strictly sequential AI processing and prevent hardware exhaustion.
+* **Facade Pattern**: `OllamaClient` masks complex HTTP requests, retries, exponential backoffs, and JSON-parsing fallbacks behind a simple, unified `.generate()` interface.
+
+## 10. Advanced Python Techniques
+* **Generators (`yield`) for Streaming**: Used extensively in `faster-whisper` and large text chunk processing to evaluate massive data streams incrementally without loading the entire dataset into RAM.
+* **Context Managers (`with`) for Resource Control**: Used for robust file I/O and low-level C-library silencing. Example: Temporarily re-routing UNIX file descriptors via `os.dup2` inside a `try/finally` block to hide `tqdm` output from third-party libraries.
+* **Decorators (`@classmethod`, `@staticmethod`, `@dataclass`)**: Enhancing classes without boilerplate. `@dataclass` automatically generates `__init__`, `__repr__`, and `__eq__` for DTOs like `PipelineResponse` and `HITLEvent`.
+* **Forward References**: `from __future__ import annotations` is used to solve circular import issues when classes reference themselves or future classes in type hints.
+* **Custom Exception Hierarchies**: Building granular control flow using exceptions. E.g., `ConfigValidationError` (Fail-fast on boot) vs. `HITLPendingInterrupt` (Used for pipeline suspension and state serialization, not actually an "error").
+* **Algorithmic Heuristics (zlib)**: Exploiting the `zlib` compression algorithm (`zlib.compress`) to mathematically detect low-entropy text (identifying LLM hallucination loops by calculating the compression ratio).
+
+## 11. Testing & CI/CD Practices
+* **Static Type Checking**: `Mypy` enforcement across the `core/` package to catch `NoneType` and parameter mismatch errors before runtime.
+* **Ultra-Fast Linting**: `Ruff` (Rust-based) for instant code formatting, replacing `flake8`, `black`, and `isort`.
+* **Mocking (`unittest.mock.patch`)**: Deep module patching to isolate unit tests from the actual file system, network, or expensive LLM API calls.
+* **Automated Quality Gates**: Shell scripts (`ops/check.sh`) executing linting, credential scanning, and Pytest pipelines, acting as a local CI/CD runner before commits are permitted.
