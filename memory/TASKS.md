@@ -1,6 +1,6 @@
 # TASKS.md — Task List
 
-> **Last Updated:** 2026-04-19
+> **Last Updated:** 2026-05-04
 > **Maintained by:** Current working agent — update on every state change
 
 ---
@@ -14,7 +14,7 @@
 ## 🟡 Medium Priority
 
 - [ ] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
-- [ ] Run live end-to-end pipeline test: `.m4a` → `data/wiki/` (confirm all 6 phases)
+- [ ] Run live end-to-end pipeline test: `.m4a` / `.mp4` → `data/wiki/` (confirm all phases)
 - [ ] Rebuild ChromaDB index and validate a Telegram RAG query
 
 ---
@@ -27,6 +27,11 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-05-04: Open Claw v9.0 Upgrade — Multi-Agent & GraphRAG
+  - Implemented `feynman_simulator` and `video_ingester`
+  - Integrated `sm2.py` spaced repetition and `scheduler.py` daemon
+  - Performed comprehensive SSoT Documentation Sync
 
 - [x] 2026-05-02: Comprehensive Documentation SSoT Sync
   - `USER_MANUAL.md` updated with Intent-Driven architecture and HITL guide

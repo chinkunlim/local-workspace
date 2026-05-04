@@ -1,27 +1,23 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-04-19
+> **Last Updated:** 2026-05-04
 > **Worker:** Jinkun + Antigravity (Google DeepMind)
-> **System Status:** ✅ Stable / Production-Ready (Phase 1 Sign-off)
+> **System Status:** ✅ Stable / Production-Ready (Phase 3 Sign-off)
 
 ---
 
 ## Final Sign-off Summary
 
-**Date:** 2026-05-02
-**Milestone:** v8.2 — Intent-Driven Architecture & Documentation Sync
+**Date:** 2026-05-04
+**Milestone:** v9.0 — Multi-Agent & GraphRAG Upgrades
 
 ### Completed This Session
 
-- [x] **Architecture Overhaul** — Migrated from hardcoded `.m4a`/`.pdf` rules in `inbox_daemon.py` to a dynamic `RouterAgent`.
-- [x] **Event-Driven Handoffs** — Integrated `EventBus` with `TaskQueue` to emit `PipelineCompleted` upon subprocess success, allowing `RouterAgent` to auto-enqueue downstream skills without OOM risks.
-- [x] **Manifest Standardisation** — All skills now expose a `manifest.py` for dynamic discovery via `SkillRegistry`.
-- [x] **Engineering-grade documentation update:**
-  - `USER_MANUAL.md` — Extended with automated routing and HITL verification guides.
-  - `STRUCTURE.md` & `INDEX.md` — Updated to reflect the Intent-Driven orchestrator roles.
-  - `DECISIONS.md` — ADR added for EventBus IPC bridging.
-  - `CHANGELOG.md` — v8.2 release block added.
-  - `memory/TASKS.md` & `memory/HANDOFF.md` — Updated for session handoff.
+- [x] **Multi-Agent Feynman Simulator**: Implemented Student (Ollama) vs Tutor (Gemini) debate via Playwright.
+- [x] **GraphRAG Upgrades**: Added local NetworkX `.gpickle` implicit relation triples.
+- [x] **Spaced Repetition Engine (SM-2)**: Native Python Anki-like scheduling with Telegram push/review.
+- [x] **Multimodal Video Ingestion**: FFmpeg keyframe + MLX-Whisper text interleaving.
+- [x] **Global Documentation SSoT Sync**: Updated all `USER_MANUAL`, `ARCHITECTURE`, and `STRUCTURE` records.
 
 ---
 

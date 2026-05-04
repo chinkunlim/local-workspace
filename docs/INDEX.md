@@ -55,6 +55,8 @@ Each of the 9 core skills inside `open-claw-sandbox/skills/` maintains absolute 
 | **`academic_edu_assistant`** | Anki export & Multi-doc RAG | [Architecture](../open-claw-sandbox/skills/academic_edu_assistant/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/academic_edu_assistant/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/academic_edu_assistant/docs/DECISIONS.md) |
 | **`telegram_kb_agent`** | Telegram Bot RAG interface | [Architecture](../open-claw-sandbox/skills/telegram_kb_agent/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/telegram_kb_agent/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/telegram_kb_agent/docs/DECISIONS.md) |
 | **`inbox_manager`** | CLI config route mutator | [Architecture](../open-claw-sandbox/skills/inbox_manager/docs/ARCHITECTURE.md) \| [Claude](../open-claw-sandbox/skills/inbox_manager/docs/CLAUDE.md) \| [Decisions](../open-claw-sandbox/skills/inbox_manager/docs/DECISIONS.md) |
+| **`feynman_simulator`** | Multi-agent Socratic debate loop | [SKILL](../open-claw-sandbox/skills/feynman_simulator/SKILL.md) |
+| **`video_ingester`** | Multimodal video processing pipeline | [SKILL](../open-claw-sandbox/skills/video_ingester/SKILL.md) |
 
 > [!TIP]
 > **To Developers & AI Agents:** Always consult this `INDEX.md` before generating new documentation. Ensure that any architectural shift is logged in the appropriate `DECISIONS.md` (global or skill-level) and that no history is ever deleted.
