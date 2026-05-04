@@ -597,12 +597,20 @@ class Phase1Transcribe(PipelineBase):
 
                     import mlx_whisper
 
-                    # ── 顯示：只在檔案層級，不對每個 chunk 顯示 spinner ──
                     _n_chunks = len(_audio_paths_to_transcribe)
+                    chunk_iter = _audio_paths_to_transcribe
+                    
                     if _n_chunks > 1:
-                        self.log(f"   📦 共 {_n_chunks} 個區塊，逐一轉錄中...")
+                        from tqdm import tqdm
+                        self.log(f"   📦 共 {_n_chunks} 個區塊，啟動批次轉錄...")
+                        chunk_iter = tqdm(
+                            _audio_paths_to_transcribe,
+                            desc="   轉錄進度",
+                            unit="區塊",
+                            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
+                        )
 
-                    for _chunk_path in _audio_paths_to_transcribe:
+                    for _chunk_path in chunk_iter:
                         # 同時壓制 stdout(fd 1) 與 stderr(fd 2)，
                         # 避免 mlx_whisper 內部 tqdm 進度條輸出至終端
                         with open(os.devnull, "w") as _devnull, warnings.catch_warnings():
@@ -629,9 +637,6 @@ class Phase1Transcribe(PipelineBase):
                                 os.close(_old_err)
                                 os.close(_old_out)
                         segments.extend(result.get("segments", []))
-
-                    if _n_chunks > 1:
-                        self.log(f"   ✅ {_n_chunks} 個區塊轉錄完成，開始後處理...")
 
                 else:  # faster-whisper
                     from tqdm import tqdm
