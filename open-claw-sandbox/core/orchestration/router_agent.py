@@ -187,9 +187,9 @@ class RouterAgent:
         # Context-Aware Model Routing (P4)
         complex_keywords = ["debate", "research", "feynman", "analyze", "deep", "study"]
         if any(k in manifest.intent.lower() for k in complex_keywords):
-            manifest.model = "deepseek-r1:14b"
+            manifest.model = "qwen3:14b"     # high-complexity: strong multilingual reasoning
         else:
-            manifest.model = "qwen3:8b"
+            manifest.model = "qwen3:8b"      # low-complexity: fast, efficient
 
         # 1. Natural language decomposition if intent is not a simple keyword
         if manifest.intent not in ["auto", "study", "compile"] and len(manifest.intent) > 10:
