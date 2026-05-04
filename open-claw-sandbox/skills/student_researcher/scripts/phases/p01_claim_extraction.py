@@ -41,7 +41,8 @@ class Phase1ClaimExtraction(PhaseBase):
 
                 print("🧠 正在萃取需查證之論點...")
                 try:
-                    response = self.llm.generate(model="deepseek-r1:8b"  # primary; fallback to qwen3:8b via config, prompt=prompt)
+                    # primary: deepseek-r1:8b (CoT); fallback: qwen3:8b (via config.yaml)
+                    response = self.llm.generate(model="deepseek-r1:8b", prompt=prompt)
 
                     # Clean up JSON
                     start_idx = response.find("[")

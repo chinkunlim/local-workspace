@@ -72,7 +72,8 @@ class Phase2Synthesis(PhaseBase):
 
                 print("✍️  正在綜合學習與生成最終筆記...")
                 try:
-                    final_note = self.llm.generate(model="deepseek-r1:8b"  # primary; fallback to qwen3:8b via config, prompt=prompt)
+                    # primary: deepseek-r1:8b (CoT synthesis); fallback: qwen3:8b (via config.yaml)
+                    final_note = self.llm.generate(model="deepseek-r1:8b", prompt=prompt)
                 except Exception as e:
                     print(f"❌ 生成失敗: {e}")
                     continue
