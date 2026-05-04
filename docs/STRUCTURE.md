@@ -75,7 +75,6 @@ core/
 ├── orchestration/            ← Central task management and DAG routing
 │   ├── router_agent.py       ← Intent parsing and skill chain resolution; subscribes to PipelineCompleted for auto-handoff
 │   ├── task_queue.py         ← Single-threaded execution lock with DLQ; broadcasts PipelineCompleted event on success
-│   ├── scheduler.py          ← Task scheduling mechanisms
 │   ├── event_bus.py          ← In-process Pub/Sub event dispatcher for bridging sub-process outputs
 │   ├── pipeline_base.py      ← Abstract base class for ALL Phase scripts
 │   ├── run_all_pipelines.py  ← Global PID-locked pipeline orchestrator
@@ -85,7 +84,9 @@ core/
 │   ├── telegram_bot.py       ← Telegram integration for notifications and RAG queries
 │   ├── inbox_daemon.py       ← Watchdog background process monitoring Inboxes; delegates routing to RouterAgent
 │   ├── hitl_manager.py       ← Human-in-the-loop (HITL) interrupt management (Web UI Gates)
-│   └── security_manager.py   ← Input security scanning (PDF sanitisation)
+│   ├── security_manager.py   ← Input security scanning (PDF sanitisation)
+│   ├── sm2.py                ← SuperMemo-2 spaced repetition algorithm engine
+│   └── scheduler.py          ← APScheduler background daemon for recurring tasks and Anki pushes
 │
 ├── ai/                       ← LLM interactions and Knowledge Retrieval
 │   ├── llm_client.py         ← Ollama/OpenAI client with async and circuit breaker

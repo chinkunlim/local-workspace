@@ -57,7 +57,10 @@ graph TD
 This is your **only manual input point**. You never need to touch any other data directory. Simply:
 
 1. Create a subfolder named after your subject: `data/raw/Cognitive_Psychology/`
-2. Drop your files in: `data/raw/Cognitive_Psychology/lecture01.m4a`
+2. Drop your files in:
+   - Audio: `lecture01.m4a`
+   - PDF: `textbook.pdf`
+   - Video: `class_recording.mp4` (or `.mov`, `.mkv`)
 3. The `inbox_daemon` detects the file, waits for it to stabilize (debounce), and hands it to the `RouterAgent`.
 4. The `RouterAgent` resolves the required Skill Chain (e.g. `[audio_transcriber, note_generator, knowledge_compiler]`) and enqueues the first task.
 5. As each skill successfully completes, it fires a `PipelineCompleted` event, which automatically triggers the next skill in the chain.
@@ -68,11 +71,37 @@ This is your finished knowledge base. Open it as an Obsidian vault to get:
 - Bi-directional `[[WikiLinks]]` between related concepts
 - Mermaid mind maps embedded in each note
 - Cornell-format lecture notes with YAML metadata
+- `[[WikiLinks]]` for concept network navigation
+- Cornell-format lecture notes with YAML metadata
 - Highlighted key terms and definitions
+- **Cross-Semester Semantic Links**: related past notes automatically injected via ChromaDB similarity search
+- Embedded FFmpeg keyframes interleaved with audio transcripts (for video ingestions)
 
 ---
 
-## Part 2: Human-in-the-Loop (HITL) Verification Gates
+## Part 2: Multimodal Video Ingestion
+
+If you drop a video file (`.mp4`, `.mov`, `.mkv`) into `data/raw/`, the system automatically routes it to the `video_ingester` skill.
+1. The system extracts high-quality screenshots (keyframes) every 30 seconds.
+2. It transcribes the video's audio track.
+3. It interleaves the screenshots with the text, creating an illustrated Markdown document.
+4. The output is forwarded to `note_generator` and compiled into your Obsidian vault.
+
+---
+
+## Part 3: Spaced Repetition via Telegram
+
+Open Claw includes a built-in **SuperMemo-2 (SM-2)** engine to help you retain knowledge. When you process academic notes, the system automatically generates Anki flashcards.
+
+1. **Daily Push**: At 09:00 AM every day, the `scheduler` daemon checks for due cards and sends them to your connected Telegram account.
+2. **Interactive Review**:
+   - Reply to a card with `/reveal <card_id>` to view the answer.
+   - Reply with `/rate <card_id> <0-5>` to score your memory (5 = Perfect, 0 = Forgot completely).
+3. The SM-2 algorithm will automatically schedule the next review date based on your score.
+
+---
+
+## Part 4: Human-in-the-Loop (HITL) Verification Gates
 
 Open Claw enforces strict GIGO (Garbage-In, Garbage-Out) prevention. Before allowing potentially hallucinated data to pollute your knowledge base, the system will pause and ask for your verification.
 
@@ -91,7 +120,7 @@ When a skill (like `audio_transcriber` Phase 2, or `academic_edu_assistant` Anki
 
 ---
 
-## Part 3: Starting and Stopping
+## Part 5: Starting and Stopping
 
 ### Start All Services
 
@@ -121,7 +150,7 @@ This launches:
 
 ---
 
-## Part 4: Processing Files Manually (Advanced)
+## Part 6: Processing Files Manually (Advanced)
 
 While the `RouterAgent` handles automatic chaining, you can also trigger pipelines manually via CLI. This is useful for forcing re-runs or resuming from checkpoints.
 
@@ -169,7 +198,7 @@ python3 skills/knowledge_compiler/scripts/run_all.py --process-all
 
 ---
 
-## Part 5: Checking Progress
+## Part 7: Checking Progress
 
 ### Task Queue Status
 Because tasks are executed in a single-threaded queue to prevent memory blowouts (OOM), you can view the queue activity in the main inbox daemon logs:
@@ -191,7 +220,7 @@ cat open-claw-sandbox/data/doc_parser/state/checklist.md
 
 ---
 
-## Part 6: Obsidian Vault Setup
+## Part 8: Obsidian Vault Setup
 
 1. Open **Obsidian** → `Open folder as vault`
 2. Navigate to: `~/Desktop/local-workspace/open-claw-sandbox/data/wiki/`
@@ -206,7 +235,7 @@ Your knowledge base is fully structured with:
 
 ---
 
-## Part 7: Troubleshooting
+## Part 9: Troubleshooting
 
 | Problem | Solution |
 |---|---|
@@ -218,7 +247,7 @@ Your knowledge base is fully structured with:
 
 ---
 
-## Part 8: Monorepo Structure Reference
+## Part 10: Monorepo Structure Reference
 
 ```
 local-workspace/

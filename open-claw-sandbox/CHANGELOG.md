@@ -5,9 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [V9.0] — 2026-05-04: Multi-Agent & GraphRAG Upgrades
 
----
+### Added
+- **`feynman_simulator`**: Multi-agent Socratic debate loop using Playwright to bypass login walls. Student Ollama debates Tutor Gemini.
+- **GraphRAG Upgrade**: `knowledge_compiler` now extracts implicit relation triples via LLM and persists to local `networkx` (`.gpickle`).
+- **Cross-Semester Linking**: `knowledge_compiler` performs ChromaDB Cosine Similarity Search to automatically inject related past notes.
+- **Hybrid Retrieval**: `hybrid_retriever.py` gracefully combines 1-hop Graph expansion with dense Vector search.
+- **Spaced Repetition Engine**: Pure Python SM-2 algorithm implementation in `core/services/sm2.py` coupled with `scheduler.py` (APScheduler).
+- **Telegram Interactive Review**: Users receive daily pushed flashcards and can reply `/reveal <id>` and `/rate <id> <0-5>` directly in Telegram.
+- **`video_ingester`**: Multimodal video ingestion pipeline using FFmpeg keyframes and MLX-Whisper word-level transcripts.
 
 ## [V8.2] — 2026-05-02: Intent-Driven RouterAgent & EventBus Handoff
 

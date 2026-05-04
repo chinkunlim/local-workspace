@@ -6,6 +6,22 @@
 
 ---
 
+## [2026-05-04] ADR-006: Local `networkx` before Neo4j
+
+**Context:** Phase 2B required upgrading the `knowledge_compiler` to extract GraphRAG implicit triples. Initially, migrating the entire graph to a dedicated Neo4j instance was considered for robust querying.
+**Decision:** We chose to persist the graph locally using `networkx` (`.gpickle`) alongside the ChromaDB vector store.
+**Rationale:** The overhead of managing a separate Neo4j instance is unnecessary at this scale. NetworkX provides sufficient in-memory traversal capabilities (e.g., finding multi-hop paths) and can easily serialize to disk. If the graph exceeds memory limits in the future, we can seamlessly migrate the data to Neo4j.
+
+---
+
+## [2026-05-04] ADR-005: Template Method Pattern for `run_all.py` Orchestration
+
+**Context:** Each skill had its own `run_all.py` script with duplicated boilerplate for argparse, error handling, and pipeline instantiation.
+**Decision:** Migrated all skills to use a Template Method pattern provided by `PipelineBase.run_skill_pipeline()`.
+**Rationale:** Centralizing the orchestration logic reduces boilerplate, ensures all skills enforce the same argument parsing (`--force`, `--single`, `--subject`), and standardizes system health checks before running phases.
+
+---
+
 ## [2026-05-01] Intent-Driven Routing & EventBus Task Handoff
 
 **Context:** The system originally relied on hardcoded rules in `inbox_daemon.py` (e.g., `if ext == '.m4a': route to audio_transcriber`). This coupled the daemon tightly to specific skills and prevented multi-skill pipelining. Furthermore, because skills run in isolated subprocesses (to prevent OOM), they couldn't natively trigger the next skill without modifying `inbox_daemon.py`.

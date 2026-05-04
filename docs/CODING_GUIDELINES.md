@@ -361,6 +361,8 @@ def process(self, data: Any) -> Any: ...
 
 ### 8.1 Always Use `build_logger` — Never `print()`
 
+**No `print()` in skill phases.** All console I/O and debug output must use `log_manager`. This ensures that logs are structured, timestamped, and can be correctly captured by the JSON output formatter.
+
 ```python
 # ✅ Correct
 from core.utils.log_manager import build_logger

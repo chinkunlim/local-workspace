@@ -101,6 +101,7 @@ The `core/` directory was refactored from a flat module into domain-specific sub
 | Pipelines | 9099 | `infra/pipelines/` | `infra/scripts/start.sh` |
 | Inbox Daemon | — | `open-claw-sandbox/core/services/inbox_daemon.py` | `infra/scripts/start.sh` |
 | RAM Watchdog | — | `infra/scripts/watchdog.sh` | `infra/scripts/start.sh` |
+| Scheduler | — | `open-claw-sandbox/core/services/scheduler.py` | `infra/scripts/start.sh` |
 
 ---
 
@@ -162,25 +163,26 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
     │    ┌────┴─────────────────────────────┐
     │    │                                  │
     │    ▼                                  ▼
-    │  audio_transcriber/input/       doc_parser/input/
-    │    │  (6-phase pipeline)          │  (7-phase pipeline)
-    │    │  P0: Glossary               │  P00a: Diagnostic
-    │    │  P1: MLX-Whisper [VERBATIM] │  P01a: Docling extract (300DPI)
-    │    │     └─ Word timestamps      │     └─ Caption heuristics
-    │    │     └─ Low-conf [? flags ?] │     └─ Anti-bleed post-proc
-    │    │  P2: Proofread+Gate ────────┤  P01b-S: Text sanitizer
-    │    │     └─ Disfluency purge     │     └─ Header/footer purge
-    │    │     └─ Flag resolution      │     └─ Hyphenation repair
-    │    │     └─ VerificationGate     │  P01b: Vector charts
-    │    │  P3: Merge                  │  P01c: OCR gate
-    │    │  P4: Highlight ──────────► smart_highlighter
-    │    │  P5: Synthesis ──────────► note_generator
+    │  audio_transcriber/input/       doc_parser/input/               video_ingester/input/
+    │    │  (6-phase pipeline)          │  (7-phase pipeline)           │  (2-phase pipeline)
+    │    │  P0: Glossary               │  P00a: Diagnostic             │  P1: Extract Keyframes
+    │    │  P1: MLX-Whisper [VERBATIM] │  P01a: Docling extract (300DPI)│  P2: Transcribe & Interleave
+    │    │     └─ Word timestamps      │     └─ Caption heuristics      │
+    │    │     └─ Low-conf [? flags ?] │     └─ Anti-bleed post-proc    │
+    │    │  P2: Proofread+Gate ────────┤  P01b-S: Text sanitizer        │
+    │    │     └─ Disfluency purge     │     └─ Header/footer purge     │
+    │    │     └─ Flag resolution      │     └─ Hyphenation repair      │
+    │    │     └─ VerificationGate     │  P01b: Vector charts           │
+    │    │  P3: Merge                  │  P01c: OCR gate                │
+    │    │  P4: Highlight ──────────► smart_highlighter                 │
+    │    │  P5: Synthesis ──────────► note_generator ◄──────────────────┘
     │    └────────────────┐           └───────────┬──────┘
     │                     ▼                       │
     │               [ Academic Research Pipeline ]◄
     │                 ├─► student_researcher (Claim Extraction)
-    │                 ├─► academic_library_agent (Elsevier/ScienceDirect Scraper via Playwright)
+    │                 ├─► academic_library_agent (Elsevier/ScienceDirect & ArXiv Fallback)
     │                 ├─► gemini_verifier_agent (AI-to-AI Debate via Gemini Playwright)
+    │                 ├─► feynman_simulator (Socratic Debate Loop)
     │                 └─► student_researcher (APA Synthesis & Obsidian Tags)
     │                     │
     │                     ▼
@@ -248,6 +250,11 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
   - `doc_parser` V2.0: PyMuPDF 300 DPI image extraction via bbox, native caption heuristics, axis-label anti-bleed, new immutable `raw_extracted.md` + sanitized `sanitized.md` Phase 1b-S, VLM bypass for captioned figures.
   - `knowledge_compiler`: WikiLink dead-link guard that downgrades `[[Dead Links]]` to plain text before vault write.
   - `academic_edu_assistant`: VerificationGate at Anki card generation for human approval before AnkiConnect push.
+- **Open Claw v9.0 Multi-Agent & GraphRAG Upgrades** (2026-05): 
+  - `feynman_simulator`: Multi-agent Socratic debate loop (Student Ollama vs Tutor Gemini via persistent Playwright).
+  - `knowledge_compiler`: Extracted implicit relation triples via LLM and implemented Vector/Graph Hybrid Retrieval fallback. Added ChromaDB-powered Cross-Semester Semantic Linking.
+  - `academic_edu_assistant`: Integrated SM-2 Spaced Repetition engine pushing interactive review cards via Telegram.
+  - `video_ingester`: Added multimodal video ingestion pipeline (FFmpeg keyframes interleaved with MLX-Whisper word-level transcripts).
 - **Academic Research Pipeline (2026-05-02)**: Introduced an autonomous AI-to-AI deep research architecture.
   - Replaced traditional MCPs with **Playwright Persistent Contexts** to seamlessly bypass Elsevier/ScienceDirect and Google Gemini login walls without API keys.
   - Integrated `academic_library_agent` for Paywall traversal and clean text snapshotting (minimizing Token limits).
