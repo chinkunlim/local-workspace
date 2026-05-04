@@ -5,11 +5,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.2] — 2026-05-04: Quality-First Model Optimization
+
+### Changed
+- **Quality-First Model Routing** (`core/orchestration/router_agent.py`): High-complexity routing model upgraded from `deepseek-r1:14b` → `qwen3:14b` (already installed, stronger multilingual reasoning for Chinese academic tasks).
+- **`note_generator`**: Active profile switched from `phi4_reasoning` → `qwen3_reasoning` (`qwen3:14b`). Profile `phi4_reasoning` retained as fallback.
+- **`student_researcher`**: Model upgraded from `qwen3:8b` → `deepseek-r1:8b` (CoT reasoning critical for academic claim extraction).
+- **`knowledge_compiler`**: Model upgraded from `qwen3:8b` → `qwen3:14b` (improved entity/WikiLink extraction accuracy). Includes `rerank_model`.
+- **`gemini_verifier_agent`**: Model upgraded from `qwen3:8b` → `qwen3:14b` (stronger argumentation for AI-to-AI debate with Gemini).
+- **`academic_edu_assistant`**: Model upgraded from `qwen3:8b` → `qwen3:14b` (deeper concept comparison for Anki generation).
+- **`academic_library_agent`**: Model upgraded from `qwen3:8b` → `qwen3:14b` (more accurate academic paper analysis).
+- **`interactive_reader`**: Model upgraded from `qwen3:8b` → `qwen3:14b` (better Q&A quality).
+- **`video_ingester`**: Model upgraded from `qwen3:8b` → `qwen3:14b` (richer keyframe descriptions).
+- **`telegram_kb_agent`**: RAG model upgraded from `gemma4:e2b` → `gemma4:e4b` (higher-quality RAG answers); `e2b` retained as commented fallback.
+
+### Removed (Ollama)
+- `deepseek-r1:14b` (9.0 GB) — replaced by `qwen3:14b` for high-complexity routing.
+- `qwen2.5-coder:7b` (4.7 GB) — fully superseded by `qwen3:8b`.
+- `llama3.1` (4.9 GB) — no references in any skill config.
+
+### Added
+- **`docs/MODEL_SELECTION.md`** (`open-claw-sandbox/docs/`): Complete per-skill model registry documenting primary models, fallback models, rationale, and quick-switch instructions for every skill.
+
+---
+
 ## [V9.1] — 2026-05-04: Performance & Robustness Hardening (Phase A)
 
 ### Added
 - **Semantic Caching** (`core/ai/llm_client.py`): `SqliteSemanticCache` class caches all deterministic (`temperature=0`) LLM responses by `SHA-256(model::prompt)` key in `data/llm_cache.sqlite3`. Zero-dependency, persistent across reboots.
-- **Context-Aware Model Routing** (`core/orchestration/router_agent.py`): `RouterAgent.resolve()` now assigns models based on intent complexity. High-complexity intents (`debate`, `research`, `feynman`, `analyze`, `deep`, `study`) use `deepseek-r1:14b`; others use `qwen2.5-coder:7b`. Model propagated via `OPENCLAW_ROUTER_MODEL` env var.
+- **Context-Aware Model Routing** (`core/orchestration/router_agent.py`): `RouterAgent.resolve()` now assigns models based on intent complexity. High-complexity intents (`debate`, `research`, `feynman`, `analyze`, `deep`, `study`) use `qwen3:14b`; low-complexity intents use `qwen3:8b`.
 - **Exponential Backoff in TaskQueue** (`core/orchestration/task_queue.py`): Failed tasks now wait `5 * 2^retry_count` seconds before being re-enqueued, preventing thundering-herd retry storms. Task-specific `env` kwarg passes environment overrides to subprocesses.
 - **Scheduler Queue Safety** (`core/services/scheduler.py`): APScheduler jobs (daily SM-2 push) now dispatch through the `LocalTaskQueue` via `trigger_anki_push()` instead of running synchronously, eliminating concurrent OOM risk with `inbox_daemon`.
 

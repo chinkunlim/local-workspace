@@ -6,13 +6,31 @@
 
 ---
 
+## [2026-05-04] ADR-009: Quality-First Model Selection Strategy
+
+**Context:** The initial model assignments prioritized resource efficiency (smaller models for all tasks). After auditing the available hardware (16GB Apple Silicon, RUNS WELL/DECENT tier for 9-14B models), we determined that running larger models for quality-critical tasks is acceptable since the TaskQueue serializes all execution.
+
+**Decision:** Each skill is assigned the highest-quality model appropriate for its task type, regardless of size, as long as the model fits within hardware capacity. Fallback models are preserved in config for circuit-breaker scenarios. See `open-claw-sandbox/docs/MODEL_SELECTION.md` for the complete per-skill registry.
+
+**Task-to-Model Mapping:**
+- Long-form synthesis & academic analysis: `qwen3:14b` (strongest installed multilingual reasoning)
+- Chain-of-thought analytical reasoning: `deepseek-r1:8b` (native CoT via `<think>` tokens)
+- Fast Q&A instruction following: `gemma4:e4b` (Google Gemma4 optimized for instruction tasks)
+- High-quality RAG retrieval: `gemma4:e4b`
+- Vision/multimodal: `llama3.2-vision` (only installed multimodal model)
+- Routing decisions: `qwen3:8b` (low-complexity) / `qwen3:14b` (high-complexity)
+
+**Rationale:** The TaskQueue already ensures sequential execution (no OOM risk from concurrency). The bottleneck is single-threaded throughput, not peak RAM. Running the best available model for each task produces better knowledge artifacts at no additional operational risk.
+
+---
+
 ## [2026-05-04] ADR-008: Context-Aware Model Routing via `OPENCLAW_ROUTER_MODEL`
 
-**Context:** Phase A optimization required routing LLM tasks to the most cost-effective local model. Simple extraction tasks were being unnecessarily dispatched to the large 14B reasoning model, wasting VRAM and increasing latency.
+**Context:** Phase A optimization required routing LLM tasks to the most appropriate local model. Simple extraction tasks were being unnecessarily dispatched to the large reasoning model, wasting VRAM and increasing latency.
 
-**Decision:** The `RouterAgent.resolve()` method now evaluates the task `intent` string against a set of high-complexity keywords (`debate`, `research`, `feynman`, `analyze`, `deep`, `study`). Based on this, it assigns either `qwen2.5-coder:7b` (low-complexity) or `deepseek-r1:14b` (high-complexity) to `TaskManifest.model`. This model is then propagated as the `OPENCLAW_ROUTER_MODEL` environment variable when the task subprocess is spawned via `TaskQueue.enqueue(env={...})`. The `OllamaClient` reads `OPENCLAW_ROUTER_MODEL` and overrides the `model` argument transparently.
+**Decision:** The `RouterAgent.resolve()` method now evaluates the task `intent` string against a set of high-complexity keywords (`debate`, `research`, `feynman`, `analyze`, `deep`, `study`). Based on this, it assigns either `qwen3:8b` (low-complexity) or `qwen3:14b` (high-complexity) to `TaskManifest.model`. This model is then propagated as the `OPENCLAW_ROUTER_MODEL` environment variable when the task subprocess is spawned via `TaskQueue.enqueue(env={...})`.
 
-**Rationale:** Environment variable injection is the only safe cross-process communication primitive when skills run in isolated subprocesses for OOM protection. This approach requires zero changes to individual skill code.
+**Rationale:** Environment variable injection is the only safe cross-process communication primitive when skills run in isolated subprocesses for OOM protection. The `OPENCLAW_ROUTER_MODEL` env var scope is strictly limited to `RouterAgent._llm_decompose` — individual skill `config.yaml` models remain authoritative.
 
 ---
 

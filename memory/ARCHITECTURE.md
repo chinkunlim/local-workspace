@@ -1,7 +1,7 @@
 # ARCHITECTURE.md — Global System Architecture
 
 > **Scope:** Entire `local-workspace/` monorepo
-> **Last Updated:** 2026-05-02
+> **Last Updated:** 2026-05-04
 > **Audience:** All AI agents and developers operating in this workspace
 
 ---
@@ -135,7 +135,7 @@ The `core/` directory was refactored from a flat module into domain-specific sub
 | `core/utils/` | `bootstrap.py` | Locates `core/` and inserts into `sys.path` (idempotent) |
 | `core/utils/` | `diff_engine.py` | Audit diff generation for content integrity checks |
 | `core/utils/` | `error_classifier.py` | Exception classification (recoverable / fatal / user-error) |
-| `core/ai/` | `llm_client.py` | Ollama/LM Studio client with exponential-backoff retry |
+| `core/ai/` | `llm_client.py` | Ollama/LM Studio client with exponential-backoff retry and `SqliteSemanticCache` (`data/llm_cache.sqlite3`, SHA-256 keyed, `temperature=0` only) |
 | `core/ai/` | `hybrid_retriever.py` | RAG retrieval combining vector + keyword search |
 | `core/ai/` | `graph_store.py` | Knowledge graph persistence and query |
 | `core/config/` | `config_manager.py` | YAML config loading with environment override |
@@ -215,6 +215,7 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
 | `OLLAMA_HOST` | Ollama server URL | `http://localhost:11434` |
 | `OLLAMA_API_URL` | Full generate endpoint | `http://localhost:11434/api/generate` |
 | `OPENCLAW_API_URL` | Open Claw intent engine | `http://127.0.0.1:18789` |
+| `OPENCLAW_ROUTER_MODEL` | RouterAgent's intent decomposition model override (scope: `_llm_decompose` only) | `qwen3:8b` |
 | `OPENCLAW_LOG_JSON` | Enable JSON structured logging | `0` (disabled) |
 
 ---
@@ -226,6 +227,8 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
 | **Idempotency** | `StateManager` tracks per-file per-phase status; completed phases are skipped unless `--force` is passed |
 | **Crash safety** | All file writes use `AtomicWriter` (`tempfile` + `os.replace()`); partial writes never corrupt state |
 | **LLM timeout** | `OllamaClient` enforces 600 s read timeout + 3-attempt exponential-backoff retry |
+| **Semantic caching** | `SqliteSemanticCache` in `llm_client.py` caches all `temperature=0` responses; SHA-256 keyed; stored at `data/llm_cache.sqlite3` |
+| **Retry resilience** | `TaskQueue` uses exponential backoff (`5 * 2^retry_count` s) to prevent thundering-herd retry storms |
 | **OOM prevention** | `PipelineBase.check_system_health()` monitors RSS + swap; pauses pipeline if thresholds exceeded |
 | **Single-threaded execution** | `LocalTaskQueue` serialises all skill invocations; eliminates concurrent OOM risk |
 | **Import isolation** | `core/utils/bootstrap.py` walks directory tree upward to locate `core/`; path inserted once (idempotent) |
@@ -260,3 +263,14 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
   - Integrated `academic_library_agent` for Paywall traversal and clean text snapshotting (minimizing Token limits).
   - Integrated `gemini_verifier_agent` for multi-turn local-Ollama vs cloud-Gemini AI debate and chat archival.
   - Integrated `student_researcher` as the master orchestrator to inject strict APA citations and Obsidian WikiLinks into the final compiled notes.
+- **Phase A Performance Hardening (2026-05-04, V9.1)**:
+  - `SqliteSemanticCache` in `core/ai/llm_client.py` — persistent SHA-256 keyed cache for all `temperature=0` LLM calls at `data/llm_cache.sqlite3`.
+  - Exponential Backoff in `TaskQueue` — failed tasks wait `5 * 2^retry_count` seconds before re-enqueue.
+  - Scheduler Queue Safety — APScheduler SM-2 push jobs now dispatch via `LocalTaskQueue` to prevent concurrent OOM.
+  - Context-Aware Model Routing — `RouterAgent` assigns `qwen3:8b` (low-complexity) or `qwen3:14b` (high-complexity) based on intent keyword matching.
+- **Quality-First Model Optimization (2026-05-04, V9.2)**:
+  - All skills upgraded to highest-quality models for their task type (see `docs/MODEL_SELECTION.md`).
+  - `note_generator`: active profile `qwen3_reasoning` (`qwen3:14b`); fallback `phi4_reasoning`.
+  - `student_researcher`, `feynman_simulator`: `deepseek-r1:8b` for CoT analytical reasoning.
+  - `knowledge_compiler`, `gemini_verifier_agent`, `academic_edu_assistant`, `academic_library_agent`, `interactive_reader`, `video_ingester`: `qwen3:14b`.
+  - RouterAgent high-complexity model: `qwen3:14b`. Ollama model pool pruned from 12 to 7 models, saving 23.6 GB.

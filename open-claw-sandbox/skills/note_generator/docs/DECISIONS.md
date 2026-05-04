@@ -6,7 +6,40 @@
 
 ---
 
-## 2026-04-20 — Map-Reduce over Single-Pass Synthesis
+## 2026-05-04 — Quality-First Model Profile: `qwen3_reasoning` (qwen3:14b)
+
+**Decision**: Switched `active_profile` from `phi4_reasoning` to `qwen3_reasoning`, using
+`qwen3:14b` as the primary synthesis model.
+
+**Context**: Performance profiling under the quality-first strategy (ADR-009) showed that
+`phi4-mini-reasoning` (3.8B), while fast and 128K-context capable, produces lower-quality
+Cornell notes and Mermaid diagrams compared to the 14B `qwen3:14b` model. Since the
+TaskQueue ensures sequential single-threaded execution, there is no OOM risk from using
+the larger model.
+
+**Profile Parameters**:
+- `model`: `qwen3:14b`
+- `chunk_threshold`: 6000 (smaller than phi4's 8000 to account for 14B overhead)
+- `map_chunk_size`: 5000
+- `num_ctx`: 32768 (conservative cap for 16GB RAM)
+- `temperature`: 0.1
+- `mermaid_retry_max`: 3 (increased from 2 for better diagram reliability)
+
+**Fallback**: `phi4_reasoning` profile retained. Switch via `synthesize.active_profile: phi4_reasoning`.
+
+---
+
+## 2026-04-?? — phi4_reasoning Profile: `phi4-mini-reasoning`
+
+**Decision**: Added `phi4_reasoning` profile using `phi4-mini-reasoning` as a synthesis alternative
+to `deepseek-r1:14b`. Now serves as the official fallback profile.
+
+**Context**: `phi4-mini-reasoning` (3.8B) with a 128K context window allows larger chunks
+(`chunk_threshold: 8000`), reducing Map-Reduce splits for long transcripts and improving
+speed with lower VRAM usage.
+
+---
+
 
 **Decision**: For inputs exceeding `chunk_threshold` characters, split the input into chunks,
 summarize each independently (Map), then synthesize all summaries into a final note (Reduce).

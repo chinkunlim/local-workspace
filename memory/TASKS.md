@@ -1,6 +1,6 @@
 # TASKS.md — Task List
 
-> **Last Updated:** 2026-05-04
+> **Last Updated:** 2026-05-04 (V9.2 Model Optimization)
 > **Maintained by:** Current working agent — update on every state change
 
 ---
@@ -14,8 +14,9 @@
 ## 🟡 Medium Priority
 
 - [ ] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
-- [ ] Run live end-to-end pipeline test: `.m4a` / `.mp4` → `data/wiki/` (confirm all phases)
-- [ ] Rebuild ChromaDB index and validate a Telegram RAG query
+- [ ] Run live end-to-end pipeline test with new `qwen3:14b` routing: `.m4a` / `.mp4` → `data/wiki/`
+- [ ] Rebuild ChromaDB index and validate a Telegram RAG query with `gemma4:e4b`
+- [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
 
 ---
 
@@ -27,6 +28,24 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-05-04: Quality-First Model Optimization (V9.2)
+  - Upgraded all skills to quality-first models (see `docs/MODEL_SELECTION.md`)
+  - `note_generator`: phi4-mini-reasoning → qwen3:14b (profile: qwen3_reasoning)
+  - `student_researcher`: qwen3:8b → deepseek-r1:8b (CoT claim extraction)
+  - `knowledge_compiler`, `gemini_verifier_agent`, `academic_edu_assistant`, `academic_library_agent`, `interactive_reader`, `video_ingester`: qwen3:8b → qwen3:14b
+  - `telegram_kb_agent`: gemma4:e2b → gemma4:e4b
+  - RouterAgent high-complexity: deepseek-r1:14b → qwen3:14b
+  - Cleaned up 3 unused Ollama models: deepseek-r1:14b, qwen2.5-coder:7b, llama3.1 (−23.6GB)
+  - Created `open-claw-sandbox/docs/MODEL_SELECTION.md` per-skill model registry
+  - Full SSoT documentation sync across all MD files
+
+- [x] 2026-05-04: Phase A Performance Hardening (V9.1)
+  - `SqliteSemanticCache` in `core/ai/llm_client.py` (SHA-256 keyed, `data/llm_cache.sqlite3`)
+  - Exponential Backoff (`5 * 2^retry_count`) in `task_queue.py`
+  - Scheduler Queue Safety: APScheduler jobs → LocalTaskQueue
+  - Context-Aware Model Routing in `RouterAgent`
+  - ADR-007 and ADR-008 documented in `memory/DECISIONS.md`
 
 - [x] 2026-05-04: Open Claw v9.0 Upgrade — Multi-Agent & GraphRAG
   - Implemented `feynman_simulator` and `video_ingester`
