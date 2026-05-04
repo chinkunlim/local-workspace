@@ -99,8 +99,60 @@ class Phase1Compile(PipelineBase):
 
         validated = WIKILINK_RE.sub(_check, text)
         if downgraded:
-            self.info(f"\U0001f517 [WikiLink Guard] {downgraded} 個死連結已降級為純文字")
+            self.info(f"🔗 [WikiLink Guard] {downgraded} 個死連結已降級為純文字")
         return validated, downgraded
+
+    def _find_similar_notes(self, content: str, title: str) -> list[str]:
+        """Find past notes with cosine similarity > 0.85 using ChromaDB."""
+        try:
+            import chromadb
+            import requests
+
+            db_path = os.path.join(
+                self.workspace_root, "skills", "telegram_kb_agent", "state", "chroma_db"
+            )
+            if not os.path.exists(db_path):
+                return []
+
+            client = chromadb.PersistentClient(path=db_path)
+            try:
+                collection = client.get_collection("wiki_knowledge")
+            except Exception:
+                return []
+
+            # Get embedding using Ollama
+            api_url = (
+                self.config_manager.get_nested("runtime", "ollama", "api_url")
+                or "http://127.0.0.1:11434/api"
+            )
+            url = f"{api_url}/embeddings"
+            resp = requests.post(
+                url, json={"model": "nomic-embed-text", "prompt": content[:2000]}, timeout=10
+            )
+            if not resp.ok:
+                return []
+            emb = resp.json().get("embedding")
+            if not emb:
+                return []
+
+            # Query ChromaDB (normalized embeddings: L2 distance < 0.3 means cosine similarity > 0.85)
+            res = collection.query(query_embeddings=[emb], n_results=3)
+
+            related = set()
+            for doc_meta, dist in zip(res.get("metadatas", [[]])[0], res.get("distances", [[]])[0]):
+                if dist < 0.3:
+                    fname = doc_meta.get("filename")
+                    if fname and fname.endswith(".md"):
+                        past_title = os.path.splitext(fname)[0]
+                        if past_title != title:
+                            related.add(past_title)
+            return list(related)
+        except ImportError:
+            self.warning("  ⚠️ chromadb 未安裝，跳過 Cross-Semester Linking")
+            return []
+        except Exception as e:
+            self.warning(f"  ⚠️ Cross-Semester Linking 失敗: {e}")
+            return []
 
     def _process_file(self, idx: int, task: dict, total: int):
         subj = task["subject"]
@@ -139,6 +191,14 @@ class Phase1Compile(PipelineBase):
 
             out_filename = f"{safe_title}.md"
             out_path = os.path.join(self.wiki_dir, out_filename)
+
+            # Cross-Semester Linking
+            related_titles = self._find_similar_notes(content, safe_title)
+            if related_titles:
+                related_links = "\n".join(
+                    [f"- ⚡ Related to past note: [[{t}]]" for t in related_titles]
+                )
+                final_doc += f"\n\n## 延伸連結\n{related_links}\n"
 
             # WikiLink Guard: downgrade dead [[Links]] before writing to vault
             final_doc, _ = self._validate_wikilinks(final_doc)

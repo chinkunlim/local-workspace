@@ -31,6 +31,7 @@ _bootstrap(__file__)
 
 from core import PipelineBase
 from core.ai.graph_store import get_graph_store
+from core.ai.llm_client import OllamaClient
 
 # Regex patterns
 _WIKILINK_RE = re.compile(r"\[\[([^\[\]|#]+?)(?:\|[^\]]+?)?\]\]")
@@ -59,6 +60,8 @@ class Phase2ExtractGraph(PipelineBase):
         default_wiki = os.path.abspath(os.path.join(self.base_dir, "..", "wiki"))
         self.wiki_dir = os.path.realpath(output_cfg.get("wiki_dir", default_wiki))
         self.graph = get_graph_store(self.workspace_root, skill_name="knowledge_compiler")
+        self.llm = OllamaClient()
+        self.model_name = self.config_manager.get_nested("models", "default") or "qwen2.5-coder:7b"
 
     # ── Parsing ───────────────────────────────────────────────────────────
 
@@ -82,6 +85,31 @@ class Phase2ExtractGraph(PipelineBase):
             relations.append(
                 (match.group(1).strip(), match.group(2).strip(), match.group(3).strip())
             )
+        return relations
+
+    def _extract_implicit_relations(self, doc_title: str, text: str) -> list[tuple[str, str, str]]:
+        """Use LLM to extract implicit (entity) -> [relation] -> (entity) triples."""
+        relations: list[tuple[str, str, str]] = []
+        prompt = (
+            f"以下是筆記「{doc_title}」的內容。請從中抽取核心知識圖譜的三元組 (Entity, Relation, Entity)。\n"
+            "規則：\n"
+            "1. 每行輸出一個三元組，格式為：實體A, 關係, 實體B\n"
+            "2. 關係必須是英文大寫，例如：IS_A, PART_OF, RELATED_TO, DEPENDS_ON, CAUSES, AFFECTS\n"
+            "3. 只抽取最重要的 3 到 5 個三元組\n"
+            "4. 不要輸出任何解釋，只輸出三元組\n\n"
+            f"內容：\n{text[:3000]}\n\n"
+            "三元組："
+        )
+        try:
+            raw = self.llm.generate(model=self.model_name, prompt=prompt)
+            for line in raw.split("\n"):
+                parts = [p.strip() for p in line.split(",")]
+                if (len(parts) == 3 and parts[1].isupper() and "_" in parts[1]) or parts[
+                    1
+                ].isalpha():
+                    relations.append((parts[0], parts[1], parts[2]))
+        except Exception as exc:
+            self.warning(f"  ⚠️ LLM 關係抽取失敗: {exc}")
         return relations
 
     # ── Processing ────────────────────────────────────────────────────────
@@ -121,7 +149,16 @@ class Phase2ExtractGraph(PipelineBase):
             self.graph.upsert_entity(dst, labels=["Concept"])
             self.graph.upsert_relation(src, rel.upper(), dst)
 
-        self.info(f"  ✅ {doc_title}: {len(links)} 連結, {len(self._extract_hashtags(text))} 標籤")
+        # Implicit relations via LLM
+        llm_relations = self._extract_implicit_relations(doc_title, text)
+        for src, rel, dst in llm_relations:
+            self.graph.upsert_entity(src, labels=["Concept"])
+            self.graph.upsert_entity(dst, labels=["Concept"])
+            self.graph.upsert_relation(src, rel.upper(), dst)
+
+        self.info(
+            f"  ✅ {doc_title}: {len(links)} 連結, {len(self._extract_hashtags(text))} 標籤, {len(llm_relations)} 隱含關係"
+        )
 
     def run(self, force: bool = False, subject: str | None = None, **_kwargs) -> None:
         self.info("🕸️ 啟動 Phase 2：知識圖譜抽取")
