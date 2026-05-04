@@ -154,8 +154,10 @@ class RouterAgent:
             "audio_transcriber,note_generator,knowledge_compiler"
         )
         try:
-            # We use a fast/smart model for routing if available, else default
-            raw = self._llm.generate(model="qwen2.5-coder:7b", prompt=prompt)
+            # Use the complexity-selected model for routing decomposition only.
+            # This does NOT affect downstream skills, which use their own config.yaml models.
+            routing_model = os.environ.get("OPENCLAW_ROUTER_MODEL", "qwen2.5-coder:7b")
+            raw = self._llm.generate(model=routing_model, prompt=prompt)
             skills = [s.strip() for s in raw.split(",") if s.strip()]
             return [
                 s

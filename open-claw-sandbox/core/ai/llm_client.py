@@ -181,10 +181,8 @@ class OllamaClient:
         trace_id = TRACE_ID_VAR.get()
         trace_pfx = f"[trace:{trace_id[:8]}] " if trace_id else ""
 
-        # Context-Aware Routing Override
-        effective_model = os.environ.get("OPENCLAW_ROUTER_MODEL", model)
-
         # Circuit breaker: if open and fallback available, switch model silently
+        effective_model = model
         if self._circuit_open and self.fallback_model and self.fallback_model != effective_model:
             if logger:
                 logger.warning(
@@ -356,9 +354,8 @@ class OllamaClient:
         trace_id = TRACE_ID_VAR.get()
         trace_pfx = f"[trace:{trace_id[:8]}] " if trace_id else ""
 
-        # Context-Aware Routing Override
-        effective_model = os.environ.get("OPENCLAW_ROUTER_MODEL", model)
-
+        # Circuit breaker: if open and fallback available, switch model silently
+        effective_model = model
         if self._circuit_open and self.fallback_model and self.fallback_model != effective_model:
             effective_model = self.fallback_model
 
