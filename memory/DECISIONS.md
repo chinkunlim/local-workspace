@@ -1,8 +1,32 @@
 # DECISIONS.md — Global Architectural Decision Records
 
 > **Scope:** `local-workspace/` monorepo root
-> **Last Updated:** 2026-04-19
+> **Last Updated:** 2026-05-04
 > **Format:** ADR (Architectural Decision Record)
+
+---
+
+## [2026-05-04] ADR-008: Context-Aware Model Routing via `OPENCLAW_ROUTER_MODEL`
+
+**Context:** Phase A optimization required routing LLM tasks to the most cost-effective local model. Simple extraction tasks were being unnecessarily dispatched to the large 14B reasoning model, wasting VRAM and increasing latency.
+
+**Decision:** The `RouterAgent.resolve()` method now evaluates the task `intent` string against a set of high-complexity keywords (`debate`, `research`, `feynman`, `analyze`, `deep`, `study`). Based on this, it assigns either `qwen2.5-coder:7b` (low-complexity) or `deepseek-r1:14b` (high-complexity) to `TaskManifest.model`. This model is then propagated as the `OPENCLAW_ROUTER_MODEL` environment variable when the task subprocess is spawned via `TaskQueue.enqueue(env={...})`. The `OllamaClient` reads `OPENCLAW_ROUTER_MODEL` and overrides the `model` argument transparently.
+
+**Rationale:** Environment variable injection is the only safe cross-process communication primitive when skills run in isolated subprocesses for OOM protection. This approach requires zero changes to individual skill code.
+
+---
+
+## [2026-05-04] ADR-007: SQLite for Semantic Caching (not Redis)
+
+**Context:** Phase A required a Semantic Caching layer to prevent redundant LLM inference on identical `temperature=0` prompts (e.g. the RouterAgent's routing decomposition, or note synthesis of repeated content).
+
+**Decision:** Implemented `SqliteSemanticCache` in `core/ai/llm_client.py` using Python's built-in `sqlite3` module. Cache stored at `data/llm_cache.sqlite3`. Lookup key is `SHA-256(model::prompt)`.
+
+**Rationale:** SQLite was chosen over Redis because:
+1. **Zero new dependencies**: No external service (Redis daemon) required to start.
+2. **Zero RAM overhead**: Data lives on disk, not memory — critical on a 16GB machine running local LLMs.
+3. **Adequate performance**: Since we are caching LLM inference (≥10s per call), a SQLite disk read (~1ms) provides effectively instant cache response.
+4. **Persistence**: Cache survives reboots and accumulates value over time without manual configuration.
 
 ---
 
