@@ -153,6 +153,8 @@ def detect_repetition(
     """
     # Strategy 2: zlib 壓縮比
     encoded = text.encode("utf-8")
+    if not encoded:          # ← guard: empty segment → not a hallucination loop
+        return False
     compressed = zlib.compress(encoded)
     compress_ratio = len(compressed) / len(encoded)
     if compress_ratio < compress_ratio_threshold:
@@ -350,10 +352,12 @@ def detect_audio_language(
                 if engine == "mlx-whisper":
                     import mlx_whisper
 
-                    # 壓制子進程 stderr（MallocStackLogging 等 macOS 雜訊）
+                    # 壓制子進程 stdout + stderr（mlx_whisper tqdm / macOS 雜訊）
                     with open(os.devnull, "w") as _dn:
-                        _old = os.dup(2)
+                        _old_err = os.dup(2)
+                        _old_out = os.dup(1)
                         os.dup2(_dn.fileno(), 2)
+                        os.dup2(_dn.fileno(), 1)
                         try:
                             det = mlx_whisper.transcribe(
                                 tmp_path,
@@ -362,8 +366,10 @@ def detect_audio_language(
                                 verbose=False,
                             )
                         finally:
-                            os.dup2(_old, 2)
-                            os.close(_old)
+                            os.dup2(_old_err, 2)
+                            os.dup2(_old_out, 1)
+                            os.close(_old_err)
+                            os.close(_old_out)
                     lang = det.get("language")
                 elif engine == "faster-whisper" and model is not None:
                     lang_probs = model.detect_language(tmp_path)
@@ -591,14 +597,20 @@ class Phase1Transcribe(PipelineBase):
 
                     import mlx_whisper
 
+                    # ── 顯示：只在檔案層級，不對每個 chunk 顯示 spinner ──
+                    _n_chunks = len(_audio_paths_to_transcribe)
+                    if _n_chunks > 1:
+                        self.log(f"   📦 共 {_n_chunks} 個區塊，逐一轉錄中...")
+
                     for _chunk_path in _audio_paths_to_transcribe:
-                        pbar, stop_tick, t = self.create_spinner(
-                            f"\u8f49\u9304\u8655\u7406 ({os.path.basename(_chunk_path)})"
-                        )
+                        # 同時壓制 stdout(fd 1) 與 stderr(fd 2)，
+                        # 避免 mlx_whisper 內部 tqdm 進度條輸出至終端
                         with open(os.devnull, "w") as _devnull, warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            _old_fd = os.dup(2)
+                            _old_err = os.dup(2)
+                            _old_out = os.dup(1)
                             os.dup2(_devnull.fileno(), 2)
+                            os.dup2(_devnull.fileno(), 1)
                             try:
                                 result = mlx_whisper.transcribe(
                                     _chunk_path,
@@ -612,10 +624,14 @@ class Phase1Transcribe(PipelineBase):
                                     verbose=False,
                                 )
                             finally:
-                                os.dup2(_old_fd, 2)
-                                os.close(_old_fd)
-                        self.finish_spinner(pbar, stop_tick, t)
+                                os.dup2(_old_err, 2)
+                                os.dup2(_old_out, 1)
+                                os.close(_old_err)
+                                os.close(_old_out)
                         segments.extend(result.get("segments", []))
+
+                    if _n_chunks > 1:
+                        self.log(f"   ✅ {_n_chunks} 個區塊轉錄完成，開始後處理...")
 
                 else:  # faster-whisper
                     from tqdm import tqdm
