@@ -77,3 +77,19 @@
 * **Ultra-Fast Linting**: `Ruff` (Rust-based) for instant code formatting, replacing `flake8`, `black`, and `isort`.
 * **Mocking (`unittest.mock.patch`)**: Deep module patching to isolate unit tests from the actual file system, network, or expensive LLM API calls.
 * **Automated Quality Gates**: Shell scripts (`ops/check.sh`) executing linting, credential scanning, and Pytest pipelines, acting as a local CI/CD runner before commits are permitted.
+
+## 12. Data Ingestion & Media Processing
+* **Vision Language Models (VLM) for OCR**: Utilizing VLMs (`doc_parser`, `gemini_verifier_agent`) to intelligently parse charts, complex tables, and diagrams from PDFs into structured Markdown, moving beyond traditional text-only OCR.
+* **In-Memory Audio Manipulation**: Leveraging `pydub.AudioSegment` to perform programmatic dBFS (Decibels relative to full scale) silence detection, slicing, and exporting of audio bytes directly in memory.
+* **Video Frame Extraction**: Using `ffmpeg` (via `subprocess`) to extract precise keyframes from video files for multimodal processing (`video_ingester`).
+
+## 13. Knowledge Representation & Schema
+* **Zettelkasten / Obsidian Integration**: Structuring all output as heavily interlinked Markdown files, inherently compatible with personal knowledge management tools like Obsidian.
+* **YAML Frontmatter Injection**: Programmatically injecting standardized metadata (tags, creation timestamps, source file hashes, and agent confidence scores) at the head of every Markdown file to enable database-like querying of text files.
+* **GraphRAG & Implicit Knowledge Graphs**: Using `NetworkX` and graph databases (`graph_store.py`) to extract semantic entities and relationships (Node-Edge-Node) for multi-hop reasoning, exceeding the capabilities of standard vector-only RAG.
+
+## 14. Prompt Engineering & AI Paradigms
+* **Chain of Thought (CoT) Enclosures**: Structuring prompts to leverage reasoning models (e.g., DeepSeek-R1), enforcing step-by-step logic deduction (often inside `<think>` blocks) before generating the final answer.
+* **Multi-Agent Debate (Feynman Simulator)**: A sophisticated workflow where multiple AI personas critique and refine each other's outputs to distill highly complex academic topics into layman-friendly explanations.
+* **State Serialization & Resumption**: Using `json.dumps/loads` to save the exact execution state of `PipelineBase` to `session.json`, allowing the pipeline to seamlessly pause and resume across system reboots.
+* **Stateless Command Factories**: `cli_runner.py` acts as a central factory for `subprocess.Popen` arguments, ensuring that whether invoked by a Web UI, Daemon, or CLI, the execution commands are identical and immune to shell-injection.
