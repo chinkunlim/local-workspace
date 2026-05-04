@@ -2,7 +2,8 @@
 model_profile: default
 models:
   default:
-    name: "qwen3:8b"
+    name: "qwen3:14b"     # primary — strongest argumentation for AI-to-AI debate
+    fallback: "qwen3:8b" # fallback
     temperature: 0.0
 
 directories:

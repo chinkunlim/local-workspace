@@ -11,8 +11,9 @@ bot:
 
 rag:
   embed_model: "nomic-embed-text"
-  # generate_model: "qwen2.5-coder:7b"  # previous
-  generate_model: "gemma4:e2b"           # faster, lower VRAM for Telegram Q&A
+  # generate_model: "qwen2.5-coder:7b"  # previous (removed)
+  # generate_model: "gemma4:e2b"        # fallback — faster, lower VRAM
+  generate_model: "gemma4:e4b"          # primary — best quality Q&A
   chunk_size: 1000
   chunk_overlap: 200
   top_k: 3

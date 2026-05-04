@@ -66,7 +66,7 @@ class Phase1AIDebate(PhaseBase):
                     f"{last_response}\n\n"
                     "Does this fully answer the claim? Generate a short follow-up question to ask Gemini to deepen the analysis or clarify a doubt. If it is perfect, output 'NO_QUESTIONS'."
                 )
-                followup = self.llm.generate(model="qwen3:8b", prompt=reflection_prompt)
+                followup = self.llm.generate(model="qwen3:14b"  # primary; fallback to qwen3:8b via config, prompt=reflection_prompt)
 
                 if "NO_QUESTIONS" not in followup:
                     print(f"🤔 本地模型追問: {followup}")

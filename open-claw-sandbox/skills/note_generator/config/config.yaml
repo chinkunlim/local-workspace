@@ -15,7 +15,7 @@ paths:
 # Synthesize profiles
 # ------------------------------------------------------------------------------
 synthesize:
-  active_profile: phi4_reasoning
+  active_profile: qwen3_reasoning   # primary: best quality synthesis
   profiles:
     default:
       # model: gemma3:12b
@@ -40,15 +40,28 @@ synthesize:
     #     temperature: 0.2
     #     num_predict: 8192
 
+    # phi4_reasoning — FALLBACK: faster, lower RAM, good for quick runs
     phi4_reasoning:
       model: phi4-mini-reasoning
-      chunk_threshold: 8000     # larger chunks benefit from 128K context
+      chunk_threshold: 8000
       map_chunk_size: 6000
       mermaid_retry_max: 2
       content_loss_threshold: 0.01
       options:
-        num_ctx: 32768          # safe cap for 16GB RAM; phi4 supports up to 128K
-        temperature: 0.1        # lower for deterministic academic notes
+        num_ctx: 32768
+        temperature: 0.1
+        num_predict: 8192
+
+    # qwen3_reasoning — PRIMARY: best synthesis quality (quality-first)
+    qwen3_reasoning:
+      model: qwen3:14b
+      chunk_threshold: 6000
+      map_chunk_size: 5000
+      mermaid_retry_max: 3
+      content_loss_threshold: 0.01
+      options:
+        num_ctx: 32768
+        temperature: 0.1
         num_predict: 8192
 
 runtime:

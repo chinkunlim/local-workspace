@@ -1,5 +1,6 @@
 models:
-  default: "qwen3:8b"
+  default: "qwen3:14b"     # primary — best quality for keyframe description
+  fallback: "qwen3:8b"     # fallback
   vlm: "llava:7b"
   whisper: "mlx-community/whisper-large-v3-turbo"
 

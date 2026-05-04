@@ -1,7 +1,8 @@
 # Open Claw Configuration
 
 phase01:
-  model: "qwen3:8b"
+  model: "qwen3:14b"     # primary — best quality for interactive Q&A
+  # model: "qwen3:8b"   # fallback
   options:
     temperature: 0
     num_predict: 2048

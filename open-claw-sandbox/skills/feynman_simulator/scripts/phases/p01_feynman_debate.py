@@ -29,7 +29,7 @@ from core.ai.llm_client import OllamaClient
 from core.utils.playwright_utils import get_persistent_context
 
 MAX_ROUNDS = 3
-_STUDENT_MODEL = "qwen3:8b"
+_STUDENT_MODEL = "qwen3:8b"  # fallback — config.yaml primary is deepseek-r1:8b
 
 
 class Phase1FeynmanDebate(PhaseBase):

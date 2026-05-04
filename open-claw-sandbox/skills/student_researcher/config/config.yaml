@@ -2,7 +2,8 @@
 model_profile: default
 models:
   default:
-    name: "qwen3:8b"
+    name: "deepseek-r1:8b"  # primary — CoT reasoning for academic claim extraction
+    fallback: "qwen3:8b"    # fallback
     temperature: 0.0
 
 directories:
