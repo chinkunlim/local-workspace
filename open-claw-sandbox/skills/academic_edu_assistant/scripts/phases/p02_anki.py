@@ -9,6 +9,7 @@ _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
 from core.orchestration.human_gate import VerificationGate
+from core.services.sm2 import SM2Engine
 from core.utils.file_utils import write_csv_safe  # #10 Shared CSV utility
 
 
@@ -25,6 +26,9 @@ class Phase2Anki(PipelineBase):
         self.ankiconnect_url = anki_cfg.get("url", "http://127.0.0.1:8765")
         self.ankiconnect_deck = anki_cfg.get("deck", "OpenClaw::Imported")
         self.ankiconnect_model = anki_cfg.get("note_model", "Basic")
+
+        # SM-2 Engine
+        self.sm2_engine = SM2Engine(self.workspace_root)
 
     # ------------------------------------------------------------------ #
     #  AnkiConnect Push (#9)                                               #
@@ -163,9 +167,15 @@ class Phase2Anki(PipelineBase):
         from core.utils.file_utils import write_csv_safe
 
         write_csv_safe(path=out_path, rows=csv_rows, logger=self)
-        self.info(
-            f"\u2705 Anki \u5361\u7247\u5df2\u532f\u51fa: {out_path} ({len(csv_rows)} \u7b46)"
-        )
+        self.info(f"✅ Anki 卡片已匯出: {out_path} ({len(csv_rows)} 筆)")
+
+        # Integrate with local SM-2 engine for Telegram pushing
+        deck = f"{self.ankiconnect_deck}::{subj}"
+        sm2_added = 0
+        for front, back in csv_rows:
+            self.sm2_engine.add_card(front, back, deck)
+            sm2_added += 1
+        self.info(f"💾 成功新增 {sm2_added} 張卡片至 SM-2 排程引擎")
 
         # #9: Push to AnkiConnect if enabled (pass raw csv_text so _push_to_anki re-parses)
         if self.ankiconnect_enabled:

@@ -27,3 +27,6 @@ Pillow>=10.4.0
 
 # --- Academic Research Pipeline ---
 arxiv>=2.1.0            # ArXiv public API fallback
+
+# --- Spaced Repetition Engine ---
+apscheduler>=3.10.0     # Telegram scheduled Anki review pushes

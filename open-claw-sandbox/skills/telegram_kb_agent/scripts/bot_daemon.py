@@ -288,18 +288,45 @@ def main():
                             prefs["active_model"] = arg
                             _save_user_prefs(prefs)
                             send_message(
-                                f"\u2705 \u6a21\u578b\u5df2\u5207\u63db\u70ba `{arg}`\uff0c\u4e0b\u6b21\u4efb\u52d9\u751f\u6548\u3002",
+                                f"✅ 模型已切換為 `{arg}`，下次任務生效。",
                                 chat_id,
                             )
                         else:
                             prefs = _load_user_prefs()
                             current = prefs.get(
                                 "active_model",
-                                "(\u672a\u8a2d\u5b9a\uff0c\u4f7f\u7528\u5404 Skill \u9810\u8a2d\u6a21\u578b)",
+                                "(未設定，使用各 Skill 預設模型)",
                             )
-                            send_message(
-                                f"\U0001f916 \u76ee\u524d\u6a21\u578b: `{current}`", chat_id
-                            )
+                            send_message(f"🤖 目前模型: `{current}`", chat_id)
+
+                    elif text.startswith("/reveal "):
+                        card_id = text[8:].strip()
+                        from core.services.sm2 import SM2Engine
+
+                        engine = SM2Engine(_workspace_root)
+                        card = engine.db["cards"].get(card_id)
+                        if not card:
+                            send_message("❌ 找不到此卡片或已過期。", chat_id)
+                        else:
+                            msg = f"🎴 **Answer**:\n\n{card['back']}\n\n請回覆 `/rate {card_id} <0-5>` 評分 (5=完美, 0=忘記)"
+                            send_message(msg, chat_id)
+
+                    elif text.startswith("/rate "):
+                        parts = text.split()
+                        if len(parts) >= 3:
+                            card_id = parts[1]
+                            try:
+                                quality = int(parts[2])
+                                from core.services.sm2 import SM2Engine
+
+                                engine = SM2Engine(_workspace_root)
+                                engine.review_card(card_id, quality)
+                                next_date = engine.db["cards"][card_id]["next_review"]
+                                send_message(f"✅ 評分已記錄！下次複習: {next_date}", chat_id)
+                            except ValueError:
+                                send_message("⚠️ 評分必須是 0-5 的數字。", chat_id)
+                        else:
+                            send_message("用法: `/rate <card_id> <0-5>`", chat_id)
 
                     elif text.startswith("/hitl "):
                         # H2 + P0-5: HITL callback — searches ALL skill pending dirs

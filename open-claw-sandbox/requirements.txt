@@ -24,6 +24,8 @@ anyio==4.13.0
     # via
     #   httpx
     #   watchfiles
+apscheduler==3.11.2
+    # via -r requirements.in
 arxiv==3.0.0
     # via -r requirements.in
 attrs==26.1.0
@@ -505,6 +507,8 @@ typing-inspection==0.4.2
     # via
     #   pydantic
     #   pydantic-settings
+tzlocal==5.3.1
+    # via apscheduler
 urllib3==2.6.3
     # via
     #   kubernetes
