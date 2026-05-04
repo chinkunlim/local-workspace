@@ -94,6 +94,10 @@ class SystemInboxDaemon:
                 ".m4a": "audio_transcriber",
                 ".mp3": "audio_transcriber",
                 ".pdf": "doc_parser",
+                ".mp4": "video_ingester",
+                ".mov": "video_ingester",
+                ".mkv": "video_ingester",
+                ".webm": "video_ingester",
             }
 
     def _process_file(self, filepath: str) -> None:

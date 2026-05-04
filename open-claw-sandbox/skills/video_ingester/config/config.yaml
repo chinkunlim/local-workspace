@@ -1,0 +1,8 @@
+models:
+  default: "qwen2.5-coder:7b"
+  vlm: "llava:7b"
+  whisper: "mlx-community/whisper-large-v3-turbo"
+
+ingestion:
+  keyframe_interval_sec: 30
+  resolution: "1280x720"

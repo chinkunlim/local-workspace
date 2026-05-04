@@ -134,6 +134,35 @@ def main():
                         threading.Thread(target=_handle_voice, daemon=True).start()
                         continue
 
+                    # Handle video → route to video_ingester inbox
+                    if msg.get("video") or (
+                        msg.get("document")
+                        and msg["document"].get("mime_type", "").startswith("video/")
+                    ):
+
+                        def _handle_video(_msg=msg, _cid=chat_id):
+                            try:
+                                from core.services.telegram_bot import download_file
+
+                                file_id = _msg.get("video", {}).get("file_id")
+                                if not file_id:
+                                    file_id = _msg.get("document", {}).get("file_id")
+                                raw_inbox = os.path.join(_workspace_root, "data", "raw", "Telegram")
+                                local_path = download_file(file_id, raw_inbox)
+                                send_message(
+                                    f"🎬 影片檔案已接收，正在排隊抽取關鍵影格與轉錄...\n"
+                                    f"📄 `{os.path.basename(local_path)}`",
+                                    _cid,
+                                )
+                                from core.services.inbox_daemon import SystemInboxDaemon
+
+                                SystemInboxDaemon()._process_file(local_path)
+                            except Exception as _exc:
+                                send_message(f"❌ 影片處理失敗: {_exc}", _cid)
+
+                        threading.Thread(target=_handle_video, daemon=True).start()
+                        continue
+
                     # Handle photo → run inline VLM analysis and reply
                     if msg.get("photo"):
 
