@@ -92,6 +92,10 @@ _ROUTING_TABLE: Dict[str, List[str]] = {
         "gemini_verifier_agent",
         "knowledge_compiler",
     ],
+    ".md:feynman": [
+        "feynman_simulator",
+        "knowledge_compiler",
+    ],
 }
 
 
@@ -130,6 +134,7 @@ class RouterAgent:
             "- student_researcher: 萃取需要學術查證的論點\n"
             "- academic_library_agent: 操作 Playwright 抓取 Elsevier/ScienceDirect 文獻\n"
             "- gemini_verifier_agent: 與 Gemini 進行 AI-to-AI 辯證與查證\n"
+            "- feynman_simulator: 模擬費曼學習法，進行師生 AI 辯證\n"
             "- knowledge_compiler: 將筆記編譯進知識庫並做雙向連結\n"
             "- telegram_kb_agent: 提供知識庫問答\n\n"
             "請將任務拆解為執行順序清單，只輸出技能名稱，以逗號分隔，例如：\n"
@@ -153,6 +158,7 @@ class RouterAgent:
                     "student_researcher",
                     "academic_library_agent",
                     "gemini_verifier_agent",
+                    "feynman_simulator",
                 ]
             ]
         except Exception as e:
@@ -240,6 +246,7 @@ class RouterAgent:
                 "student_researcher",
                 "academic_library_agent",
                 "gemini_verifier_agent",
+                "feynman_simulator",
             ]:
                 # These skills use the unified interface
                 cmd = [sys.executable, "scripts/run_all.py", "--subject", subject]

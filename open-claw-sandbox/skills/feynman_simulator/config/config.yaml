@@ -1,0 +1,22 @@
+model_profile: default
+models:
+  default:
+    name: "qwen2.5-coder:7b"
+    temperature: 0.3        # Slightly non-zero: creativity helps explanation diversity
+
+directories:
+  input: "data/feynman_simulator/input"
+  output: "data/feynman_simulator/output"
+  state: "data/feynman_simulator/state"
+  archives: "data/feynman_simulator/archives"
+  enriched: "data/feynman_simulator/enriched"
+
+phases:
+  p01_feynman_debate:
+    enabled: true
+    max_rounds: 3
+    gemini_url: "https://gemini.google.com/app"
+    response_wait_seconds: 18
+
+  p02_debate_synthesis:
+    enabled: true
