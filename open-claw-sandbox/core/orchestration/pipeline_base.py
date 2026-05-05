@@ -128,12 +128,13 @@ class PipelineBase:
         )
 
     def log(self, msg: str, level: str = "info") -> None:
-        if "tqdm" in sys.modules:
-            import tqdm
+        if level != "debug":
+            if "tqdm" in sys.modules:
+                import tqdm
 
-            tqdm.tqdm.write(msg)
-        else:
-            print(msg)
+                tqdm.tqdm.write(msg)
+            else:
+                print(msg)
 
         if self.logger:
             if level == "info":
@@ -143,6 +144,11 @@ class PipelineBase:
             elif level == "error":
                 # exc_info=True captures the active exception traceback into the log file
                 self.logger.error(msg, exc_info=True)
+            elif level == "debug":
+                self.logger.debug(msg)
+
+    def debug(self, msg: str) -> None:
+        self.log(msg, level="debug")
 
     def info(self, msg: str) -> None:
         self.log(msg, level="info")

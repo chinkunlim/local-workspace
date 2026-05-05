@@ -301,8 +301,10 @@ class QueueManager(PipelineBase):
             return None
 
         try:
+            force_this = self.force_mode or item.get("force_reprocess", False)
+
             # --- Phase 0a: Diagnostic ---
-            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p0a"):
+            if force_this or not self._is_already_processed(pdf_id, subject, phase_key="p0a"):
                 self.info(f"📋 [Queue] Phase 0a: 輕量診斷 ({subject})...")
                 from phases.p00a_diagnostic import Phase0aDiagnostic
 
@@ -327,7 +329,7 @@ class QueueManager(PipelineBase):
                     raise RuntimeError("Phase 0a 完成但找不到 scan_report.json")
 
             # --- Phase 1a: Docling Extraction ---
-            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1a"):
+            if force_this or not self._is_already_processed(pdf_id, subject, phase_key="p1a"):
                 if not self.model_mutex.acquire_docling():
                     self.warning("⚠️ [Queue] Playwright 執行中，Docling 等待...")
                     while self.model_mutex._playwright_active:
@@ -361,7 +363,7 @@ class QueueManager(PipelineBase):
             self.state_manager.update_task(subject, item["filename"], "p1b_s", "✅")
 
             # --- Phase 1b: Vector Chart Extraction ---
-            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1b"):
+            if force_this or not self._is_already_processed(pdf_id, subject, phase_key="p1b"):
                 # Always call run(), Phase 1b internally reads scan_report.json and skips if empty
                 self.info(f"🎨 [Queue] Phase 1b: 向量圖表補充 ({subject})...")
                 from phases.p01b_vector_charts import Phase1bVectorChartExtractor
@@ -372,7 +374,7 @@ class QueueManager(PipelineBase):
                 self.info("🎨 [Queue] Phase 1b 已完成，跳過")
 
             # --- Phase 1c: OCR Quality (if scanned) ---
-            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1c"):
+            if force_this or not self._is_already_processed(pdf_id, subject, phase_key="p1c"):
                 # Phase 1c internally reads scan_report.json and skips if not scanned
                 self.info(f"🔤 [Queue] Phase 1c: OCR 品質評估 ({subject})...")
                 from phases.p01c_ocr_gate import Phase1cOCRQualityGate
@@ -383,7 +385,7 @@ class QueueManager(PipelineBase):
                 self.info("🔤 [Queue] Phase 1c 已完成，跳過")
 
             # --- Phase 1d: VLM Vision ---
-            if self.force_mode or not self._is_already_processed(pdf_id, subject, phase_key="p1d"):
+            if force_this or not self._is_already_processed(pdf_id, subject, phase_key="p1d"):
                 self.info(f"👁️ [Queue] Phase 1d: VLM 視覺圖表解析 ({subject})...")
                 from phases.p01d_vlm_vision import Phase1dVLMVision
 
@@ -570,9 +572,10 @@ if __name__ == "__main__":
 
                 reprocess_dict = batch_select_tasks(done_tasks, header="已完成的 PDF (重跑選取)")
                 if reprocess_dict:
-                    # 將選中的任務標記為 PENDING
+                    # 將選中的任務標記為 PENDING 並強制重跑所有階段
                     for item in reprocess_dict.values():
                         item["status"] = PDFStatus.PENDING.value
+                        item["force_reprocess"] = True
 
             # 處理「待處理」的 PDF
             pending = [i for i in qm._queue if i["status"] == PDFStatus.PENDING.value]

@@ -309,21 +309,22 @@ memory/
 
 ```
 docs/
-└── CODING_GUIDELINES.md    ← Definitive engineering standards:
-                               §1  Core design principles
-                               §2  Directory structure
-                               §3  Skill development standards (phase templates, orchestrator rules)
-                               §4  Core module usage (PathBuilder, AtomicWriter, StateManager…)
-                               §5  Naming conventions (files, classes, methods, config keys)
-                               §6  Configuration schema (config.yaml required sections)
-                               §7  Error handling (severity levels, prohibited patterns)
-                               §8  CLI design (standard flags, output emoji style, interrupt behaviour)
-                               §9  Documentation standards (required docs per skill)
-                               §10 Prohibited patterns (hardcoded paths, silent exceptions…)
-                               §11 Python code style (formatting, imports, class structure)
-                               §12 Type annotations (required patterns, aliases, forbidden forms)
-                               §13 Docstrings (Google style, module/class/method templates)
-                               §14 Enforcement & tooling (Ruff, Mypy, pre-commit, review checklist)
+├── CODING_GUIDELINES.md    ← Definitive engineering standards:
+│                              §1  Core design principles
+│                              §2  Directory structure
+│                              §3  Skill development standards (phase templates, orchestrator rules)
+│                              §4  Core module usage (PathBuilder, AtomicWriter, StateManager…)
+│                              §5  Naming conventions (files, classes, methods, config keys)
+│                              §6  Configuration schema (config.yaml required sections)
+│                              §7  Error handling (severity levels, prohibited patterns)
+│                              §8  CLI design (standard flags, output emoji style, interrupt behaviour)
+│                              §9  Documentation standards (required docs per skill)
+│                              §10 Prohibited patterns (hardcoded paths, silent exceptions…)
+│                              §11 Python code style (formatting, imports, class structure)
+│                              §12 Type annotations (required patterns, aliases, forbidden forms)
+│                              §13 Docstrings (Google style, module/class/method templates)
+│                              §14 Enforcement & tooling (Ruff, Mypy, pre-commit, review checklist)
+└── OPENCLAW_TECH_STACK.md  ← Exhaustive reference of tech stack, architectural patterns, multi-agent integrations, and defensive programming mechanisms.
 ```
 
 ---

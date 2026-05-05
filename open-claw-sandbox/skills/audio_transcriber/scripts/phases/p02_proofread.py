@@ -226,24 +226,62 @@ class Phase2Proofread(PipelineBase):
                 # --- Load Extra Context ---
                 glossary_text = self._get_glossary(subj)
                 pdf_text = ""
-                ref_dir = self.dirs.get(
-                    "p0_ref", os.path.join(self.base_dir, "output", "00_glossary")
-                )
-                pdf_path = os.path.join(ref_dir, subj, f"{base_name}.pdf")
 
-                if os.path.exists(pdf_path):
-                    try:
-                        reader = PdfReader(pdf_path)
-                        pdf_text = "\n".join(
-                            [p.extract_text() for p in reader.pages[:20] if p.extract_text()]
-                        )[:20000]
-                        self.log(f"📖 已載入 PDF 參考 ({len(pdf_text)} 字元)")
-                    except Exception as e:
-                        self.log(f"⚠️ PDF 讀取錯誤: {e}", "warn")
-                else:
-                    m = re.match(r"^(.+)-(\d+)$", base_name)
-                    if m:
-                        lecture_base = m.group(1)
+                # 1. Look for doc_parser output first
+                doc_parser_dir = os.path.abspath(
+                    os.path.join(self.base_dir, "..", "doc_parser", "output", "01_processed", subj)
+                )
+                doc_parser_found = False
+                lecture_base = None
+
+                m = re.match(r"^(.+)-(\d+)$", base_name)
+                if m:
+                    lecture_base = m.group(1)
+
+                candidates = [base_name]
+                if lecture_base:
+                    candidates.append(lecture_base)
+
+                if os.path.exists(doc_parser_dir):
+                    for cand in candidates:
+                        cand_dir = os.path.join(doc_parser_dir, cand)
+                        if os.path.exists(cand_dir) and os.path.isdir(cand_dir):
+                            # Prioritize sanitized.md over raw_extracted.md
+                            target_md = os.path.join(cand_dir, "sanitized.md")
+                            if not os.path.exists(target_md):
+                                target_md = os.path.join(cand_dir, "raw_extracted.md")
+
+                            if os.path.exists(target_md):
+                                try:
+                                    with open(target_md, encoding="utf-8") as f:
+                                        pdf_text = f.read()[:20000]
+                                    self.log(
+                                        f"📚 [跨技能參考] 成功讀取 doc-parser 解析 Markdown: {cand} ({len(pdf_text)} 字元)"
+                                    )
+                                    doc_parser_found = True
+                                    break
+                                except Exception as e:
+                                    self.log(f"⚠️ 讀取 doc-parser Markdown 錯誤: {e}", "warn")
+
+                # 2. Fallback to crude pypdf extraction if no doc_parser output
+                if not doc_parser_found:
+                    ref_dir = self.dirs.get(
+                        "p0_ref", os.path.join(self.base_dir, "output", "00_glossary")
+                    )
+                    pdf_path = os.path.join(ref_dir, subj, f"{base_name}.pdf")
+
+                    if os.path.exists(pdf_path):
+                        try:
+                            reader = PdfReader(pdf_path)
+                            pdf_text = "\n".join(
+                                [p.extract_text() for p in reader.pages[:20] if p.extract_text()]
+                            )[:20000]
+                            self.log(
+                                f"📚 [降級參考] 成功讀取原始 PDF 講義: {pdf_path} ({len(pdf_text)} 字元)"
+                            )
+                        except Exception as e:
+                            self.log(f"⚠️ PDF 讀取錯誤: {e}", "warn")
+                    elif lecture_base:
                         shared_pdf = os.path.join(ref_dir, subj, f"{lecture_base}.pdf")
                         if os.path.exists(shared_pdf):
                             try:
@@ -255,7 +293,9 @@ class Phase2Proofread(PipelineBase):
                                         if p.extract_text()
                                     ]
                                 )[:20000]
-                                self.log(f"📖 已載入共用 PDF ({lecture_base}.pdf)")
+                                self.log(
+                                    f"📚 [降級參考] 成功讀取共用 PDF 講義: {shared_pdf} ({len(pdf_text)} 字元)"
+                                )
                             except Exception:
                                 pass
 
@@ -408,29 +448,46 @@ class Phase2Proofread(PipelineBase):
                 if full_logs:
                     final_doc += "\n\n---\n\n## 📋 彙整修改日誌\n\n" + "\n\n".join(full_logs)
 
-                # Then open the ephemeral WebUI for human review
-                audio_path_for_gate = os.path.join(self.dirs.get("p0", ""), subj, fname)
-                if not os.path.exists(audio_path_for_gate):
-                    audio_path_for_gate = None  # degrade gracefully if audio missing
+                vg_cfg = self.config_manager.get_section("verification_gate") or {}
+                gate_enabled = bool(vg_cfg.get("enabled", True))
 
-                self.log(
-                    "⏸️  [Verification Gate] 正在開啟人工審核視窗 (完成後 Pipeline 自動繼續)..."
-                )
-                gate = VerificationGate(
-                    skill_name="audio_transcriber / p02_proofread",
-                    original_text=raw_text,  # verbatim P1 output (left pane)
-                    llm_text=final_doc,  # Ollama-proofread P2 draft (right pane, editable)
-                    audio_path=audio_path_for_gate,
-                )
-                approved_text = gate.start()
-                if approved_text and approved_text.strip():
-                    final_doc = approved_text
-                    self.log("✅ [Verification Gate] 人工審核完成，使用核准版本。")
-                else:
+                if gate_enabled:
+                    # Then open the ephemeral WebUI for human review
+                    audio_path_for_gate = os.path.join(self.dirs.get("p0", ""), subj, fname)
+                    if not os.path.exists(audio_path_for_gate):
+                        audio_path_for_gate = None  # degrade gracefully if audio missing
+
                     self.log(
-                        "⚠️  [Verification Gate] 未收到審核內容，保留 Ollama 校對結果。",
-                        "warn",
+                        "⏸️  [Verification Gate] 正在開啟人工審核視窗 (完成後 Pipeline 自動繼續)..."
                     )
+
+                    ref_info = ""
+                    if glossary_text or pdf_text:
+                        ref_info += "【📚 術語詞庫】\n" + (
+                            glossary_text if glossary_text else "無\n"
+                        )
+                        ref_info += "\n【📖 PDF 講義前 20 頁參考】\n" + (
+                            pdf_text if pdf_text else "無\n"
+                        )
+
+                    gate = VerificationGate(
+                        skill_name="audio_transcriber / p02_proofread",
+                        original_text=raw_text,  # verbatim P1 output (left pane)
+                        llm_text=final_doc,  # Ollama-proofread P2 draft (right pane, editable)
+                        audio_path=audio_path_for_gate,
+                        reference_text=ref_info,
+                    )
+                    approved_text = gate.start()
+                    if approved_text and approved_text.strip():
+                        final_doc = approved_text
+                        self.log("✅ [Verification Gate] 人工審核完成，使用核准版本。")
+                    else:
+                        self.log(
+                            "⚠️  [Verification Gate] 未收到審核內容，保留 Ollama 校對結果。",
+                            "warn",
+                        )
+                else:
+                    self.log("⏭️  [Verification Gate] 已在設定中停用 (bypass)，自動儲存校對結果。")
 
                 # --- Save Output ---
                 out_path = os.path.join(self.dirs["p2"], subj, f"{base_name}.md")

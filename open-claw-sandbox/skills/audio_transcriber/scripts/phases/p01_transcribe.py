@@ -153,7 +153,7 @@ def detect_repetition(
     """
     # Strategy 2: zlib 壓縮比
     encoded = text.encode("utf-8")
-    if not encoded:          # ← guard: empty segment → not a hallucination loop
+    if not encoded:  # ← guard: empty segment → not a hallucination loop
         return False
     compressed = zlib.compress(encoded)
     compress_ratio = len(compressed) / len(encoded)
@@ -599,9 +599,10 @@ class Phase1Transcribe(PipelineBase):
 
                     _n_chunks = len(_audio_paths_to_transcribe)
                     chunk_iter = _audio_paths_to_transcribe
-                    
+
                     if _n_chunks > 1:
                         from tqdm import tqdm
+
                         self.log(f"   📦 共 {_n_chunks} 個區塊，啟動批次轉錄...")
                         chunk_iter = tqdm(
                             _audio_paths_to_transcribe,

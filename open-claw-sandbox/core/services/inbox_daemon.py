@@ -21,18 +21,17 @@ import threading
 import time
 from typing import Any, Dict, List, Optional
 
-from core.cli.cli_runner import SkillRunner
-from core.orchestration.router_agent import RouterAgent, TaskManifest
-from core.orchestration.skill_registry import SkillRegistry
-from core.orchestration.task_queue import task_queue
-
-# Path Resolution
+# Path Resolution MUST happen before importing internal packages
 _core_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.dirname(_core_dir))
+_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.dirname(os.path.dirname(_core_dir)))
 # Ensure workspace root is on sys.path so `from core.xxx` always resolves
 if _workspace_root not in sys.path:
     sys.path.insert(0, _workspace_root)
 
+from core.cli.cli_runner import SkillRunner
+from core.orchestration.router_agent import RouterAgent, TaskManifest
+from core.orchestration.skill_registry import SkillRegistry
+from core.orchestration.task_queue import task_queue
 from core.utils.atomic_writer import AtomicWriter
 
 _logger = logging.getLogger("OpenClaw.InboxDaemon")

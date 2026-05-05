@@ -1,20 +1,16 @@
-from core.models.manifest import SkillManifest
+from core.orchestration.skill_registry import SkillManifest
 
 
-def get_manifest() -> SkillManifest:
-    return SkillManifest(
-        name="video_ingester",
-        description="Ingests lecture videos, extracts keyframes with FFmpeg, transcribes audio, and outputs interleaved Markdown.",
-        version="1.0.0",
-        author="Open Claw",
-        phases=[
-            {
-                "name": "p01_extract_keyframes",
-                "description": "Extracts keyframes from video at regular intervals using FFmpeg.",
-            },
-            {
-                "name": "p02_transcribe_video",
-                "description": "Transcribes audio track using MLX-Whisper and interleaves keyframes.",
-            },
-        ],
-    )
+def _run(**kw):
+    pass  # To be implemented when video_ingester runs
+
+
+MANIFEST = SkillManifest(
+    skill_name="video_ingester",
+    description="Ingests lecture videos, extracts keyframes with FFmpeg, transcribes audio, and outputs interleaved Markdown.",
+    phases=["p01_extract_keyframes", "p02_transcribe_video"],
+    cli_entry="scripts/run_all.py",
+    run_fn=_run,
+    file_types=[".mp4", ".mov", ".mkv", ".webm"],
+    tags=["video", "ffmpeg", "transcription"],
+)

@@ -8,14 +8,19 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 ## [Unreleased]
 
 ### Added
+- **docs**: Created `OPENCLAW_TECH_STACK.md` as an exhaustive reference for the project's security defenses, multi-agent architecture, DAG states, and advanced Python implementations. Linked in `INDEX.md` and `STRUCTURE.md`.
 - **core**: `task_queue.py` implemented as a single-threaded queue to replace concurrent subprocesses, preventing OOM.
 - **core**: `knowledge_pusher.py` to push generated notes to Open WebUI Knowledge API.
 - **infra**: `open_claw_tool.py` custom tool for Open WebUI to natively trigger Open Claw pipelines.
 - **core**: Obsidian Watchdog added to `inbox_daemon.py` to listen for `status: rewrite` and automatically enqueue files for `note_generator`.
+- **skills**: Added deterministic chunk-level `tqdm` progress bars in `audio_transcriber` Phase 1 when falling back to 30s chunks, to provide clear visual feedback during long transcribing operations.
 
 ### Changed
+- **core**: Fixed Path Traversal Defense and `WORKSPACE_DIR` resolution logic in `bootstrap.py`, `pipeline_base.py`, and `atomic_writer.py`. Resolved `PermissionError` and `ConfigValidationError` when launching scripts from subdirectories without environment variables.
 - **core**: `inbox_daemon.py` removed legacy HTTP POST to the retired Flask WebUI. Now fully uses local `task_queue.py`.
 - **core**: `inbox_daemon.py` now strictly adheres to sandbox input isolation. Removed hardcoded `pdf_routing_rules` that previously bypassed boundaries and wrote directly to cross-skill `output/` directories.
+- **skills**: Fixed `ZeroDivisionError` in `audio_transcriber` Phase 1 repetition detection (`detect_repetition`) caused by empty audio segments.
+- **skills**: Suppressed internal `tqdm` outputs and stdout/stderr chatters of `mlx-whisper` inside loops to maintain a clean "Quiet Pipeline" CLI interface.
 - **skills**: All `temperature` configs in extraction layers (`audio_transcriber`, `doc_parser`) and `smart_highlighter` forcefully set to `0` to prevent hallucinations.
 - **skills**: `audio_transcriber` Phase 3 prompt stripped of formatting logic to strictly perform lossless merging.
 - **skills**: `note_generator` synthesis map temperature lowered to `0.1` and `0.2` to prevent hallucination during map-reduce.

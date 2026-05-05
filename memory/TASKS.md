@@ -29,6 +29,12 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-05: Audio Pipeline Pathing & Tech Stack Docs
+  - Fixed `WORKSPACE_DIR` resolution in `bootstrap.py`, `pipeline_base.py`, and `atomic_writer.py`
+  - Fixed `ZeroDivisionError` in `audio_transcriber` VAD handling.
+  - Suppressed internal `tqdm` output for `mlx-whisper` and implemented chunk-level `tqdm` progress bar.
+  - Created `OPENCLAW_TECH_STACK.md` mapping out security defenses, architectural patterns, multi-agent integrations, and defensive programming.
+
 - [x] 2026-05-04: Quality-First Model Optimization (V9.2)
   - Upgraded all skills to quality-first models (see `docs/MODEL_SELECTION.md`)
   - `note_generator`: phi4-mini-reasoning → qwen3:14b (profile: qwen3_reasoning)

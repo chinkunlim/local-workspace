@@ -128,15 +128,19 @@ context:
 
 # Circuit Breaker fallback model (#11)
 models:
-  fallback: gemma3:4b   # lighter model activated when primary fails 3× in a row
+  fallback: gemma4:e2b   # lighter model activated when primary fails 3× in a row
 
 # Proofread Feedback Loop (#8)
 phase2_feedback:
   enabled: true
   confidence_threshold: 0.70   # If output/input ratio < threshold, trigger secondary pass
-  secondary_model: gemma3:12b  # Heavier model used for low-confidence chunks
+  secondary_model: qwen3:14b  # Heavier model used for low-confidence chunks
 
 # Audio Chunk Fallback (#7)
 phase1_chunk_fallback:
   enabled: true
   max_chunk_duration_sec: 30   # Hard time-based slice when VAD finds no silence
+
+# Human-in-the-Loop Verification Gate
+verification_gate:
+  enabled: true

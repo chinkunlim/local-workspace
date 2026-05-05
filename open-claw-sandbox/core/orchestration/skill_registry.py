@@ -120,7 +120,15 @@ class SkillRegistry:
             return None
         mod = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = mod
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+
+        # Inject the skill directory so it can import its own internal modules
+        skill_dir = os.path.dirname(manifest_path)
+        sys.path.insert(0, skill_dir)
+        try:
+            spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        finally:
+            sys.path.remove(skill_dir)
+
         manifest = getattr(mod, "MANIFEST", None)
         if not isinstance(manifest, SkillManifest):
             raise TypeError(
