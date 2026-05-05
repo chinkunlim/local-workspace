@@ -153,7 +153,7 @@ class Phase2Anki(PipelineBase):
             csv_text = approved
             self.info("✅ [Verification Gate] 人工審核完成，使用核准內容。")
         else:
-            self.info("⚠️  [Verification Gate] 未提交，保留 LLM 生成結果。", "warn")
+            self.warning("⚠️  [Verification Gate] 未提交，保留 LLM 生成結果。")
 
         csv_rows = []
         for line in csv_text.splitlines():

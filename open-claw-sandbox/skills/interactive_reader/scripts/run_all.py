@@ -27,7 +27,7 @@ class ReaderOrchestrator(PipelineBase):
         print("✅ 前置檢查通過。")
         return True
 
-    def _check_and_resume(self) -> dict:
+    def _check_and_resume(self) -> dict | None:
         cp = self._state_manager.load_checkpoint()
         if not cp:
             return None

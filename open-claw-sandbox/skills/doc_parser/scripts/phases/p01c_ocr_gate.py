@@ -52,7 +52,7 @@ class Phase1cOCRQualityGate(PipelineBase):
         ocr_cfg = self.config_manager.get_nested("pdf_processing", "ocr") or {}
         self.dpi = ocr_cfg.get("dpi")
         self.lang = ocr_cfg.get("lang")
-        self.threshold = ocr_cfg.get("confidence_threshold")
+        self.threshold: float = float(ocr_cfg.get("confidence_threshold", 0.8))
         if self.dpi is None or self.lang is None or self.threshold is None:
             raise RuntimeError(
                 "doc_parser config missing pdf_processing.ocr.dpi/lang/confidence_threshold"

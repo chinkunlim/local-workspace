@@ -157,10 +157,10 @@ class Phase1bVectorChartExtractor(PipelineBase):
         shutil.move(output_files[0], dest_path)
 
         return {
-            "page": page_num,
+            "page": str(page_num),
             "src": os.path.join("assets", dest_filename),
             "type": "vector_rasterized",
-            "dpi": self.dpi,
+            "dpi": str(self.dpi),
         }
 
     # ------------------------------------------------------------------ #
@@ -244,7 +244,7 @@ if __name__ == "__main__":
             print(f"❌ scan_report.json 不存在: {report_path}")
             sys.exit(1)
 
-    results = extractor.extract_vector_charts(args.pdf, pdf_id, page_nums)
-    print(f"\n✅ 完成: {len(results)} 張向量圖表已光柵化")
-    for r in results:
-        print(f"  頁面 {r['page']} → {r['src']}")
+    filename = os.path.basename(args.pdf)
+    extractor.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
+    success = extractor.run("Default", filename)
+    print(f"\n{'✅' if success else '❌'} 完成")

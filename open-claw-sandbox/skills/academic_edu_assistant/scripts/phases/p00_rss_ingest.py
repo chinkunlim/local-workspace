@@ -69,7 +69,7 @@ class Phase0RSSIngest(PipelineBase):
     # ── Deduplication ─────────────────────────────────────────────────────
 
     def _load_seen(self) -> set:
-        seen = set()
+        seen: set[str] = set()
         if not os.path.exists(self.dedupe_path):
             return seen
         try:

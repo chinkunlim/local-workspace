@@ -1,4 +1,4 @@
-# CLAUDE.md — Inbox Manager Skill
+# PROJECT_RULES.md — Inbox Manager Skill
 
 > AI agent collaboration context for the `inbox_manager` skill.
 > Read this file before making any changes to this skill or `core/config/inbox_config.json`.

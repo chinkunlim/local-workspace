@@ -195,7 +195,7 @@ class Phase1dVLMVision(PipelineBase):
 
             return True
         finally:
-            self.llm.unload_model(self.vlm_model, logger=self)
+            self.llm.unload_model(str(self.vlm_model) if self.vlm_model else "", logger=self)
 
 
 if __name__ == "__main__":

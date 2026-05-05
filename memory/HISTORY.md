@@ -1,0 +1,42 @@
+# HISTORY.md — Global Development Log
+
+> **Rule:** Never delete historical records. All Google Antigravity operations, implementation plans, and walkthroughs are archived here.
+
+---
+
+## Session Archives
+
+- **[2026-05-05] [[Archived] Historical Archival & Template Integration Plan (Updated)](sessions/2026-05-05_6f681039.md)** (ID: `6f681039`)
+- **[2026-05-05] [[Archived] Architectural Assessment & Implementation Plan](sessions/2026-05-05_d7f00fdb.md)** (ID: `d7f00fdb`)
+- **[2026-05-05] [[Archived] 🚀 跨技能連動與參考資料架構設計 (Optimal Architecture)](sessions/2026-05-05_d8f40cf7.md)** (ID: `d8f40cf7`)
+- **[2026-04-23] [[Archived] Session 6a203c2e](sessions/2026-04-23_6a203c2e.md)** (ID: `6a203c2e`)
+- **[2026-04-22] [[Archived] 全專案文檔大稽核報告 (Audit Report)](sessions/2026-04-22_e5d1d6e5.md)** (ID: `e5d1d6e5`)
+- **[2026-04-21] [[Archived] Session dea7a211](sessions/2026-04-21_dea7a211.md)** (ID: `dea7a211`)
+- **[2026-04-21] [[Archived] 記憶體優化實作藍圖 (Performance & Memory Guard Plan)](sessions/2026-04-21_bf93cce5.md)** (ID: `bf93cce5`)
+- **[2026-04-20] [[Archived] 實作設計計畫：p01_transcribe.py 抗幻覺雙重防禦](sessions/2026-04-20_82771ab8.md)** (ID: `82771ab8`)
+- **[2026-04-20] [[Archived] Open Claw 深度體檢報告與重構藍圖](sessions/2026-04-20_383b99f1.md)** (ID: `383b99f1`)
+- **[2026-04-20] [[Archived] 任務：Antigravity 除錯與清理計畫 (Purge & Fix Plan)](sessions/2026-04-20_e1a446df.md)** (ID: `e1a446df`)
+- **[2026-04-20] [[Archived] Open Claw System Fixes & Architecture Refactoring](sessions/2026-04-20_85d5dcc3.md)** (ID: `85d5dcc3`)
+- **[2026-04-19] [[Archived] Inbox Daemon 升級與調度解答計畫](sessions/2026-04-19_26c6e54a.md)** (ID: `26c6e54a`)
+- **[2026-04-19] [[Archived] 《全端重建實作藍圖》](sessions/2026-04-19_47adff49.md)** (ID: `47adff49`)
+- **[2026-04-17] [[Archived] 🏗️ 架構與邏輯提煉/去硬編碼審查計畫 (Architectural Review & Refactoring Plan)](sessions/2026-04-17_db96e2d6.md)** (ID: `db96e2d6`)
+- **[Unknown] [[Archived] PDF Knowledge Skill — Implementation Plan](sessions/Unknown_871e6d22.md)** (ID: `871e6d22`)
+- **[Unknown] [[Archived] Pipeline UX 四大改進實作計畫](sessions/Unknown_026dcfd2.md)** (ID: `026dcfd2`)
+- **[Unknown] [[Archived] Session 9acafd2c](sessions/Unknown_9acafd2c.md)** (ID: `9acafd2c`)
+- **[Unknown] [[Archived] Session 9b670179](sessions/Unknown_9b670179.md)** (ID: `9b670179`)
+- **[Unknown] [[Archived] 5-Phase Pipeline Architecture Enhancement Plan](sessions/Unknown_be37128c.md)** (ID: `be37128c`)
+- **[Unknown] [[Archived] Session 49ae2d17](sessions/Unknown_49ae2d17.md)** (ID: `49ae2d17`)
+- **[Unknown] [[Archived] Session f0c3e45f](sessions/Unknown_f0c3e45f.md)** (ID: `f0c3e45f`)
+- **[Unknown] [[Archived] Session 6cc63e00](sessions/Unknown_6cc63e00.md)** (ID: `6cc63e00`)
+- **[Unknown] [[Archived] Session tempmedi](sessions/Unknown_tempmedi.md)** (ID: `tempmedi`)
+- **[Unknown] [[Archived] Phase 9: Context Window Exceedance Fix](sessions/Unknown_f0fb1f33.md)** (ID: `f0fb1f33`)
+- **[Unknown] [[Archived] Voice-Memo Pipeline — 獨角獸級深層架構評估與 V7.0 升級計畫](sessions/Unknown_eedc148f.md)** (ID: `eedc148f`)
+- **[Unknown] [[Archived] Session ef0b40f7](sessions/Unknown_ef0b40f7.md)** (ID: `ef0b40f7`)
+- **[Unknown] [[Archived] Goal Description](sessions/Unknown_f9bb2404.md)** (ID: `f9bb2404`)
+- **[Unknown] [[Archived] Session 01981f3b](sessions/Unknown_01981f3b.md)** (ID: `01981f3b`)
+- **[Unknown] [[Archived] Phase 2 & 3 Optimization Plan — Glossary Injection & Transcript Refinement](sessions/Unknown_565531e0.md)** (ID: `565531e0`)
+- **[Unknown] [[Archived] Session ed07275c](sessions/Unknown_ed07275c.md)** (ID: `ed07275c`)
+- **[Unknown] [[Archived] Session d810027a](sessions/Unknown_d810027a.md)** (ID: `d810027a`)
+- **[Unknown] [[Archived] Voice Memo Pipeline Architecture Refactoring](sessions/Unknown_9b17ee28.md)** (ID: `9b17ee28`)
+- **[Unknown] [[Archived] 完美主義者級別程式架構對齊 (Enterprise-Grade Strict Alignment)](sessions/Unknown_d133d678.md)** (ID: `d133d678`)- **[2026-05-05] [Final Document System Polish & Deep Integration Plan](sessions/2026-05-05_6f681039.md)** (ID: `6f681039`)
+- **[2026-05-05] [[Archived] Project-Wide Compliance & Archival Audit Plan](sessions/2026-05-05_6f681039.md)** (ID: `6f681039`)

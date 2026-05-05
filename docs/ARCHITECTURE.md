@@ -42,7 +42,7 @@ local-workspace/                    ← Monorepo root (git repo)
 │   ├── ARCHITECTURE.md             ← This file — single source of truth
 │   ├── DECISIONS.md                ← Global architectural decision log (ADR format)
 │   ├── HANDOFF.md                  ← Session handoff records
-│   ├── CLAUDE.md                   ← AI agent collaboration context
+│   ├── PROJECT_RULES.md                   ← AI agent collaboration context
 │   └── TASKS.md                    ← Active task tracking
 │
 └── ops/                            ← Global quality gate scripts

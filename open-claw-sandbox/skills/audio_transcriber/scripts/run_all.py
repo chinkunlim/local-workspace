@@ -118,7 +118,7 @@ class VoiceMemoOrchestrator(PipelineBase):
     #  Checkpoint Resume                                                   #
     # ------------------------------------------------------------------ #
 
-    def _check_and_resume(self) -> dict:
+    def _check_and_resume(self) -> dict | None:
         """Prompt the user to resume from a saved checkpoint (if any).
 
         Returns:

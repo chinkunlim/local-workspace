@@ -42,7 +42,7 @@ skills/inbox_manager/
 ├── SKILL.md              ← Quick-start: all CLI commands
 ├── docs/
 │   ├── ARCHITECTURE.md   ← This file
-│   ├── CLAUDE.md         ← AI agent collaboration context
+│   ├── PROJECT_RULES.md         ← AI agent collaboration context
 │   └── DECISIONS.md      ← Technical decision log
 └── scripts/
     └── query.py          ← Main CLI entry point (list / add / remove)

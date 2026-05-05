@@ -28,9 +28,9 @@ fi
 
 # ── Mypy ─────────────────────────────────────────────────────────────────────
 echo ""
-echo "🔬 [3/3] Mypy type check (core/ only)..."
+echo "🔬 [3/3] Mypy type check (core/ + skills/)..."
 if command -v mypy &> /dev/null; then
-    mypy core/ && echo "   ✅ Mypy passed" || { echo "   ❌ Mypy found type errors"; ERRORS=$((ERRORS+1)); }
+    mypy core/ skills/ && echo "   ✅ Mypy passed" || { echo "   ❌ Mypy found type errors"; ERRORS=$((ERRORS+1)); }
 else
     echo "   ⚠️  mypy not installed — skipping (pip install mypy)"
 fi

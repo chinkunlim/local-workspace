@@ -1,4 +1,4 @@
-# CLAUDE.md — Academic & Education Assistant Skill
+# PROJECT_RULES.md — Academic & Education Assistant Skill
 
 > AI agent collaboration context for the `academic_edu_assistant` skill.
 > Read this file in full before making any code changes to this skill.

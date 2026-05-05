@@ -39,7 +39,7 @@ skills/academic_edu_assistant/
 │   └── prompt.md                     ← LLM prompts for comparison and flashcard generation
 ├── docs/
 │   ├── ARCHITECTURE.md               ← This file
-│   ├── CLAUDE.md                     ← AI agent collaboration context
+│   ├── PROJECT_RULES.md                     ← AI agent collaboration context
 │   └── DECISIONS.md                  ← Technical decision log (ADRs)
 └── scripts/
     ├── run_all.py                    ← Orchestrator: 2-phase runner with resume/interactive

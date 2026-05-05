@@ -1,4 +1,4 @@
-# CLAUDE.md — Smart Highlighter Skill
+# PROJECT_RULES.md — Smart Highlighter Skill
 
 > AI agent collaboration context for the `smart_highlighter` skill.
 > Read this file in full before making any code changes to this skill.

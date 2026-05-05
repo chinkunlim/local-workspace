@@ -53,7 +53,9 @@ class Phase1aPDFEngine(PipelineBase):
         self.resume_manager = ResumeManager(self.base_dir)
         docling_cfg = self.config_manager.get_nested("pdf_processing", "docling") or {}
         self.gc_collect_after = docling_cfg.get("gc_collect_after")
-        self.font_diff_threshold = docling_cfg.get("font_fallback_diff_threshold")
+        self.font_diff_threshold: float = float(
+            docling_cfg.get("font_fallback_diff_threshold", 0.2)
+        )
         if self.gc_collect_after is None:
             raise RuntimeError("doc_parser config missing pdf_processing.docling.gc_collect_after")
         if self.font_diff_threshold is None:
@@ -483,6 +485,7 @@ class Phase1aPDFEngine(PipelineBase):
         font_fallback_pages = scan_report.get("font_issues", [])
         self._update_scan_report(
             pdf_id,
+            scan_report.get("subject", ""),
             {
                 "font_fallback_applied": diff_ratio > self.font_diff_threshold,
                 "font_fallback_diff_ratio": round(diff_ratio, 4),
@@ -621,7 +624,7 @@ if __name__ == "__main__":
 
     pdf_id = args.pdf_id or os.path.splitext(os.path.basename(args.pdf))[0]
     engine = Phase1aPDFEngine()
-    result = engine.extract(args.pdf, pdf_id)
+    result = engine.run("default_subject", filename=args.pdf)
 
     if result:
         print(f"\n✅ 提取完成: {result}")

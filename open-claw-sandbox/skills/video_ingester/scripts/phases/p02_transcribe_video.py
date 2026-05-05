@@ -59,7 +59,7 @@ class Phase2TranscribeVideo(PipelineBase):
             # Group transcription into blocks corresponding to keyframes
             # Every `self.interval` seconds, we insert the keyframe image
             blocks = []
-            current_block_text = []
+            current_block_text: list[str] = []
             current_frame_idx = 1
 
             # Get all frames, sorted

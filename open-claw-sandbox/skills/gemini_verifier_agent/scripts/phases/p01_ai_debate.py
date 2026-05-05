@@ -2,8 +2,8 @@ import asyncio
 import json
 import os
 
-from core import PhaseBase
 from core.ai.llm_client import OllamaClient
+from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.playwright_utils import get_persistent_context
 
 
@@ -97,7 +97,7 @@ class Phase1AIDebate(PhaseBase):
                 return ""
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.phase_dirs["input"]
+        input_dir = self.dirs["input"]
 
         for root, _, files in os.walk(input_dir):
             for file in files:
@@ -127,7 +127,7 @@ class Phase1AIDebate(PhaseBase):
                         }
                     )
 
-                out_path = self._get_output_path(filepath, ext=".json")
+                out_path = os.path.splitext(filepath)[0] + ".json"
                 with open(out_path, "w", encoding="utf-8") as f:
                     json.dump({"debated_claims": results}, f, ensure_ascii=False, indent=2)
 

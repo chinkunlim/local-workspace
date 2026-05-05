@@ -314,6 +314,25 @@ class StateManager:
 
             self._save_state()
 
+    def is_completed(self, phase_key: str, state_key: str) -> bool:
+        """Convenience method for skills that use a simple phase/key model.
+
+        Checks whether the given state_key has been marked complete under
+        a flat '_simple_' namespace.  Used by skills like feynman_simulator
+        that do not have subject/filename triplets.
+        """
+        with self._lock:
+            return self.state.get("_simple_", {}).get(state_key, {}).get(phase_key) == "✅"
+
+    def mark_completed(self, phase_key: str, state_key: str) -> None:
+        """Convenience method: mark a simple phase/key pair as completed.
+
+        Mirrors is_completed() for skills that use a flat tracking model.
+        """
+        with self._lock:
+            self.state.setdefault("_simple_", {}).setdefault(state_key, {})[phase_key] = "✅"
+            self._save_state()
+
     def check_output_hashes(self, phase_dirs: Dict[str, str]):
         """
         Check if physical outputs of completed phases have been manually edited.

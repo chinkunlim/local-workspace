@@ -1,4 +1,4 @@
-# CLAUDE.md — Knowledge Compiler Skill
+# PROJECT_RULES.md — Knowledge Compiler Skill
 
 > AI agent collaboration context for the `knowledge_compiler` skill.
 > Read this before making any changes to this skill or the wiki publishing logic.

@@ -92,7 +92,7 @@ def encode_image_b64(image_path: str) -> str:
 def write_csv_safe(
     path: str,
     rows: list,
-    logger: Optional[logging.Logger] = None,
+    logger: object = None,
 ) -> bool:
     """
     Write a list of rows to a CSV file using Python's stdlib csv module.
@@ -118,5 +118,7 @@ def write_csv_safe(
         return True
     except OSError as exc:
         if logger:
-            logger.error("write_csv_safe failed (%s): %s", path, exc)
+            _log = getattr(logger, "error", None)
+            if callable(_log):
+                _log("write_csv_safe failed (%s): %s", path, exc)
         return False

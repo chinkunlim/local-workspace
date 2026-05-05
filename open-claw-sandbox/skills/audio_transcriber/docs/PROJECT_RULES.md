@@ -1,4 +1,4 @@
-# CLAUDE.md — Audio Transcriber Skill
+# PROJECT_RULES.md — Audio Transcriber Skill
 
 > AI collaboration context for the `audio_transcriber` skill.
 > Read this before making any code changes to this skill.

@@ -1,4 +1,4 @@
-# CLAUDE.md — Interactive Reader Skill
+# PROJECT_RULES.md — Interactive Reader Skill
 
 > AI agent collaboration context for the `interactive_reader` skill.
 > Read this file before making any changes to this skill.

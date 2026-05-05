@@ -2,8 +2,8 @@ import json
 import os
 import uuid
 
-from core import PhaseBase
 from core.ai.llm_client import OllamaClient
+from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 
 
 class Phase1ClaimExtraction(PhaseBase):
@@ -16,7 +16,7 @@ class Phase1ClaimExtraction(PhaseBase):
         self.llm = OllamaClient()
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.phase_dirs["input"]
+        input_dir = self.dirs["input"]
 
         for root, _, files in os.walk(input_dir):
             for file in files:
@@ -57,7 +57,7 @@ class Phase1ClaimExtraction(PhaseBase):
                     print(f"❌ 萃取失敗: {e}")
                     continue
 
-                out_path = self._get_output_path(filepath, ext=".json")
+                out_path = os.path.splitext(filepath)[0] + ".json"
                 with open(out_path, "w", encoding="utf-8") as f:
                     json.dump(
                         {"source_md": filepath, "claims": claims}, f, ensure_ascii=False, indent=2

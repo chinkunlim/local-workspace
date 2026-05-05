@@ -107,6 +107,7 @@ class QueueManager(PipelineBase):
         # Utilizing canonical self.dirs from PipelineBase
         self.resume_manager = ResumeManager(self.base_dir)
         self.model_mutex = ModelMutex()
+        self.interactive: bool = False
         self._queue: List[Dict] = []
         self._processed_hashes: set = set()
 

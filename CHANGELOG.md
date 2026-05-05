@@ -3,12 +3,19 @@
 All notable changes to this project will be documented in this file.
 Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
+> [!NOTE]
+> **Historical Archival:** For the granular, step-by-step AI execution logs, implementation plans, and walkthroughs of these changes, please refer to the master index at **[`memory/HISTORY.md`](memory/HISTORY.md)**.
+
 ---
 
-## [Unreleased]
+## [9.2.0] — 2026-05-05
 
 ### Added
+- **docs**: Established a formal `identity/` directory for global persona configuration.
 - **docs**: Created `OPENCLAW_TECH_STACK.md` as an exhaustive reference for the project's security defenses, multi-agent architecture, DAG states, and advanced Python implementations. Linked in `INDEX.md` and `STRUCTURE.md`.
+
+### Changed
+- **docs**: Executed a comprehensive restructure of the documentation system based on the `doc_system_template.md`. `ARCHITECTURE.md` was moved to the global `docs/` folder, while all files in `memory/` were explicitly reformatted with strict boilerplate headers to ensure AI memory persistence without historical loss.
 - **core**: `task_queue.py` implemented as a single-threaded queue to replace concurrent subprocesses, preventing OOM.
 - **core**: `knowledge_pusher.py` to push generated notes to Open WebUI Knowledge API.
 - **infra**: `open_claw_tool.py` custom tool for Open WebUI to natively trigger Open Claw pipelines.

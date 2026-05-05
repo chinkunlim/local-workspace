@@ -1,56 +1,28 @@
-# AGENTS.md
+# AGENTS.md — Internal Agent Registry
 
-## 1. Mission
+> **Target Audience:** Open Claw Runtime System & Developers
+> **Purpose:** Serves as the central registry defining the purpose and capabilities of all specialized internal AI agents operating within the local Open Claw ecosystem.
+> **Note to Development AIs:** Do not use this file for your own rules. Read `identity/AI_PROFILE.md` instead.
 
-Deliver production-grade local AI automation with explicit safety, auditability, and maintainability.
-All agents operate within the open-claw-sandbox sandbox boundary.
+---
 
-## 2. Mandatory Startup Context for Agents
+## 1. Orchestration & Routing
+- **RouterAgent**: The brain of the system. Decomposes natural language intents into a DAG of skill execution pipelines. Dynamically assigns `qwen3:14b` or `qwen3:8b` based on task complexity.
 
-Before making any change, read and apply the following files in order:
+## 2. Core Extraction Skills
+- **audio_transcriber**: Processes `.m4a` files. Uses MLX-Whisper for raw transcription and LLMs for semantic proofreading and glossary injection.
+- **doc_parser**: Processes `.pdf` files. Uses Docling to produce immutable Markdown and Vector charts.
 
-1. `memory/CLAUDE.md` — project rules, AI behaviour contract, hardware constraints
-2. `memory/ARCHITECTURE.md` — system architecture, module map, data flow
-3. `memory/HANDOFF.md` — last session progress and next steps
-4. `memory/TASKS.md` — current task list
-5. `docs/STRUCTURE.md` — annotated map of every file and folder in this workspace
-6. `open-claw-sandbox/AGENTS.md` — this file (non-negotiable behaviours and quality bar)
-7. `skills/<skill>/SKILL.md` — skill quick-start, phases, and CLI reference (if executing a skill)
+## 3. High-Level Processing Skills
+- **smart_highlighter**: Applies Markdown highlights to raw text, strictly avoiding text tampering.
+- **note_generator**: Synthesizes notes using Map-Reduce chains. Permitted to use higher temperatures (`0.1`-`0.2`) for structural creativity.
 
-## 3. Non-Negotiable Behaviors
+## 4. Specialized Analytical Agents
+- **interactive_reader**: Resolves in-place queries or annotations from human operators.
+- **academic_edu_assistant**: Extracts flashcards and performs multi-document topic comparisons.
+- **feynman_simulator**: Simulates Socratic debates between multiple AI personas to test logic.
+- **video_ingester**: Multimodal processing pipeline for video formats.
+- **knowledge_compiler**: Consolidates processed artifacts into the final Obsidian Vault (`data/wiki/`).
 
-1. Do not execute destructive actions without explicit operator approval.
-2. Do not leak private data outside the local sandbox boundary.
-3. Prefer deterministic scripts and explicit logs over hidden or implicit behavior.
-4. Keep all changes minimal and scoped to the stated objective.
-5. Update documentation in the same change set for any significant modification.
-6. Never reference or modify files outside `open-claw-sandbox/` from within skill code.
-
-## 4. Documentation Update Requirement
-
-If code changes affect observable behavior, update corresponding documentation immediately:
-
-| Changed behaviour | Files to update |
-|:---|:---|
-| CLI interface change | `skills/<skill>/SKILL.md` |
-| Data path, phase logic, or core module change | `skills/<skill>/docs/ARCHITECTURE.md` + `docs/STRUCTURE.md` |
-| Architectural decision made | `skills/<skill>/docs/DECISIONS.md` |
-| New pattern or rule established | `docs/CODING_GUIDELINES.md` |
-| New skill or core module added | `docs/STRUCTURE.md`, `memory/ARCHITECTURE.md`, `skills/<skill>/SKILL.md` |
-
-## 5. External Action Policy
-
-Request explicit operator approval before any action that leaves the machine:
-email, public posting, external service mutation, or any operation outside the local network control plane.
-
-## 6. Quality Bar
-
-All outputs — code, documentation, and plans — must be:
-- Professional and concise
-- Verifiable by future operators
-- Interoperable across Claude Code, GitHub Copilot, and Google Antigravity
-- Compliant with `docs/CODING_GUIDELINES.md` in full
-
-## 7. Sandbox Invariant
-
-`open-claw-sandbox/` is a fully self-contained sandbox. See `docs/CODING_GUIDELINES.md` §3.4 for the full isolation specification.
+## 5. Interaction Agents
+- **telegram_kb_agent**: Exposes a Retrieval-Augmented Generation (RAG) interface via Telegram Bot, connected to the local ChromaDB.

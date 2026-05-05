@@ -139,11 +139,13 @@ class Phase1Compile(PipelineBase):
             res = collection.query(query_embeddings=[emb], n_results=3)
 
             related = set()
-            for doc_meta, dist in zip(res.get("metadatas", [[]])[0], res.get("distances", [[]])[0]):
+            metadatas = res.get("metadatas") or [[]]
+            distances = res.get("distances") or [[]]
+            for doc_meta, dist in zip(metadatas[0], distances[0]):  # type: ignore[index]
                 if dist < 0.3:
-                    fname = doc_meta.get("filename")
-                    if fname and fname.endswith(".md"):
-                        past_title = os.path.splitext(fname)[0]
+                    fname = doc_meta.get("filename")  # type: ignore[union-attr]
+                    if fname and str(fname).endswith(".md"):
+                        past_title = os.path.splitext(str(fname))[0]
                         if past_title != title:
                             related.add(past_title)
             return list(related)

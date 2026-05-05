@@ -39,7 +39,7 @@ skills/doc_parser/
 ├── docs/
 │   ├── ARCHITECTURE.md            # This file
 │   ├── DECISIONS.md               # Architectural decision log (ADR format)
-│   └── CLAUDE.md                  # AI collaboration context
+│   └── PROJECT_RULES.md                  # AI collaboration context
 └── scripts/
     ├── run_all.py                  # Orchestrator — queue-based 7-phase executor
     └── phases/

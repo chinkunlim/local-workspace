@@ -1,4 +1,4 @@
-# CLAUDE.md — Note Generator Skill
+# PROJECT_RULES.md — Note Generator Skill
 
 > AI agent collaboration context for the `note_generator` skill.
 > Read this file in full before making any code changes to this skill.

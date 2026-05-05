@@ -1,12 +1,13 @@
-# DECISIONS.md — Global Architectural Decision Records
+# DECISIONS.md — Architectural Decision Records
 
-> **Scope:** `local-workspace/` monorepo root
-> **Last Updated:** 2026-05-04
-> **Format:** ADR (Architectural Decision Record)
+> **Rule:** Never delete historical records. If a pattern is deprecated, mark it `[ABANDONED]` and explain why.
+> **Granular Logs:** This document records the *why* and *what* of architecture. For the *how* (raw execution logs, implementation plans, AI walkthroughs), refer to **[`HISTORY.md`](HISTORY.md)** and the `memory/sessions/` directory.
 
 ---
 
 ## [2026-05-04] ADR-009: Quality-First Model Selection Strategy
+
+**Status:** Active
 
 **Context:** The initial model assignments prioritized resource efficiency (smaller models for all tasks). After auditing the available hardware (16GB Apple Silicon, RUNS WELL/DECENT tier for 9-14B models), we determined that running larger models for quality-critical tasks is acceptable since the TaskQueue serializes all execution.
 
@@ -20,27 +21,35 @@
 - Vision/multimodal: `llama3.2-vision` (only installed multimodal model)
 - Routing decisions: `qwen3:8b` (low-complexity) / `qwen3:14b` (high-complexity)
 
-**Rationale:** The TaskQueue already ensures sequential execution (no OOM risk from concurrency). The bottleneck is single-threaded throughput, not peak RAM. Running the best available model for each task produces better knowledge artifacts at no additional operational risk.
+**Consequences:** The TaskQueue already ensures sequential execution (no OOM risk from concurrency). The bottleneck is single-threaded throughput, not peak RAM. Running the best available model for each task produces better knowledge artifacts at no additional operational risk.
+
+---
 
 ---
 
 ## [2026-05-04] ADR-008: Context-Aware Model Routing via `OPENCLAW_ROUTER_MODEL`
 
+**Status:** Active
+
 **Context:** Phase A optimization required routing LLM tasks to the most appropriate local model. Simple extraction tasks were being unnecessarily dispatched to the large reasoning model, wasting VRAM and increasing latency.
 
 **Decision:** The `RouterAgent.resolve()` method now evaluates the task `intent` string against a set of high-complexity keywords (`debate`, `research`, `feynman`, `analyze`, `deep`, `study`). Based on this, it assigns either `qwen3:8b` (low-complexity) or `qwen3:14b` (high-complexity) to `TaskManifest.model`. This model is then propagated as the `OPENCLAW_ROUTER_MODEL` environment variable when the task subprocess is spawned via `TaskQueue.enqueue(env={...})`.
 
-**Rationale:** Environment variable injection is the only safe cross-process communication primitive when skills run in isolated subprocesses for OOM protection. The `OPENCLAW_ROUTER_MODEL` env var scope is strictly limited to `RouterAgent._llm_decompose` — individual skill `config.yaml` models remain authoritative.
+**Consequences:** Environment variable injection is the only safe cross-process communication primitive when skills run in isolated subprocesses for OOM protection. The `OPENCLAW_ROUTER_MODEL` env var scope is strictly limited to `RouterAgent._llm_decompose` — individual skill `config.yaml` models remain authoritative.
+
+---
 
 ---
 
 ## [2026-05-04] ADR-007: SQLite for Semantic Caching (not Redis)
 
+**Status:** Active
+
 **Context:** Phase A required a Semantic Caching layer to prevent redundant LLM inference on identical `temperature=0` prompts (e.g. the RouterAgent's routing decomposition, or note synthesis of repeated content).
 
 **Decision:** Implemented `SqliteSemanticCache` in `core/ai/llm_client.py` using Python's built-in `sqlite3` module. Cache stored at `data/llm_cache.sqlite3`. Lookup key is `SHA-256(model::prompt)`.
 
-**Rationale:** SQLite was chosen over Redis because:
+**Consequences:** SQLite was chosen over Redis because:
 1. **Zero new dependencies**: No external service (Redis daemon) required to start.
 2. **Zero RAM overhead**: Data lives on disk, not memory — critical on a 16GB machine running local LLMs.
 3. **Adequate performance**: Since we are caching LLM inference (≥10s per call), a SQLite disk read (~1ms) provides effectively instant cache response.
@@ -48,79 +57,103 @@
 
 ---
 
+---
+
 ## [2026-05-04] ADR-006: Local `networkx` before Neo4j
+
+**Status:** Active
 
 **Context:** Phase 2B required upgrading the `knowledge_compiler` to extract GraphRAG implicit triples. Initially, migrating the entire graph to a dedicated Neo4j instance was considered for robust querying.
 **Decision:** We chose to persist the graph locally using `networkx` (`.gpickle`) alongside the ChromaDB vector store.
-**Rationale:** The overhead of managing a separate Neo4j instance is unnecessary at this scale. NetworkX provides sufficient in-memory traversal capabilities (e.g., finding multi-hop paths) and can easily serialize to disk. If the graph exceeds memory limits in the future, we can seamlessly migrate the data to Neo4j.
+**Consequences:** The overhead of managing a separate Neo4j instance is unnecessary at this scale. NetworkX provides sufficient in-memory traversal capabilities (e.g., finding multi-hop paths) and can easily serialize to disk. If the graph exceeds memory limits in the future, we can seamlessly migrate the data to Neo4j.
+
+---
 
 ---
 
 ## [2026-05-04] ADR-005: Template Method Pattern for `run_all.py` Orchestration
 
+**Status:** Active
+
 **Context:** Each skill had its own `run_all.py` script with duplicated boilerplate for argparse, error handling, and pipeline instantiation.
 **Decision:** Migrated all skills to use a Template Method pattern provided by `PipelineBase.run_skill_pipeline()`.
-**Rationale:** Centralizing the orchestration logic reduces boilerplate, ensures all skills enforce the same argument parsing (`--force`, `--single`, `--subject`), and standardizes system health checks before running phases.
+**Consequences:** Centralizing the orchestration logic reduces boilerplate, ensures all skills enforce the same argument parsing (`--force`, `--single`, `--subject`), and standardizes system health checks before running phases.
+
+---
 
 ---
 
 ## [2026-05-01] Intent-Driven Routing & EventBus Task Handoff
 
+**Status:** Active
+
 **Context:** The system originally relied on hardcoded rules in `inbox_daemon.py` (e.g., `if ext == '.m4a': route to audio_transcriber`). This coupled the daemon tightly to specific skills and prevented multi-skill pipelining. Furthermore, because skills run in isolated subprocesses (to prevent OOM), they couldn't natively trigger the next skill without modifying `inbox_daemon.py`.
 
-**Decision:**
-1. **Dynamic Intent Resolution**: `inbox_daemon.py` was stripped of hardcoded rules. It now delegates all routing to `RouterAgent`, which dynamically resolves intents using the `SkillRegistry`.
+**Decision:** 1. **Dynamic Intent Resolution**: `inbox_daemon.py` was stripped of hardcoded rules. It now delegates all routing to `RouterAgent`, which dynamically resolves intents using the `SkillRegistry`.
 2. **EventBus Subprocess Bridging**: Instead of skills calling the EventBus directly from inside their isolated subprocess (which fails due to memory isolation), the main `TaskQueue` worker was modified. When a subprocess exits successfully (`returncode == 0`), `TaskQueue` emits a `PipelineCompleted` event on the `EventBus`.
 3. **Automated Handoffs**: `RouterAgent` subscribes to the `PipelineCompleted` event. Upon receiving it, it inspects the skill chain, uses `SkillRunner.resolve_synthesize_paths()` to determine the input/output handoff, and enqueues the next skill automatically.
 
-**Rationale:** This solves the critical IPC (Inter-Process Communication) problem. We maintain the strict OOM protection of subprocess isolation while achieving a completely decoupled, event-driven multi-skill orchestration.
+**Consequences:** This solves the critical IPC (Inter-Process Communication) problem. We maintain the strict OOM protection of subprocess isolation while achieving a completely decoupled, event-driven multi-skill orchestration.
+
+---
 
 ---
 
 ## [2026-04-30] P4 Sprint: Multi-Agent Architecture, Global State & HITL
 
+**Status:** Active
+
 **Context:** The system originally consisted of isolated scripts that passed files sequentially through the `data/` directory. There was no global state sharing, meaning user preferences (e.g., via Telegram) could not be easily passed to the `doc_parser` or `audio_transcriber`. Furthermore, any interruption required killing the process, which lacked a robust Human-in-the-Loop (HITL) recovery mechanism.
 
-**Decision:**
-1. **Global State & Memory Pool**: Implemented `MemoryPool` in `core/state/state_manager.py` using `StateBackend` for atomic JSON/Redis locking. Skills can now read/write cross-skill states from a `_global_` namespace.
+**Decision:** 1. **Global State & Memory Pool**: Implemented `MemoryPool` in `core/state/state_manager.py` using `StateBackend` for atomic JSON/Redis locking. Skills can now read/write cross-skill states from a `_global_` namespace.
 2. **Intent Routing**: Introduced `core/orchestration/router_agent.py` to parse complex natural language intents using an LLM, generating a DAG (Directed Acyclic Graph) of skills to execute.
 3. **HITL Pipeline Resumption**: Created `HITLPendingInterrupt` in `core/services/hitl_manager.py`. When triggered, `PipelineBase` intercepts the error, checkpoints the state to `session.json`, and gracefully exits, waiting for a `/hitl approve` signal via Telegram.
 4. **Async LLM Client**: Overhauled `core/ai/llm_client.py` to use `aiohttp` and `tenacity` for exponential backoff, circuit breaking, and concurrent generation.
 
-**Rationale:** Transitioning to a Multi-Agent orchestration framework enables the system to handle complex, chained requests autonomously while allowing safe human intervention without losing computational progress.
+**Consequences:** Transitioning to a Multi-Agent orchestration framework enables the system to handle complex, chained requests autonomously while allowing safe human intervention without losing computational progress.
+
+---
 
 ---
 
 ## [2026-04-19] `open-claw-sandbox/` placed at monorepo root (not inside `apps/`)
 
+**Status:** Active
+
 **Context:** §11.2 of CODING_GUIDELINES recommends an `apps/` directory.
 
 **Decision:** Keep `open-claw-sandbox/` directly at root.
 
-**Rationale:**
-- Only one application exists — `apps/` adds structure without value
+**Consequences:** - Only one application exists — `apps/` adds structure without value
 - The sandbox has its own mature internal hierarchy (`core/`, `skills/`, `memory/`, `ops/`)
 - `WORKSPACE_DIR` env var is already wired to the sandbox path
 - Migration to `apps/open-claw-sandbox/` is straightforward if a second app is ever added
 
-**Consequence:** The `memory/ARCHITECTURE.md` file documents this exception so AI agents understand the deviation from the standard pattern.
+**Consequences:** The `memory/ARCHITECTURE.md` file documents this exception so AI agents understand the deviation from the standard pattern.
+
+---
 
 ---
 
 ## [2026-04-20] Strict I/O Routing & Extraction Layer Purge
 
+**Status:** Active
+
 **Context:** The `inbox_daemon.py` was bypassing sandbox boundaries by directly writing `.pdf` files to `audio_transcriber/output/` based on `pdf_routing_rules`, causing routing leakage. Furthermore, `audio_transcriber` and `doc_parser` still contained processing prompts (highlighting, synthesis) that belong to `smart_highlighter` and `note_generator`.
 
-**Decision:**
-1. **Strict I/O Routing**: `inbox_daemon.py` now strictly routes files based on extension (`.m4a`/`.mp3` to `audio_transcriber/input/`, `.pdf` to `doc_parser/input/`). Cross-skill `output/` writes are strictly forbidden.
+**Decision:** 1. **Strict I/O Routing**: `inbox_daemon.py` now strictly routes files based on extension (`.m4a`/`.mp3` to `audio_transcriber/input/`, `.pdf` to `doc_parser/input/`). Cross-skill `output/` writes are strictly forbidden.
 2. **Extraction Layer Purge**: Removed Phase 4 (highlight) and Phase 5 (synthesis) from `audio_transcriber`, and Phase 2 (highlight) and Phase 3 (synthesis) from `doc_parser`.
 3. **Prompt Migration**: Integrated all highlighting rules into `smart_highlighter` and all synthesis Map-Reduce rules into `note_generator`.
 
-**Rationale:** Enforces the single-responsibility principle. Extraction skills should only extract high-fidelity Markdown. Processing skills handle formatting and synthesis.
+**Consequences:** Enforces the single-responsibility principle. Extraction skills should only extract high-fidelity Markdown. Processing skills handle formatting and synthesis.
+
+---
 
 ---
 
 ## [2026-04-19] Global `ops/check.sh` added at monorepo root
+
+**Status:** Active
 
 **Context:** §16.5 specifies `ops/check.sh` as the quality gate. The sandbox has its own check script, but there was no root-level script to scan the whole monorepo.
 
@@ -131,17 +164,25 @@
 
 ---
 
+---
+
 ## [2026-04-19] `pipelines/` placed in `infra/` (not `apps/`)
+
+**Status:** Active
 
 **Context:** Open WebUI Pipelines is technically a runnable service.
 
 **Decision:** Treat it as infrastructure, not an application.
 
-**Rationale:** It is a plugin runtime for the LLM proxy layer — it has no user-facing business logic unique to this project. All other infrastructure services (LiteLLM, Open WebUI) are also in `infra/`.
+**Consequences:** It is a plugin runtime for the LLM proxy layer — it has no user-facing business logic unique to this project. All other infrastructure services (LiteLLM, Open WebUI) are also in `infra/`.
+
+---
 
 ---
 
 ## [2026-04-18] Monorepo §11.2 structure applied to `local-workspace/`
+
+**Status:** Active
 
 **Context:** Previously, `local-workspace/` had no standard monorepo structure.
 
@@ -153,7 +194,11 @@
 
 ---
 
+---
+
 ## [2026-04-18] `open-claw-workspace/` renamed to `open-claw-sandbox/`
+
+**Status:** Active
 
 **Context:** The original name `open-claw-workspace` was ambiguous — the entire monorepo (`local-workspace/`) is also a "workspace".
 
@@ -161,220 +206,306 @@
 
 ---
 
+---
+
 ## [2026-04-17] Lifecycle scripts (start.sh, stop.sh, watchdog.sh) moved to `infra/scripts/`
+
+**Status:** Active
 
 **Context:** Scripts were scattered at the root of `local-workspace/`.
 
 **Decision:** Move to `infra/scripts/` — they are infrastructure operations (starting/stopping services), not application code.
 
+---
+
 ## [2026-04-20] P0: Task Queue Replaces Direct Subprocess (OOM Prevention)
 
-### Decision
+**Status:** Active
+
+**Decision:**
 `inbox_daemon.py` abandoned the redundant HTTP POST mechanism to the WebUI API. Tasks are now written to the local Python Queue in `core/orchestration/task_queue.py` and executed synchronously by a single Worker thread.
 
-### Consequence
+**Consequences:**
 Completely eliminates Ollama OOM crashes caused by simultaneous file arrivals. Guarantees sequential pipeline execution.
+
+---
 
 ---
 
 ## [2026-04-20] P0: Extraction Layer Temperature Forced to Zero (Anti-Hallucination)
 
-### Decision
+**Status:** Active
+
+**Decision:**
 All extraction layers (`audio_transcriber`, `doc_parser`) and annotation layers (`smart_highlighter`) have `temperature` forced to `0` in every LLM profile config.
 
-### Consequence
+**Consequences:**
 Guarantees raw knowledge extraction and Markdown annotation never alter semantics, lose data, or produce hallucinations. High temperature is permitted ONLY in `note_generator` synthesis.
 
 ---
 
-## [2026-04-20] P1: Open WebUI Bidirectional Integration [ABANDONED — superseded by local-first CLI architecture]
+---
 
-### Decision
+## [2026-04-20] P1: Open WebUI Bidirectional Integration
+
+**Status:** Abandoned (Reason: -first CLI architecture)
+
+**Decision:**
 Added `knowledge_pusher.py` to push notes into the Open WebUI knowledge base, and added Open Claw trigger tool scripts under `infra/open-webui/custom_tools/`. Added an Obsidian monitoring mechanism (`status: rewrite`) as a local reverse trigger point.
 
-### Consequence
+**Consequences:**
 Forms a bidirectional closed loop: WebUI can call Open Claw, and Open Claw can proactively push results back to the WebUI knowledge base.
+
+---
 
 ---
 
 ## [2026-04-19] P0: inbox_daemon triggers via HTTP → WebUI API (OOM prevention)
 
-### Decision
+**Status:** Active
+
+**Decision:**
 [SUPERSEDED by 2026-04-20 Task Queue decision] `inbox_daemon._trigger_pipeline()` sends `POST /api/start` to the WebUI's `ExecutionManager` Job Queue first. Direct `subprocess.Popen` is a fallback-only path used when WebUI is not running (standalone mode). This ensures all Daemon-triggered pipeline runs are RAM-safe and serialised.
 
-### Consequence
+**Consequences:**
 Batch arrivals of N files no longer spawn N concurrent LLM processes. The Queue dedup also prevents double-triggering the same skill.
+
+---
 
 ---
 
 ## [2026-04-19] P0: _wait_and_trigger gains 300s timeout + stop_event (zombie thread prevention)
 
-### Decision
+**Status:** Active
+
+**Decision:**
 Replaced the infinite `while True` poll loop with a bounded loop (`elapsed < 300s`) and a `threading.Event` stop signal. File-disappeared guard added. Debounce mechanism upgraded from `.cancel()` on `Thread` (dead code) to `Event.set()` on a `threading.Event`.
+
+---
 
 ---
 
 ## [2026-04-19] P0: state_manager fcntl.flock on .pipeline_state.json (concurrent write guard)
 
-### Decision
+**Status:** Active
+
+**Decision:**
 `_load_state()` acquires `LOCK_SH` and `_save_state()` acquires `LOCK_EX` via a companion `.lock` file. This prevents JSON corruption when a CLI process and a WebUI process write the state file concurrently.
+
+---
 
 ---
 
 ## [2026-04-19] P1: ExecutionManager writes .rerun_state.json (Silent Failure elimination)
 
-### Decision
+**Status:** Active
+
+**Decision:**
 `_run_job()` writes a lightweight `{task, status, timestamp}` record to `data/.rerun_state.json` at RUNNING, COMPLETED, FAILED, and CANCELLED transitions. The `/api/queue` endpoint can expose this log to the UI.
+
+---
 
 ---
 
 ## [2026-04-19] P2: cli_runner uses PathBuilder for path resolution
 
-### Decision
+**Status:** Active
+
+**Decision:**
 `resolve_highlight_paths()` and `resolve_synthesize_paths()` now use `PathBuilder.phase_dirs` with hardcoded strings as fallback. This keeps path resolution in sync with each skill's `config.yaml`.
+
+---
 
 ---
 
 ## [2026-04-19] start.sh: path resolution fix (INFRA_DIR two-level ascent)
 
-### Decision
+**Status:** Active
+
+**Decision:**
 `_LOCAL_WORKSPACE` is now derived as `$(dirname $(dirname $script_dir))` (two levels up from `infra/scripts/`). LiteLLM and Pipelines `cd` to `${INFRA_DIR}/litellm` and `${INFRA_DIR}/pipelines`. Dashboard wait extended to 60s.
+
+---
 
 ---
 
 ## [2026-04-19] WebUI Integration: Re-run Pattern for smart-highlighter & note-generator
 
-### Background
+**Status:** Active
+
+**Context:**
 `smart-highlighter` and `note-generator` are standalone library-style skills invoked via Python import by the upstream pipeline phases. The question was whether to give them a dedicated WebUI input form or a Re-run mechanism against existing outputs.
 
 ### Options
 1. Independent input form: User pastes arbitrary Markdown → triggers skill → output shown in browser
 2. Re-run on existing phase output ✅ — User selects an existing `audio_transcriber`/`doc_parser` output file; system auto-discovers paths and re-triggers the skill against it
 
-### Decision
+**Decision:**
 Option 2 (Re-run). This avoids duplicating the data-entry UX, respects the existing Data Flow architecture, and requires no new data ingestion infrastructure. Auto-discovery logic is encapsulated in `core/cli_runner.SkillRunner.resolve_highlight_paths()` and `resolve_synthesize_paths()`.
 
-### Consequence
+**Consequences:**
 New routes `POST /api/highlight` and `POST /api/synthesize` accept `skill + subject + file_id` and resolve all paths server-side.
+
+---
 
 ---
 
 ## [2026-04-19] ExecutionManager Job Queue with Same-Skill Deduplication
 
-### Background
+**Status:** Active
+
+**Context:**
 The original `ExecutionManager` only supported one concurrent task. Starting a second task would return 409. No queueing existed.
 
-### Decision
+**Decision:**
 Upgrade to a sequential `queue.Queue` consumed by a background daemon thread. Tasks with the same `task_name` are rejected if already queued or running (deduplication via `_queued_names: list[str]`). One task runs at a time to preserve RAM safety on 16GB machines.
 
-### Consequence
+**Consequences:**
 `POST /api/start`, `/api/highlight`, `/api/synthesize` now all enqueue through the same `ExecutionManager.enqueue_task()`. New `GET /api/queue` exposes queue state to the frontend.
+
+---
 
 ---
 
 ## [2026-04-19] core/cli_runner.py as Single Source of Truth for Command Construction
 
-### Decision
+**Status:** Active
+
+**Decision:**
 Extracted all subprocess command-list construction into `core/cli_runner.SkillRunner`. Both `app.py` routes and future CLI tools import from it. No command strings are duplicated between WebUI and CLI layers.
+
+---
 
 ---
 
 ## [2026-04-18] Establish `memory/` as AI Reading Layer
 
-### Background
-Guidelines (§12.2) specify that AI collaboration files (CLAUDE.md, HANDOFF.md, TASKS.md, DECISIONS.md, ARCHITECTURE.md) should live in a `memory/` directory. Previously these did not exist at workspace level.
+**Status:** Active
 
-### Decision
-Create `memory/` at workspace root with the five standard files. Agent startup sequence updated in `AGENTS.md` and `memory/CLAUDE.md` to reference these paths.
+**Context:**
+Guidelines (§12.2) specify that AI collaboration files (PROJECT_RULES.md, HANDOFF.md, TASKS.md, DECISIONS.md, ARCHITECTURE.md) should live in a `memory/` directory. Previously these did not exist at workspace level.
 
-### Consequence
+**Decision:**
+Create `memory/` at workspace root with the five standard files. Agent startup sequence updated in `AGENTS.md` and `memory/PROJECT_RULES.md` to reference these paths.
+
+**Consequences:**
 AI agents now have a standardised onboarding path. Root-level context files (AGENTS.md, IDENTITY.md, SOUL.md, USER.md) remain at root — they are workspace identity documents, not session memory.
+
+---
 
 ---
 
 ## [2026-04-18] Move config files to workspace root
 
-### Background
+**Status:** Active
+
+**Context:**
 `pyproject.toml` and `.pre-commit-config.yaml` were in `ops/config/`. Tools like Ruff and pre-commit expect these at the project root.
 
 ### Options
 1. Keep in `ops/config/` — requires `--config` flags on every tool invocation
 2. Move to workspace root ✅ — standard convention, zero friction
 
-### Decision
+**Decision:**
 Move to workspace root. `ops/config/` directory deleted.
 
-### Consequence
+**Consequences:**
 `ruff check .`, `mypy core/`, `pre-commit run` all work without extra flags.
+
+---
 
 ---
 
 ## [2026-04-18] CODING_GUIDELINES.md as single source of truth
 
-### Background
+**Status:** Active
+
+**Context:**
 Three overlapping documents existed: `BASIC_RULES.md` (v1.0), `CODING_GUIDELINES.md` (v2.0), and `CODING_GUIDELINES.md`.
 
-### Decision
+**Decision:**
 Merge all three into `CODING_GUIDELINES.md` v3.0.0. Delete the other two. Store in both `docs/` and workspace `docs/`.
+
+---
 
 ---
 
 ## [2026-04-17] MLX-Whisper over Docker for transcription
 
-### Background
+**Status:** Active
+
+**Context:**
 Earlier audio_transcriber used a Docker-based Whisper container. Docker adds startup latency and requires a daemon running.
 
-### Decision
+**Decision:**
 Switch to MLX-Whisper (native Apple Silicon). Zero Docker dependency, lower latency, better integration with macOS power management.
 
-### Consequence
+**Consequences:**
 Removed all Docker references from audio_transcriber pipeline and docs.
+
+---
 
 ---
 
 ## [2026-04-15] Shared `core/` framework over per-skill duplication
 
-### Background
+**Status:** Active
+
+**Context:**
 Early audio_transcriber had inline logging, path resolution, and state management. Adding doc_parser would duplicate all of this. A `SKILL_PARITY_ANALYSIS` conducted on 2026-04-15 highlighted that `voice-memo` (now `audio_transcriber`) was strong in CLI-centric pipelines and content-loss guards, while `pdf-knowledge` (now `doc_parser`) excelled in preflight diagnostics and security boundaries.
 
-### Decision
+**Decision:**
 Do not merge the workflows. Keep skills separate but extract shared primitives to `core/` with a `PipelineBase` abstract class. Each skill phase inherits from it.
 **Note (Abandoned idea):** The analysis suggested an "optional voice dashboard for parity with pdf operations". This was later abandoned when the WebUI was fully deprecated in favour of the Telegram bot and Open Claw CLI.
 
-### Consequence
+**Consequences:**
 Adding new skills requires only implementing the phase logic; infrastructure (logging, resume, paths) is inherited automatically. Both skills maintain their unique operational strengths while sharing governance.
+
+---
 
 ---
 
 ## [2026-04-15] Strict `data/` separation from `skills/`
 
-### Background
+**Status:** Active
+
+**Context:**
 Pipeline outputs were previously mixed with source code.
 
-### Decision
+**Decision:**
 All runtime data (inputs, outputs, state, logs) lives exclusively in `data/<skill>/`. Source code in `skills/<skill>/scripts/`. No cross-contamination.
 
-### Consequence
+**Consequences:**
 `git clean -fd` on `skills/` is safe. Data directory excluded from git.
 
 ---
 
-## [2026-04-19] Technology Selection: Long-Polling vs WebSocket/Celery [ABANDONED — system migrated to CLI-first]
+---
 
-### Decision
+## [2026-04-19] Technology Selection: Long-Polling vs WebSocket/Celery
+
+**Status:** Abandoned (Reason: -first)
+
+**Decision:**
 Chose **Long-Polling** (frontend polls `/api/rerun/status` every 3 seconds) over Flask-SocketIO or Celery:
 
 1. **Flask-SocketIO** requires `gevent`/`eventlet`, incompatible with the Flask dev server, and doubles deployment complexity
 2. **Celery** requires a Redis broker, adding infrastructure dependency; the system is local-first, single-machine
 3. **Long-Polling** was sufficient given the `ExecutionManager` already had a background Worker Thread; latency < 3s met the use case
 
-### Consequence
+**Consequences:**
 `GET /api/rerun/status?task=XXX` reads the latest record from `.rerun_state.json`; frontend polls until status transitions from RUNNING/QUEUED to COMPLETE/ERROR.
 
 ---
 
-## [2026-04-19] Job Queue RAM Protection: maxsize=5 [ABANDONED — superseded by LocalTaskQueue]
+---
 
-### Decision
+## [2026-04-19] Job Queue RAM Protection: maxsize=5
+
+**Status:** Abandoned (Reason: )
+
+**Decision:**
 `queue.Queue(maxsize=5)` — the 6th queued request returns False, and the caller converts this to an HTTP 409 response.
 A single Worker Thread ensures only one LLM subprocess runs at a time.
+
+---

@@ -42,7 +42,7 @@ class NoteGenerator(PipelineBase):
 
     def _agentic_mermaid_retry(
         self, node_text: str, base_prompt: str, model: str, options: dict, max_retries: int
-    ) -> str:
+    ) -> tuple[str, str | None]:
         """Agentic loop to fix Mermaid syntax errors."""
         for attempt in range(1, max_retries + 1):
             errors = self._validate_mermaid(node_text)

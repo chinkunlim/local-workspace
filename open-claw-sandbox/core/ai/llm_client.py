@@ -418,7 +418,11 @@ class OllamaClient:
 
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.post(self.api_url, json=payload, timeout=timeout_val) as res:
+                async with session.post(
+                    self.api_url,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=float(timeout_val)),
+                ) as res:
                     res.raise_for_status()
                     _resp_json = await res.json()
 

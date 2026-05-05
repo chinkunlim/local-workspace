@@ -27,7 +27,7 @@ import json
 import os
 import re
 
-from core import PhaseBase
+from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.playwright_utils import get_clean_text_snapshot, get_persistent_context
 
 _EVIDENCE_SUBDIR = "evidence"
@@ -135,8 +135,8 @@ class Phase1SearchLiterature(PhaseBase):
     # ------------------------------------------------------------------ #
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.phase_dirs["input"]
-        output_dir = self.phase_dirs["output"]
+        input_dir = self.dirs["input"]
+        output_dir = self.dirs["output"]
         os.makedirs(output_dir, exist_ok=True)
 
         for root, _, files in os.walk(input_dir):

@@ -17,8 +17,8 @@ from __future__ import annotations
 import json
 import os
 
-from core import PhaseBase
 from core.ai.llm_client import OllamaClient
+from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 
 _SYNTHESIS_MODEL = "qwen3:8b"  # fallback
 
@@ -33,7 +33,7 @@ class Phase2DebateSynthesis(PhaseBase):
         self._llm = OllamaClient()
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.phase_dirs["output"]  # Phase 1 outputs are our inputs
+        input_dir = self.dirs["output"]  # Phase 1 outputs are our inputs
         enriched_dir = os.path.join(self.base_dir, "enriched")
         os.makedirs(enriched_dir, exist_ok=True)
 

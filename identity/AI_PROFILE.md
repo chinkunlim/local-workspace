@@ -1,5 +1,7 @@
-# Operator Profile — Jinkun
+# Operator Profile & IDE AI Constraints
 
+> **Target Audience:** Development AIs (Google Antigravity, Claude Code, GitHub Copilot)
+> **Purpose:** Defines operator habits, IDE workflows, and the master entry sequence for developing this project.
 ## Identity
 - **Role**: Operator & primary developer of the `local-workspace` monorepo
 - **Working style**: Direct, precise, production-grade output only — no scaffolding, no stubs
@@ -59,9 +61,13 @@
   - `memory/HANDOFF.md` and `memory/TASKS.md` (at the end of every session or task completion)
   - `docs/STRUCTURE.md` and `docs/INDEX.md` (if any directory or file structure changes)
   - `CHANGELOG.md` (for any meaningful feature, fix, or refactor)
-  - Skill-level `SKILL.md`, `ARCHITECTURE.md`, `CLAUDE.md`, `DECISIONS.md` (if a specific skill is modified)
-  - `docs/USER_MANUAL.md` or `docs/INFRA_SETUP.md` (if user-facing operations or setup changes). **Note: User manuals must be extremely detailed, step-by-step, and exhaustive, especially for autonomous pipelines and HITL interfaces.**
-- **Continuous Profile Update**: When the user mentions new habits, workflows, or explicitly asks to "update md files" regarding their requirements, the AI MUST continuously integrate these new rules into `AI_PROFILE.md`.
+- **Continuous Principle Sync (主動原則更新)**: If Jinkun establishes a new operational principle, a new workflow habit, or gives a global instruction during the conversation, the AI **MUST proactively and automatically** integrate these new rules without asking. 
+  - To prevent writing to random files, you **MUST route the rule** according to this table:
+    - **Operator Habits / Prompt Macros** ➡️ `identity/AI_PROFILE.md`
+    - **Programming/Syntax/Formatting Standards** ➡️ `docs/CODING_GUIDELINES.md`
+    - **IDE Hardware Limits / Execution Protocols** ➡️ `memory/PROJECT_RULES.md`
+    - **Local Sandbox Agent Ethics/Boundaries** ➡️ `open-claw-sandbox/SOUL.md` or `open-claw-sandbox/IDENTITY.md`
+    - **Why a technical approach was chosen** ➡️ `memory/DECISIONS.md`
 
 ---
 
@@ -90,8 +96,15 @@
 
 ---
 
-## Workspace Entry Point (Mandatory Reading Order)
-1. `memory/ARCHITECTURE.md` — global system overview
-2. `open-claw-sandbox/memory/CLAUDE.md` — sandbox rules and behaviour contract
-3. `open-claw-sandbox/AGENTS.md` — AI agent startup sequence
-4. `docs/CODING_GUIDELINES.md` — development standards (v3.0.0)
+## AI Agent Master Startup Sequence (Mandatory)
+
+> [!IMPORTANT]
+> **To any AI Agent reading this:** You have been instructed to read this `AI_PROFILE.md` as your initial context. To safely operate this repository, you **MUST** read the following files in this exact order to build your full memory context before making any code changes:
+
+1. **`docs/CODING_GUIDELINES.md`**: Read the entire file, paying special attention to **§15 AI-Native Documentation & Memory System** which explains the mandatory Append-Only rule and Historical Archival protocol.
+2. **`memory/PROJECT_RULES.md`**: Your behaviour contract, environmental constraints, and strict prohibitions.
+3. **`memory/HANDOFF.md` & `memory/TASKS.md`**: The checkpoint of the previous AI session and your current pending tasks.
+4. **`docs/STRUCTURE.md` & `docs/INDEX.md`**: The definitive maps of every directory and file in the workspace.
+5. **`memory/DECISIONS.md` & `memory/HISTORY.md`**: Check these before proposing any architectural changes to understand past decisions and historical context.
+
+**Do not guess the state of the project.** Read the files above to acquire your operational memory.

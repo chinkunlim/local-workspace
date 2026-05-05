@@ -52,7 +52,7 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 strict = false
 disallow_untyped_defs = false
 warn_return_any = false

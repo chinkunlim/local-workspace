@@ -1,4 +1,7 @@
-# USER.md
+# USER.md — Operator Profile for Open Claw
+
+> **Target Audience:** Open Claw Runtime Agents
+> **Purpose:** Provides local Ollama agents with the operator's timezone, hardware limits, and explicit approval requirements before taking dangerous actions.
 
 ## User Profile
 

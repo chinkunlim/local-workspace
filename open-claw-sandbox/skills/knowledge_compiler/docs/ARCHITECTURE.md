@@ -43,7 +43,7 @@ skills/knowledge_compiler/
 │   └── prompt.md         ← LLM prompts for link suggestion and synthesis
 ├── docs/
 │   ├── ARCHITECTURE.md   ← This file
-│   ├── CLAUDE.md         ← AI agent collaboration context
+│   ├── PROJECT_RULES.md         ← AI agent collaboration context
 │   └── DECISIONS.md      ← Technical decision log
 └── scripts/
     ├── run_all.py        ← Orchestrator: scans outputs, publishes to wiki

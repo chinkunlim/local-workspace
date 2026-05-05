@@ -2,9 +2,9 @@ import json
 import os
 import uuid
 
-from core import PhaseBase
 from core.ai.llm_client import OllamaClient
 from core.orchestration.event_bus import DomainEvent, EventBus
+from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 
 
 class Phase2Synthesis(PhaseBase):
@@ -17,7 +17,7 @@ class Phase2Synthesis(PhaseBase):
         self.llm = OllamaClient()
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.phase_dirs["input"]
+        input_dir = self.dirs["input"]
 
         for root, _, files in os.walk(input_dir):
             for file in files:
@@ -50,7 +50,7 @@ class Phase2Synthesis(PhaseBase):
 
                 if not debate_texts:
                     print("⚠️ 沒有查證到任何有效討論紀錄，直接輸出原檔案。")
-                    out_path = self._get_output_path(filepath, ext=".md")
+                    out_path = os.path.splitext(filepath)[0] + ".md"
                     with open(out_path, "w", encoding="utf-8") as f:
                         f.write(original_note)
                     continue
@@ -78,7 +78,7 @@ class Phase2Synthesis(PhaseBase):
                     print(f"❌ 生成失敗: {e}")
                     continue
 
-                out_path = self._get_output_path(filepath, ext=".md")
+                out_path = os.path.splitext(filepath)[0] + ".md"
                 with open(out_path, "w", encoding="utf-8") as f:
                     f.write(final_note)
 

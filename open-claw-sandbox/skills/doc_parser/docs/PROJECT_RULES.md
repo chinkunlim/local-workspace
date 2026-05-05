@@ -1,4 +1,4 @@
-# CLAUDE.md — Doc Parser Skill
+# PROJECT_RULES.md — Doc Parser Skill
 
 > AI collaboration context for the `doc_parser` skill.
 > Read this before making any code changes to this skill.

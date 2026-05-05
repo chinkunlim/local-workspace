@@ -24,8 +24,8 @@ import asyncio
 from datetime import datetime
 import os
 
-from core import PhaseBase
 from core.ai.llm_client import OllamaClient
+from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.playwright_utils import get_persistent_context
 
 MAX_ROUNDS = 3
@@ -195,8 +195,8 @@ class Phase1FeynmanDebate(PhaseBase):
     # ------------------------------------------------------------------ #
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.phase_dirs["input"]
-        output_dir = self.phase_dirs["output"]
+        input_dir = self.dirs["input"]
+        output_dir = self.dirs["output"]
         os.makedirs(output_dir, exist_ok=True)
 
         processed = 0
@@ -208,7 +208,7 @@ class Phase1FeynmanDebate(PhaseBase):
                 note_path = os.path.join(root, fname)
                 state_key = os.path.relpath(note_path, input_dir)
 
-                if not force and self.state_manager.is_complete(self.phase_key, state_key):
+                if not force and self.state_manager.is_completed(self.phase_key, state_key):
                     self.info(f"⏭️  已完成，跳過: {fname}")
                     continue
 
@@ -238,7 +238,7 @@ class Phase1FeynmanDebate(PhaseBase):
                             indent=2,
                         )
 
-                    self.state_manager.mark_complete(self.phase_key, state_key)
+                    self.state_manager.mark_completed(self.phase_key, state_key)
                     processed += 1
 
                 except Exception as exc:

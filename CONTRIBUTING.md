@@ -5,7 +5,7 @@ This is a private workspace. The following guidelines apply to all contributors 
 ## Before You Start
 
 Read the mandatory context in order:
-1. `open-claw-sandbox/memory/CLAUDE.md`
+1. `open-claw-sandbox/memory/PROJECT_RULES.md`
 2. `open-claw-sandbox/memory/ARCHITECTURE.md`
 3. `open-claw-sandbox/docs/CODING_GUIDELINES.md`
 4. `open-claw-sandbox/AGENTS.md`

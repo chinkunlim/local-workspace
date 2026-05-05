@@ -1,17 +1,16 @@
-# TASKS.md — Task List
+# TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-04 (V9.2 Model Optimization)
-> **Maintained by:** Current working agent — update on every state change
+> **Last Updated:** 2026-05-05 (Documentation System Restructuring)
 
 ---
 
-## 🔴 High Priority
+## 🔴 High Priority (阻斷性問題 / 核心功能)
 
 *(None currently)*
 
 ---
 
-## 🟡 Medium Priority
+## 🟡 Medium Priority (優化 / 非緊急功能)
 
 - [ ] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
 - [ ] Run live end-to-end pipeline test with new `qwen3:14b` routing: `.m4a` / `.mp4` → `data/wiki/`
@@ -20,7 +19,7 @@
 
 ---
 
-## 🟢 Low Priority
+## 🟢 Low Priority (技術債 / 探索性研究)
 
 - [ ] Register any future OCR service in `BOOTSTRAP.md` if/when needed
 - [ ] Evaluate `CONTRIBUTING.md` guidelines if workspace becomes multi-contributor

@@ -12,11 +12,11 @@
 local-workspace/
 ├── docs/                 ← Single Source of Truth (SSoT) Global Docs — contains ARCHITECTURE, STRUCTURE, USER_MANUAL and all core documents
 └── open-claw-sandbox/
-    ├── AGENTS.md             ← Non-negotiable rules and startup context for AI agents
+    ├── AGENTS.md             ← Internal Agent Registry: defines the 9 core skills and RouterAgent
     ├── BOOTSTRAP.md          ← How to bring this workspace to operational state from scratch
     ├── HEARTBEAT.md          ← Known-good state snapshot; updated after each verified stable milestone
-    ├── IDENTITY.md           ← Open Claw system identity: mission, boundaries, personality
-    ├── SOUL.md               ← Quality and discipline principles (the "why" behind the rules)
+    ├── IDENTITY.md           ← Open Claw Runtime Persona: system mission, boundaries, scope of authority
+    ├── SOUL.md               ← Open Claw Runtime Ethics: precision, safety, determinism
     ├── TOOLS.md              ← Local endpoints, key paths, env vars, hardware profile
     ├── USER.md               ← Operator profile: preferences, working style, constraints
     │
@@ -126,7 +126,7 @@ skills/
 │   ├── docs/
 │   │   ├── ARCHITECTURE.md         ← Directory layout, class hierarchy, data-flow diagram
 │   │   ├── DECISIONS.md            ← Technical decision log (date-stamped entries)
-│   │   └── CLAUDE.md               ← AI collaboration context for this skill
+│   │   └── PROJECT_RULES.md               ← AI collaboration context for this skill
 │   └── scripts/
 │       ├── run_all.py              ← Orchestrator: interactive 5-phase runner with resume/force
 │       ├── phases/
@@ -149,7 +149,7 @@ skills/
     ├── docs/
     │   ├── ARCHITECTURE.md         ← Subject-based hierarchy, IMMUTABLE principle, core deps
     │   ├── DECISIONS.md            ← Technical decision log
-    │   └── CLAUDE.md               ← AI collaboration context for this skill
+    │   └── PROJECT_RULES.md               ← AI collaboration context for this skill
     └── scripts/
         ├── run_all.py              ← QueueManager orchestrator: batch PDF queue processor
         └── phases/
@@ -287,8 +287,7 @@ Never contains runtime data — only human/agent-curated session state and archi
 
 ```
 memory/
-├── CLAUDE.md        ← Project rules, AI behaviour contract, mandatory startup sequence, hardware constraints
-├── ARCHITECTURE.md  ← System full picture: core modules, skill pipelines, service map, data flow
+├── PROJECT_RULES.md        ← Project rules, AI behaviour contract, mandatory startup sequence, hardware constraints
 ├── HANDOFF.md       ← Last session: what was completed, current system state, next starting point
 ├── TASKS.md         ← Prioritised task list (High / Medium / Low / Done)
 └── DECISIONS.md     ← Architectural Decision Records (ADRs) — why we made each key design choice
@@ -297,7 +296,7 @@ memory/
 **Update rules:**
 | File | Update When |
 |---|---|
-| `CLAUDE.md` | Project rules or hardware constraints change |
+| `PROJECT_RULES.md` | Project rules or hardware constraints change |
 | `ARCHITECTURE.md` | New module, skill, or service added/removed |
 | `HANDOFF.md` | End of every working session |
 | `TASKS.md` | Task status changes (start / complete / add / defer) |
@@ -305,10 +304,23 @@ memory/
 
 ---
 
+---
+
+## `identity/` — Global Identity Layer
+
+```
+identity/
+└── AI_PROFILE.md           ← Global AI persona configuration and interaction style
+```
+
+---
+
 ## `docs/` — Project-Wide Documentation
 
 ```
 docs/
+├── ARCHITECTURE.md         ← High-level system architecture and component interactions (V9.2 Intent-Driven)
+├── DEVELOPMENT_MANUAL.md   ← Chronological onboarding guide for new developers
 ├── CODING_GUIDELINES.md    ← Definitive engineering standards:
 │                              §1  Core design principles
 │                              §2  Directory structure

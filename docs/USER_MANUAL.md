@@ -1,13 +1,21 @@
 # Open Claw PKMS — User Manual
 
-> **System Version**: V9.1 (Performance & Robustness Hardening)
+> **System Version**: V9.2 (Quality-First Model Optimization)
 > **Status**: Production-Grade Headless CLI Deployment
-> **Last Updated**: 2026-05-04
+> **Last Updated**: 2026-05-05
 
 ---
 
 ## Quick Start (TL;DR)
 
+### Absolute Beginner Setup
+If you are entirely new to this project, don't worry. This system is designed to run completely autonomously. 
+
+**Prerequisites:**
+1. You must be on macOS (Apple Silicon recommended).
+2. You must have the required LLM models downloaded via Ollama (run `ollama run qwen3:8b` and `ollama run qwen3:14b` once).
+
+**Daily Usage:**
 ```bash
 # Step 1: Start all services
 cd ~/Desktop/local-workspace
@@ -31,11 +39,13 @@ That's it. The rest of this manual explains what happens in between, how the sys
 
 ---
 
-## Part 1: How the System Works (V8.2 Intent-Driven Architecture)
+## Part 1: How the System Works (V9.2 Intent-Driven Architecture)
 
-### The Fully Automated Data Flow
+### The Magic of the RouterAgent
 
-Open Claw now uses an **Intent-Driven RouterAgent** and an **EventBus** to automatically chain multiple skills together. You no longer need to trigger downstream processing manually.
+You might wonder: *How does the system know what to do with my file without me clicking any buttons?*
+
+Open Claw uses an **Intent-Driven RouterAgent** and an **EventBus** to automatically chain multiple AI skills together. Think of the `RouterAgent` as a smart traffic controller. When you drop a file into the inbox, the controller looks at the file type and context, decides which "Skills" (like transcribing, highlighting, or formatting) are needed, and automatically passes the file down the assembly line.
 
 ```mermaid
 graph TD
@@ -80,14 +90,14 @@ This is your finished knowledge base. Open it as an Obsidian vault to get:
 
 ---
 
-## Part 2: Context-Aware Model Routing (V9.1)
+## Part 2: Context-Aware Model Routing (V9.2)
 
 The `RouterAgent` now automatically selects the optimal local LLM based on the **complexity** of the task. You do **not** need to configure this manually — it is fully transparent to you.
 
 | Task Complexity | Intent Keywords | Model Used | Why |
 |:---|:---|:---|:---|
-| **Low** | `auto`, `transcribe`, `parse`, `compile` | `qwen2.5-coder:7b` | Fast, low VRAM, suitable for structured extraction |
-| **High** | `debate`, `research`, `feynman`, `analyze`, `deep`, `study` | `deepseek-r1:14b` | Deep reasoning required for Socratic debate and academic verification |
+| **Low** | `auto`, `transcribe`, `parse`, `compile` | `qwen3:8b` | Fast, low VRAM, suitable for structured extraction |
+| **High** | `debate`, `research`, `feynman`, `analyze`, `deep`, `study` | `qwen3:14b` | Deep reasoning required for Socratic debate and academic verification |
 
 **How to observe model selection in logs:**
 ```bash
@@ -117,13 +127,13 @@ EOF
 
 Expected output:
 ```
-auto → qwen2.5-coder:7b
-feynman debate → deepseek-r1:14b
+auto → qwen3:8b
+feynman debate → qwen3:14b
 ```
 
 ---
 
-## Part 3: Semantic Caching (V9.1)
+## Part 3: Semantic Caching (V9.2)
 
 To reduce redundant GPU computation, all LLM calls with `temperature=0` (deterministic) are automatically cached in a local SQLite database at:
 ```

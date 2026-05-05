@@ -517,7 +517,7 @@ Provider 2 (Complex tasks / debug — switch manually):
   Model: gemini-pro
 ```
 
-> ℹ️ Store both provider configurations in your `CLAUDE.md` so you can copy-paste during the 10-second switch.
+> ℹ️ Store both provider configurations in your `PROJECT_RULES.md` so you can copy-paste during the 10-second switch.
 
 ---
 
