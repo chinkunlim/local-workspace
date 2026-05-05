@@ -61,13 +61,16 @@
   - `memory/HANDOFF.md` and `memory/TASKS.md` (at the end of every session or task completion)
   - `docs/STRUCTURE.md` and `docs/INDEX.md` (if any directory or file structure changes)
   - `CHANGELOG.md` (for any meaningful feature, fix, or refactor)
-- **Continuous Principle Sync (主動原則更新)**: If Jinkun establishes a new operational principle, a new workflow habit, or gives a global instruction during the conversation, the AI **MUST proactively and automatically** integrate these new rules without asking. 
+- **Continuous Principle Sync (主動原則更新)**: If Jinkun establishes a new operational principle, a new workflow habit, or gives a global instruction during the conversation, the AI **MUST proactively and automatically** integrate these new rules without asking.
   - To prevent writing to random files, you **MUST route the rule** according to this table:
     - **Operator Habits / Prompt Macros** ➡️ `identity/AI_PROFILE.md`
     - **Programming/Syntax/Formatting Standards** ➡️ `docs/CODING_GUIDELINES.md`
     - **IDE Hardware Limits / Execution Protocols** ➡️ `memory/PROJECT_RULES.md`
     - **Local Sandbox Agent Ethics/Boundaries** ➡️ `open-claw-sandbox/SOUL.md` or `open-claw-sandbox/IDENTITY.md`
     - **Why a technical approach was chosen** ➡️ `memory/DECISIONS.md`
+  - **Principle Acknowledgement (強制確認)**: Every time the AI captures a new principle from the conversation, it **MUST explicitly state it** in the reply using this exact format:
+    > `✅ 原則已記錄 → [target_file.md]：<rule content>`
+    > This allows Jinkun to immediately verify the principle was captured correctly and routed to the right file. Silent updates are NOT acceptable.
 
 ---
 

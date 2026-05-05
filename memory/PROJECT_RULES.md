@@ -55,7 +55,31 @@ Whenever a feature, bug fix, or major task is completed, you MUST perform the fo
 
 1. **Verify Correctness**: Run specific `pytest` tests or manually test the updated module.
 2. **Quality Gate**: Run `cd open-claw-sandbox && ./ops/check.sh` to ensure `ruff` linting/formatting and `mypy` type-checking pass without errors.
-3. **Global SSoT Sync**: Ensure all relevant Markdown files (Architecture, Manuals, Structure) are updated. 
+3. **Global SSoT Sync**: Ensure all relevant Markdown files (Architecture, Manuals, Structure) are updated.
    - *Continuous Principle Sync*: If any new operational principles, constraints, or workflow habits were discovered or established during this session, you MUST immediately update `identity/AI_PROFILE.md` or `docs/CODING_GUIDELINES.md` to permanently record them.
-4. **Session Archival**: Run `python3 ops/archive_session.py` to automatically extract your current conversation, plan, and walkthrough into `memory/sessions/` and update `HISTORY.md`. Then update `memory/HANDOFF.md` & `memory/TASKS.md`.
-5. **Version Control**: Stage changes (`git add -A`), write a conventional commit message, and push to the GitHub repository (`git push`).
+   - *Principle Acknowledgement*: Every newly captured rule MUST be confirmed in-conversation with the format: `✅ 原則已記錄 → [file.md]：<content>`
+4. **Version Control**: Stage changes (`git add -A`), write a conventional commit message, and push to the GitHub repository (`git push`).
+5. **Session Archival**: Run `python3 ops/archive_session.py` **AFTER** `git push` (not before) to ensure the full conversation including archival confirmation is captured. Update `memory/HANDOFF.md` & `memory/TASKS.md`.
+
+> [!IMPORTANT]
+> `archive_session.py` MUST run after `git push`, never before. The archival log may miss the final conversation turns if run before pushing.
+
+---
+
+## 6. Code Review Checklist (每次深度審查必跑)
+
+When performing a full code audit (triggered by "讀取 AI_PROFILE.md，深度分析..."), the AI MUST systematically check every item below in addition to running `./ops/check.sh`:
+
+| # | Check | Command / Method |
+|:---:|:---|:---|
+| 1 | No bare `print()` in production code | `grep -r "^print(" core/ skills/` |
+| 2 | No hardcoded file paths | `grep -rn '/data/raw\|/tmp/openclaw' core/ skills/` |
+| 3 | All LLM calls followed by `unload_model()` | Manual review of each `llm.generate()` callsite |
+| 4 | All file writes use `AtomicWriter` | `grep -rn "open(.*[\"']w[\"']" core/ skills/` |
+| 5 | All config reads go through `config_manager` | `grep -rn "yaml.load\|json.load.*config" core/ skills/` |
+| 6 | DRY compliance — no duplicated for-loop logic | Semantic review across Phase scripts |
+| 7 | `STRUCTURE.md` matches actual directory tree | `ls` vs documented structure |
+| 8 | `HANDOFF.md` timestamp is current | Check `Last Updated` field |
+| 9 | No `# TODO` without accompanying issue reference | `grep -rn "# TODO" core/ skills/` |
+| 10 | All new principles captured and confirmed | Review conversation for `✅ 原則已記錄` markers |
+
