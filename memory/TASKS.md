@@ -1,6 +1,42 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-05 (Documentation System Restructuring)
+> **Last Updated:** 2026-05-05 (Full Mypy Compliance + AI-Native Doc System Hardened)
+
+---
+
+## 🔴 High Priority (阻斷性問題 / 核心功能)
+
+*(None currently)*
+
+---
+
+## 🟡 Medium Priority (優化 / 非緊急功能)
+
+- [ ] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
+- [ ] Run live end-to-end pipeline test with new `qwen3:14b` routing: `.m4a` / `.mp4` → `data/wiki/`
+- [ ] Rebuild ChromaDB index and validate a Telegram RAG query with `gemma4:e4b`
+- [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
+
+---
+
+## 🟢 Low Priority (技術債 / 探索性研究)
+
+- [ ] Register any future OCR service in `BOOTSTRAP.md` if/when needed
+- [ ] Evaluate `CONTRIBUTING.md` guidelines if workspace becomes multi-contributor
+
+---
+
+## ✅ Completed
+
+- [x] 2026-05-05: Full Mypy Compliance + AI-Native Documentation System Hardened
+  - Fixed all 41 Mypy type errors across `skills/` (0 errors in 133 files)
+  - `ops/check.sh` expanded: Mypy now covers `core/ + skills/`
+  - `pyproject.toml`: `python_version` corrected `3.9` → `3.11`
+  - `memory/STARTUP.md` [NEW]: Canonical 5-Phase startup prompt + full process docs
+  - `identity/AI_PROFILE.md`: Added Principle Acknowledgement rule
+  - `memory/PROJECT_RULES.md`: Added §6 Code Review Checklist (10 items); fixed archive timing order
+
+
 
 ---
 
