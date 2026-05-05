@@ -104,10 +104,11 @@
 > [!IMPORTANT]
 > **To any AI Agent reading this:** You have been instructed to read this `AI_PROFILE.md` as your initial context. To safely operate this repository, you **MUST** read the following files in this exact order to build your full memory context before making any code changes:
 
-1. **`docs/CODING_GUIDELINES.md`**: Read the entire file, paying special attention to **§15 AI-Native Documentation & Memory System** which explains the mandatory Append-Only rule and Historical Archival protocol.
-2. **`memory/PROJECT_RULES.md`**: Your behaviour contract, environmental constraints, and strict prohibitions.
-3. **`memory/HANDOFF.md` & `memory/TASKS.md`**: The checkpoint of the previous AI session and your current pending tasks.
-4. **`docs/STRUCTURE.md` & `docs/INDEX.md`**: The definitive maps of every directory and file in the workspace.
-5. **`memory/DECISIONS.md` & `memory/HISTORY.md`**: Check these before proposing any architectural changes to understand past decisions and historical context.
+1. **`memory/STARTUP.md`**: The canonical startup prompt and full session initialization process. Read this first to understand the complete workflow before proceeding.
+2. **`docs/CODING_GUIDELINES.md`**: Read the entire file, paying special attention to **§15 AI-Native Documentation & Memory System** which explains the mandatory Append-Only rule and Historical Archival protocol.
+3. **`memory/PROJECT_RULES.md`**: Your behaviour contract, environmental constraints, strict prohibitions, and the Code Review Checklist (§6).
+4. **`memory/HANDOFF.md` & `memory/TASKS.md`**: The checkpoint of the previous AI session and your current pending tasks.
+5. **`docs/STRUCTURE.md` & `docs/INDEX.md`**: The definitive maps of every directory and file in the workspace.
+6. **`memory/DECISIONS.md` & `memory/HISTORY.md`**: Check these before proposing any architectural changes to understand past decisions and historical context.
 
 **Do not guess the state of the project.** Read the files above to acquire your operational memory.
