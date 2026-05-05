@@ -287,19 +287,25 @@ Never contains runtime data — only human/agent-curated session state and archi
 
 ```
 memory/
-├── PROJECT_RULES.md        ← Project rules, AI behaviour contract, mandatory startup sequence, hardware constraints
-├── HANDOFF.md       ← Last session: what was completed, current system state, next starting point
+├── STARTUP.md       ← Canonical startup prompt + full 5-Phase session init process
+├── PROJECT_RULES.md ← AI behaviour contract, hardware limits, Code Review Checklist
+├── HANDOFF.md       ← Last session: completed work, system state, next starting point
 ├── TASKS.md         ← Prioritised task list (High / Medium / Low / Done)
-└── DECISIONS.md     ← Architectural Decision Records (ADRs) — why we made each key design choice
+├── HISTORY.md       ← Index of all archived sessions with [Archived] links
+├── DECISIONS.md     ← Architectural Decision Records (ADRs)
+├── ARCHITECTURE.md  ← System architecture narrative
+sessions/          ← Individual session archive files (append-only)
 ```
 
 **Update rules:**
 | File | Update When |
 |---|---|
-| `PROJECT_RULES.md` | Project rules or hardware constraints change |
+| `STARTUP.md` | Startup sequence or session workflow changes |
+| `PROJECT_RULES.md` | Project rules, hardware constraints, or checklist items change |
 | `ARCHITECTURE.md` | New module, skill, or service added/removed |
 | `HANDOFF.md` | End of every working session |
 | `TASKS.md` | Task status changes (start / complete / add / defer) |
+| `HISTORY.md` | A session is archived (auto-updated by `archive_session.py`) |
 | `DECISIONS.md` | Any significant architectural decision is made |
 
 ---
