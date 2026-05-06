@@ -5,6 +5,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.3] — 2026-05-05: Full Mypy Compliance + AI-Native Doc System
+
+### Fixed
+- **Global Mypy compliance** (`core/` + `skills/`): Resolved all 41 type errors across 133 source files.
+  - `core/ai/llm_client.py`: `aiohttp.ClientTimeout(total=float(...))` wrapping
+  - `core/state/state_manager.py`: Added `is_completed()` / `mark_completed()` convenience methods
+  - `core/utils/file_utils.py`: Widened `write_csv_safe()` logger param to `object` for duck-typed callers
+  - `skills/doc_parser/` (`p01b`, `p01c`, `p01d`): None-guards for threshold/dpi; unload_model str-cast; dict type fixes
+  - `skills/knowledge_compiler/p01_compile.py`: ChromaDB query result None-guard
+  - `skills/note_generator/synthesize.py`: Fixed `_agentic_mermaid_retry` return type annotation
+  - `skills/doc_parser/run_all.py`: Declared `self.interactive: bool = False`
+  - `skills/feynman_simulator/`: Fixed method calls to use `is_completed()` / `mark_completed()`
+  - 6 skills: Fixed `PhaseBase` import path (`core.orchestration.pipeline_base`)
+
+### Changed
+- **`ops/check.sh`**: Mypy scope expanded from `core/` → `core/ + skills/` (133 files). Type regressions now caught at commit time.
+- **`pyproject.toml`**: `python_version` corrected `3.9` → `3.11` to match actual runtime.
+
+### Added
+- **`memory/STARTUP.md`** (`local-workspace/memory/`): Canonical 5-Phase startup prompt and full end-of-session close flow. Single reference for all future AI sessions.
+
+---
+
 ## [V9.2] — 2026-05-04: Quality-First Model Optimization
 
 ### Changed

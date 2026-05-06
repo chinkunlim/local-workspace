@@ -40,3 +40,4 @@
 - **[Unknown] [[Archived] Voice Memo Pipeline Architecture Refactoring](sessions/Unknown_9b17ee28.md)** (ID: `9b17ee28`)
 - **[Unknown] [[Archived] 完美主義者級別程式架構對齊 (Enterprise-Grade Strict Alignment)](sessions/Unknown_d133d678.md)** (ID: `d133d678`)
 - **[2026-05-05] [[Archived] Full Mypy Compliance + AI-Native Doc System Hardened](sessions/2026-05-05_6f681039.md)** (ID: `6f681039`)
+- **[2026-05-05] [[Archived] Project-Wide Compliance & Archival Audit Plan](sessions/2026-05-05_6f681039.md)** (ID: `6f681039`)
