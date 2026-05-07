@@ -32,12 +32,12 @@ cat data/doc_parser/state/checklist.md
 | Phase | Script | Function |
 |:---:|:---|:---|
 | P00a | `p00a_diagnostic.py` | Security check + PDF metadata extraction |
+| P00b | `p00b_png_pipeline.py` | Tesseract OCR and layout extraction for direct PNG inputs |
 | P01a | `p01a_engine.py` | Primary Docling extraction → `raw_extracted.md` |
 | P01b | `p01b_vector_charts.py` | Vector diagram detection and captioning |
 | P01c | `p01c_ocr_gate.py` | Adaptive OCR decision (triggers only when Docling coverage is insufficient) |
 | P01d | `p01d_vlm_vision.py` | Figure / image analysis via VLM (vision language model) |
-| P02 | (Delegated) | Highlight extraction via `smart_highlighter` |
-| P03 | (Delegated) | Synthesis and publishing via `note_generator` → `data/wiki/` |
+| Handoff | (Autonomous) | The RouterAgent automatically forwards the extracted content to the `proofreader` skill for AI verification and dashboard review. |
 
 ## Common Commands
 
