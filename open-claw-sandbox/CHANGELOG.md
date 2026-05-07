@@ -5,6 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.5] — 2026-05-07: Advanced Prompt Engineering & Routing Architecture
+
+### Added
+- **Comprehensive Study Guide Model** (`note_generator`): Introduced an 8th model in the synthesis prompt producing an Obsidian-ready deep-dive guide. Includes bilingual headers, GitHub-style alerts, and dynamic Mermaid mind maps.
+- **Auto-Hashtag Mechanism**: Enforced a strict rule in `note_generator` to embed italicized `#tags` exactly one line below all `H2`/`H3` headings for precise Dataview block retrieval.
+- **Parallel Extraction Architecture** (ADR-011): Formally defined that `smart_highlighter` and `note_generator` run in parallel from `proofreader`'s clean output, eliminating markdown pollution between the annotation and synthesis streams.
+
+### Changed
+- **Unified Synthesis Prompt**: Removed legacy "Phase 5" terminology from `synthesize.py`, migrating to a universal `Note Synthesis Instruction` architecture.
+- **Smart Highlighter Syntax Expansion**: Expanded allowed annotation syntax to include `**bold**`, `==highlight==`, `*italic*`, `~~strikethrough~~`, `` `inline code` ``, `> blockquote`, and `<u>underline</u>`. Added strict rule preventing deletion of existing `![image]` tags.
+- **QEC Model Refinement**: Constrained the 'Evidence' extraction to only the 1-2 most pivotal experiments, shifting exhaustive data lists to dedicated Markdown tables in the Study Guide.
+
+---
+
 ## [V9.4] — 2026-05-07: Multi-Format Parse & Asynchronous Verification Pipeline
 
 ### Added

@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-05-07] ADR-011: Dual-Brain Parallelism (Extraction vs Synthesis)
+
+**Status:** Active
+
+**Context:** The `smart_highlighter` and `note_generator` skills both process the output of `proofreader`. Chaining them sequentially (e.g., `proofreader` -> `smart_highlighter` -> `note_generator`) would result in the `note_generator` consuming heavily marked-up text, risking syntax pollution and LLM hallucination.
+
+**Decision:** Adopt a **Parallel Y-shaped Routing** approach. Both `smart_highlighter` (First Brain: immutable annotated source) and `note_generator` (Second Brain: synthesized study notes) are sibling processes. They MUST both consume the clean, verified output of `proofreader` in parallel.
+
+**Consequences:** Ensures clean separation of concerns. The First Brain focuses purely on academic emphasis without losing context, while the Second Brain rebuilds the knowledge structure from a clean slate. Prevents formatting collisions.
+
+---
+
 ## [2026-05-07] ADR-010: Asynchronous Verification Dashboard & Ground Truth Contextualization
 
 **Status:** Active

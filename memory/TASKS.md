@@ -28,7 +28,13 @@
 
 ## ✅ Completed
 
-- [x] 2026-05-07: Multi-Format Parse & Asynchronous Verification Pipeline
+- [x] 2026-05-07: Advanced Prompt Engineering & Routing Architecture (V9.5)
+  - `note_generator` upgraded to 8-model format including Obsidian-ready Comprehensive Study Guide and dynamic Mermaid diagrams.
+  - `smart_highlighter` expanded to 7 Markdown annotation types, strictly preserving image tags.
+  - Defined ADR-011: Dual-Brain Parallelism, ensuring pure extraction logic separation from synthesis logic.
+  - Purged legacy "Phase 5" terminology from `note_generator` core scripts.
+
+- [x] 2026-05-07: Multi-Format Parse & Asynchronous Verification Pipeline (V9.4)
   - `docling` core environment recovered (forced `docling-slim` and resolved module pathing in `p01a_engine.py`).
   - Validated end-to-end `doc_parser` functionality for mixed `.png` and `.pdf` input batches.
   - Replaced the blocking `VerificationGate` (`_GatedHTTPServer`) with an asynchronous `dashboard.py`.

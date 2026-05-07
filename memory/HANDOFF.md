@@ -8,10 +8,12 @@
 ## Final Sign-off Summary
 
 **Date:** 2026-05-07
-**Milestone:** Mixed-Format Parsing (PDF/PNG) & Asynchronous Verification Dashboard
+**Milestone:** V9.5 Note Generator & Smart Highlighter Prompt Engineering
 
 ### Completed This Session
 
+- [x] **Prompt Engineering**: Upgraded `note_generator` and `smart_highlighter` prompts to use 8 specialized learning models and expanded markdown formatting rules.
+- [x] **Architecture Clarification**: Formalized Dual-Brain Parallelism (Extraction vs Synthesis) in ADR-011. Both note_generator and smart_highlighter process the raw text from `proofreader` in parallel.
 - [x] **Docling Core Recovery**: Repaired the corrupted `docling` environment by forcing `docling-slim` and fixing the module pathing in `p01a_engine.py`.
 - [x] **Mixed-Format Parsers (PDF/PNG)**: Validated end-to-end functionality for the `doc_parser` handling both direct `.png` (Tesseract) and `.pdf` (Docling + LLaMA-Vision) inputs accurately within the same Subject batch.
 - [x] **Asynchronous Verification Dashboard (Refactoring)**: Deprecated the blocking `human_gate.py` server. Replaced with an asynchronous `dashboard.py` running in the background.
@@ -97,6 +99,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-07 | Advanced Prompt Engineering & Routing | Upgraded `note_generator` and `smart_highlighter` models; defined Parallel Extraction vs Synthesis architecture (ADR-011) |
 | 2026-05-07 | Multi-Format Parse & Async Verification | Docling PDF/PNG fixed; Blocking Verification Gate replaced with Async Dashboard |
 | 2026-05-05 | Full Mypy Compliance + AI Doc System Hardening | 0 type errors in 133 files; STARTUP.md created; Code Review Checklist added |
 | 2026-05-05 | Audio Pipeline Pathing & Tech Stack Docs | Path traversal bugs fixed, VAD hardened, `OPENCLAW_TECH_STACK.md` created |
