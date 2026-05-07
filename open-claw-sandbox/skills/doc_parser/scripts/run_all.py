@@ -191,7 +191,7 @@ class QueueManager(PipelineBase):
         new_pdfs = []
         for root, dirs, files in os.walk(inbox_dir):
             for filename in sorted(files):
-                if not filename.lower().endswith(".pdf"):
+                if not filename.lower().endswith((".pdf", ".png", ".jpg", ".jpeg")):
                     continue
 
                 pdf_path = os.path.join(root, filename)
@@ -303,6 +303,41 @@ class QueueManager(PipelineBase):
 
         try:
             force_this = self.force_mode or item.get("force_reprocess", False)
+            ext = os.path.splitext(pdf_path)[1].lower()
+
+            if ext in [".png", ".jpg", ".jpeg"]:
+                if force_this or not self._is_already_processed(pdf_id, subject, phase_key="p0b"):
+                    self.info(f"🖼️ [Queue] Phase 0b: 圖片提取 ({subject})...")
+                    from phases.p00b_png_pipeline import Phase0bPNGPipeline
+
+                    success = Phase0bPNGPipeline().run(subject, item["filename"])
+                    if not success:
+                        raise RuntimeError("Phase 0b 圖片提取失敗")
+                    self.state_manager.update_task(subject, item["filename"], "p0b", "✅")
+                else:
+                    self.info("🖼️ [Queue] Phase 0b 已完成，跳過")
+
+                # Done for PNG
+                item["status"] = PDFStatus.COMPLETED.value
+                item["completed_at"] = datetime.now().isoformat()
+                self._processed_hashes.add(item["md5"])
+                self.state_manager.update_task(
+                    subject, item["filename"], "p0b", "✅", note_tag="Pipeline 全部完成"
+                )
+                self.info(f"✅ [Queue] {item['filename']} 處理完成")
+
+                # IMPORTANT: Fire EventBus for RouterAgent
+                from core.orchestration.event_bus import DomainEvent, EventBus
+
+                EventBus.publish(
+                    DomainEvent(
+                        name="PipelineCompleted",
+                        source_skill="doc_parser",
+                        payload={"filepath": pdf_path, "subject": subject, "chain": []},
+                    )
+                )
+
+                return item
 
             # --- Phase 0a: Diagnostic ---
             if force_this or not self._is_already_processed(pdf_id, subject, phase_key="p0a"):
@@ -398,7 +433,6 @@ class QueueManager(PipelineBase):
             if getattr(self, "interactive", False):
                 input("⏸️ [Interactive] Phase 1d 已完成。請確認 figure_list.md，按 Enter 繼續...")
 
-            # Done
             item["status"] = PDFStatus.COMPLETED.value
             item["completed_at"] = datetime.now().isoformat()
             self._processed_hashes.add(item["md5"])
@@ -406,6 +440,17 @@ class QueueManager(PipelineBase):
                 subject, item["filename"], "p1d", "✅", note_tag="Pipeline 全部完成"
             )
             self.info(f"✅ [Queue] {item['filename']} 處理完成")
+
+            # IMPORTANT: Fire EventBus for RouterAgent
+            from core.orchestration.event_bus import DomainEvent, EventBus
+
+            EventBus.publish(
+                DomainEvent(
+                    name="PipelineCompleted",
+                    source_skill="doc_parser",
+                    payload={"filepath": pdf_path, "subject": subject, "chain": []},
+                )
+            )
 
         except Exception as e:
             self.error(f"❌ [Queue] {item['filename']} 失敗: {e}")
@@ -470,7 +515,7 @@ class QueueManager(PipelineBase):
             return record.get(phase_key) in ("✅", "❌")
 
         # If no explicit phase requested, consider it processed if the final phase is success OR explicitly failed
-        return record.get("p1d") in ("✅", "❌")
+        return record.get("p1d") in ("✅", "❌") or record.get("p0b") in ("✅", "❌")
 
     def _load_processed_hashes(self):
         """Load MD5 hashes of already-processed PDFs from scan_reports."""

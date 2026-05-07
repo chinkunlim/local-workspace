@@ -9,11 +9,15 @@
 
   "routing_rules": {
     "voice_memo":    [".m4a", ".mp3", ".wav", ".ogg", ".aac", ".flac", ".opus"],
-    "pdf_knowledge": [".pdf"],
+    "pdf_knowledge": [".pdf", ".png", ".jpg", ".jpeg"],
     "compiler":      [".md", ".txt", ".rtf"]
   },
 
   "pdf_routing_rules": [
+    { "pattern": "_fig",          "description": "圖片/圖表 (僅供語音校對參考)",            "routing": "audio_ref" },
+    { "pattern": "_diagram",      "description": "圖解 (僅供語音校對參考)",                 "routing": "audio_ref" },
+    { "pattern": "图表",          "description": "【中文】圖表",                            "routing": "audio_ref" },
+    { "pattern": "圖表",          "description": "【繁中】圖表",                            "routing": "audio_ref" },
     { "pattern": "_ref",          "description": "通用參考資料",                           "routing": "audio_ref" },
     { "pattern": "_refs",         "description": "通用參考資料 (複數)",                     "routing": "audio_ref" },
     { "pattern": "_slides",       "description": "投影片/簡報 (僅供語音校對參考)",          "routing": "audio_ref" },

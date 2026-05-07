@@ -1,0 +1,18 @@
+name: "proofreader"
+version: "1.0.0"
+description: "Centralized proofreading and completeness verification skill."
+author: "OpenClaw Framework"
+
+# ------------------------------------------------------------------------------
+# Routing Hooks for RouterAgent (Phase 4)
+# ------------------------------------------------------------------------------
+routing:
+  intent_bindings:
+    - "proofread"
+    - "verify"
+    - "check_completeness"
+
+# ------------------------------------------------------------------------------
+# CLI / Execution Interface
+# ------------------------------------------------------------------------------
+cli_entry: "scripts/run_all.py"

@@ -84,6 +84,7 @@ core/
 │   ├── telegram_bot.py       ← Telegram integration for notifications and RAG queries
 │   ├── inbox_daemon.py       ← Watchdog background process monitoring Inboxes; delegates routing to RouterAgent
 │   ├── hitl_manager.py       ← Human-in-the-loop (HITL) interrupt management (Web UI Gates)
+│   ├── human_gate.py         ← (DEPRECATED) Legacy blocking VerificationGate
 │   ├── security_manager.py   ← Input security scanning (PDF sanitisation)
 │   ├── sm2.py                ← SuperMemo-2 spaced repetition algorithm engine
 │   └── scheduler.py          ← APScheduler background daemon for recurring tasks and Anki pushes
@@ -158,6 +159,19 @@ skills/
             ├── p01b_vector_charts.py ← Phase 1b: Vector chart rasterisation (pdftoppm)
             ├── p01c_ocr_gate.py    ← Phase 1c: OCR quality assessment (scan PDFs only)
             └── p01d_vlm_vision.py  ← Phase 1d: VLM visual figure description → figure_list.md
+
+├── proofreader/                    ← Centralized proofreading and completeness verification
+│   ├── SKILL.md                    ← Quick-start: modes, usage
+│   ├── config/
+│   │   ├── config.yaml             ← Model profiles and chunk sizes
+│   │   └── prompts.yaml            ← LLM instructions for verification
+│   └── scripts/
+│       ├── run_all.py              ← Orchestrator
+│       ├── dashboard.py            ← Asynchronous Verification Dashboard (Flask UI)
+│       └── phases/
+│           ├── p00_doc_proofread.py        ← Phase 0: Docling extract proofreading & image embed
+│           ├── p01_transcript_proofread.py ← Phase 1: Wait logic, LLM correction, async HITL queue
+│           └── p02_doc_completeness.py     ← Phase 2: PDF extract, image embedding, async HITL queue
 
 ├── smart-highlighter/              ← Standalone skill: Highlight raw markdown (Anti-Tampering)
 │   ├── SKILL.md                    ← Quick-start

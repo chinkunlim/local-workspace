@@ -164,19 +164,20 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
     │    │                                  │
     │    ▼                                  ▼
     │  audio_transcriber/input/       doc_parser/input/               video_ingester/input/
-    │    │  (6-phase pipeline)          │  (7-phase pipeline)           │  (2-phase pipeline)
+    │    │  (4-phase pipeline)          │  (8-phase pipeline)           │  (2-phase pipeline)
     │    │  P0: Glossary               │  P00a: Diagnostic             │  P1: Extract Keyframes
-    │    │  P1: MLX-Whisper [VERBATIM] │  P01a: Docling extract (300DPI)│  P2: Transcribe & Interleave
-    │    │     └─ Word timestamps      │     └─ Caption heuristics      │
-    │    │     └─ Low-conf [? flags ?] │     └─ Anti-bleed post-proc    │
-    │    │  P2: Proofread+Gate ────────┤  P01b-S: Text sanitizer        │
-    │    │     └─ Disfluency purge     │     └─ Header/footer purge     │
-    │    │     └─ Flag resolution      │     └─ Hyphenation repair      │
-    │    │     └─ VerificationGate     │  P01b: Vector charts           │
-    │    │  P3: Merge                  │  P01c: OCR gate                │
-    │    │  P4: Highlight ──────────► smart_highlighter                 │
-    │    │  P5: Synthesis ──────────► note_generator ◄──────────────────┘
-    │    └────────────────┐           └───────────┬──────┘
+    │    │  P1: MLX-Whisper [VERBATIM] │  P00b: PNG OCR/VLM extract    │  P2: Transcribe & Interleave
+    │    │     └─ Word timestamps      │  P01a: Docling extract (300DPI)│
+    │    │  P2: Glossary Apply         │     └─ Caption heuristics      │
+    │    │  P3: Sequence Merge         │  P01b-S: Text sanitizer        │
+    │    └────────────┬───────────────┘  P01b: Vector charts           │
+    │                 │                  P01c: OCR gate                │
+    │                 ▼                  P01d: VLM vision desc         │
+    │           proofreader/input/                                     │
+    │            │ (2-phase pipeline)                                  │
+    │            │ P1: Transcript Proofread                            │
+    │            │ P2: Doc Completeness ───► smart_highlighter         │
+    │            └─────────────────────────► note_generator ◄──────────┘
     │                     ▼                       │
     │               [ Academic Research Pipeline ]◄
     │                 ├─► student_researcher (Claim Extraction)
@@ -274,3 +275,6 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
   - `student_researcher`, `feynman_simulator`: `deepseek-r1:8b` for CoT analytical reasoning.
   - `knowledge_compiler`, `gemini_verifier_agent`, `academic_edu_assistant`, `academic_library_agent`, `interactive_reader`, `video_ingester`: `qwen3:14b`.
   - RouterAgent high-complexity model: `qwen3:14b`. Ollama model pool pruned from 12 to 7 models, saving 23.6 GB.
+- **Asynchronous Verification Dashboard (2026-05-07, V9.4)**:
+  - Deprecated the blocking `VerificationGate` (`_GatedHTTPServer`) which bottlenecked pipeline execution.
+  - Introduced a persistent, non-blocking `dashboard.py` (Flask) that surfaces `data/proofreader/output/` alongside the original Ground Truth media (PDF, PNG, M4A) for highly contextual, asynchronous Human-in-the-Loop review.

@@ -28,6 +28,14 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-07: Multi-Format Parse & Asynchronous Verification Pipeline
+  - `docling` core environment recovered (forced `docling-slim` and resolved module pathing in `p01a_engine.py`).
+  - Validated end-to-end `doc_parser` functionality for mixed `.png` and `.pdf` input batches.
+  - Replaced the blocking `VerificationGate` (`_GatedHTTPServer`) with an asynchronous `dashboard.py`.
+  - Rebuilt the verification UI to embed raw Ground Truth media (PDF, PNG, M4A) inline with the Markdown editor.
+  - Implemented `p00_doc_proofread` (Phase 0) for direct `.md` proofreading and image-embedding logic.
+  - Fixed JS `btoa` Unicode bug for robust file routing in the dashboard.
+
 - [x] 2026-05-05: Full Mypy Compliance + AI-Native Documentation System Hardened
   - Fixed all 41 Mypy type errors across `skills/` (0 errors in 133 files)
   - `ops/check.sh` expanded: Mypy now covers `core/ + skills/`
@@ -63,6 +71,14 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-05-07: Multi-Format Parse & Asynchronous Verification Pipeline
+  - `docling` core environment recovered (forced `docling-slim` and resolved module pathing in `p01a_engine.py`).
+  - Validated end-to-end `doc_parser` functionality for mixed `.png` and `.pdf` input batches.
+  - Replaced the blocking `VerificationGate` (`_GatedHTTPServer`) with an asynchronous `dashboard.py`.
+  - Rebuilt the verification UI to embed raw Ground Truth media (PDF, PNG, M4A) inline with the Markdown editor.
+  - Implemented `p00_doc_proofread` (Phase 0) for direct `.md` proofreading and image-embedding logic.
+  - Fixed JS `btoa` Unicode bug for robust file routing in the dashboard.
 
 - [x] 2026-05-05: Audio Pipeline Pathing & Tech Stack Docs
   - Fixed `WORKSPACE_DIR` resolution in `bootstrap.py`, `pipeline_base.py`, and `atomic_writer.py`

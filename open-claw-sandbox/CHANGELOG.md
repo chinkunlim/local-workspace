@@ -5,6 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.4] — 2026-05-07: Multi-Format Parse & Asynchronous Verification Pipeline
+
+### Added
+- **Asynchronous Verification Dashboard** (`dashboard.py`): A centralized, non-blocking Flask web UI for Human-in-the-Loop verification. It serves `data/proofreader/output/` files and embeds original PDF/PNG/M4A Ground Truth media inline.
+- **Phase 0: Doc Proofread** (`p00_doc_proofread.py`): A dedicated proofreading phase for the `doc_parser` pipeline that automatically corrects OCR errors and embeds Markdown images exactly where they logically belong.
+- **`pipeline_architecture.md`** (`memory/`): Created an architectural overview of the `doc_parser` ➡️ `proofreader` ⬅️ `audio_transcriber` hand-off mechanisms.
+
+### Changed
+- **Deprecated Blocking Verification Gate** (`human_gate.py`): Removed the synchronous `_GatedHTTPServer` from `p00`, `p01`, and `p02` to allow true autonomous background batch processing.
+- **Unicode Support in UI**: Fixed the Dashboard's JS `btoa` encoding logic to safely support Unicode file and subject names (e.g., `助人歷程`).
+
+### Fixed
+- **Docling Core Recovery**: Repaired the previously corrupted `docling` runtime by enforcing `docling-slim` and resolving absolute module pathing (`sys.path` injection) in `p01a_engine.py`.
+- **Mixed-Format Parsers (PDF/PNG)**: Hardened `run_all.py` to seamlessly orchestrate both Tesseract PNG extractions and Docling PDF extractions within the same Subject batch.
+
+---
+
 ## [V9.3] — 2026-05-05: Full Mypy Compliance + AI-Native Doc System
 
 ### Fixed

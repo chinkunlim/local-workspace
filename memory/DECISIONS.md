@@ -5,6 +5,21 @@
 
 ---
 
+## [2026-05-07] ADR-010: Asynchronous Verification Dashboard & Ground Truth Contextualization
+
+**Status:** Active
+
+**Context:** The `proofreader` skill required Human-in-the-Loop (HITL) intervention for final output review. Previously, this was handled by `_GatedHTTPServer` (`VerificationGate`), which blocked the entire processing pipeline per file. This broke the automation flow, especially for batch jobs spanning multiple subjects. Furthermore, displaying intermediate parsed text (e.g., Docling output or figure lists) alongside AI results added cognitive load for human reviewers.
+
+**Decision:** 
+1. **Non-Blocking Architecture**: Deprecated the synchronous `VerificationGate`. The `proofreader` phases now save the AI-generated Markdown directly to the `data/proofreader/output/` directory and immediately proceed to the next task.
+2. **Centralized Dashboard**: Created a standalone `dashboard.py` running via Flask. Users can review all queued verification tasks asynchronously at their convenience, grouped by subject.
+3. **Ground Truth Contextualization**: The dashboard UI embeds the original, unmodified source file (PDF, PNG, M4A) directly beside the AI output editor, entirely skipping intermediate "parsed text" views to maximize human review accuracy.
+
+**Consequences:** Pipelines now run continuously without blocking. The system gains true asynchronous batch-processing capability. The review UX is closer to professional editing software.
+
+---
+
 ## [2026-05-04] ADR-009: Quality-First Model Selection Strategy
 
 **Status:** Active

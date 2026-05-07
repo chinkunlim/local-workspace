@@ -20,8 +20,8 @@ paths:
     p0: "input" # 00 — 原始音檔
     p0_ref: "output/00_glossary" # 00 — 參考講義與詞庫
     p1: "output/01_transcript" # 01 — Whisper 轉錄稿
-    p2: "output/02_proofread" # 02 — AI 校對稿
-    p3: "output/03_merged" # 03 — 跨段合併精煉
+    p2: "output/02_glossary_apply" # 02 — 術語套用
+    p3: "output/03_merged" # 03 — 跨段合併
 
 phase0:
   active_profile: priority_gemma
@@ -80,67 +80,11 @@ phase1:
     repetition_compress_ratio: 0.3 # zlib 壓縮比低於 0.3 觸發重試
     retry_temperature: 0.2 # 重試時輕微隨機性打破迴圈
 
-phase2:
-  active_profile: strict_gemma
-  profiles:
-    strict_gemma:
-      # model: qwen3:14b
-      # model: llama3:8b
-      # model: gemma3:12b
-      model: gemma4:e4b
-      chunk_size: 3000
-      options:
-        num_ctx: 16384
-        temperature: 0
-        num_predict: 4096
-
-phase3:
-  active_profile: default
-  profiles:
-    default:
-      # model: qwen3:14b
-      # model: gemma3:12b
-      model: gemma4:e4b
-      chunk_size: 4000
-      options:
-        num_ctx: 16384
-        temperature: 0
-        num_predict: 4096
-
-runtime:
-  ollama:
-    api_url: "http://127.0.0.1:11434/api/generate"
-    timeout_seconds: 600
-    retries: 3
-    backoff_seconds: 5
-
-# NOTE: hardware thresholds and runtime (ollama) settings are defined globally in:
-#   open-claw-sandbox/core/config/global.yaml
-# Override any value here only if this skill needs different thresholds.
-#   e.g. disk.min_free_mb: 200 was previously lower here for audio_transcriber.
-
-thresholds:
-  phase2_verbatim: 0.85
-  phase3_verbatim: 0.70
-context:
-  phase2_lookback_chars: 200
-  phase3_lookback_chars: 150
-
 # Circuit Breaker fallback model (#11)
 models:
   fallback: gemma4:e2b   # lighter model activated when primary fails 3× in a row
-
-# Proofread Feedback Loop (#8)
-phase2_feedback:
-  enabled: true
-  confidence_threshold: 0.70   # If output/input ratio < threshold, trigger secondary pass
-  secondary_model: qwen3:14b  # Heavier model used for low-confidence chunks
 
 # Audio Chunk Fallback (#7)
 phase1_chunk_fallback:
   enabled: true
   max_chunk_duration_sec: 30   # Hard time-based slice when VAD finds no silence
-
-# Human-in-the-Loop Verification Gate
-verification_gate:
-  enabled: true

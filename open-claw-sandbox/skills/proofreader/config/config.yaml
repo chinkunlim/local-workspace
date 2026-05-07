@@ -1,0 +1,38 @@
+# ==============================================================================
+# config.yaml — OpenClaw Proofreader Skill Configuration
+# ==============================================================================
+
+paths:
+  input: "input"
+  output: "output"
+  state: "state"
+  logs: "logs"
+
+  phases:
+    p1: "output/01_transcript_proofread"
+    p2: "output/02_doc_completeness"
+
+phase1:
+  active_profile: strict_gemma
+  profiles:
+    strict_gemma:
+      model: gemma4:e4b
+      chunk_size: 3000
+      options:
+        num_ctx: 16384
+        temperature: 0
+        num_predict: 4096
+
+phase2:
+  active_profile: strict_gemma
+  profiles:
+    strict_gemma:
+      model: gemma4:e4b
+      chunk_size: 4000
+      options:
+        num_ctx: 16384
+        temperature: 0
+        num_predict: 4096
+
+verification_gate:
+  enabled: true

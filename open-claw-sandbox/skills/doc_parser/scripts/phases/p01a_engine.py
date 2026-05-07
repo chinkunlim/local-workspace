@@ -22,9 +22,17 @@ import json
 import os
 import shutil
 import sys
+
+# Temporary path injection just to reach core/bootstrap.py from skills/doc_parser/scripts/phases
+import sys as _sys
 from typing import Dict, Optional
 
-# Internal Core Bootstrap
+_sys.path.insert(
+    0,
+    __import__("os").path.abspath(
+        __import__("os").path.join(__import__("os").path.dirname(__file__), "..", "..", "..", "..")
+    ),
+)
 from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
@@ -115,7 +123,7 @@ class Phase1aPDFEngine(PipelineBase):
         # Set up output directory
         output_dir = os.path.join(self.dirs["processed"], subject, pdf_id)
         os.makedirs(output_dir, exist_ok=True)
-        raw_output_path = os.path.join(output_dir, "raw_extracted.md")
+        raw_output_path = os.path.join(output_dir, f"{pdf_id}_raw_extracted.md")
 
         # Save checkpoint before heavy operation
         self.resume_manager.save_checkpoint(pdf_id, "phase1b", chunk_index=0)
@@ -141,7 +149,7 @@ class Phase1aPDFEngine(PipelineBase):
             AtomicWriter.write_text(
                 raw_output_path,
                 (
-                    "<!-- raw_extracted.md — IMMUTABLE — DO NOT MODIFY —\n"
+                    f"<!-- {pdf_id}_raw_extracted.md — IMMUTABLE — DO NOT MODIFY —\n"
                     f"     pdf_id: {pdf_id}\n"
                     f"     source: {os.path.basename(pdf_path)}\n"
                     f"     pages: {scan_report.get('pages', '?')}\n"
@@ -280,9 +288,14 @@ class Phase1aPDFEngine(PipelineBase):
                 _fitz_doc = None
 
             for _, pic_item in picture_items_indexed:
-                prov = getattr(pic_item, "prov", None)
-                page_no = prov[0].page_no if prov else 1
-                bbox = prov[0].bbox if prov else None
+                prov_list = getattr(pic_item, "prov", [])
+                if prov_list and isinstance(prov_list, list) and len(prov_list) > 0:
+                    prov = prov_list[0]
+                    page_no = getattr(prov, "page_no", 1)
+                    bbox = getattr(prov, "bbox", None)  # type: ignore
+                else:
+                    page_no = 1
+                    bbox = None  # type: ignore
 
                 filename = f"fig_p{page_no}_{pic_item.self_ref.replace('/', '_')}.png"
                 filepath = os.path.join(assets_dir, filename)

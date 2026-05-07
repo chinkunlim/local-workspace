@@ -21,12 +21,14 @@ Usage (future):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
 import os
 import sys
 from typing import Callable, Dict, List, Optional
 
 from core.cli.cli_runner import SkillRunner
 from core.orchestration.event_bus import DomainEvent, EventBus
+from core.orchestration.session_manifest import update_session_manifest
 from core.orchestration.task_queue import task_queue
 
 # ---------------------------------------------------------------------------
@@ -85,6 +87,9 @@ _ROUTING_TABLE: Dict[str, List[str]] = {
         "gemini_verifier_agent",
         "knowledge_compiler",
     ],
+    ".png:auto": ["doc_parser"],
+    ".jpg:auto": ["doc_parser"],
+    ".jpeg:auto": ["doc_parser"],
     ".pdf:study": ["doc_parser", "academic_edu_assistant"],
     ".md:compile": ["knowledge_compiler"],
     ".md:research": [
@@ -208,6 +213,68 @@ class RouterAgent:
         payload = event.payload
         chain = payload.get("chain", [])
 
+        # Mark as done in session manifest
+        workspace_root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
+        subject = payload.get("subject", "Default")
+        filepath = payload.get("filepath", "")
+        filename = os.path.basename(filepath)
+        model = payload.get("model") or "qwen3:8b"
+        env = {"OPENCLAW_ROUTER_MODEL": model}
+
+        # Update manifest
+        update_session_manifest(workspace_root, subject, filename, event.source_skill, "done")
+
+        # [NEW LOGIC] If doc_parser finishes, check if any audio files are waiting for proofreader
+        if event.source_skill == "doc_parser":
+            prefix = filename.split("_")[0] if "_" in filename else ""
+            if prefix:
+                manifest_path = os.path.join(
+                    workspace_root, "data", "raw", subject, ".session_manifest.json"
+                )
+                if os.path.exists(manifest_path):
+                    with open(manifest_path, encoding="utf-8") as f:
+                        manifest = json.load(f)
+                    audio_files = manifest.get("audio_files", {})
+                    for a_file, a_data in audio_files.items():
+                        if (
+                            a_file.startswith(prefix + "_")
+                            and a_data.get("status") == "done"
+                            and a_data.get("proofread") == "pending"
+                        ):
+                            # We found an audio file waiting! Trigger proofreader/p01 for it.
+                            print(
+                                f"🗺️  [RouterAgent] doc_parser 完成，喚醒等待中的校對任務: {a_file}"
+                            )
+                            cwd = os.path.join(workspace_root, "skills", "proofreader")
+                            # Trigger proofreader p01
+                            cmd = [
+                                sys.executable,
+                                "scripts/phases/p01_transcript_proofread.py",
+                                "--subject",
+                                subject,
+                                "--file",
+                                a_file,
+                            ]
+                            task_queue.enqueue(
+                                name=f"proofreader/p01 ({a_file})",
+                                cmd=cmd,
+                                cwd=cwd,
+                                filepath=os.path.join(
+                                    workspace_root,
+                                    "data",
+                                    "audio_transcriber",
+                                    "input",
+                                    subject,
+                                    a_file,
+                                ),
+                                skill="proofreader",
+                                chain=[],  # It will run its own internal routing if needed
+                                subject=subject,
+                                env=env,
+                            )
+
         if len(chain) <= 1:
             print(f"🏁 [RouterAgent] 整個路由計畫已完成: {event.source_skill}")
             return
@@ -216,11 +283,7 @@ class RouterAgent:
         current_skill = chain[0]
         next_skill = chain[1]
         remaining_chain = chain[1:]
-        subject = payload.get("subject", "Default")
-        filepath = payload.get("filepath", "")
-        file_id = os.path.splitext(os.path.basename(filepath))[0]
-        model = payload.get("model") or "qwen3:8b"
-        env = {"OPENCLAW_ROUTER_MODEL": model}
+        file_id = os.path.splitext(filename)[0]
 
         print(f"🗺️  [RouterAgent] 接力觸發: {current_skill} -> {next_skill} (Model: {model})")
 
@@ -362,6 +425,17 @@ class RouterAgent:
                 chain=chain,
                 subject=manifest.subject or "Default",
                 env={"OPENCLAW_ROUTER_MODEL": manifest.model} if manifest.model else None,
+            )
+
+            workspace_root = os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            )
+            update_session_manifest(
+                workspace_root,
+                manifest.subject or "Default",
+                os.path.basename(target_path),
+                first_skill,
+                "processing",
             )
 
             results.append({"skill": first_skill, "status": "enqueued"})

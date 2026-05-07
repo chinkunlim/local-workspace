@@ -1,23 +1,23 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-05
-> **System Status:** 🟢 Stable / Production-Ready (Full Mypy Compliance + AI-Native Doc System Hardened)
+> **Last Updated:** 2026-05-07
+> **System Status:** 🟢 Stable / Production-Ready (Mixed-Format Parse & Asynchronous Verification Pipeline)
 
 ---
 
 ## Final Sign-off Summary
 
-**Date:** 2026-05-05
-**Milestone:** Full Mypy Compliance + AI-Native Documentation System Hardened
+**Date:** 2026-05-07
+**Milestone:** Mixed-Format Parsing (PDF/PNG) & Asynchronous Verification Dashboard
 
 ### Completed This Session
 
-- [x] **Global Mypy Compliance (0 errors in 133 files)**: Fixed all 41 type errors across `skills/` directory. Fixes included: PhaseBase import corrections, None-guard for threshold/dpi comparisons, `write_csv_safe` logger type widened, ChromaDB query None-guards, `StateManager.is_completed()` / `mark_completed()` convenience methods added, `QueueManager.interactive` attribute declared, `aiohttp.ClientTimeout` wrapping fixed.
-- [x] **`ops/check.sh` Hardened**: Mypy scope expanded from `core/` only → `core/ + skills/` (133 files). All future type regressions caught at commit time.
-- [x] **`pyproject.toml`**: `python_version` corrected from `3.9` → `3.11` to match runtime stack.
-- [x] **`memory/STARTUP.md` [NEW]**: Created canonical startup reference file containing the complete copy-paste startup prompt (5-Phase), full process documentation, Phase 3 grep commands, principle routing table, and standardized 5-section status report format.
-- [x] **`identity/AI_PROFILE.md`**: Added Principle Acknowledgement rule — AI must explicitly confirm every captured principle in-conversation using `✅ 原則已記錄 → [file]：<content>`. `STARTUP.md` added as step 1 of Master Startup Sequence.
-- [x] **`memory/PROJECT_RULES.md`**: Added Section 6 — Code Review Checklist (10 systematic items). Fixed End-of-Feature Protocol order: `git push` → `archive_session.py` (was reversed).
+- [x] **Docling Core Recovery**: Repaired the corrupted `docling` environment by forcing `docling-slim` and fixing the module pathing in `p01a_engine.py`.
+- [x] **Mixed-Format Parsers (PDF/PNG)**: Validated end-to-end functionality for the `doc_parser` handling both direct `.png` (Tesseract) and `.pdf` (Docling + LLaMA-Vision) inputs accurately within the same Subject batch.
+- [x] **Asynchronous Verification Dashboard (Refactoring)**: Deprecated the blocking `human_gate.py` server. Replaced with an asynchronous `dashboard.py` running in the background.
+- [x] **Ground Truth Contextualization UI**: Rebuilt the verification UI to display raw Ground Truth media (PDF, PNG, M4A) inline with the Monaco editor instead of showing raw parsed text strings.
+- [x] **Phase 0 `p00_doc_proofread` Implementation**: Added direct Markdown & Image-embedding proofread phase specifically designed for `doc_parser` output.
+- [x] **Verification Unicode Bugfix**: Corrected a JS bug (`btoa` failing on Unicode characters like `助人歷程`) ensuring accurate file grouping.
 
 - [x] **Phase A Performance Hardening (V9.1)**: `SqliteSemanticCache` in `llm_client.py`; Exponential Backoff in `task_queue.py`; Scheduler Queue Safety via `LocalTaskQueue`.
 - [x] **Context-Aware Model Routing (V9.1)**: `RouterAgent` assigns `qwen3:14b` (high-complexity) or `qwen3:8b` (low-complexity) based on intent keywords.
@@ -97,6 +97,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-07 | Multi-Format Parse & Async Verification | Docling PDF/PNG fixed; Blocking Verification Gate replaced with Async Dashboard |
 | 2026-05-05 | Full Mypy Compliance + AI Doc System Hardening | 0 type errors in 133 files; STARTUP.md created; Code Review Checklist added |
 | 2026-05-05 | Audio Pipeline Pathing & Tech Stack Docs | Path traversal bugs fixed, VAD hardened, `OPENCLAW_TECH_STACK.md` created |
 | 2026-05-04 | Quality-First Model Optimization (V9.2) | All skills upgraded to optimal models; 23.6GB Ollama cleanup; MODEL_SELECTION.md created |

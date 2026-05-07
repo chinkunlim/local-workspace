@@ -30,6 +30,7 @@ if _workspace_root not in sys.path:
 
 from core.cli.cli_runner import SkillRunner
 from core.orchestration.router_agent import RouterAgent, TaskManifest
+from core.orchestration.session_manifest import update_session_manifest
 from core.orchestration.skill_registry import SkillRegistry
 from core.orchestration.task_queue import task_queue
 from core.utils.atomic_writer import AtomicWriter
@@ -134,6 +135,10 @@ class SystemInboxDaemon:
         try:
             os.rename(filepath, target_path)
             _logger.info("已移動: [%s] %s → %s", subject, filename, target_skill)
+
+            # Update Session Manifest (File arrived and waiting to stabilize)
+            update_session_manifest(_workspace_root, subject, filename, target_skill, "pending")
+
             if os.sep + "input" + os.sep in target_dir + os.sep:
                 self._schedule_trigger(target_skill, target_path)
         except Exception as e:
