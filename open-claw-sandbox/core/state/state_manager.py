@@ -75,6 +75,10 @@ class StateManager:
     PHASES_AGENT = ["p1"]
     # Phase set for academic_edu_assistant
     PHASES_ACADEMIC = ["p1", "p2"]
+    # Phase set for smart_highlighter
+    PHASES_HIGHLIGHT = ["highlight"]
+    # Phase set for note_generator
+    PHASES_NOTE = ["synthesize"]
 
     # Phase labels for checklist rendering
     PHASE_LABELS_VOICE = {"p1": "P1 (轉錄)", "p2": "P2 (校對)", "p3": "P3 (合併)"}
@@ -89,8 +93,12 @@ class StateManager:
     PHASE_LABELS_READER = {"p1": "P1 (互動標籤處理)"}
     PHASE_LABELS_AGENT = {"p1": "P1 (向量庫服務)"}
     PHASE_LABELS_ACADEMIC = {"p1": "P1 (RAG 交叉比對)", "p2": "P2 (Anki 生成)"}
+    PHASE_LABELS_HIGHLIGHT = {"highlight": "H1 (重點標記)"}
+    PHASE_LABELS_NOTE = {"synthesize": "N1 (知識合成)"}
 
-    def __init__(self, base_dir: str, skill_name: str = "audio_transcriber"):
+    def __init__(
+        self, base_dir: str, skill_name: str = "audio_transcriber", raw_dir: str | None = None
+    ):
         self.base_dir = base_dir
         self.skill_name = skill_name
         if skill_name == "doc_parser":
@@ -113,6 +121,14 @@ class StateManager:
             self.PHASES = self.PHASES_ACADEMIC
             self._phase_labels = self.PHASE_LABELS_ACADEMIC
             self.file_ext = "*.md"
+        elif skill_name == "smart_highlighter":
+            self.PHASES = self.PHASES_HIGHLIGHT
+            self._phase_labels = self.PHASE_LABELS_HIGHLIGHT
+            self.file_ext = "*.md"
+        elif skill_name == "note_generator":
+            self.PHASES = self.PHASES_NOTE
+            self._phase_labels = self.PHASE_LABELS_NOTE
+            self.file_ext = "*.md"
         else:
             self.PHASES = self.PHASES_VOICE
             self._phase_labels = self.PHASE_LABELS_VOICE
@@ -134,7 +150,11 @@ class StateManager:
             else legacy_checklist_file
         )
 
-        if skill_name == "interactive_reader":
+        if raw_dir is not None:
+            # Caller-supplied override (e.g. note_generator/smart_highlighter
+            # read from proofreader output, not from their own input/ dir)
+            self.raw_dir = raw_dir
+        elif skill_name == "interactive_reader":
             # Interactive reader directly monitors and mutates the wiki
             self.raw_dir = os.path.abspath(os.path.join(base_dir, "..", "wiki"))
         else:

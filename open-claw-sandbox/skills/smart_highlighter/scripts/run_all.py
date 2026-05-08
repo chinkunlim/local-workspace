@@ -154,7 +154,13 @@ class SmartHighlighterOrchestrator(PipelineBase):
             phase_name="Smart Highlighter 管線協調器",
             skill_name="smart_highlighter",
         )
-        self._state_manager = StateManager(self.base_dir, skill_name="smart_highlighter")
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        proofread_dir = os.path.join(
+            workspace_root, "data", "proofreader", "output", "00_doc_proofread"
+        )
+        self._state_manager = StateManager(
+            self.base_dir, skill_name="smart_highlighter", raw_dir=proofread_dir
+        )
 
     # ------------------------------------------------------------------ #
     #  Startup                                                             #
@@ -289,7 +295,20 @@ class SmartHighlighterOrchestrator(PipelineBase):
                         pass
 
                     self._state_manager = StateManager(
-                        self.base_dir, skill_name="smart_highlighter"
+                        self.base_dir,
+                        skill_name="smart_highlighter",
+                        raw_dir=os.path.abspath(
+                            os.path.join(
+                                os.path.dirname(__file__),
+                                "..",
+                                "..",
+                                "..",
+                                "data",
+                                "proofreader",
+                                "output",
+                                "00_doc_proofread",
+                            )
+                        ),
                     )
                     self._state_manager.print_dashboard()
 

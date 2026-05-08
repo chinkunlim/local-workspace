@@ -362,7 +362,13 @@ class NoteGeneratorOrchestrator(PipelineBase):
             phase_name="Note Generator 管線協調器",
             skill_name="note_generator",
         )
-        self._state_manager = StateManager(self.base_dir, skill_name="note_generator")
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        proofread_dir = os.path.join(
+            workspace_root, "data", "proofreader", "output", "00_doc_proofread"
+        )
+        self._state_manager = StateManager(
+            self.base_dir, skill_name="note_generator", raw_dir=proofread_dir
+        )
 
     # ------------------------------------------------------------------ #
     #  Startup                                                             #
@@ -491,7 +497,22 @@ class NoteGeneratorOrchestrator(PipelineBase):
                     except Exception:
                         pass
 
-                    self._state_manager = StateManager(self.base_dir, skill_name="note_generator")
+                    self._state_manager = StateManager(
+                        self.base_dir,
+                        skill_name="note_generator",
+                        raw_dir=os.path.abspath(
+                            os.path.join(
+                                os.path.dirname(__file__),
+                                "..",
+                                "..",
+                                "..",
+                                "data",
+                                "proofreader",
+                                "output",
+                                "00_doc_proofread",
+                            )
+                        ),
+                    )
                     self._state_manager.print_dashboard()
 
                     if args.interactive:
