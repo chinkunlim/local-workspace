@@ -8,19 +8,17 @@ from core.orchestration.skill_registry import SkillManifest
 
 
 def _run(**kw):
-    import sys
-
-    from scripts.synthesize import NoteGenerator
+    from scripts.run_all import PhaseNoteGenerator
 
     text = kw.pop("markdown_text", "")
-    NoteGenerator().run(text, **kw)
+    PhaseNoteGenerator().run_single(text, **kw)
 
 
 MANIFEST = SkillManifest(
     skill_name="note_generator",
     description="Synthesizes Markdown text into structured study notes with YAML frontmatter and Mermaid mindmaps using Map-Reduce chunking.",
     phases=["synthesize"],
-    cli_entry="scripts/synthesize.py",
+    cli_entry="scripts/run_all.py",
     run_fn=_run,
     file_types=[".md"],
     tags=["notes", "synthesis", "mermaid", "map-reduce"],

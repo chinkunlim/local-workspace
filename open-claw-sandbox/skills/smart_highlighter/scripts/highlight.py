@@ -27,7 +27,7 @@ class SmartHighlighter(PipelineBase):
         super().__init__(
             phase_key="highlight",
             phase_name="Smart Highlighter",
-            skill_name="smart-highlighter",
+            skill_name="smart_highlighter",
         )
         self.profile_override = profile
 
@@ -67,9 +67,11 @@ class SmartHighlighter(PipelineBase):
         if not model_name:
             raise RuntimeError("smart-highlighter highlight config missing model")
 
-        prompt_tpl = self.get_prompt("Phase 4: 重點標記指令")
+        prompt_tpl = self.get_prompt("Highlight: Key Annotation Instruction")
         if not prompt_tpl:
-            self.error("❌ 找不到 prompt 指令，請確認 prompt.md 有「Phase 4: 重點標記指令」段落")
+            self.error(
+                "❌ 找不到 prompt 指令，請確認 prompt.md 有「Highlight: Key Annotation Instruction」段落"
+            )
             return markdown_text  # Fallback to original
 
         chunks = smart_split(markdown_text, chunk_size)

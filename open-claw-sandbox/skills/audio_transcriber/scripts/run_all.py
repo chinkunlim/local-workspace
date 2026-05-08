@@ -27,7 +27,7 @@ _bootstrap(__file__)
 # Group 3 — Core imports
 from phases.p00_glossary import Phase0Glossary
 from phases.p01_transcribe import Phase1Transcribe
-from phases.p02_proofread import Phase2Proofread
+from phases.p02_glossary_apply import Phase2GlossaryApply
 from phases.p03_merge import Phase3Merge
 
 from core import (
@@ -200,7 +200,7 @@ class VoiceMemoOrchestrator(PipelineBase):
 
         phases_classes = {
             1: Phase1Transcribe,
-            2: Phase2Proofread,
+            2: Phase2GlossaryApply,
             3: Phase3Merge,
         }
 

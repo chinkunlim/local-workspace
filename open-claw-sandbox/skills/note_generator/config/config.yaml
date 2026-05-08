@@ -67,6 +67,6 @@ synthesize:
 runtime:
   ollama:
     api_url: "http://127.0.0.1:11434/api/generate"
-    timeout_seconds: 600
+    timeout_seconds: 1800
     retries: 3
     backoff_seconds: 5
