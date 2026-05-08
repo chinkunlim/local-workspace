@@ -256,6 +256,46 @@ All PDF inputs must pass through `SecurityManager` before any content is read:
 - Filename allowlist validation
 - File size cap check
 
+### 5.5 Skill Name Convention (underscore only)
+
+`skill_name` in `PipelineBase.__init__()` **must** use underscores and **must exactly match** the directory name under `skills/`. Using hyphens (e.g. `"smart-highlighter"`) will break `PathBuilder` config resolution.
+
+```python
+# ✅ Correct
+super().__init__(skill_name="smart_highlighter")
+
+# ❌ Wrong — hyphens cause PathBuilder to fail
+super().__init__(skill_name="smart-highlighter")
+```
+
+### 5.6 Skill Entry Point Naming
+
+All skill pipeline entry points **must** be named `run_all.py`. Custom names (`synthesize.py`, `highlight.py`, etc.) are prohibited. This ensures uniform routing by `RouterAgent` and consistent CLI conventions across all skills.
+
+### 5.7 Reasoning Model `<think>` Tag Stripping
+
+When using reasoning models (`phi4-mini-reasoning`, `deepseek-r1`, `qwen3` with thinking), the LLM output **must** be passed through `strip_think_tags()` before any further processing or file writes:
+
+```python
+from skills.note_generator.scripts.run_all import strip_think_tags
+
+result = self.llm.generate(model=model, prompt=prompt, options=options)
+result = strip_think_tags(result)  # ← mandatory for reasoning models
+```
+
+### 5.8 StateManager `raw_dir` Override
+
+When a skill's input files originate from another skill's output directory (not from `data/<skill>/input/`), the `raw_dir` parameter **must** be explicitly passed to `StateManager` so the DAG dashboard shows correct file counts.
+
+```python
+# ✅ Correct — note_generator reads from proofreader output
+proofread_dir = os.path.join(workspace_root, "data", "proofreader", "output", "00_doc_proofread")
+self._state_manager = StateManager(self.base_dir, skill_name="note_generator", raw_dir=proofread_dir)
+
+# ❌ Wrong — StateManager defaults to data/note_generator/input/*.m4a
+self._state_manager = StateManager(self.base_dir, skill_name="note_generator")
+```
+
 ---
 
 ## 6. Python Style & Formatting

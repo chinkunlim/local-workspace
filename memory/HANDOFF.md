@@ -1,25 +1,27 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-07
-> **System Status:** 🟢 Stable / Production-Ready (Mixed-Format Parse & Asynchronous Verification Pipeline)
+> **Last Updated:** 2026-05-08
+> **System Status:** 🟢 Stable / Production-Ready (V9.6 — Synthesis Pipeline Hardened)
 
 ---
 
 ## Final Sign-off Summary
 
-**Date:** 2026-05-07
-**Milestone:** V9.5 Note Generator & Smart Highlighter Prompt Engineering
+**Date:** 2026-05-08
+**Milestone:** V9.6 Synthesis Pipeline CLI Standardisation & DAG Hardening
 
 ### Completed This Session
 
-- [x] **Prompt Engineering**: Upgraded `note_generator` and `smart_highlighter` prompts to use 8 specialized learning models and expanded markdown formatting rules.
-- [x] **Architecture Clarification**: Formalized Dual-Brain Parallelism (Extraction vs Synthesis) in ADR-011. Both note_generator and smart_highlighter process the raw text from `proofreader` in parallel.
-- [x] **Docling Core Recovery**: Repaired the corrupted `docling` environment by forcing `docling-slim` and fixing the module pathing in `p01a_engine.py`.
-- [x] **Mixed-Format Parsers (PDF/PNG)**: Validated end-to-end functionality for the `doc_parser` handling both direct `.png` (Tesseract) and `.pdf` (Docling + LLaMA-Vision) inputs accurately within the same Subject batch.
-- [x] **Asynchronous Verification Dashboard (Refactoring)**: Deprecated the blocking `human_gate.py` server. Replaced with an asynchronous `dashboard.py` running in the background.
-- [x] **Ground Truth Contextualization UI**: Rebuilt the verification UI to display raw Ground Truth media (PDF, PNG, M4A) inline with the Monaco editor instead of showing raw parsed text strings.
-- [x] **Phase 0 `p00_doc_proofread` Implementation**: Added direct Markdown & Image-embedding proofread phase specifically designed for `doc_parser` output.
-- [x] **Verification Unicode Bugfix**: Corrected a JS bug (`btoa` failing on Unicode characters like `助人歷程`) ensuring accurate file grouping.
+- [x] **audio_transcriber `run_all.py` Import Fix**: Corrected stale import (`Phase2Proofread` → `Phase2GlossaryApply`) that caused `ModuleNotFoundError` on startup. Pipeline now runs end-to-end.
+- [x] **smart_highlighter V2.0 — Orchestrator Architecture**: Renamed `highlight.py` → `run_all.py`. Implemented `SmartHighlighterOrchestrator` with DAG dashboard, `StateManager` tracking, `--force/--resume/--subject/--file` CLI, asset directory copying, and dual file/batch mode (mirrors `audio_transcriber`).
+- [x] **note_generator V2.0 — Orchestrator Architecture**: Renamed `synthesize.py` → `run_all.py`. Implemented `NoteGeneratorOrchestrator` with identical DAG/CLI architecture. Added `strip_think_tags()` for reasoning model compatibility and `fix_mermaid_syntax()` for self-healing Mermaid output.
+- [x] **StateManager — `raw_dir` Override**: Added optional `raw_dir` parameter so skills reading from cross-skill output paths (e.g., `proofreader/output`) can correctly report DAG file counts.
+- [x] **StateManager — New Phase Registrations**: Added `PHASES_HIGHLIGHT = ['highlight']` / `PHASES_NOTE = ['synthesize']` with display labels `H1 (重點標記)` / `N1 (知識合成)`.
+- [x] **highlight.py `skill_name` Bug Fix**: Corrected `skill_name="smart-highlighter"` (hyphen) to `skill_name="smart_highlighter"` (underscore) in old `highlight.py`. Config loading was silently failing.
+- [x] **note_generator API Timeout**: Increased `timeout_seconds` from 600 → 1800 to support 8-model synthesis output.
+- [x] **Both `manifest.py` updated**: `cli_entry` for both skills now points to `scripts/run_all.py`.
+- [x] **CODING_GUIDELINES §5.5–5.8**: Documented four new invariants (skill_name convention, run_all.py naming, think-tag stripping, raw_dir override).
+- [x] **check.sh**: ✅ All Passed — Ruff + Mypy (158 files, 0 errors).
 
 - [x] **Phase A Performance Hardening (V9.1)**: `SqliteSemanticCache` in `llm_client.py`; Exponential Backoff in `task_queue.py`; Scheduler Queue Safety via `LocalTaskQueue`.
 - [x] **Context-Aware Model Routing (V9.1)**: `RouterAgent` assigns `qwen3:14b` (high-complexity) or `qwen3:8b` (low-complexity) based on intent keywords.
@@ -38,13 +40,16 @@
 
 | Attribute | Value |
 | ---------------------- | -------------------------------------------------------------------------------- |
-| Git | Clean — synced with `origin/main` (`6fe1b74`) |
+| Git | Clean — synced with `origin/main` (`6db7fb4`) |
 | Ruff linting | ✅ All checks passed |
-| Ruff format | ✅ 149 files clean |
-| Mypy | ✅ 0 errors in 133 source files (`core/` + `skills/`) |
+| Ruff format | ✅ 158 files clean |
+| Mypy | ✅ 0 errors in 142 source files (`core/` + `skills/`) |
 | Python version | `3.11` (pyproject.toml corrected) |
 | Ollama models | 7 models (phi4-mini-reasoning, qwen3:8b, deepseek-r1:8b, gemma4:e2b, llama3.2-vision, gemma4:e4b, qwen3:14b) |
-| Skill package names | `note_generator`, `smart_highlighter` (underscore convention) |
+| Skill package names | `note_generator`, `smart_highlighter` (underscore — enforced §5.5) |
+| Skill entry points | All skills use `scripts/run_all.py` (enforced §5.6) |
+| DAG Phases | `smart_highlighter`: H1 (重點標記); `note_generator`: N1 (知識合成) |
+| note_generator timeout | 1800 seconds (supports 8-model synthesis) |
 | Inbox routing | Intent-Driven via `RouterAgent` and `SkillRegistry` |
 | Pipeline Handoff | Autonomous via `EventBus` (`TaskQueue` emits `PipelineCompleted`) |
 | LLM Semantic Cache | `data/llm_cache.sqlite3` (SHA-256 keyed, `temperature=0` only) |
@@ -78,11 +83,11 @@ curl http://localhost:18789/health          # Open Claw API
 
 ## Next Session Starting Point
 
-1. Run live end-to-end test: place a `.m4a` file into `data/raw/認知心理學/` and confirm all phases complete with `qwen3:14b` routing
-2. Rebuild ChromaDB index: `python skills/telegram_kb_agent/scripts/indexer.py`
-3. Validate a Telegram query reaches `telegram_kb_agent` with `gemma4:e4b`
-4. Populate `tests/` stub structure per CODING_GUIDELINES §11.2
-5. Phase B (Memory & Graph RAG): ChromaDB + NetworkX integration
+1. **Review synthesis output quality**: Open `data/note_generator/output/助人歷程/` and `data/smart_highlighter/output/助人歷程/` in Obsidian — verify Mermaid renders, images show, `<think>` tags absent.
+2. **Run full batch synthesis**: `python3 skills/note_generator/scripts/run_all.py --subject 助人歷程 --force` — confirm DAG progresses from `❌ 0/5` → `✅ 5/5`.
+3. Run live E2E test: place a `.m4a` file into `data/raw/認知心理學/` and confirm all phases complete.
+4. Rebuild ChromaDB index: `python skills/telegram_kb_agent/scripts/indexer.py`
+5. Populate `tests/` stub structure per CODING_GUIDELINES §11.2.
 
 > **Startup Protocol**: Copy the prompt from `memory/STARTUP.md` at the start of every new conversation.
 
@@ -99,6 +104,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-08 | V9.6 Synthesis Pipeline CLI & DAG Standardisation | `smart_highlighter`/`note_generator` → `run_all.py` Orchestrators; DAG fixed; 4 new §5 invariants |
 | 2026-05-07 | Advanced Prompt Engineering & Routing | Upgraded `note_generator` and `smart_highlighter` models; defined Parallel Extraction vs Synthesis architecture (ADR-011) |
 | 2026-05-07 | Multi-Format Parse & Async Verification | Docling PDF/PNG fixed; Blocking Verification Gate replaced with Async Dashboard |
 | 2026-05-05 | Full Mypy Compliance + AI Doc System Hardening | 0 type errors in 133 files; STARTUP.md created; Code Review Checklist added |

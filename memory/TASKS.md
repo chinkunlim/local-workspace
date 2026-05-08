@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-05 (Full Mypy Compliance + AI-Native Doc System Hardened)
+> **Last Updated:** 2026-05-08 (V9.6 — Synthesis Pipeline CLI Standardisation & DAG Hardening)
 
 ---
 
@@ -12,8 +12,10 @@
 
 ## 🟡 Medium Priority (優化 / 非緊急功能)
 
+- [ ] Review synthesis output quality in Obsidian: `data/note_generator/output/助人歷程/` — verify Mermaid renders, images display, no `<think>` tags
+- [ ] Run full batch synthesis test: `run_all.py --subject 助人歷程 --force` for both skills (confirm DAG `❌ 0/5` → `✅ 5/5`)
 - [ ] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
-- [ ] Run live end-to-end pipeline test with new `qwen3:14b` routing: `.m4a` / `.mp4` → `data/wiki/`
+- [ ] Run live end-to-end pipeline test: `.m4a` → `data/wiki/`
 - [ ] Rebuild ChromaDB index and validate a Telegram RAG query with `gemma4:e4b`
 - [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
 
@@ -27,6 +29,15 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-05-08: V9.6 Synthesis Pipeline CLI Standardisation & DAG Hardening
+  - `audio_transcriber` `run_all.py` stale import fixed (`Phase2Proofread` → `Phase2GlossaryApply`).
+  - `smart_highlighter` → `run_all.py` with `SmartHighlighterOrchestrator`, DAG `H1 (重點標記)`, asset copying.
+  - `note_generator` → `run_all.py` with `NoteGeneratorOrchestrator`, DAG `N1 (知識合成)`, `strip_think_tags()`, `fix_mermaid_syntax()`.
+  - `StateManager`: added `raw_dir` override param; registered `PHASES_HIGHLIGHT` and `PHASES_NOTE`.
+  - `highlight.py` `skill_name` bug fixed (hyphen → underscore).
+  - `note_generator` API timeout increased to 1800s.
+  - `CODING_GUIDELINES.md` §5.5–5.8: 4 new OpenClaw invariants documented.
 
 - [x] 2026-05-07: Advanced Prompt Engineering & Routing Architecture (V9.5)
   - `note_generator` upgraded to 8-model format including Obsidian-ready Comprehensive Study Guide and dynamic Mermaid diagrams.

@@ -5,6 +5,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.6] — 2026-05-08: Synthesis Pipeline CLI Standardisation & DAG Hardening
+
+### Added
+- **`SmartHighlighterOrchestrator`** (`smart_highlighter/scripts/run_all.py` [NEW]): Full pipeline runner with `StateManager` DAG tracking, dual file/batch mode, `--force/--resume/--subject/--file` CLI, and automatic `assets/` directory copying for image path resolution.
+- **`NoteGeneratorOrchestrator`** (`note_generator/scripts/run_all.py` [NEW]): Identical architecture as above. Adds `strip_think_tags()` (removes `<think>...</think>` reasoning blocks from models like `phi4-mini-reasoning`) and `fix_mermaid_syntax()` (auto-repairs broken `mindmap` declarations).
+- **`StateManager.raw_dir` override parameter**: Skills with cross-skill input paths can now explicitly provide their scan directory, decoupling the DAG from the default `input/` folder.
+- **`StateManager` Phase Registration**: `PHASES_HIGHLIGHT = ["highlight"]` / `PHASES_NOTE = ["synthesize"]` with labels `H1 (重點標記)` / `N1 (知識合成)` displayed in the DAG dashboard.
+- **`CODING_GUIDELINES.md` §5.5–5.8**: Four new invariants: `skill_name` underscore convention, `run_all.py` entry point naming, reasoning model `<think>` stripping, and `StateManager raw_dir` override.
+
+### Fixed
+- **`audio_transcriber/run_all.py` stale import**: `Phase2Proofread` → `Phase2GlossaryApply` (previous refactor left a dead import causing `ModuleNotFoundError`).
+- **`smart_highlighter/scripts/highlight.py` `skill_name` bug**: Changed `"smart-highlighter"` (hyphen) to `"smart_highlighter"` (underscore). `PathBuilder` was silently unable to resolve `config.yaml`.
+
+### Changed
+- **`note_generator/config.yaml` timeout**: Increased `runtime.ollama.timeout_seconds` from 600 → 1800 to support long 8-model synthesis outputs.
+- **Both `manifest.py`**: `cli_entry` updated from `synthesize.py`/`highlight.py` → `scripts/run_all.py`.
+
+---
+
 ## [V9.5] — 2026-05-07: Advanced Prompt Engineering & Routing Architecture
 
 ### Added

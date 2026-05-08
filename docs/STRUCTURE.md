@@ -181,7 +181,8 @@ skills/
 │   ├── docs/
 │   │   └── ARCHITECTURE.md         ← Standalone skill architecture
 │   └── scripts/
-│       └── highlight.py            ← Main entry point (SmartHighlighter class)
+│       ├── highlight.py            ← Legacy entry (kept for import compat; use run_all.py)
+│       └── run_all.py              ← V2.0 entry point (SmartHighlighterOrchestrator, DAG)
 │
 ├── note-generator/                 ← Standalone skill: Synthesize structured Markdown notes
 │   ├── SKILL.md                    ← Quick-start
@@ -191,7 +192,8 @@ skills/
 │   ├── docs/
 │   │   └── ARCHITECTURE.md         ← Standalone skill architecture
 │   └── scripts/
-│       └── synthesize.py           ← Main entry point (NoteGenerator class)
+│       ├── synthesize.py           ← Legacy entry (kept for import compat; use run_all.py)
+│       └── run_all.py              ← V2.0 entry point (NoteGeneratorOrchestrator, DAG)
 │
 ├── academic_edu_assistant/         ← Cross-document comparison + Anki export
 │   ├── SKILL.md

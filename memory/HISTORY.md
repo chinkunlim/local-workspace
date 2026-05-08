@@ -6,6 +6,7 @@
 
 ## Session Archives
 
+- **[2026-05-08] [[Archived] V9.6 Synthesis Pipeline CLI & DAG Standardisation](sessions/2026-05-08_e41d68c5.md)** (ID: `e41d68c5`)
 - **[2026-05-05] [[Archived] Historical Archival & Template Integration Plan (Updated)](sessions/2026-05-05_6f681039.md)** (ID: `6f681039`)
 - **[2026-05-05] [[Archived] Architectural Assessment & Implementation Plan](sessions/2026-05-05_d7f00fdb.md)** (ID: `d7f00fdb`)
 - **[2026-05-05] [[Archived] 🚀 跨技能連動與參考資料架構設計 (Optimal Architecture)](sessions/2026-05-05_d8f40cf7.md)** (ID: `d8f40cf7`)
