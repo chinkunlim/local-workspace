@@ -6,6 +6,7 @@
 
 ## Session Archives
 
+- **[2026-05-10] [[Archived] Proofreader Refactoring & Global Registry](sessions/2026-05-10_4b56e43d.md)** (ID: `4b56e43d`)
 - **[2026-05-08] [[Archived] V9.6 Synthesis Pipeline CLI & DAG Standardisation](sessions/2026-05-08_e41d68c5.md)** (ID: `e41d68c5`)
 - **[2026-05-05] [[Archived] Historical Archival & Template Integration Plan (Updated)](sessions/2026-05-05_6f681039.md)** (ID: `6f681039`)
 - **[2026-05-05] [[Archived] Architectural Assessment & Implementation Plan](sessions/2026-05-05_d7f00fdb.md)** (ID: `d7f00fdb`)
@@ -45,3 +46,4 @@
 - **[2026-05-06] [[Archived] Project-Wide Compliance & Archival Audit Plan](sessions/2026-05-06_6f681039.md)** (ID: `6f681039`)
 - **[2026-05-07] [[Archived] Goal Description](sessions/2026-05-07_e41d68c5.md)** (ID: `e41d68c5`)
 - **[2026-05-08] [[Archived] Refactoring OpenClaw Synthesis Pipeline](sessions/2026-05-08_e41d68c5.md)** (ID: `e41d68c5`)
+- **[2026-05-10] [[Archived] Proofreader Refactoring & Global Registry](sessions/2026-05-10_4b56e43d.md)** (ID: `4b56e43d`)

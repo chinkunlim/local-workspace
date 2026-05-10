@@ -1,16 +1,21 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-08
-> **System Status:** 🟢 Stable / Production-Ready (V9.6 — Synthesis Pipeline Hardened)
+> **Last Updated:** 2026-05-10
+> **System Status:** 🟢 Stable / Production-Ready (V9.7 — Global Asset Registry & Proofreader Hardening)
 
 ---
 
 ## Final Sign-off Summary
 
-**Date:** 2026-05-08
-**Milestone:** V9.6 Synthesis Pipeline CLI Standardisation & DAG Hardening
+**Date:** 2026-05-10
+**Milestone:** V9.7 Global Asset Registry & Proofreader Orchestrator Standardisation
 
 ### Completed This Session
+
+- [x] **Global Asset Registry (V9.7)**: Implemented `core/state/global_registry.py`. `RouterAgent` now auto-registers all outputs to `state/global_manifest.json` on `PipelineCompleted`.
+- [x] **Proofreader Orchestrator Refactoring**: Upgraded `proofreader` to use `PipelineBase`, adding an interactive CLI (`--force`, `--resume`, `--subject`) and DAG tracking dashboard mirroring other core skills.
+- [x] **Per-file EventBus Handoff**: Refactored `audio_transcriber`, `proofreader`, `note_generator`, and `smart_highlighter` to emit `PipelineCompleted` per-file rather than per-batch, enabling true asynchronous cross-skill pipelining.
+- [x] **Dynamic Reference Fetching**: `proofreader` (p01, p02) now safely looks up reference doc paths via the `GlobalRegistry` instead of insecure path traversal.
 
 - [x] **audio_transcriber `run_all.py` Import Fix**: Corrected stale import (`Phase2Proofread` → `Phase2GlossaryApply`) that caused `ModuleNotFoundError` on startup. Pipeline now runs end-to-end.
 - [x] **smart_highlighter V2.0 — Orchestrator Architecture**: Renamed `highlight.py` → `run_all.py`. Implemented `SmartHighlighterOrchestrator` with DAG dashboard, `StateManager` tracking, `--force/--resume/--subject/--file` CLI, asset directory copying, and dual file/batch mode (mirrors `audio_transcriber`).
@@ -104,6 +109,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-10 | V9.7 Proofreader & Global Asset Registry | Implemented `GlobalRegistry`, per-file EventBus handoff, and `ProofreaderOrchestrator`. |
 | 2026-05-08 | V9.6 Synthesis Pipeline CLI & DAG Standardisation | `smart_highlighter`/`note_generator` → `run_all.py` Orchestrators; DAG fixed; 4 new §5 invariants |
 | 2026-05-07 | Advanced Prompt Engineering & Routing | Upgraded `note_generator` and `smart_highlighter` models; defined Parallel Extraction vs Synthesis architecture (ADR-011) |
 | 2026-05-07 | Multi-Format Parse & Async Verification | Docling PDF/PNG fixed; Blocking Verification Gate replaced with Async Dashboard |
