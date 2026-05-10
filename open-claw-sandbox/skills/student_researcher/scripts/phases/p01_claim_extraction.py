@@ -4,6 +4,7 @@ import uuid
 
 from core.ai.llm_client import OllamaClient
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
+from core.utils.atomic_writer import AtomicWriter
 
 
 class Phase1ClaimExtraction(PhaseBase):
@@ -58,10 +59,7 @@ class Phase1ClaimExtraction(PhaseBase):
                     continue
 
                 out_path = os.path.splitext(filepath)[0] + ".json"
-                with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump(
-                        {"source_md": filepath, "claims": claims}, f, ensure_ascii=False, indent=2
-                    )
+                AtomicWriter.write_json(out_path, {"source_md": filepath, "claims": claims})
 
                 print(f"✅ 萃取完成，共 {len(claims)} 個論點，輸出至: {out_path}")
 

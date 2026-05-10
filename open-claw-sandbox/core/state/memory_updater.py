@@ -27,6 +27,7 @@ import json
 import logging
 import os
 from typing import Optional
+from core.utils.atomic_writer import AtomicWriter
 
 _logger = logging.getLogger("OpenClaw.MemoryUpdater")
 
@@ -112,8 +113,7 @@ class MemoryUpdater:
 
         # Atomic write: write to temp then rename
         tmp_path = glossary_path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(gloss, f, ensure_ascii=False, indent=2)
+        AtomicWriter.write_json(tmp_path, gloss)
         os.replace(tmp_path, glossary_path)
 
         return True

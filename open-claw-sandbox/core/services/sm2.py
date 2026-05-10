@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import json
 import os
 from typing import Any, Dict, List, Optional
+from core.utils.atomic_writer import AtomicWriter
 
 
 class SM2Engine:
@@ -32,8 +33,7 @@ class SM2Engine:
 
     def _save(self) -> None:
         os.makedirs(os.path.dirname(self.schedule_path), exist_ok=True)
-        with open(self.schedule_path, "w", encoding="utf-8") as f:
-            json.dump(self.db, f, ensure_ascii=False, indent=2)
+        AtomicWriter.write_json(self.schedule_path, self.db)
 
     def add_card(self, front: str, back: str, deck: str) -> str:
         """Add a new card to the engine if it doesn't already exist.

@@ -14,6 +14,7 @@ _bootstrap(__file__)
 from core.services.hitl_manager import HITLManager
 from core.services.telegram_bot import _get_bot_config, send_inline_keyboard, send_message
 from core.utils.log_manager import build_logger
+from core.utils.atomic_writer import AtomicWriter
 
 _workspace_root = os.environ.get(
     "WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -40,13 +41,7 @@ def _load_user_prefs() -> dict:
 
 
 def _save_user_prefs(prefs: dict) -> None:
-    import json
-
-    os.makedirs(os.path.dirname(_USER_PREFS_PATH), exist_ok=True)
-    tmp = _USER_PREFS_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(prefs, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, _USER_PREFS_PATH)
+    AtomicWriter.write_json(_USER_PREFS_PATH, prefs)
 
 
 def run_status_check() -> str:

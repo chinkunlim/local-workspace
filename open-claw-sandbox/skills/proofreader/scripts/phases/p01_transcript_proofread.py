@@ -20,6 +20,8 @@ from core import AtomicWriter, PipelineBase
 from core.utils.text_utils import smart_split
 
 
+from core.state.global_registry import GlobalRegistry
+
 class Phase1TranscriptProofread(PipelineBase):
     def __init__(self):
         super().__init__(
@@ -71,28 +73,17 @@ class Phase1TranscriptProofread(PipelineBase):
         workspace_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
-        doc_processed_dir = os.path.join(
-            workspace_root, "data", "doc_parser", "output", "01_processed", subject
-        )
-
-        if not os.path.exists(doc_processed_dir):
-            return ""
+        registry = GlobalRegistry(workspace_root)
+        assets = registry.get_assets(subject, prefix)
 
         ref_text = ""
-        for item in os.listdir(doc_processed_dir):
-            if item.startswith(prefix + "_"):
-                cand_dir = os.path.join(doc_processed_dir, item)
-                if os.path.isdir(cand_dir):
-                    target_md = os.path.join(cand_dir, "sanitized.md")
-                    if not os.path.exists(target_md):
-                        target_md = os.path.join(cand_dir, f"{item}_raw_extracted.md")
-
-                    if os.path.exists(target_md):
-                        try:
-                            with open(target_md, encoding="utf-8") as f:
-                                ref_text += f.read()[:20000] + "\n\n"
-                        except Exception:
-                            pass
+        doc_path = assets.get("doc_parser")
+        if doc_path and os.path.exists(doc_path):
+            try:
+                with open(doc_path, encoding="utf-8") as f:
+                    ref_text = f.read()[:20000] + "\n\n"
+            except Exception:
+                pass
         return ref_text
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):

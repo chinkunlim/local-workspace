@@ -30,6 +30,7 @@ from core.cli.cli_runner import SkillRunner
 from core.orchestration.event_bus import DomainEvent, EventBus
 from core.orchestration.session_manifest import update_session_manifest
 from core.orchestration.task_queue import task_queue
+from core.state.global_registry import GlobalRegistry
 
 # ---------------------------------------------------------------------------
 # Data Contracts
@@ -225,6 +226,16 @@ class RouterAgent:
 
         # Update manifest
         update_session_manifest(workspace_root, subject, filename, event.source_skill, "done")
+
+        # [NEW LOGIC] Register into Global Asset Registry
+        file_prefix = filename.split("_")[0] if "_" in filename else os.path.splitext(filename)[0]
+        registry = GlobalRegistry(workspace_root)
+        registry.register_asset(
+            subject=subject,
+            file_prefix=file_prefix,
+            skill_name=event.source_skill,
+            filepath=filepath
+        )
 
         # [NEW LOGIC] If doc_parser finishes, check if any audio files are waiting for proofreader
         if event.source_skill == "doc_parser":

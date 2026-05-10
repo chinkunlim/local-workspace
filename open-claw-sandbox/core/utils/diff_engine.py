@@ -26,6 +26,7 @@ import os
 import re
 from typing import Dict, List, Optional, Tuple
 import webbrowser
+from core.utils.atomic_writer import AtomicWriter
 
 # ──────────────────────────────────────────────────────────────────────────────
 #  Data containers
@@ -177,8 +178,7 @@ class DiffEngine:
     def write_html(self, result: DiffResult, out_path: str, auto_open: bool = False) -> str:
         """Write result.html_report to disk and optionally open in browser."""
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
-        with open(out_path, "w", encoding="utf-8") as f:
-            f.write(result.html_report)
+        AtomicWriter.write_text(out_path, result.html_report)
         if auto_open:
             webbrowser.open(f"file://{os.path.abspath(out_path)}")
         return out_path
@@ -408,8 +408,7 @@ if __name__ == "__main__":
         report = audit_engine.render_report(entries, args.subject, args.min_count)
         if args.out:
             os.makedirs(os.path.dirname(args.out), exist_ok=True)
-            with open(args.out, "w", encoding="utf-8") as f:
-                f.write(report)
+            AtomicWriter.write_text(args.out, report)
             print(f"✅ Audit 報告已生成: {args.out}")
         else:
             print(report)

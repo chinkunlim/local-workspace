@@ -27,6 +27,7 @@ import os
 from core.ai.llm_client import OllamaClient
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.playwright_utils import get_persistent_context
+from core.utils.atomic_writer import AtomicWriter
 
 MAX_ROUNDS = 3
 _STUDENT_MODEL = "qwen3:8b"  # fallback — config.yaml primary is deepseek-r1:8b
@@ -184,8 +185,7 @@ class Phase1FeynmanDebate(PhaseBase):
         debate_log.append(f"\n## 🔍 盲點分析報告\n\n{synthesis}\n")
 
         # Write archive
-        with open(archive_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(debate_log))
+        AtomicWriter.write_text(archive_path, "\n".join(debate_log))
 
         self.info(f"  💾 辯證歸檔完成: {archive_path}")
         return archive_path
@@ -227,16 +227,13 @@ class Phase1FeynmanDebate(PhaseBase):
                     out_path = os.path.join(output_dir, fname.replace(".md", "_debate.json"))
                     import json
 
-                    with open(out_path, "w", encoding="utf-8") as f:
-                        json.dump(
-                            {
-                                "source_note": note_path,
-                                "debate_archive": archive_path,
-                            },
-                            f,
-                            ensure_ascii=False,
-                            indent=2,
-                        )
+                    AtomicWriter.write_json(
+                        out_path,
+                        {
+                            "source_note": note_path,
+                            "debate_archive": archive_path,
+                        },
+                    )
 
                     self.state_manager.mark_completed(self.phase_key, state_key)
                     processed += 1

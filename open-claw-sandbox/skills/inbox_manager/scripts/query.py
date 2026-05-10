@@ -14,6 +14,8 @@ import os
 import sys
 import tempfile
 
+from core.utils.atomic_writer import AtomicWriter
+
 # ── Path bootstrap ─────────────────────────────────────────────────────────────
 _script_dir = os.path.dirname(os.path.abspath(__file__))
 _workspace_root = os.path.abspath(os.path.join(_script_dir, "..", "..", ".."))
@@ -29,10 +31,7 @@ def _load() -> dict:
 
 
 def _save(cfg: dict) -> None:
-    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(_config_path), suffix=".json")
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        json.dump(cfg, fh, ensure_ascii=False, indent=2)
-    os.replace(tmp, _config_path)
+    AtomicWriter.write_json(_config_path, cfg)
 
 
 # ── Commands ───────────────────────────────────────────────────────────────────

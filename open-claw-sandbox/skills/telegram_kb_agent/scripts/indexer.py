@@ -68,7 +68,7 @@ def main():
     client = chromadb.PersistentClient(path=db_path)
     collection = client.get_or_create_collection(name="wiki_knowledge")
 
-    md_files = glob.glob(os.path.join(wiki_dir, "*.md"))
+    md_files = glob.glob(os.path.join(wiki_dir, "**", "*.md"), recursive=True)
     print(f"📄 找到 {len(md_files)} 個 Wiki 檔案，準備處理...")
 
     doc_ids = []

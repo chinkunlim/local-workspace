@@ -5,6 +5,7 @@ import os
 from core.ai.llm_client import OllamaClient
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.playwright_utils import get_persistent_context
+from core.utils.atomic_writer import AtomicWriter
 
 
 class Phase1AIDebate(PhaseBase):
@@ -86,50 +87,7 @@ class Phase1AIDebate(PhaseBase):
                 archive_path = os.path.join(
                     archive_dir, f"debate_{claim[:15].replace(' ', '_')}.md"
                 )
-                with open(archive_path, "w", encoding="utf-8") as f:
-                    f.write("\n".join(debate_history))
-
-                print(f"✅ 辯證完成，已歸檔至: {archive_path}")
-                return archive_path
-
-            except Exception as e:
-                print(f"⚠️ Gemini 互動失敗: {e}")
-                return ""
-
-    def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.dirs["input"]
-
-        for root, _, files in os.walk(input_dir):
-            for file in files:
-                if not file.endswith(".json"):
-                    continue
-
-                filepath = os.path.join(root, file)
-                print(f"\n📂 處理查證清單: {file}")
-
-                with open(filepath, encoding="utf-8") as f:
-                    data = json.load(f)
-
-                results = []
-                for item in data.get("verified_claims", []):
-                    claim_id = item.get("claim_id")
-                    query = item.get("query")
-                    snapshot = item.get("snapshot")
-
-                    # Debate Gemini synchronously via asyncio.run
-                    archive_path = asyncio.run(self._debate_gemini(query, snapshot))
-
-                    results.append(
-                        {
-                            "claim_id": claim_id,
-                            "debate_archive": archive_path,
-                            "evidence_file": item.get("evidence_file"),
-                        }
-                    )
-
-                out_path = os.path.splitext(filepath)[0] + ".json"
-                with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump({"debated_claims": results}, f, ensure_ascii=False, indent=2)
+                AtomicWriter.write_json(archive_path, {"debated_claims": results})
 
                 print(f"✅ AI 辯證階段完成，輸出至: {out_path}")
 

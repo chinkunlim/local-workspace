@@ -19,6 +19,7 @@ import os
 
 from core.ai.llm_client import OllamaClient
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
+from core.utils.atomic_writer import AtomicWriter
 
 _SYNTHESIS_MODEL = "qwen3:8b"  # fallback
 
@@ -84,8 +85,7 @@ class Phase2DebateSynthesis(PhaseBase):
 
                 out_name = os.path.basename(source_note).replace(".md", "_feynman.md")
                 out_path = os.path.join(enriched_dir, out_name)
-                with open(out_path, "w", encoding="utf-8") as f:
-                    f.write(enriched_note)
+                AtomicWriter.write_text(out_path, enriched_note)
 
                 self.info(f"  ✅ 升級筆記已輸出: {out_path}")
 

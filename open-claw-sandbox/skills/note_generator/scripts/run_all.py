@@ -34,6 +34,7 @@ from core import (
     StateManager,
     build_skill_parser,
 )
+from core.orchestration.event_bus import DomainEvent, EventBus
 from core.utils.atomic_writer import AtomicWriter
 from core.utils.text_utils import smart_split
 
@@ -496,6 +497,15 @@ class NoteGeneratorOrchestrator(PipelineBase):
                         )
                     except Exception:
                         pass
+                        
+                    # --- Per-file EventBus Handoff ---
+                    EventBus.publish(
+                        DomainEvent(
+                            name="PipelineCompleted",
+                            source_skill="note_generator",
+                            payload={"filepath": output_path, "subject": subj, "chain": []},
+                        )
+                    )
 
                     self._state_manager = StateManager(
                         self.base_dir,

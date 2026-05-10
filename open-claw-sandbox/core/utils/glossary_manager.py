@@ -7,6 +7,7 @@ Also generates prompt injections for preserving protected terms during LLM synth
 import glob
 import json
 import os
+from core.utils.atomic_writer import AtomicWriter
 
 
 class GlossaryManager:
@@ -67,8 +68,7 @@ class GlossaryManager:
             priority_data["CRITICAL_SUBSTITUTIONS"] = subs
             priority_data["CRITICAL_TERM_PROTECTION"] = protection
 
-            with open(self.priority_terms_path, "w", encoding="utf-8") as f:
-                json.dump(priority_data, f, ensure_ascii=False, indent=2)
+            AtomicWriter.write_json(self.priority_terms_path, priority_data)
             if logger:
                 logger.info(
                     f"🔄 跨模組術語同步完成！成功引入 {added_count} 個新詞彙至中央防護清單。"

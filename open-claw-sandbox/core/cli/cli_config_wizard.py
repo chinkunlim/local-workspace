@@ -18,6 +18,7 @@ _workspace_root = os.environ.get(
 )
 
 from core.utils.path_builder import PathBuilder
+from core.utils.atomic_writer import AtomicWriter
 
 
 def load_config(config_file):
@@ -44,11 +45,7 @@ def save_config(config_file, config_data, format_type):
     if format_type == "yaml":
         import yaml
 
-        with open(config_file, "w", encoding="utf-8") as f:
-            yaml.dump(config_data, f, allow_unicode=True, sort_keys=False)
-    else:
-        with open(config_file, "w", encoding="utf-8") as f:
-            json.dump(config_data, f, indent=2, ensure_ascii=False)
+        AtomicWriter.write_json(config_file, config_data)
     print(f"✅ 設定已成功儲存至 {config_file}！")
 
 

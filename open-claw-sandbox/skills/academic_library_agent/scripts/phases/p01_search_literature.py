@@ -29,6 +29,7 @@ import re
 
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.playwright_utils import get_clean_text_snapshot, get_persistent_context
+from core.utils.atomic_writer import AtomicWriter
 
 _EVIDENCE_SUBDIR = "evidence"
 
@@ -126,74 +127,7 @@ class Phase1SearchLiterature(PhaseBase):
         slug = _safe_slug(query)
         filename = f"evidence_{slug}__{source}.txt"
         path = os.path.join(evidence_dir, filename)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(f"# Evidence: {query}\n# Source: {source}\n\n{snapshot}")
-        return path
-
-    # ------------------------------------------------------------------ #
-    #  Phase Entry Point                                                   #
-    # ------------------------------------------------------------------ #
-
-    def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.dirs["input"]
-        output_dir = self.dirs["output"]
-        os.makedirs(output_dir, exist_ok=True)
-
-        for root, _, files in os.walk(input_dir):
-            for fname in sorted(files):
-                if not fname.endswith(".json"):
-                    continue
-
-                filepath = os.path.join(root, fname)
-                self.info(f"\n📂 處理斷言檔案: {fname}")
-
-                with open(filepath, encoding="utf-8") as f:
-                    try:
-                        payload = json.load(f)
-                    except json.JSONDecodeError:
-                        self.error(f"  ❌ 無法解析 JSON: {fname}")
-                        continue
-
-                results: list[dict] = []
-                for claim in payload.get("claims", []):
-                    query = claim.get("search_query", "").strip()
-                    if not query:
-                        continue
-
-                    # Strategy 1: ScienceDirect
-                    snapshot = asyncio.run(self._search_sciencedirect(query))
-                    source = "ScienceDirect"
-
-                    # Strategy 2: ArXiv fallback
-                    if not snapshot or snapshot.startswith("搜尋失敗"):
-                        self.info("  🔄 切換至 ArXiv 備援...")
-                        snapshot = self._search_arxiv(query)
-                        source = "ArXiv"
-
-                    if not snapshot:
-                        self.warning(f"  ⚠️  查無結果: '{query}' — 跳過此斷言")
-                        continue
-
-                    evidence_path = self._save_evidence(query, snapshot, source)
-
-                    results.append(
-                        {
-                            "claim_id": claim.get("id"),
-                            "query": query,
-                            "source": source,
-                            "evidence_file": evidence_path,
-                            # Truncated snapshot for token efficiency in downstream phases
-                            "snapshot": snapshot[:2000],
-                        }
-                    )
-
-                # Emit to output for gemini_verifier_agent
-                out_path = os.path.join(
-                    output_dir,
-                    fname.replace(".json", "_literature.json"),
-                )
-                with open(out_path, "w", encoding="utf-8") as f:
-                    json.dump({"verified_claims": results}, f, ensure_ascii=False, indent=2)
+        AtomicWriter.write_json(path, {"verified_claims": results})
 
                 self.info(f"  💾 文獻搜尋完成 ({len(results)} 筆)，輸出至: {out_path}")
 

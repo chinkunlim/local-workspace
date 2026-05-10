@@ -27,6 +27,8 @@ import os
 from typing import Any, Dict, Optional
 import uuid
 
+from core.utils.atomic_writer import AtomicWriter
+
 # ---------------------------------------------------------------------------
 # Exceptions
 # ---------------------------------------------------------------------------
@@ -103,8 +105,7 @@ class HITLManager:
         if session_state_data:
             payload["_session_snapshot"] = session_state_data
 
-        with open(event_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
+        AtomicWriter.write_json(event_path, payload)
 
         print(
             f"⏸️  [HITL] 已暫停 — Phase: {event.phase} | 原因: {event.reason}\n"
@@ -112,7 +113,7 @@ class HITLManager:
             f"   等待確認：{event_path}"
         )
 
-        # TODO (P3): emit to telegram_bot
+        # TODO (P3) #14: emit to telegram_bot
         if self.telegram_bot:
             msg = (
                 f"⚠️ *OpenClaw HITL 介入*\n"
@@ -149,8 +150,7 @@ class HITLManager:
         snapshot = payload.pop("_session_snapshot", None)
 
         resolved_path = event_path.replace(".json", ".resolved.json")
-        with open(resolved_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
+        AtomicWriter.write_json(resolved_path, payload)
         os.remove(event_path)
 
         return snapshot

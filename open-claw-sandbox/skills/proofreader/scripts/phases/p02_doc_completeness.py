@@ -17,6 +17,9 @@ from core import AtomicWriter, PipelineBase
 from core.utils.text_utils import smart_split
 
 
+from core.orchestration.event_bus import DomainEvent, EventBus
+from core.state.global_registry import GlobalRegistry
+
 class Phase2DocCompleteness(PipelineBase):
     def __init__(self):
         super().__init__(phase_key="p2", phase_name="Doc Completeness", skill_name="proofreader")
@@ -25,38 +28,28 @@ class Phase2DocCompleteness(PipelineBase):
         workspace_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
-        doc_processed_dir = os.path.join(
-            workspace_root, "data", "doc_parser", "output", "01_processed", subject
-        )
-
-        if not os.path.exists(doc_processed_dir):
-            return "", ""
+        registry = GlobalRegistry(workspace_root)
+        assets = registry.get_assets(subject, prefix)
 
         ref_text = ""
         figure_list_text = ""
-
-        for item in os.listdir(doc_processed_dir):
-            if item.startswith(prefix + "_"):
-                cand_dir = os.path.join(doc_processed_dir, item)
-                if os.path.isdir(cand_dir):
-                    target_md = os.path.join(cand_dir, "sanitized.md")
-                    if not os.path.exists(target_md):
-                        target_md = os.path.join(cand_dir, f"{item}_raw_extracted.md")
-
-                    if os.path.exists(target_md):
-                        try:
-                            with open(target_md, encoding="utf-8") as f:
-                                ref_text += f.read()[:20000] + "\n\n"
-                        except Exception:
-                            pass
-
-                    fig_list_path = os.path.join(cand_dir, "figure_list.md")
-                    if os.path.exists(fig_list_path):
-                        try:
-                            with open(fig_list_path, encoding="utf-8") as f:
-                                figure_list_text += f.read() + "\n\n"
-                        except Exception:
-                            pass
+        
+        # Look for doc_parser output in registry
+        doc_path = assets.get("doc_parser")
+        if doc_path and os.path.exists(doc_path):
+            try:
+                with open(doc_path, encoding="utf-8") as f:
+                    ref_text = f.read()[:20000] + "\n\n"
+            except Exception:
+                pass
+                
+            fig_list_path = os.path.join(os.path.dirname(doc_path), "figure_list.md")
+            if os.path.exists(fig_list_path):
+                try:
+                    with open(fig_list_path, encoding="utf-8") as f:
+                        figure_list_text = f.read() + "\n\n"
+                except Exception:
+                    pass
 
         return ref_text, figure_list_text
 
@@ -159,6 +152,18 @@ class Phase2DocCompleteness(PipelineBase):
                     f.write(log_content)
 
                 self.log(f"✅ 完整性檢查完成：{fname}")
+                
+                # --- Per-file EventBus Handoff ---
+                workspace_root = os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                )
+                EventBus.publish(
+                    DomainEvent(
+                        name="PipelineCompleted",
+                        source_skill="proofreader",
+                        payload={"filepath": out_path, "subject": subj, "chain": []},
+                    )
+                )
 
 
 if __name__ == "__main__":

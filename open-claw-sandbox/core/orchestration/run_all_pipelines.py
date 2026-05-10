@@ -14,7 +14,7 @@ import subprocess
 import sys
 
 _core_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(_core_dir, "..")))
+_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(_core_dir, "..", "..")))
 _LOCK_FILE = os.path.join(_workspace_root, "logs", "run_pipelines.lock")
 
 logging.basicConfig(

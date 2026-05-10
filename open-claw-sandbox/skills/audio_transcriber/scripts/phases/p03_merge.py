@@ -14,6 +14,7 @@ from core.utils.bootstrap import ensure_core_path as _bootstrap
 _bootstrap(__file__)
 
 from core import AtomicWriter, PipelineBase
+from core.orchestration.event_bus import DomainEvent, EventBus
 
 
 class Phase3Merge(PipelineBase):
@@ -95,6 +96,18 @@ class Phase3Merge(PipelineBase):
                     output_hash=out_hash,
                 )
             self.log(f"✅ 合併完成：{base_name}.md")
+            
+            # --- Per-file EventBus Handoff ---
+            workspace_root = os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            )
+            EventBus.publish(
+                DomainEvent(
+                    name="PipelineCompleted",
+                    source_skill="audio_transcriber",
+                    payload={"filepath": out_path, "subject": subj, "chain": []},
+                )
+            )
 
             if self.stop_requested:
                 break

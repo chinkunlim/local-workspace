@@ -5,6 +5,7 @@ import uuid
 from core.ai.llm_client import OllamaClient
 from core.orchestration.event_bus import DomainEvent, EventBus
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
+from core.utils.atomic_writer import AtomicWriter
 
 
 class Phase2Synthesis(PhaseBase):
@@ -51,8 +52,7 @@ class Phase2Synthesis(PhaseBase):
                 if not debate_texts:
                     print("⚠️ 沒有查證到任何有效討論紀錄，直接輸出原檔案。")
                     out_path = os.path.splitext(filepath)[0] + ".md"
-                    with open(out_path, "w", encoding="utf-8") as f:
-                        f.write(original_note)
+                    AtomicWriter.write_text(out_path, original_note)
                     continue
 
                 all_debates = "\n\n".join(debate_texts)
@@ -79,8 +79,7 @@ class Phase2Synthesis(PhaseBase):
                     continue
 
                 out_path = os.path.splitext(filepath)[0] + ".md"
-                with open(out_path, "w", encoding="utf-8") as f:
-                    f.write(final_note)
+                AtomicWriter.write_text(out_path, final_note)
 
                 print(f"✅ 最終筆記生成完成: {out_path}")
 

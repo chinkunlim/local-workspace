@@ -10,6 +10,7 @@ import json
 import os
 
 from flask import Flask, jsonify, render_template_string, request, send_file
+from core.utils.atomic_writer import AtomicWriter
 
 app = Flask(__name__)
 
@@ -140,8 +141,7 @@ def save_content():
     if WORKSPACE_ROOT not in os.path.abspath(path):
         return jsonify({"error": "Access denied"}), 403
 
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
+    AtomicWriter.write_text(path, content)
 
     return jsonify({"status": "success"})
 
