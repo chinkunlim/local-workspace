@@ -1,0 +1,240 @@
+[project]
+name = "openclaw-sandbox"
+version = "0.1.0"
+description = "Open Claw Sandbox"
+requires-python = ">=3.11"
+dependencies = [
+    "accelerate==1.13.0",
+    "aiohappyeyeballs==2.6.1",
+    "aiohttp==3.13.5",
+    "aiosignal==1.4.0",
+    "annotated-doc==0.0.4",
+    "annotated-types==0.7.0",
+    "antlr4-python3-runtime==4.9.3",
+    "anyio==4.13.0",
+    "apscheduler==3.11.2",
+    "arxiv==3.0.0",
+    "attrs==26.1.0",
+    "av==17.0.1",
+    "bcrypt==5.0.0",
+    "beautifulsoup4==4.14.3",
+    "build==1.5.0",
+    "certifi==2026.4.22",
+    "charset-normalizer==3.4.7",
+    "chromadb==1.5.8",
+    "click==8.3.3",
+    "colorlog==6.10.1",
+    "ctranslate2==4.7.1",
+    "defusedxml==0.7.1",
+    "dill==0.4.1",
+    "docling==2.92.0",
+    "docling-core[chunking]==2.74.1",
+    "docling-ibm-models==3.13.2",
+    "docling-parse==5.10.1",
+    "docling-slim[standard]==2.92.0",
+    "durationpy==0.10",
+    "et-xmlfile==2.0.0",
+    "faker==40.15.0",
+    "faster-whisper==1.2.1",
+    "feedparser==6.0.12",
+    "filelock==3.29.0",
+    "filetype==1.2.0",
+    "flatbuffers==25.12.19",
+    "frozenlist==1.8.0",
+    "fsspec==2026.4.0",
+    "googleapis-common-protos==1.74.0",
+    "greenlet==3.5.0",
+    "grpcio==1.80.0",
+    "h11==0.16.0",
+    "hf-xet==1.4.3",
+    "httpcore==1.0.9",
+    "httptools==0.7.1",
+    "httpx==0.28.1",
+    "huggingface-hub==1.13.0",
+    "idna==3.13",
+    "importlib-metadata==8.7.1",
+    "importlib-resources==7.1.0",
+    "jinja2==3.1.6",
+    "jsonlines==4.0.0",
+    "jsonref==1.1.0",
+    "jsonschema==4.26.0",
+    "jsonschema-specifications==2025.9.1",
+    "kubernetes==35.0.0",
+    "latex2mathml==3.81.0",
+    "llvmlite==0.47.0",
+    "lxml==6.1.0",
+    "markdown-it-py==4.0.0",
+    "marko==2.2.2",
+    "markupsafe==3.0.3",
+    "mdurl==0.1.2",
+    "mlx==0.31.2",
+    "mlx-metal==0.31.2",
+    "mlx-whisper==0.4.3",
+    "mmh3==5.2.1",
+    "more-itertools==11.0.2",
+    "mpire[dill]==2.10.2",
+    "mpmath==1.3.0",
+    "multidict==6.7.1",
+    "multiprocess==0.70.19",
+    "networkx==3.6.1",
+    "numba==0.65.1",
+    "numpy==2.4.4",
+    "oauthlib==3.3.1",
+    "omegaconf==2.3.0",
+    "onnxruntime==1.25.1",
+    "opencv-python==4.13.0.92",
+    "openpyxl==3.1.5",
+    "opentelemetry-api==1.41.1",
+    "opentelemetry-exporter-otlp-proto-common==1.41.1",
+    "opentelemetry-exporter-otlp-proto-grpc==1.41.1",
+    "opentelemetry-proto==1.41.1",
+    "opentelemetry-sdk==1.41.1",
+    "opentelemetry-semantic-conventions==0.62b1",
+    "orjson==3.11.8",
+    "overrides==7.7.0",
+    "packaging==26.2",
+    "pandas==3.0.2",
+    "pillow==12.2.0",
+    "playwright==1.59.0",
+    "pluggy==1.6.0",
+    "polyfactory==3.3.0",
+    "propcache==0.4.1",
+    "protobuf==6.33.6",
+    "psutil==7.2.2",
+    "pybase64==1.4.3",
+    "pyclipper==1.4.0",
+    "pydantic==2.13.3",
+    "pydantic-core==2.46.3",
+    "pydantic-settings==2.14.0",
+    "pydub==0.25.1",
+    "pyee==13.0.1",
+    "pygments==2.20.0",
+    "pylatexenc==2.10",
+    "pypdf==6.10.2",
+    "pypdfium2==5.7.1",
+    "pypika==0.51.1",
+    "pyproject-hooks==1.2.0",
+    "pytesseract==0.3.13",
+    "python-dateutil==2.9.0.post0",
+    "python-docx==1.2.0",
+    "python-dotenv==1.2.2",
+    "python-pptx==1.0.2",
+    "pyyaml==6.0.3",
+    "rapidocr==3.8.1",
+    "referencing==0.37.0",
+    "regex==2026.4.4",
+    "requests==2.33.1",
+    "requests-oauthlib==2.0.0",
+    "rich==15.0.0",
+    "rpds-py==0.30.0",
+    "rtree==1.4.1",
+    "safetensors[numpy,torch]==0.7.0",
+    "scipy==1.17.1",
+    "semchunk==3.2.5",
+    "sgmllib3k==1.0.0",
+    "shapely==2.1.2",
+    "shellingham==1.5.4",
+    "six==1.17.0",
+    "soupsieve==2.8.3",
+    "sympy==1.14.0",
+    "tabulate==0.10.0",
+    "tenacity==9.1.4",
+    "tiktoken==0.12.0",
+    "tokenizers==0.22.2",
+    "torch==2.11.0",
+    "torchvision==0.26.0",
+    "tqdm==4.67.3",
+    "transformers==5.7.0",
+    "tree-sitter==0.25.2",
+    "tree-sitter-c==0.24.2",
+    "tree-sitter-javascript==0.25.0",
+    "tree-sitter-python==0.25.0",
+    "tree-sitter-typescript==0.23.2",
+    "typer==0.21.2",
+    "typing-extensions==4.15.0",
+    "typing-inspection==0.4.2",
+    "tzlocal==5.3.1",
+    "urllib3==2.6.3",
+    "uvicorn[standard]==0.46.0",
+    "uvloop==0.22.1",
+    "watchdog==6.0.0",
+    "watchfiles==1.1.1",
+    "websocket-client==1.9.0",
+    "websockets==16.0",
+    "xlsxwriter==3.2.9",
+    "yarl==1.23.0",
+    "zipp==3.23.1",
+]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes (undefined names, unused imports)
+    "I",    # isort (import ordering)
+    "N",    # pep8-naming
+    "UP",   # pyupgrade (modern Python syntax)
+    "B",    # flake8-bugbear (common bugs)
+    "C4",   # flake8-comprehensions (cleaner list/dict comps)
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "E501",  # line length — handled by ruff format, not ruff check
+    "N999",  # module name contains dashes (skills use kebab-case dirs)
+    "RUF001", # Fullwidth characters in Chinese text
+    "RUF002",
+    "RUF003",
+    "RUF013", # Implicit Optional
+    "E402",  # Module level import not at top of file (used in bootstrap)
+    "UP006", # list vs List
+    "UP035", # typing.Dict is deprecated
+    "B007",  # Loop control variable not used
+    "F841",  # Local variable is assigned to but never used
+    "F811",  # Redefinition of unused name
+    "F401",  # Unused import
+    "SIM102", # nested ifs
+    "SIM103", # return condition
+    "SIM105", # suppress exception
+    "E741",   # ambiguous variable name
+    "RUF059", # Unpacked variable is never used
+    "UP045",  # Use X | None
+    "RUF012", # Mutable default value for class attribute
+    "C416",   # Unnecessary dict comprehension
+    "N806",   # Variable in function should be lowercase
+    "RUF100", # Unused noqa directive
+    "B904",   # raise ... from err
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["core"]
+force-sort-within-sections = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+disallow_untyped_defs = false
+warn_return_any = false
+warn_unused_ignores = false
+ignore_missing_imports = true
+no_implicit_optional = false
+exclude = [
+    "data/",
+    "models/",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.1.0",
+    "pytest>=9.0.3",
+    "ruff>=0.15.12",
+]

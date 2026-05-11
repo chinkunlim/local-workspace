@@ -3,7 +3,7 @@
 # --- 基礎設定 ---
 WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export WORKSPACE_DIR
-export PYTHONPATH="${WORKSPACE_DIR}:${WORKSPACE_DIR}/open-claw-sandbox:${PYTHONPATH}"
+export PYTHONPATH="${WORKSPACE_DIR}:${WORKSPACE_DIR}/openclaw-sandbox:${PYTHONPATH}"
 
 LOG_DIR="${WORKSPACE_DIR}/logs"
 mkdir -p "$LOG_DIR"

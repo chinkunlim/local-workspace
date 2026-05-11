@@ -111,7 +111,7 @@
   - `telegram_kb_agent`: gemma4:e2b → gemma4:e4b
   - RouterAgent high-complexity: deepseek-r1:14b → qwen3:14b
   - Cleaned up 3 unused Ollama models: deepseek-r1:14b, qwen2.5-coder:7b, llama3.1 (−23.6GB)
-  - Created `open-claw-sandbox/docs/MODEL_SELECTION.md` per-skill model registry
+  - Created `openclaw-sandbox/docs/MODEL_SELECTION.md` per-skill model registry
   - Full SSoT documentation sync across all MD files
 
 - [x] 2026-05-04: Phase A Performance Hardening (V9.1)

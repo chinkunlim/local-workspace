@@ -25,7 +25,7 @@ Before writing a single line of code, you must consume the following documents i
 
 ## 2. Developing a New Skill
 
-Open Claw is an extensible platform. Adding a new capability means creating a new "Skill" in `open-claw-sandbox/skills/`.
+Open Claw is an extensible platform. Adding a new capability means creating a new "Skill" in `openclaw-sandbox/skills/`.
 
 ### Step-by-Step Flow
 
@@ -58,20 +58,20 @@ When making changes, your development loop should look like this:
 1. **Write Code**: Implement your feature or fix.
 2. **Lint and Format**:
    ```bash
-   cd open-claw-sandbox
+   cd openclaw-sandbox
    ruff check --fix .
    ruff format .
    ```
 3. **Type Checking**:
    Ensure `mypy` passes with zero errors:
    ```bash
-   cd open-claw-sandbox
+   cd openclaw-sandbox
    ./ops/check.sh
    ```
 4. **Run Unit Tests**:
-   Tests are located in `open-claw-sandbox/tests/`. Ensure you mock dependencies correctly using the full sub-package path (e.g., `@patch("core.orchestration.task_queue.subprocess.run")`).
+   Tests are located in `openclaw-sandbox/tests/`. Ensure you mock dependencies correctly using the full sub-package path (e.g., `@patch("core.orchestration.task_queue.subprocess.run")`).
    ```bash
-   cd open-claw-sandbox
+   cd openclaw-sandbox
    PYTHONPATH=. pytest tests/ -q
    ```
 
@@ -106,6 +106,6 @@ The Open Claw environment is managed via headless infrastructure scripts in the 
 - **Start Services**: `./infra/scripts/start.sh` (Bootstraps Ollama, LiteLLM, Inbox Daemon, Scheduler)
 - **Stop Services**: `./infra/scripts/stop.sh`
 - **Check Status**: `./ops/check.sh`
-- **Monitor Queue**: `tail -f open-claw-sandbox/logs/task_queue.log`
+- **Monitor Queue**: `tail -f openclaw-sandbox/logs/task_queue.log`
 
 For operational usage instructions, refer to the **[User Manual](USER_MANUAL.md)**.

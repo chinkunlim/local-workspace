@@ -18,7 +18,7 @@ fi
 # script_dir = .../local-workspace/infra/scripts
 INFRA_DIR="$(dirname "$script_dir")"          # → .../local-workspace/infra
 _LOCAL_WORKSPACE="$(dirname "$INFRA_DIR")"    # → .../local-workspace
-WORKSPACE_DIR="${_LOCAL_WORKSPACE}/open-claw-sandbox"
+WORKSPACE_DIR="${_LOCAL_WORKSPACE}/openclaw-sandbox"
 export WORKSPACE_DIR
 # Ensure Homebrew binaries (poppler, etc.) are always on PATH regardless of how this script is invoked
 export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"

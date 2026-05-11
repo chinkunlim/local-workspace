@@ -22,14 +22,14 @@ cd ~/Desktop/local-workspace
 ./infra/scripts/start.sh
 
 # Step 2: Drop your files into the universal inbox
-cp lecture.m4a  open-claw-sandbox/data/raw/YourSubject/
-cp textbook.pdf open-claw-sandbox/data/raw/YourSubject/
+cp lecture.m4a  openclaw-sandbox/data/raw/YourSubject/
+cp textbook.pdf openclaw-sandbox/data/raw/YourSubject/
 
 # Step 3: Wait — the system parses your intent and routes files automatically.
 # Through the magic of the RouterAgent and EventBus, your file will be processed through
 # extraction, note generation, and knowledge compilation automatically.
 # When complete, your notes appear in:
-open open-claw-sandbox/data/wiki/YourSubject/
+open openclaw-sandbox/data/wiki/YourSubject/
 
 # Step 4: Shutdown
 ./infra/scripts/stop.sh
@@ -102,10 +102,10 @@ The `RouterAgent` now automatically selects the optimal local LLM based on the *
 **How to observe model selection in logs:**
 ```bash
 # Watch the RouterAgent routing decisions in real-time
-tail -f open-claw-sandbox/logs/task_queue.log | grep "Model:"
+tail -f openclaw-sandbox/logs/task_queue.log | grep "Model:"
 
 # Or simulate the routing decision directly:
-cd open-claw-sandbox
+cd openclaw-sandbox
 export WORKSPACE_DIR="$(pwd)"
 export PYTHONPATH="$(dirname $(pwd)):$(pwd):$PYTHONPATH"
 
@@ -137,7 +137,7 @@ feynman debate → qwen3:14b
 
 To reduce redundant GPU computation, all LLM calls with `temperature=0` (deterministic) are automatically cached in a local SQLite database at:
 ```
-open-claw-sandbox/data/llm_cache.sqlite3
+openclaw-sandbox/data/llm_cache.sqlite3
 ```
 
 **How it works:**
@@ -153,7 +153,7 @@ open-claw-sandbox/data/llm_cache.sqlite3
 
 **To clear the cache (e.g., when prompts change significantly):**
 ```bash
-rm open-claw-sandbox/data/llm_cache.sqlite3
+rm openclaw-sandbox/data/llm_cache.sqlite3
 ```
 
 ---
@@ -236,7 +236,7 @@ While the `RouterAgent` handles automatic chaining, you can also trigger pipelin
 ### Audio Transcriber
 
 ```bash
-cd open-claw-sandbox
+cd openclaw-sandbox
 
 # Process all pending audio files
 python3 skills/audio_transcriber/scripts/run_all.py --process-all
@@ -257,7 +257,7 @@ python3 skills/audio_transcriber/scripts/run_all.py --from 2
 ### Doc Parser
 
 ```bash
-cd open-claw-sandbox
+cd openclaw-sandbox
 
 # Process all pending PDFs
 python3 skills/doc_parser/scripts/run_all.py --process-all
@@ -271,7 +271,7 @@ python3 skills/doc_parser/scripts/run_all.py --subject AI_Papers
 Compiles all skill outputs into your Obsidian Vault with bi-directional WikiLinks. (Note: The RouterAgent usually triggers this automatically at the end of a chain).
 
 ```bash
-cd open-claw-sandbox
+cd openclaw-sandbox
 python3 skills/knowledge_compiler/scripts/run_all.py --process-all
 ```
 
@@ -283,7 +283,7 @@ python3 skills/knowledge_compiler/scripts/run_all.py --process-all
 Because tasks are executed in a single-threaded queue with exponential backoff retry, you can view the queue activity in the inbox daemon logs:
 
 ```bash
-tail -f open-claw-sandbox/logs/task_queue.log
+tail -f openclaw-sandbox/logs/task_queue.log
 ```
 
 **Key log patterns to watch for:**
@@ -301,10 +301,10 @@ Each skill writes a persistent JSON/MD checklist to its state directory:
 
 ```bash
 # Audio transcriber progress
-cat open-claw-sandbox/data/audio_transcriber/state/checklist.md
+cat openclaw-sandbox/data/audio_transcriber/state/checklist.md
 
 # Doc parser progress
-cat open-claw-sandbox/data/doc_parser/state/checklist.md
+cat openclaw-sandbox/data/doc_parser/state/checklist.md
 ```
 
 ---
@@ -312,7 +312,7 @@ cat open-claw-sandbox/data/doc_parser/state/checklist.md
 ## Part 10: Obsidian Vault Setup
 
 1. Open **Obsidian** → `Open folder as vault`
-2. Navigate to: `~/Desktop/local-workspace/open-claw-sandbox/data/wiki/`
+2. Navigate to: `~/Desktop/local-workspace/openclaw-sandbox/data/wiki/`
 3. Enable the **Mermaid** plugin for mind map rendering
 4. Enable **Dataview** (optional) for dynamic note queries
 
@@ -330,7 +330,7 @@ Your knowledge base is fully structured with:
 |---|---|
 | Files not processing automatically | Check if `infra/scripts/start.sh` was run; verify `data/raw/` has files. Check `task_queue.log` for errors. |
 | LLM timeout / slow processing | Normal for large files; check `data/<skill>/state/checklist.md` for progress. |
-| `ModuleNotFoundError: No module named 'core'` | Run scripts from inside `open-claw-sandbox/` and ensure `WORKSPACE_DIR` and `PYTHONPATH` are set. |
+| `ModuleNotFoundError: No module named 'core'` | Run scripts from inside `openclaw-sandbox/` and ensure `WORKSPACE_DIR` and `PYTHONPATH` are set. |
 | Out of memory / system freeze | The single-threaded `task_queue` should prevent this. If it happens, ensure `watchdog.sh` is running to throttle processes. |
 | Corrupted state file | Delete `data/<skill>/state/` and re-run with `--force`. |
 | File failed to process 3 times | Check `data/quarantine/<skill>/quarantine_log.json` for the error. Fix the root cause and copy the file back to `data/raw/`. |
@@ -342,7 +342,7 @@ Your knowledge base is fully structured with:
 
 ```
 local-workspace/
-├── open-claw-sandbox/    ← Main application (all skill code lives here)
+├── openclaw-sandbox/    ← Main application (all skill code lives here)
 │   ├── core/
 │   │   ├── ai/           ← LLM Client with Semantic Cache (llm_cache.sqlite3)
 │   │   ├── orchestration/ ← RouterAgent (Model Routing), TaskQueue (Exponential Backoff), EventBus

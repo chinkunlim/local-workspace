@@ -13,7 +13,7 @@
 ```
 local-workspace/                    ← Monorepo root (git repo)
 │
-├── open-claw-sandbox/              ← Primary App: Open Claw AI Automation
+├── openclaw-sandbox/              ← Primary App: Open Claw AI Automation
 │   ├── core/                       ← Shared Python framework (sub-packages below)
 │   │   ├── ai/                     ← LLM clients, RAG, vector DB
 │   │   ├── cli/                    ← Terminal UI/UX, config wizards, arg parsing
@@ -54,7 +54,7 @@ local-workspace/                    ← Monorepo root (git repo)
 
 ## Design Decisions
 
-### Why `open-claw-sandbox/` is NOT inside `apps/`
+### Why `openclaw-sandbox/` is NOT inside `apps/`
 
 1. It is the **only** application in this monorepo (no sibling apps).
 2. It contains its own mature internal structure (`core/`, `skills/`, `ops/`, `tests/`).
@@ -99,9 +99,9 @@ The `core/` directory was refactored from a flat module into domain-specific sub
 | LiteLLM Proxy | 4000 | `infra/litellm/` | `infra/scripts/start.sh` |
 | Open WebUI | 3000 | `infra/open-webui/` | `infra/scripts/start.sh` |
 | Pipelines | 9099 | `infra/pipelines/` | `infra/scripts/start.sh` |
-| Inbox Daemon | — | `open-claw-sandbox/core/services/inbox_daemon.py` | `infra/scripts/start.sh` |
+| Inbox Daemon | — | `openclaw-sandbox/core/services/inbox_daemon.py` | `infra/scripts/start.sh` |
 | RAM Watchdog | — | `infra/scripts/watchdog.sh` | `infra/scripts/start.sh` |
-| Scheduler | — | `open-claw-sandbox/core/services/scheduler.py` | `infra/scripts/start.sh` |
+| Scheduler | — | `openclaw-sandbox/core/services/scheduler.py` | `infra/scripts/start.sh` |
 
 ---
 
@@ -111,7 +111,7 @@ The `core/` directory was refactored from a flat module into domain-specific sub
 |---|---|
 | `memory/ARCHITECTURE.md` (this file) | Understanding the entire monorepo |
 | `docs/INDEX.md` | Navigating to any skill or global doc |
-| `open-claw-sandbox/AGENTS.md` | Sandbox rules and behaviour contract |
+| `openclaw-sandbox/AGENTS.md` | Sandbox rules and behaviour contract |
 | `docs/CODING_GUIDELINES.md` | Engineering development standards |
 
 ---
@@ -211,8 +211,8 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `WORKSPACE_DIR` | Root of `open-claw-sandbox/` | auto-detected via `bootstrap.py` |
-| `HF_HOME` | Hugging Face model cache | `open-claw-sandbox/models/` |
+| `WORKSPACE_DIR` | Root of `openclaw-sandbox/` | auto-detected via `bootstrap.py` |
+| `HF_HOME` | Hugging Face model cache | `openclaw-sandbox/models/` |
 | `OLLAMA_HOST` | Ollama server URL | `http://localhost:11434` |
 | `OLLAMA_API_URL` | Full generate endpoint | `http://localhost:11434/api/generate` |
 | `OPENCLAW_API_URL` | Open Claw intent engine | `http://127.0.0.1:18789` |

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ops/check.sh — Global monorepo quality gate
-# Scans: open-claw-sandbox/ (Python) + infra/pipelines/ (Python) + infra/scripts/ (Shell)
+# Scans: openclaw-sandbox/ (Python) + infra/pipelines/ (Python) + infra/scripts/ (Shell)
 # Usage: ./ops/check.sh [--fix]
 set -euo pipefail
 
@@ -17,14 +17,14 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # ── 1. Sandbox Python checks (delegates to sandbox's own check.sh) ────────────
-echo "📦 [1/4] Sandbox checks (open-claw-sandbox/)..."
-if [[ -x "open-claw-sandbox/ops/check.sh" ]]; then
-    open-claw-sandbox/ops/check.sh ${FIX:+--fix} && echo "   ✅ Sandbox checks passed" || {
+echo "📦 [1/4] Sandbox checks (openclaw-sandbox/)..."
+if [[ -x "openclaw-sandbox/ops/check.sh" ]]; then
+    openclaw-sandbox/ops/check.sh ${FIX:+--fix} && echo "   ✅ Sandbox checks passed" || {
         echo "   ❌ Sandbox checks failed"
         ERRORS=$((ERRORS+1))
     }
 else
-    echo "   ⚠️  open-claw-sandbox/ops/check.sh not found — skipping"
+    echo "   ⚠️  openclaw-sandbox/ops/check.sh not found — skipping"
 fi
 
 echo ""
@@ -53,7 +53,7 @@ echo ""
 echo "🐚 [3/4] Shell script check (shellcheck)..."
 if command -v shellcheck &>/dev/null; then
     SHELL_ERRORS=0
-    for script in infra/scripts/*.sh open-claw-sandbox/ops/*.sh; do
+    for script in infra/scripts/*.sh openclaw-sandbox/ops/*.sh; do
         [[ -f "$script" ]] || continue
         shellcheck "$script" && echo "   ✅ $script" || {
             echo "   ❌ $script failed shellcheck"

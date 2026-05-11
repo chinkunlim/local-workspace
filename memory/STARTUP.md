@@ -24,7 +24,7 @@
 8. 讀取 docs/CODING_GUIDELINES.md §15（AI-Native 文件系統規範）
 
 【Phase 2 — 靜態分析（自動執行）】
-cd open-claw-sandbox && ./ops/check.sh
+cd openclaw-sandbox && ./ops/check.sh
 （涵蓋 Ruff lint + Ruff format + Mypy，覆蓋 core/ + skills/ 共 133 個檔案）
 
 【Phase 3 — 人工審查（逐項執行 PROJECT_RULES.md §6 Checklist）】
@@ -40,8 +40,8 @@ cd open-claw-sandbox && ./ops/check.sh
 10. 所有原則已被「✅ 原則已記錄」確認
 
 【Phase 4 — 文件同步核對】
-- git -C open-claw-sandbox status
-- git -C open-claw-sandbox log --oneline -5
+- git -C openclaw-sandbox status
+- git -C openclaw-sandbox log --oneline -5
 - 確認所有 .md 檔案（ARCHITECTURE.md / CHANGELOG.md / STRUCTURE.md）已反映最新狀態
 
 【Phase 5 — Continuous Principle Sync】
@@ -100,7 +100,7 @@ cd open-claw-sandbox && ./ops/check.sh
 
 ### Phase 2 — 靜態分析 (Automated Quality Gate)
 
-執行 `cd open-claw-sandbox && ./ops/check.sh`，涵蓋：
+執行 `cd openclaw-sandbox && ./ops/check.sh`，涵蓋：
 
 | 工具 | 檢查範圍 | 標準 |
 |:---|:---|:---|
@@ -141,8 +141,8 @@ grep -rn "# TODO" core/ skills/
 ### Phase 4 — 文件同步核對 (SSoT Verification)
 
 ```bash
-git -C open-claw-sandbox status
-git -C open-claw-sandbox log --oneline -5
+git -C openclaw-sandbox status
+git -C openclaw-sandbox log --oneline -5
 ```
 
 逐一核對：
@@ -185,7 +185,7 @@ git -C open-claw-sandbox log --oneline -5
 | 操作習慣、Prompt Macro、溝通風格 | `identity/AI_PROFILE.md` |
 | 程式語法規範、命名規則、格式標準 | `docs/CODING_GUIDELINES.md` |
 | IDE 限制、執行協議、完工流程 | `memory/PROJECT_RULES.md` |
-| Sandbox Agent 倫理、邊界定義 | `open-claw-sandbox/SOUL.md` |
+| Sandbox Agent 倫理、邊界定義 | `openclaw-sandbox/SOUL.md` |
 | 為什麼選 X 不選 Y（架構決策） | `memory/DECISIONS.md` |
 | 目錄結構、資料路徑、核心模組變更 | `docs/STRUCTURE.md` |
 | CLI 介面、使用者操作說明 | `skills/<skill>/SKILL.md` |

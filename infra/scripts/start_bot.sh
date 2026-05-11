@@ -12,7 +12,7 @@ if [ "$script_dir" = "/" ] || [ -z "$script_dir" ] || [ "$script_dir" = "." ]; t
 fi
 INFRA_DIR="$(dirname "$script_dir")"
 _LOCAL_WORKSPACE="$(dirname "$INFRA_DIR")"
-WORKSPACE_DIR="${_LOCAL_WORKSPACE}/open-claw-sandbox"
+WORKSPACE_DIR="${_LOCAL_WORKSPACE}/openclaw-sandbox"
 
 export WORKSPACE_DIR
 export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"

@@ -53,7 +53,7 @@
 | **Environment Hygiene** | Never leave `.bak`, `.tmp`, test files, bare `print()` statements, or large commented-out blocks. |
 | **Anti-Truncation Protocol** | Never summarise terminal commands, environment variables, or code blocks into descriptive prose. Preserve 100% of their content. |
 | **SSoT Preservation** | Historical records in `DECISIONS.md` are never deleted. Abandoned decisions are marked `[ABANDONED]` with reasoning. |
-| **Two-Tier Doc Boundary** | Never mix root `docs/` (infrastructure/deployment docs) with `open-claw-sandbox/docs/` (skill architecture docs). |
+| **Two-Tier Doc Boundary** | Never mix root `docs/` (infrastructure/deployment docs) with `openclaw-sandbox/docs/` (skill architecture docs). |
 
 ---
 
@@ -113,7 +113,7 @@ from core.utils.bootstrap import ensure_core_path
 ensure_core_path(__file__)
 ```
 
-This idempotently adds the correct `open-claw-sandbox/` root to `sys.path`.
+This idempotently adds the correct `openclaw-sandbox/` root to `sys.path`.
 
 ### 3.3 Skill Phase Conventions
 
@@ -429,7 +429,7 @@ print(f"Processing {filename}")
 
 Enable via environment variable for machine parsing:
 ```bash
-OPENCLAW_LOG_JSON=1 python3 skills/audio_transcriber/scripts/run_all.py
+OPENCLAW_LOG_JSON=1 uv run skills/audio_transcriber/scripts/run_all.py
 ```
 
 ---
@@ -438,9 +438,9 @@ OPENCLAW_LOG_JSON=1 python3 skills/audio_transcriber/scripts/run_all.py
 
 ### 9.1 Location and Discovery
 
-- Tests live in `open-claw-sandbox/tests/`
+- Tests live in `openclaw-sandbox/tests/`
 - Test files: `test_<module_name>.py`
-- Run: `cd open-claw-sandbox && PYTHONPATH=. pytest tests/`
+- Run: `cd openclaw-sandbox && PYTHONPATH=. pytest tests/`
 
 ### 9.2 Mock Path Rules
 
@@ -521,9 +521,9 @@ Examples:
 
 ```gitignore
 # Runtime data (gitignored — generated on first run)
-open-claw-sandbox/data/
-open-claw-sandbox/models/
-open-claw-sandbox/logs/
+openclaw-sandbox/data/
+openclaw-sandbox/models/
+openclaw-sandbox/logs/
 
 # Open WebUI runtime databases
 infra/open-webui/vector_db/
@@ -598,7 +598,7 @@ The global quality gate (`ops/check.sh`) runs a credential detection scan on eve
 |---|---|---|---|
 | **Global** | `docs/` | Monorepo | `USER_MANUAL.md`, `CODING_GUIDELINES.md`, `STRUCTURE.md`, `INDEX.md` |
 | **Global AI** | `memory/` | AI Agents | `ARCHITECTURE.md`, `DECISIONS.md`, `HANDOFF.md`, `PROJECT_RULES.md`, `TASKS.md` |
-| **Skill** | `open-claw-sandbox/skills/<skill>/docs/` | Skill owner | `ARCHITECTURE.md`, `PROJECT_RULES.md`, `DECISIONS.md` |
+| **Skill** | `openclaw-sandbox/skills/<skill>/docs/` | Skill owner | `ARCHITECTURE.md`, `PROJECT_RULES.md`, `DECISIONS.md` |
 
 ### 12.2 Documentation Language
 
@@ -660,15 +660,15 @@ Decisions are **never deleted**. Abandoned decisions are marked `[ABANDONED]` wi
 ./ops/check.sh
 
 # Sandbox-level (ruff lint + ruff format + mypy)
-cd open-claw-sandbox
+cd openclaw-sandbox
 ./ops/check.sh
 
 # Run tests
-cd open-claw-sandbox
-PYTHONPATH=. pytest tests/ -q
+cd openclaw-sandbox
+uv run pytest tests/ -q
 
 # Auto-fix formatting and safe lint issues
-cd open-claw-sandbox
+cd openclaw-sandbox
 ruff check --fix .
 ruff format .
 ```
@@ -677,8 +677,8 @@ ruff format .
 
 ```bash
 # All skills follow this pattern:
-cd open-claw-sandbox
-python3 skills/<skill-name>/scripts/run_all.py --process-all
+cd openclaw-sandbox
+uv run skills/<skill-name>/scripts/run_all.py --process-all
 
 # Common flags:
 #   --force          Re-process even completed files
@@ -712,7 +712,7 @@ from core.config.config_manager import ConfigManager
 To maintain absolute context preservation across AI sessions, the repository implements a strict Document & Memory System Template. All human operators and AI agents MUST adhere to these rules:
 
 ### 15.1 System Structure
-- **`identity/`**: Contains global AI personas (`AI_PROFILE.md`). Sandbox-specific identities remain in `open-claw-sandbox/`.
+- **`identity/`**: Contains global AI personas (`AI_PROFILE.md`). Sandbox-specific identities remain in `openclaw-sandbox/`.
 - **`memory/`**: The active AI workspace. Contains `PROJECT_RULES.md`, `DECISIONS.md`, `HANDOFF.md`, and `TASKS.md`.
 - **`memory/sessions/`**: The immutable archive of past AI execution logs and implementation plans.
 - **`docs/`**: Human-readable global SSoT documentation (e.g., `ARCHITECTURE.md`, `DEVELOPMENT_MANUAL.md`).

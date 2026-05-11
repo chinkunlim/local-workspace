@@ -42,7 +42,7 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 - **Bidirectional Ecosystem Integration**: Finalized local-first, zero-latency workflows synchronizing Open WebUI with the Obsidian Vault.
 - **WebUI to CLI Convergence**: Streamlined architecture post WebUI/CLI functional parity, standardizing entirely on headless CLI infrastructure and automated file routing.
 - **Omega Integration & Code Self-Healing**: Ported the `audio_transcriber` DAG dashboard, interactive selection UI, and preflight check mechanisms to all other skills (`doc_parser`, `interactive_reader`, `knowledge_compiler`, `academic_edu_assistant`).
-- **Global Documentation Consolidation**: Enforced the Anti-Truncation Protocol by executing a full-scale ingestion of `open-claw-sandbox/docs/` into the root `/docs/` repository, designating `/docs/` as the sole Single Source of Truth (SSoT).
+- **Global Documentation Consolidation**: Enforced the Anti-Truncation Protocol by executing a full-scale ingestion of `openclaw-sandbox/docs/` into the root `/docs/` repository, designating `/docs/` as the sole Single Source of Truth (SSoT).
 
 ---
 
@@ -95,7 +95,7 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ### Added
 
-- `memory/` AI collaboration layer in `open-claw-sandbox/`
+- `memory/` AI collaboration layer in `openclaw-sandbox/`
 - `infra/` directory consolidating LiteLLM, Open WebUI, Pipelines, and lifecycle scripts
 - `.github/` with CI lint workflow and issue/PR templates
 - `tests/` directory structure (e2e + integration stubs)
@@ -104,7 +104,7 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ### Changed
 
-- `pyproject.toml` and `.pre-commit-config.yaml` moved to `open-claw-sandbox/` root
+- `pyproject.toml` and `.pre-commit-config.yaml` moved to `openclaw-sandbox/` root
 - `CODING_GUIDELINES.md` v3.0.0 — merged all prior rules documents
 
 ### Removed
@@ -118,7 +118,7 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ### Added
 
-- Initial `open-claw-sandbox/` sandbox structure
+- Initial `openclaw-sandbox/` sandbox structure
 - `core/` shared framework (`PipelineBase`, `PathBuilder`, `StateManager`, `LogManager`, etc.)
 - `audio_transcriber` skill — 6-phase MLX-Whisper pipeline
 - `doc_parser` skill — 7-phase Docling pipeline

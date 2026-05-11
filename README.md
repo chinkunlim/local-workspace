@@ -17,7 +17,7 @@ graph TD
 
 ```
 local-workspace/
-├── open-claw-sandbox/   ← Open Claw AI automation (voice-memo, pdf-knowledge)
+├── openclaw-sandbox/   ← Open Claw AI automation (voice-memo, pdf-knowledge)
 ├── infra/               ← LiteLLM proxy, Open WebUI, Pipelines, lifecycle scripts
 ├── docs/                ← Global documentation (CODING_GUIDELINES, INFRA_SETUP)
 ├── memory/              ← Global AI memory (ARCHITECTURE, DECISIONS)
@@ -42,7 +42,7 @@ local-workspace/
 
 3. **Install Dependencies:**
    ```bash
-   cd open-claw-sandbox
+   cd openclaw-sandbox
    pip install pip-tools
    pip-sync requirements.txt
    cd ..
@@ -69,8 +69,8 @@ local-workspace/
 - `docs/USER_MANUAL.md` — The complete guide on how to use this ecosystem (Start Here)
 - `docs/CODING_GUIDELINES.md` — Single source of truth for all development rules (v3.0.0)
 - `memory/ARCHITECTURE.md` — Full system architecture and design decisions
-- `open-claw-sandbox/AGENTS.md` — AI agent behaviour contract
-- `open-claw-sandbox/docs/STRUCTURE.md` — Annotated file map of the sandbox
+- `openclaw-sandbox/AGENTS.md` — AI agent behaviour contract
+- `openclaw-sandbox/docs/STRUCTURE.md` — Annotated file map of the sandbox
 
 ## Change Discipline
 

@@ -66,7 +66,7 @@
     - **Operator Habits / Prompt Macros** ➡️ `identity/AI_PROFILE.md`
     - **Programming/Syntax/Formatting Standards** ➡️ `docs/CODING_GUIDELINES.md`
     - **IDE Hardware Limits / Execution Protocols** ➡️ `memory/PROJECT_RULES.md`
-    - **Local Sandbox Agent Ethics/Boundaries** ➡️ `open-claw-sandbox/SOUL.md` or `open-claw-sandbox/IDENTITY.md`
+    - **Local Sandbox Agent Ethics/Boundaries** ➡️ `openclaw-sandbox/SOUL.md` or `openclaw-sandbox/IDENTITY.md`
     - **Why a technical approach was chosen** ➡️ `memory/DECISIONS.md`
   - **Principle Acknowledgement (強制確認)**: Every time the AI captures a new principle from the conversation, it **MUST explicitly state it** in the reply using this exact format:
     > `✅ 原則已記錄 → [target_file.md]：<rule content>`
@@ -77,7 +77,7 @@
 ## What AI Should NOT Do
 
 ### Execution prohibitions
-- Do NOT modify files outside `open-claw-sandbox/` without explicit approval
+- Do NOT modify files outside `openclaw-sandbox/` without explicit approval
 - Do NOT run `start.sh` / `stop.sh` without asking first (services may be live)
 - Do NOT assume a path exists — always `ls` or `cat` first
 - Do NOT produce partial implementations without marking `# TODO(reason)` and explaining

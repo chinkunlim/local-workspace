@@ -13,14 +13,14 @@ tests/
 ## Skill-Level Unit Tests
 
 Unit tests for each skill live inside the skill directory:
-- `open-claw-sandbox/skills/voice-memo/tests/`
-- `open-claw-sandbox/skills/pdf-knowledge/tests/`
+- `openclaw-sandbox/skills/voice-memo/tests/`
+- `openclaw-sandbox/skills/pdf-knowledge/tests/`
 
 ## Running Tests
 
 ```bash
 # E2E — run a full voice-memo pipeline
-cd open-claw-sandbox
+cd openclaw-sandbox
 python skills/voice-memo/scripts/run_all.py --subject test_subject
 
 # Integration — verify core modules load correctly

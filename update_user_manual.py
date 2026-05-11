@@ -49,7 +49,7 @@ Your Raw Files
 ```
 
 ### 📥 Phase 1: Universal Inbox
-- **Path**: `open-claw-sandbox/data/raw/<Subject_Taxonomy>/`
+- **Path**: `openclaw-sandbox/data/raw/<Subject_Taxonomy>/`
 - **Purpose**: This is the **only directory** where you need to manually drop files.
 - **Rule**: Create subdirectories named after the subject, e.g., `data/raw/Cognitive_Psychology/`.
 
@@ -58,7 +58,7 @@ Your Raw Files
 - **Purpose**: Background processing zones. You do **not** need to manage any files here.
 
 ### 🧠 Phase 3: Obsidian Vault (The Brain)
-- **Path**: `open-claw-sandbox/data/wiki/`
+- **Path**: `openclaw-sandbox/data/wiki/`
 - **Purpose**: The final destination for all synthesized Markdown notes. This acts directly as your Obsidian Vault.
 
 ---
@@ -112,7 +112,7 @@ Open Claw interfaces collaborate seamlessly:
 
 > **Prerequisite**: Execute all commands from the root of the sandbox directory.
 ```bash
-cd ~/Desktop/local-workspace/open-claw-sandbox
+cd ~/Desktop/local-workspace/openclaw-sandbox
 ```
 
 ---

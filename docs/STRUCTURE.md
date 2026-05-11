@@ -1,7 +1,7 @@
 # Open Claw — Workspace Structure
 
 > Last Updated: 2026-04-18
-> Every file and folder in `open-claw-sandbox/` is documented here.
+> Every file and folder in `openclaw-sandbox/` is documented here.
 > Update this file whenever a file is added, removed, or significantly renamed.
 
 ---
@@ -11,7 +11,7 @@
 ```text
 local-workspace/
 ├── docs/                 ← Single Source of Truth (SSoT) Global Docs — contains ARCHITECTURE, STRUCTURE, USER_MANUAL and all core documents
-└── open-claw-sandbox/
+└── openclaw-sandbox/
     ├── AGENTS.md             ← Internal Agent Registry: defines the 9 core skills and RouterAgent
     ├── BOOTSTRAP.md          ← How to bring this workspace to operational state from scratch
     ├── HEARTBEAT.md          ← Known-good state snapshot; updated after each verified stable milestone

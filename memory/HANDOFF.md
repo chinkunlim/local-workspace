@@ -1,18 +1,26 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-10
-> **System Status:** 🟢 Stable / Production-Ready (V9.7 — Global Asset Registry & Proofreader Hardening)
+> **Last Updated:** 2026-05-12
+> **System Status:** 🟢 Stable / Production-Ready (V9.8 — uv-Native Toolchain Migration & Quality Gate Hardening)
 
 ---
 
 ## Final Sign-off Summary
 
-**Date:** 2026-05-10
-**Milestone:** V9.7 Global Asset Registry & Proofreader Orchestrator Standardisation
+**Date:** 2026-05-12
+**Milestone:** V9.8 uv-Native Toolchain Migration & Quality Gate Hardening
 
-### Completed This Session
+- [x] **uv-Native Toolchain Migration**: Removed `requirements.txt` and `requirements.in`. All 160+ dependencies now managed exclusively via `pyproject.toml` and `uv.lock`. Added `[project]` table to enable `uv add`.
+- [x] **Dev Dependencies via uv**: `ruff`, `mypy`, `pytest` added as dev dependencies (`uv add --dev`).
+- [x] **`check.sh` uv-Hardened**: Updated `openclaw-sandbox/ops/check.sh` to call `uv run ruff` and `uv run mypy` instead of bare commands, eliminating the `command not found` failure on clean environments.
+- [x] **Syntax Bug Fixes**: Repaired two broken Python files (`academic_library_agent/p01_search_literature.py`, `gemini_verifier_agent/p01_ai_debate.py`) that had dangling indentation and undefined variable references causing Mypy and Ruff parse failures.
+- [x] **Type Error Fixes**: Fixed 4 Mypy type errors in `core/state/global_registry.py` (`_memory_cache` annotation) and corrected `_debate_gemini` return type.
+- [x] **Quality Gate**: `check.sh` now passes — ✅ Ruff lint, ✅ Ruff format, ✅ Mypy (0 errors, 143 files).
+- [x] **MLX-Whisper Model Download**: Triggered `hf download mlx-community/whisper-large-v3-mlx` to `models/` with `HF_HOME` sandboxed inside the project. Faster-Whisper `medium` model also downloaded.
 
-- [x] **Global Asset Registry (V9.7)**: Implemented `core/state/global_registry.py`. `RouterAgent` now auto-registers all outputs to `state/global_manifest.json` on `PipelineCompleted`.
+---
+
+## Current System State
 - [x] **Proofreader Orchestrator Refactoring**: Upgraded `proofreader` to use `PipelineBase`, adding an interactive CLI (`--force`, `--resume`, `--subject`) and DAG tracking dashboard mirroring other core skills.
 - [x] **Per-file EventBus Handoff**: Refactored `audio_transcriber`, `proofreader`, `note_generator`, and `smart_highlighter` to emit `PipelineCompleted` per-file rather than per-batch, enabling true asynchronous cross-skill pipelining.
 - [x] **Dynamic Reference Fetching**: `proofreader` (p01, p02) now safely looks up reference doc paths via the `GlobalRegistry` instead of insecure path traversal.
@@ -45,12 +53,15 @@
 
 | Attribute | Value |
 | ---------------------- | -------------------------------------------------------------------------------- |
-| Git | Clean — synced with `origin/main` (`6db7fb4`) |
+| Git | Clean — synced with `origin/main` |
 | Ruff linting | ✅ All checks passed |
-| Ruff format | ✅ 158 files clean |
-| Mypy | ✅ 0 errors in 142 source files (`core/` + `skills/`) |
-| Python version | `3.11` (pyproject.toml corrected) |
-| Ollama models | 7 models (phi4-mini-reasoning, qwen3:8b, deepseek-r1:8b, gemma4:e2b, llama3.2-vision, gemma4:e4b, qwen3:14b) |
+| Ruff format | ✅ 162 files clean |
+| Mypy | ✅ 0 errors in 143 source files (`core/` + `skills/`) |
+| Python version | `3.11` (pinned via `.python-version`) |
+| Dependency manager | `uv` (exclusive) — `requirements.txt` removed |
+| Ollama models | 9 models present (gemma4, llama3, llama3.2-vision, phi4-mini-reasoning, qwen3:8b, deepseek-r1:8b, gemma4:e2b, gemma4:e4b, nomic-embed-text) |
+| MLX-Whisper model | `mlx-community/whisper-large-v3-mlx` — downloading to `models/` |
+| Faster-Whisper model | `medium` — downloaded to `models/` |
 | Skill package names | `note_generator`, `smart_highlighter` (underscore — enforced §5.5) |
 | Skill entry points | All skills use `scripts/run_all.py` (enforced §5.6) |
 | DAG Phases | `smart_highlighter`: H1 (重點標記); `note_generator`: N1 (知識合成) |
@@ -58,9 +69,9 @@
 | Inbox routing | Intent-Driven via `RouterAgent` and `SkillRegistry` |
 | Pipeline Handoff | Autonomous via `EventBus` (`TaskQueue` emits `PipelineCompleted`) |
 | LLM Semantic Cache | `data/llm_cache.sqlite3` (SHA-256 keyed, `temperature=0` only) |
-| Model Registry | `open-claw-sandbox/docs/MODEL_SELECTION.md` |
-| Obsidian Vault | `open-claw-sandbox/data/wiki/` |
-| ChromaDB index | `open-claw-sandbox/data/chroma/` (rebuilt by `telegram_kb_agent`) |
+| Model Registry | `openclaw-sandbox/docs/MODEL_SELECTION.md` |
+| Obsidian Vault | `openclaw-sandbox/data/wiki/` |
+| ChromaDB index | `openclaw-sandbox/data/chroma/` (rebuilt by `telegram_kb_agent`) |
 | Startup Protocol | `memory/STARTUP.md` (canonical prompt + 5-Phase process) |
 
 ---
@@ -89,10 +100,11 @@ curl http://localhost:18789/health          # Open Claw API
 ## Next Session Starting Point
 
 1. **Review synthesis output quality**: Open `data/note_generator/output/助人歷程/` and `data/smart_highlighter/output/助人歷程/` in Obsidian — verify Mermaid renders, images show, `<think>` tags absent.
-2. **Run full batch synthesis**: `python3 skills/note_generator/scripts/run_all.py --subject 助人歷程 --force` — confirm DAG progresses from `❌ 0/5` → `✅ 5/5`.
+2. **Run full batch synthesis**: `uv run skills/note_generator/scripts/run_all.py --subject 助人歷程 --force` — confirm DAG progresses from `❌ 0/5` → `✅ 5/5`.
 3. Run live E2E test: place a `.m4a` file into `data/raw/認知心理學/` and confirm all phases complete.
-4. Rebuild ChromaDB index: `python skills/telegram_kb_agent/scripts/indexer.py`
+4. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
 5. Populate `tests/` stub structure per CODING_GUIDELINES §11.2.
+6. Update `docs/STRUCTURE.md` to remove `requirements.txt` reference and fix `smart-highlighter`/`note-generator` legacy names.
 
 > **Startup Protocol**: Copy the prompt from `memory/STARTUP.md` at the start of every new conversation.
 
@@ -109,6 +121,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-12 | V9.8 uv-Native Toolchain Migration & Quality Gate | Removed `requirements.txt`; migrated to `uv add`; fixed `check.sh` to use `uv run`; fixed 3 syntax/type bugs; 0 errors in 143 files |
 | 2026-05-10 | V9.7 Proofreader & Global Asset Registry | Implemented `GlobalRegistry`, per-file EventBus handoff, and `ProofreaderOrchestrator`. |
 | 2026-05-08 | V9.6 Synthesis Pipeline CLI & DAG Standardisation | `smart_highlighter`/`note_generator` → `run_all.py` Orchestrators; DAG fixed; 4 new §5 invariants |
 | 2026-05-07 | Advanced Prompt Engineering & Routing | Upgraded `note_generator` and `smart_highlighter` models; defined Parallel Extraction vs Synthesis architecture (ADR-011) |

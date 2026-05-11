@@ -38,7 +38,7 @@
 
 **Context:** The initial model assignments prioritized resource efficiency (smaller models for all tasks). After auditing the available hardware (16GB Apple Silicon, RUNS WELL/DECENT tier for 9-14B models), we determined that running larger models for quality-critical tasks is acceptable since the TaskQueue serializes all execution.
 
-**Decision:** Each skill is assigned the highest-quality model appropriate for its task type, regardless of size, as long as the model fits within hardware capacity. Fallback models are preserved in config for circuit-breaker scenarios. See `open-claw-sandbox/docs/MODEL_SELECTION.md` for the complete per-skill registry.
+**Decision:** Each skill is assigned the highest-quality model appropriate for its task type, regardless of size, as long as the model fits within hardware capacity. Fallback models are preserved in config for circuit-breaker scenarios. See `openclaw-sandbox/docs/MODEL_SELECTION.md` for the complete per-skill registry.
 
 **Task-to-Model Mapping:**
 - Long-form synthesis & academic analysis: `qwen3:14b` (strongest installed multilingual reasoning)
@@ -143,18 +143,18 @@
 
 ---
 
-## [2026-04-19] `open-claw-sandbox/` placed at monorepo root (not inside `apps/`)
+## [2026-04-19] `openclaw-sandbox/` placed at monorepo root (not inside `apps/`)
 
 **Status:** Active
 
 **Context:** §11.2 of CODING_GUIDELINES recommends an `apps/` directory.
 
-**Decision:** Keep `open-claw-sandbox/` directly at root.
+**Decision:** Keep `openclaw-sandbox/` directly at root.
 
 **Consequences:** - Only one application exists — `apps/` adds structure without value
 - The sandbox has its own mature internal hierarchy (`core/`, `skills/`, `memory/`, `ops/`)
 - `WORKSPACE_DIR` env var is already wired to the sandbox path
-- Migration to `apps/open-claw-sandbox/` is straightforward if a second app is ever added
+- Migration to `apps/openclaw-sandbox/` is straightforward if a second app is ever added
 
 **Consequences:** The `memory/ARCHITECTURE.md` file documents this exception so AI agents understand the deviation from the standard pattern.
 
@@ -185,7 +185,7 @@
 **Context:** §16.5 specifies `ops/check.sh` as the quality gate. The sandbox has its own check script, but there was no root-level script to scan the whole monorepo.
 
 **Decision:** Add `ops/check.sh` at the monorepo root that:
-1. Delegates to `open-claw-sandbox/ops/check.sh` for Python quality
+1. Delegates to `openclaw-sandbox/ops/check.sh` for Python quality
 2. Adds `infra/pipelines/` to the scan scope
 3. Checks shell scripts via shellcheck if available
 
@@ -223,13 +223,13 @@
 
 ---
 
-## [2026-04-18] `open-claw-workspace/` renamed to `open-claw-sandbox/`
+## [2026-04-18] `open-claw-workspace/` renamed to `openclaw-sandbox/`
 
 **Status:** Active
 
 **Context:** The original name `open-claw-workspace` was ambiguous — the entire monorepo (`local-workspace/`) is also a "workspace".
 
-**Decision:** Rename to `open-claw-sandbox/` to precisely describe its function: a fully isolated, self-contained sandbox for Open Claw operations.
+**Decision:** Rename to `openclaw-sandbox/` to precisely describe its function: a fully isolated, self-contained sandbox for Open Claw operations.
 
 ---
 

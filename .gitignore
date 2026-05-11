@@ -5,9 +5,9 @@
 # ------------------------------------------------------------------------------
 # Open Claw Sandbox Runtime Data
 # ------------------------------------------------------------------------------
-open-claw-sandbox/data/
-open-claw-sandbox/models/
-open-claw-sandbox/logs/
+openclaw-sandbox/data/
+openclaw-sandbox/models/
+openclaw-sandbox/logs/
 
 # ------------------------------------------------------------------------------
 # Universal Ignore Patterns
