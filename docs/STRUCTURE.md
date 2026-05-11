@@ -20,8 +20,8 @@ local-workspace/
     ├── TOOLS.md              ← Local endpoints, key paths, env vars, hardware profile
     ├── USER.md               ← Operator profile: preferences, working style, constraints
     │
-    ├── pyproject.toml        ← Ruff (linter/formatter) + Mypy (type checker) configuration
-    ├── requirements.txt      ← All Python dependencies for core + all skills
+    ├── pyproject.toml        ← Project metadata + Ruff/Mypy config + all runtime & dev dependencies
+    ├── uv.lock               ← Locked dependency tree (managed by uv, never edit manually)
     ├── .gitignore            ← Excludes data/, models/, logs/, __pycache__, .DS_Store
     ├── .pre-commit-config.yaml ← Pre-commit hooks: Ruff lint+format + file hygiene
     ├── .editorconfig         ← Consistent editor settings across all tools and AI agents
@@ -173,7 +173,7 @@ skills/
 │           ├── p01_transcript_proofread.py ← Phase 1: Wait logic, LLM correction, async HITL queue
 │           └── p02_doc_completeness.py     ← Phase 2: PDF extract, image embedding, async HITL queue
 
-├── smart-highlighter/              ← Standalone skill: Highlight raw markdown (Anti-Tampering)
+├── smart_highlighter/              ← Standalone skill: Highlight raw markdown (Anti-Tampering)
 │   ├── SKILL.md                    ← Quick-start
 │   ├── config/
 │   │   ├── config.yaml             ← Model profiles and chunk sizes
@@ -184,7 +184,7 @@ skills/
 │       ├── highlight.py            ← Legacy entry (kept for import compat; use run_all.py)
 │       └── run_all.py              ← V2.0 entry point (SmartHighlighterOrchestrator, DAG)
 │
-├── note-generator/                 ← Standalone skill: Synthesize structured Markdown notes
+├── note_generator/                 ← Standalone skill: Synthesize structured Markdown notes
 │   ├── SKILL.md                    ← Quick-start
 │   ├── config/
 │   │   ├── config.yaml             ← Model profiles and chunk sizes
@@ -369,13 +369,15 @@ Persistent utility scripts live here. **One-off migration scripts must be delete
 
 ```
 ops/
-├── bootstrap.sh     ← First-time environment setup: installs pip deps, pre-commit hooks, verifies Ollama
-└── check.sh         ← Full quality gate: Ruff lint + format + Mypy
-                         Usage: ./ops/check.sh
+├── bootstrap.sh          ← First-time environment setup: installs uv deps, pre-commit hooks, verifies Ollama
+├── check.sh              ← Full quality gate: uv run ruff lint + format + uv run mypy
+│                              Usage: ./ops/check.sh
+└── archive_session.py    ← Archives current AI session to memory/sessions/ and updates HISTORY.md
 ```
 
-**Note:** `pyproject.toml`, `.pre-commit-config.yaml`, and `requirements.txt` are at the workspace root
-(not inside `ops/`) so that Ruff, Mypy, and pip work without extra flags.
+**Note:** `pyproject.toml`, `.pre-commit-config.yaml` are at the workspace root
+(not inside `ops/`) so that Ruff, Mypy, and uv work without extra flags.
+`requirements.txt` has been removed — all dependencies are managed via `uv add` / `uv.lock`.
 
 ---
 
@@ -383,10 +385,13 @@ ops/
 
 ```
 models/
-├── models--mlx-community--whisper-large-v3-mlx/   ← MLX Whisper (audio_transcriber P1)
-├── models--docling-project--docling-layout-heron/  ← Docling layout model (pdf P1b)
-└── models--docling-project--docling-models/        ← Docling recognition models (pdf P1b)
+├── hub/models--mlx-community--whisper-large-v3-mlx/   ← MLX Whisper Large v3 (audio_transcriber P1, Apple Silicon)
+├── models--Systran--faster-whisper-medium/             ← Faster-Whisper medium (audio_transcriber P1, fallback)
+├── models--docling-project--docling-layout-heron/      ← Docling layout model (doc_parser P1b, auto-downloaded)
+└── models--docling-project--docling-models/            ← Docling recognition models (doc_parser P1b, auto-downloaded)
 ```
+
+> **HF_HOME sandboxed**: `p01_transcribe.py` sets `HF_HOME=<workspace>/models` at runtime to keep all Hugging Face model caches inside the project.
 
 ---
 

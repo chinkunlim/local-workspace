@@ -5,6 +5,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.8] — 2026-05-12: uv-Native Toolchain Migration & Quality Gate Hardening
+
+### Changed
+- **Dependency management migrated to `uv`**: `requirements.txt` and `requirements.in` removed. All 160+ runtime and dev dependencies now live exclusively in `pyproject.toml` + `uv.lock`. `[project]` table added to enable `uv add`.
+- **`ops/check.sh` uv-hardened**: Replaced bare `ruff check`, `ruff format`, `mypy` calls with `uv run ruff` / `uv run mypy`. Eliminates `command not found` failures on clean environments where tools are only available via the project `.venv`.
+
+### Fixed
+- **`academic_library_agent/p01_search_literature.py`**: Repaired broken `_save_evidence()` method (dangling indented line, reference to undefined `results`/`out_path`). Added missing `run()` orchestration entry point.
+- **`gemini_verifier_agent/p01_ai_debate.py`**: Fixed missing `except` clause after `try` block (syntax error blocking Ruff format & Mypy). Corrected `_debate_gemini` return type annotation to `str | None`.
+- **`core/state/global_registry.py`**: Fixed 4 Mypy type errors — `_memory_cache` type annotation changed from implicit `None` to `Optional[Dict]`; added `# type: ignore[return-value]` on guarded return path.
+
+### Added
+- **`litellm==1.83.0`** and **`python-telegram-bot==22.7`**: Were missing from `pyproject.toml` despite being imported by core services. Added via `uv add`.
+- **Whisper models downloaded**: `mlx-community/whisper-large-v3-mlx` (HF Hub) and `Systran/faster-whisper-medium` fully downloaded to `models/` (4.3 GB total) with `HF_HOME` sandboxed inside project.
+
+### Quality Gate
+- Ruff lint: ✅ 0 errors (162 files)
+- Ruff format: ✅ 162 files clean
+- Mypy: ✅ 0 errors in 143 source files
+- pytest: ✅ 18 passed, 5 skipped (0 failures)
+
+---
+
 ## [V9.6] — 2026-05-08: Synthesis Pipeline CLI Standardisation & DAG Hardening
 
 ### Added

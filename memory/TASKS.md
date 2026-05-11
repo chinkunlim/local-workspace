@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-08 (V9.6 — Synthesis Pipeline CLI Standardisation & DAG Hardening)
+> **Last Updated:** 2026-05-12 (V9.8 — uv-Native Toolchain Migration & Quality Gate Hardening)
 
 ---
 
@@ -13,11 +13,12 @@
 ## 🟡 Medium Priority (優化 / 非緊急功能)
 
 - [ ] Review synthesis output quality in Obsidian: `data/note_generator/output/助人歷程/` — verify Mermaid renders, images display, no `<think>` tags
-- [ ] Run full batch synthesis test: `run_all.py --subject 助人歷程 --force` for both skills (confirm DAG `❌ 0/5` → `✅ 5/5`)
+- [ ] Run full batch synthesis test: `uv run skills/note_generator/scripts/run_all.py --subject 助人歷程 --force` (confirm DAG `❌ 0/5` → `✅ 5/5`)
 - [ ] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
 - [ ] Run live end-to-end pipeline test: `.m4a` → `data/wiki/`
 - [ ] Rebuild ChromaDB index and validate a Telegram RAG query with `gemma4:e4b`
 - [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
+- [ ] Update `docs/STRUCTURE.md`: remove `requirements.txt` reference, fix `smart-highlighter`/`note-generator` legacy hyphen names
 
 ---
 
@@ -30,7 +31,20 @@
 
 ## ✅ Completed
 
-- [x] 2026-05-08: V9.6 Synthesis Pipeline CLI Standardisation & DAG Hardening
+- [x] 2026-05-12: V9.8 uv-Native Toolchain Migration & Quality Gate Hardening
+  - `requirements.txt` and `requirements.in` removed; all 160+ deps migrated to `pyproject.toml` + `uv.lock`.
+  - Added `[project]` table to `pyproject.toml` to enable `uv add`.
+  - `ruff`, `mypy`, `pytest` added as dev dependencies via `uv add --dev`.
+  - `openclaw-sandbox/ops/check.sh` updated: bare `ruff`/`mypy` calls replaced with `uv run ruff`/`uv run mypy`.
+  - Fixed syntax errors in `academic_library_agent/p01_search_literature.py` and `gemini_verifier_agent/p01_ai_debate.py`.
+  - Fixed 4 Mypy type errors in `core/state/global_registry.py`.
+  - Added missing `litellm` and `python-telegram-bot` via `uv add`.
+  - MLX-Whisper (`mlx-community/whisper-large-v3-mlx`) and Faster-Whisper (`medium`) models downloaded to `models/`.
+  - `check.sh`: ✅ Ruff lint, ✅ Ruff format, ✅ Mypy 0 errors in 143 files.
+  - Tests: 18 passed, 5 skipped — 0 failures.
+  - GitHub push authenticated via PAT + `gh auth setup-git`.
+
+- [x] 2026-05-10: V9.7 Proofreader & Global Registry
   - `audio_transcriber` `run_all.py` stale import fixed (`Phase2Proofread` → `Phase2GlossaryApply`).
   - `smart_highlighter` → `run_all.py` with `SmartHighlighterOrchestrator`, DAG `H1 (重點標記)`, asset copying.
   - `note_generator` → `run_all.py` with `NoteGeneratorOrchestrator`, DAG `N1 (知識合成)`, `strip_think_tags()`, `fix_mermaid_syntax()`.
