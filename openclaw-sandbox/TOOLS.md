@@ -83,3 +83,21 @@ Hardware safety thresholds (RAM warning/critical, temperature, battery) are conf
 1. Keep entries factual and concise.
 2. Update when operational reality changes (hardware upgrade, new endpoint, new env var).
 3. Do not add runtime logic here — this file is documentation only.
+
+---
+
+## 8. OpenClaw Skill System Architecture (Two Independent Systems)
+
+> [!IMPORTANT]
+> `openclaw skills` does NOT list the project's pipeline skills. This is correct and expected. See ADR-012 in `memory/DECISIONS.md`.
+
+| System | Discovery | Invocation | Examples |
+|:---|:---|:---|:---|
+| **OpenClaw CLI Skills** | `~/.nvm/.../openclaw/skills/` + `~/.openclaw/skills/` | OpenClaw Chat (Telegram, MCP) | `weather`, `notion`, `browser-automation` |
+| **Internal Python SkillRegistry** | `openclaw-sandbox/skills/*/manifest.py` (scanned at runtime) | `inbox_daemon` → `RouterAgent` → `TaskQueue` subprocess | `audio_transcriber`, `doc_parser`, `proofreader` |
+
+**Key facts:**
+- `openclaw skills` only shows OpenClaw CLI-native skills. Never try to register Python ML pipeline skills there.
+- `SkillRegistry.discover()` in `core/orchestration/skill_registry.py` is the authoritative Python skill scanner.
+- Each Python skill exposes `MANIFEST = SkillManifest(...)` in `skills/<name>/manifest.py`.
+- The `openclaw.json` `agents.defaults.workspace` controls which workspace OpenClaw CLI targets for agent operations (NOT for Python skill discovery).

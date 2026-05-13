@@ -64,42 +64,6 @@ class SystemInboxDaemon:
         self.registry.discover()
         self.router = RouterAgent(registry=self.registry)
 
-        # Load Config
-        self.config_path = os.path.join(_core_dir, "inbox_config.json")
-        self._load_config()
-
-    def _load_config(self) -> None:
-        self.routing_rules = {}
-        self.pdf_routing_rules: List[Dict[str, str]] = []  # list of {pattern, routing}
-        if os.path.exists(self.config_path):
-            try:
-                with open(self.config_path, encoding="utf-8") as f:
-                    cfg = json.load(f)
-
-                    rules = cfg.get("routing_rules", {})
-                    for ext in rules.get("voice_memo", []):
-                        self.routing_rules[ext] = "audio_transcriber"
-                    for ext in rules.get("pdf_knowledge", []):
-                        self.routing_rules[ext] = "doc_parser"
-                    for ext in rules.get("compiler", []):
-                        self.routing_rules[ext] = "knowledge_compiler"
-
-                    # Remove structured pdf_routing_rules as they violate sandbox boundaries
-
-            except Exception as e:
-                _logger.error("讀取 inbox_config.json 失敗: %s", e)
-
-        if not self.routing_rules:
-            self.routing_rules = {
-                ".m4a": "audio_transcriber",
-                ".mp3": "audio_transcriber",
-                ".pdf": "doc_parser",
-                ".mp4": "video_ingester",
-                ".mov": "video_ingester",
-                ".mkv": "video_ingester",
-                ".webm": "video_ingester",
-            }
-
     def _process_file(self, filepath: str) -> None:
         """Route a single raw file to its target skill's input directory."""
         # B-2 Fix: deduplicate files already dispatched by scan_all or watchdog

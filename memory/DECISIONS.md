@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-05-13] ADR-012: OpenClaw CLI Skills vs Internal Python SkillRegistry (Two Independent Systems)
+
+**Status:** Active
+
+**Context:** Investigation revealed that running `openclaw skills` in the terminal only displays OpenClaw CLI's own bundled/managed skills (weather, notion, browser-automation, etc.), and never shows the project's Python-native pipeline skills (audio_transcriber, doc_parser, proofreader, etc.). This caused confusion about whether the skills were correctly registered.
+
+**Decision:** Recognise that there are **two completely separate skill systems** that must never be conflated:
+
+1. **OpenClaw CLI Skills** (`openclaw skills`): Discovered by the OpenClaw Node.js binary from its bundled `~/.nvm/.../openclaw/skills/` directory and from `~/.openclaw/skills/` (managed installs). Each skill is a SKILL.md file with `openclaw` frontmatter metadata, plus optional binary requirements. These are Chat/Agent-facing tools (Telegram/Discord dispatch). Managed via `openclaw skills install <slug>` (ClawHub registry).
+
+2. **Internal Python SkillRegistry** (`core/orchestration/skill_registry.py`): Discovers skills by scanning `openclaw-sandbox/skills/*/manifest.py` at Python runtime. Each skill exposes a `MANIFEST = SkillManifest(...)` variable. These are **pipeline orchestration** skills invoked by `inbox_daemon` → `RouterAgent` → `TaskQueue`. They run as isolated Python subprocesses.
+
+**Why the project's pipeline skills do NOT appear in `openclaw skills`:** The SKILL.md frontmatter with `openclaw` metadata is present in the project's skill files, but OpenClaw CLI only scans its own managed paths, not arbitrary workspace `skills/` directories. The workspace skills are **not** intended to be OpenClaw CLI-dispatch skills; they are heavy ML pipeline scripts (Whisper, Docling, ChromaDB) that must be subprocess-isolated for OOM protection.
+
+**Consequences:**
+- Do NOT attempt to register `audio_transcriber`, `doc_parser`, etc. into the OpenClaw CLI skill system.
+- The `openclaw skills` output showing only bundled skills is **correct and expected**.
+- The Python `SkillRegistry.discover()` is the authoritative skill discovery mechanism for pipeline execution.
+- If in the future a skill should also be accessible via OpenClaw Chat (Telegram), a thin OpenClaw-native SKILL.md wrapper that calls into the Python pipeline via subprocess would be the correct approach.
+
+---
+
 ## [2026-05-07] ADR-011: Dual-Brain Parallelism (Extraction vs Synthesis)
 
 **Status:** Active

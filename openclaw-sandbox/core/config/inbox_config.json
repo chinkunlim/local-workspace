@@ -9,7 +9,7 @@
 
   "routing_rules": {
     "voice_memo":    [".m4a", ".mp3", ".wav", ".ogg", ".aac", ".flac", ".opus"],
-    "pdf_knowledge": [".pdf", ".png", ".jpg", ".jpeg"],
+    "pdf_knowledge": [".pdf", ".png", ".jpg", ".jpeg", ".pptx", ".docx", ".xlsx"],
     "compiler":      [".md", ".txt", ".rtf"]
   },
 

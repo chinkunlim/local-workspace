@@ -112,3 +112,28 @@
 **Decision**: Add OCR confidence scoring pass.
 **Rationale**: OCR uncertainty must be visible to operators and later synthesis steps.
 **Impact**: Clear low-confidence page signaling and reduced silent corruption risk.
+
+---
+
+## 2026-05-13 — MarkItDown Integration as Phase 0c (PPTX/DOCX/XLSX Support)
+
+**Decision**: Integrate Microsoft MarkItDown as a new Phase 0c to enable `.pptx`, `.docx`, and `.xlsx` as valid `doc_parser` inbox formats.
+
+**Context**: The inbox previously only accepted `.pdf` and `.png`. Academic teaching materials are frequently distributed as PowerPoint slides (PPTX) containing speaker notes (備注) that represent raw lecture content. Word documents and Excel tables also appear as supplementary materials. Without this support, these files could not enter the pipeline at all.
+
+**Chosen approach**:
+- New `Phase0cMarkItDown` (`p00c_markitdown.py`) runs first in the DAG.
+- Uses `markitdown[pptx,docx,xlsx]` (MIT License, v0.1.5) to convert Office files to Markdown.
+- Output is `{file_id}_raw_extracted.md` — identical interface to `Phase1aPDFEngine`, so all downstream phases (proofreader, knowledge_compiler) require zero changes.
+- PPTX speaker notes are preserved as `### Notes:` blocks after each slide — treated as raw reference material for `audio_transcriber`校對, **not** as a substitute for audio transcription.
+- After p0c completes, all PDF-specific phases (`p0b`, `p0a`, `p1a`, `p1b_s`, `p1b`, `p1c`, `p1d`) are masked as `⏭️` in the DAG.
+- Image handling: lightweight mode only (placeholder alt-text, no image extraction).
+
+**Why NOT MarkItDown for audio transcription**: MarkItDown's `[audio-transcription]` feature uses `SpeechRecognition.recognize_google()` — a cloud API with no hallucination protection, no VAD, no timestamps, and no privacy guarantee. Rejected in favour of the existing V8.1 local mlx-whisper pipeline.
+
+**Trade-off**: MarkItDown's PPTX extraction is not layout-aware (no multi-column analysis). This is acceptable for slides, which are inherently single-column. PDFs continue to use Docling for layout-aware extraction.
+
+**Impact**:
+- `core/config/inbox_config.json`: `.pptx`, `.docx`, `.xlsx` added to `pdf_knowledge` routing group.
+- `core/state/state_manager.py`: `PHASES_PDF` extended with `p0c`; `file_ext` extended with Office extensions.
+- `skills/doc_parser/scripts/run_all.py`: DAG masking logic updated for three file-type branches.

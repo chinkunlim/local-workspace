@@ -85,7 +85,7 @@ class Phase3DocCompleteness(PipelineBase):
                     if subj not in self.state_manager.state:
                         self.state_manager.state[subj] = {}
                     for fname in os.listdir(subj_dir):
-                        if not fname.endswith(".md"):
+                        if not fname.endswith(".md") or fname == "correction_log.md":
                             continue
                         if fname not in self.state_manager.state[subj]:
                             self.state_manager.state[subj][fname] = {

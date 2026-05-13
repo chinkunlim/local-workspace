@@ -5,10 +5,26 @@
 
 ---
 
+## Current Session (2026-05-13 — Git Recovery & OpenClaw Architecture Investigation)
+
+**Date:** 2026-05-13
+
+- [x] **Restored `manual/*.docx` files**: 8 `.docx` files deleted in commit `53bf7e3` were recovered from git history via `git checkout 10251a4 -- "manual/*.docx"` and staged for commit.
+- [x] **Investigated `openclaw skills` not showing project skills**: Diagnosed root cause — `openclaw skills` CLI only lists OpenClaw's own bundled/managed skills. The project's Python pipeline skills (`audio_transcriber`, `doc_parser`, etc.) are managed by `core/orchestration/skill_registry.py`, a completely separate system.
+- [x] **ADR-012 documented**: Formalised the two-system architecture in `memory/DECISIONS.md` to prevent future confusion.
+- [x] **Confirmed `openclaw.json` workspace**: `agents.defaults.workspace` correctly points to `/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox` (note: old path; sandbox is now at `openclaw-sandbox/`). Functional but the path is stale.
+- [x] **Cleaned up test artifacts**: Removed `openclaw-sandbox/skills/audio-transcriber-test/` (created during investigation).
+
+> [!NOTE]
+> The `openclaw.json` `agents.defaults.workspace` still references the old `open-claw-sandbox` path. The sandbox was renamed to `openclaw-sandbox/`. This may cause issues if OpenClaw tries to access the workspace. Consider updating via `openclaw configure` or `openclaw config set`.
+
+---
+
 ## Final Sign-off Summary
 
 **Date:** 2026-05-13
 **Milestone:** V9.9 Doc-Parser & Proofreader Pipeline Standardization
+
 
 - [x] **`phase_key` Alignment (doc_parser P1c & P1d)**: Fixed `phase_key` mismatches — previously causing completed tasks to be re-queued endlessly.
 - [x] **NameError Fix (doc_parser P1d)**: Declared missing `pdf_path` variable in `_process_file` to prevent crash during EventBus handoff.
@@ -131,6 +147,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 - **None blocking.**
 - `tests/` directory stubs are declared in `TASKS.md` but not yet populated (low priority).
+- **`openclaw.json` stale workspace path**: `agents.defaults.workspace` still points to `/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox` (old name). Sandbox is now at `openclaw-sandbox/`. Low priority until OpenClaw tries to resolve workspace files via CLI.
 
 ---
 
@@ -138,6 +155,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-13 | Git Recovery & OpenClaw Architecture Investigation | Restored 8 `.docx` files from git; diagnosed `openclaw skills` two-system architecture; documented ADR-012 |
 | 2026-05-13 | V9.9 Doc-Parser & Proofreader Pipeline Standardization | `phase_key` fixed; GlobalRegistry deadlock fixed; Manual State Injection for proofreader; Proofreader Dashboard in start.sh; inbox_daemon path corrected |
 | 2026-05-12 | V9.8 uv-Native Toolchain Migration & Quality Gate | Removed `requirements.txt`; migrated to `uv add`; fixed `check.sh` to use `uv run`; fixed 3 syntax/type bugs; 0 errors in 143 files |
 | 2026-05-10 | V9.7 Proofreader & Global Asset Registry | Implemented `GlobalRegistry`, per-file EventBus handoff, and `ProofreaderOrchestrator`. |

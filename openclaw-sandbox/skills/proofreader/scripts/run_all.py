@@ -103,7 +103,7 @@ class ProofreaderOrchestrator(PipelineBase):
                     else:
                         # audio_transcriber: flat *.md files in subj_dir
                         for fname in os.listdir(subj_dir):
-                            if not fname.endswith(".md"):
+                            if not fname.endswith(".md") or fname == "correction_log.md":
                                 continue
                             if fname not in self._state_manager.state[subj]:
                                 self._state_manager.state[subj][fname] = {

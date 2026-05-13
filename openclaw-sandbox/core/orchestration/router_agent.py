@@ -58,13 +58,22 @@ class SkillCall:
 
 
 # ---------------------------------------------------------------------------
-# Routing Table
+# Routing Constants
 # ---------------------------------------------------------------------------
 
-# Maps (file_extension, intent) → ordered list of SkillCall names.
-# Populated at registration time by SkillRegistry (#17).
-_ROUTING_TABLE: Dict[str, List[str]] = {
-    ".m4a:auto": [
+# Workspace root (router_agent is at core/orchestration/router_agent.py)
+_WORKSPACE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Maps routing group names in inbox_config.json to the first skill in the chain.
+_GROUP_FIRST_SKILL: Dict[str, str] = {
+    "voice_memo": "audio_transcriber",
+    "pdf_knowledge": "doc_parser",
+    "compiler": "knowledge_compiler",
+}
+
+# Default full pipeline chain for each first skill (intent="auto").
+_DEFAULT_CHAINS: Dict[str, List[str]] = {
+    "audio_transcriber": [
         "audio_transcriber",
         "note_generator",
         "student_researcher",
@@ -72,15 +81,7 @@ _ROUTING_TABLE: Dict[str, List[str]] = {
         "gemini_verifier_agent",
         "knowledge_compiler",
     ],
-    ".mp3:auto": [
-        "audio_transcriber",
-        "note_generator",
-        "student_researcher",
-        "academic_library_agent",
-        "gemini_verifier_agent",
-        "knowledge_compiler",
-    ],
-    ".pdf:auto": [
+    "doc_parser": [
         "doc_parser",
         "note_generator",
         "student_researcher",
@@ -88,9 +89,33 @@ _ROUTING_TABLE: Dict[str, List[str]] = {
         "gemini_verifier_agent",
         "knowledge_compiler",
     ],
-    ".png:auto": ["doc_parser"],
-    ".jpg:auto": ["doc_parser"],
-    ".jpeg:auto": ["doc_parser"],
+    "video_ingester": [
+        "video_ingester",
+        "note_generator",
+        "student_researcher",
+        "academic_library_agent",
+        "gemini_verifier_agent",
+        "knowledge_compiler",
+    ],
+    "knowledge_compiler": ["knowledge_compiler"],
+}
+
+# Extensions that only trigger the first skill (no downstream chain).
+# These are reference/extraction-only formats, not full study pipelines.
+_EXTRACT_ONLY_EXTS: frozenset = frozenset(
+    {
+        ".png",
+        ".jpg",
+        ".jpeg",  # image-only, no note generation
+        ".pptx",
+        ".docx",
+        ".xlsx",  # Office formats: extraction + reference only
+    }
+)
+
+# Intent-specific route overrides that are routing logic (not file-type config).
+# These intentionally remain in code rather than config.
+_INTENT_ROUTES: Dict[str, List[str]] = {
     ".pdf:study": ["doc_parser", "academic_edu_assistant"],
     ".md:compile": ["knowledge_compiler"],
     ".md:research": [
@@ -128,6 +153,16 @@ class RouterAgent:
     Resolves a TaskManifest into an ordered sequence of SkillCalls and
     executes them in order. Can use LLM to decompose natural language intents
     into a DAG/Pipeline of skills.
+
+    Routing Table Design
+    --------------------
+    The ``auto`` intent routing is built dynamically at init from
+    ``core/config/inbox_config.json``, so adding a new file extension
+    only requires editing that JSON file.
+
+    Intent-specific routes (e.g. ``.pdf:study``) are defined in
+    ``_INTENT_ROUTES`` and remain in code because they represent
+    deliberate orchestration logic, not mere file-type configuration.
     """
 
     def __init__(self, registry=None, llm_client=None):
@@ -135,8 +170,44 @@ class RouterAgent:
         self._registry = registry
         self._llm = llm_client
 
+        # Build config-driven routing table (single source of truth)
+        self._routing_table: Dict[str, List[str]] = self._build_routing_table()
+
         # Subscribe to EventBus to continue chains
         EventBus.subscribe("PipelineCompleted", self._on_pipeline_completed)
+
+    def _build_routing_table(self) -> Dict[str, List[str]]:
+        """Build the 'ext:auto' routing table from inbox_config.json.
+
+        Reads ``core/config/inbox_config.json`` routing_rules to map each
+        file extension to the appropriate first skill, then applies the
+        default pipeline chain for that skill.  Intent-specific routes
+        from ``_INTENT_ROUTES`` are merged in last.
+        """
+        table: Dict[str, List[str]] = {}
+
+        config_path = os.path.join(_WORKSPACE_ROOT, "core", "config", "inbox_config.json")
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, encoding="utf-8") as f:
+                    cfg = json.load(f)
+                rules = cfg.get("routing_rules", {})
+                for group, first_skill in _GROUP_FIRST_SKILL.items():
+                    full_chain = _DEFAULT_CHAINS.get(first_skill, [first_skill])
+                    for ext in rules.get(group, []):
+                        # Extract-only formats: stop chain at first skill
+                        chain = [first_skill] if ext in _EXTRACT_ONLY_EXTS else full_chain
+                        table[f"{ext}:auto"] = chain
+            except Exception as exc:
+                print(f"⚠️  [RouterAgent] 讀取 inbox_config.json 失敗，路由表可能不完整: {exc}")
+        else:
+            print(
+                f"⚠️  [RouterAgent] 未找到 inbox_config.json，路由表為空。 (expected: {config_path})"
+            )
+
+        # Merge intent-specific overrides (logic, not file-type config)
+        table.update(_INTENT_ROUTES)
+        return table
 
     def _llm_decompose(self, intent: str, ext: str) -> List[str]:
         """Use LLM to decompose a natural language request into a skill pipeline."""
@@ -203,10 +274,10 @@ class RouterAgent:
             if llm_chain:
                 return llm_chain
 
-        # 2. Rule-based fallback
+        # 2. Rule-based lookup from config-driven routing table
         key = f"{ext}:{manifest.intent}"
         fallback_key = f"{ext}:auto"
-        chain = _ROUTING_TABLE.get(key) or _ROUTING_TABLE.get(fallback_key) or []
+        chain = self._routing_table.get(key) or self._routing_table.get(fallback_key) or []
         return chain
 
     def _on_pipeline_completed(self, event: DomainEvent) -> None:

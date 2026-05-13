@@ -16,6 +16,7 @@ _bootstrap(__file__)
 
 from phases.p00a_diagnostic import Phase0aDiagnostic
 from phases.p00b_png_pipeline import Phase0bPNGPipeline
+from phases.p00c_markitdown import Phase0cMarkItDown
 from phases.p01a_engine import Phase1aPDFEngine
 from phases.p01b_text_sanitizer import Phase1bTextSanitizer
 from phases.p01b_vector_charts import Phase1bVectorChartExtractor
@@ -85,10 +86,18 @@ class DocParserOrchestrator(PipelineBase):
                 for fname, record in files.items():
                     ext = os.path.splitext(fname)[1].lower()
                     if ext == ".pdf":
-                        if record.get("p0b") != "⏭️":
-                            record["p0b"] = "⏭️"
+                        # PDF skips p0c and p0b
+                        for p in ["p0c", "p0b"]:
+                            if record.get(p) != "⏭️":
+                                record[p] = "⏭️"
                     elif ext in [".png", ".jpg", ".jpeg"]:
-                        for p in ["p0a", "p1a", "p1b_s", "p1b", "p1c", "p1d"]:
+                        # Image-only: skip p0c and all text-extraction phases
+                        for p in ["p0c", "p0a", "p1a", "p1b_s", "p1b", "p1c", "p1d"]:
+                            if record.get(p) != "⏭️":
+                                record[p] = "⏭️"
+                    elif ext in [".pptx", ".docx", ".xlsx"]:
+                        # Office formats: only p0c runs; all PDF-specific phases are skipped
+                        for p in ["p0b", "p0a", "p1a", "p1b_s", "p1b", "p1c", "p1d"]:
                             if record.get(p) != "⏭️":
                                 record[p] = "⏭️"
             self._state_manager._save_state()
@@ -112,13 +121,14 @@ class DocParserOrchestrator(PipelineBase):
 
         # Register all horizontal phases
         phases = [
-            Phase0bPNGPipeline,  # phase0b_png
-            Phase0aDiagnostic,  # phase0a
-            Phase1aPDFEngine,  # phase1a
-            Phase1bTextSanitizer,  # phase1b_sanitizer
-            Phase1bVectorChartExtractor,  # phase1b
-            Phase1cOCRQualityGate,  # phase1c
-            Phase1dVLMVision,  # phase1d
+            Phase0cMarkItDown,  # p0c: Office format conversion (PPTX/DOCX/XLSX)
+            Phase0bPNGPipeline,  # p0b: PNG pipeline
+            Phase0aDiagnostic,  # p0a: PDF diagnostic
+            Phase1aPDFEngine,  # p1a: Docling deep extraction
+            Phase1bTextSanitizer,  # p1b_s: text sanitizer
+            Phase1bVectorChartExtractor,  # p1b: vector chart extractor
+            Phase1cOCRQualityGate,  # p1c: OCR quality gate
+            Phase1dVLMVision,  # p1d: VLM vision
         ]
 
         PipelineBase.run_skill_pipeline(

@@ -66,7 +66,7 @@ class StateManager:
     # Default phases for audio_transcriber
     PHASES_VOICE = ["p1", "p2", "p3"]
     # Phase set for doc_parser
-    PHASES_PDF = ["p0b", "p0a", "p1a", "p1b_s", "p1b", "p1c", "p1d"]
+    PHASES_PDF = ["p0c", "p0b", "p0a", "p1a", "p1b_s", "p1b", "p1c", "p1d"]
     # Phase set for knowledge_compiler
     PHASES_COMPILER = ["p1"]
     # Phase set for interactive_reader
@@ -85,6 +85,7 @@ class StateManager:
     # Phase labels for checklist rendering
     PHASE_LABELS_VOICE = {"p1": "P1 (轉錄)", "p2": "P2 (校對)", "p3": "P3 (合併)"}
     PHASE_LABELS_PDF = {
+        "p0c": "P0c (MarkItDown 轉換)",
         "p0b": "P0b (圖片提取)",
         "p0a": "P0a (診斷)",
         "p1a": "P1a (提取)",
@@ -114,7 +115,7 @@ class StateManager:
         if skill_name == "doc_parser":
             self.PHASES = self.PHASES_PDF
             self._phase_labels = self.PHASE_LABELS_PDF
-            self.file_ext = ("*.pdf", "*.png", "*.jpg", "*.jpeg")
+            self.file_ext = ("*.pdf", "*.png", "*.jpg", "*.jpeg", "*.pptx", "*.docx", "*.xlsx")
         elif skill_name == "knowledge_compiler":
             self.PHASES = self.PHASES_COMPILER
             self._phase_labels = self.PHASE_LABELS_COMPILER
@@ -280,6 +281,8 @@ class StateManager:
 
                 for pf in physical_files:
                     fname = os.path.basename(pf)
+                    if fname == "correction_log.md":
+                        continue
                     fhash = self.get_file_hash(pf)
                     mtime = datetime.fromtimestamp(os.path.getmtime(pf)).strftime("%Y-%m-%d")
 

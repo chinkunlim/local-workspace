@@ -66,6 +66,7 @@ dependencies = [
     "llvmlite==0.47.0",
     "lxml==6.1.0",
     "markdown-it-py==4.0.0",
+    "markitdown[docx,pptx,xlsx]>=0.1.5",
     "marko==2.2.2",
     "markupsafe==3.0.3",
     "mdurl==0.1.2",
