@@ -27,6 +27,27 @@
 
 ---
 
+## [2026-05-13] ADR-013: Config-Driven RouterAgent Routing Table
+
+**Status:** Active
+
+**Context:** `RouterAgent` originally had a hardcoded `_ROUTING_TABLE` dict mapping `"ext:intent"` keys to skill chains (e.g. `".m4a:auto"` → `["audio_transcriber", ...]`). Adding a new file type (e.g. `.pptx`) required editing Python source code in two places: the routing dict AND `inbox_config.json`.
+
+**Decision:** Replace the hardcoded `_ROUTING_TABLE` with a `_build_routing_table()` method that reads `core/config/inbox_config.json` at runtime and constructs the `ext:auto` table dynamically using:
+- `_GROUP_FIRST_SKILL`: maps routing group name → first skill in chain
+- `_DEFAULT_CHAINS`: maps first skill → full downstream pipeline
+- `_EXTRACT_ONLY_EXTS`: frozenset of extensions that only trigger the first skill (no synthesis chain)
+- `_INTENT_ROUTES`: intent-specific overrides that remain in code (deliberate orchestration logic, not file-type config)
+
+**Why NOT keep it all in config:** Intent-specific routes (e.g. `.pdf:study`) represent deliberate orchestration decisions, not mere file-type dispatch. These belong in code where they are versioned alongside the logic they control.
+
+**Consequences:**
+- Adding a new file format now only requires editing `inbox_config.json` (zero Python changes).
+- `inbox_daemon.py`'s duplicate `_load_config()` method removed — routing is entirely owned by `RouterAgent`.
+- `.pptx`, `.docx`, `.xlsx` added to `pdf_knowledge` group in `inbox_config.json`.
+
+---
+
 ## [2026-05-07] ADR-011: Dual-Brain Parallelism (Extraction vs Synthesis)
 
 **Status:** Active

@@ -1,7 +1,7 @@
 # HANDOFF.md — Session Handoff Record
 
 > **Last Updated:** 2026-05-13
-> **System Status:** 🟢 Stable / Production-Ready (V9.9 — Doc-Parser & Proofreader Pipeline Standardization)
+> **System Status:** 🟢 Stable / Production-Ready (V9.10 — MarkItDown Integration, RouterAgent Config-Driven Routing & Proofreader DAG Fixes)
 
 ---
 
@@ -23,21 +23,23 @@
 ## Final Sign-off Summary
 
 **Date:** 2026-05-13
-**Milestone:** V9.9 Doc-Parser & Proofreader Pipeline Standardization
+**Milestone:** V9.10 — MarkItDown Integration, RouterAgent Refactor & Proofreader DAG Fixes
 
-
-- [x] **`phase_key` Alignment (doc_parser P1c & P1d)**: Fixed `phase_key` mismatches — previously causing completed tasks to be re-queued endlessly.
-- [x] **NameError Fix (doc_parser P1d)**: Declared missing `pdf_path` variable in `_process_file` to prevent crash during EventBus handoff.
-- [x] **GlobalRegistry Deadlock Fix**: Changed `threading.Lock()` → `threading.RLock()` — eliminated silent hang in `get_asset_paths()` recursive lock acquisition.
-- [x] **Manual State Injection (proofreader)**: Replaced `sync_physical_files()` in `p02` and `p03` with manual directory iteration that preserves `⏭️` masks.
-- [x] **Continuous Masking**: Added `else:` branches in all proofreader phases and `run_all.py` to enforce masks on existing state entries.
-- [x] **RouterAgent Proofreader Wakeup Fix**: Corrected wakeup cmd path from individual phase script → `scripts/run_all.py`.
-- [x] **Proofreader Dashboard in start.sh**: Port `8081`, auto-opens browser; integrated into `stop.sh` cleanup.
-- [x] **inbox_daemon path fix**: Corrected `core/inbox_daemon.py` → `core/services/inbox_daemon.py` in both `start.sh` and `stop.sh`.
-- [x] **CODING_GUIDELINES §5.4**: Documented `sync_physical_files()` vs Manual State Injection invariant.
-- [x] **Full Pipeline Architecture Review**: Confirmed audio_transcriber → doc_parser → proofreader handoff via EventBus + GlobalRegistry + session_manifest is intact end-to-end.
+- [x] **`correction_log.md` DAG Pollution Fix**: Added filter `if fname == "correction_log.md": continue` in Manual State Injection loops inside `p02_transcript_proofread.py`, `p03_doc_completeness.py`, `proofreader/run_all.py`, and `core/state/state_manager.py`. Prevents log files from being treated as processable pipeline entries, which caused inflating DAG counts and P2 resetting across runs.
+- [x] **Phase 0c MarkItDown — PPTX/DOCX/XLSX Support**: New `Phase0cMarkItDown` (`p00c_markitdown.py`) added to `doc_parser`. Uses `markitdown[pptx,docx,xlsx]` to convert Office files to Markdown with identical output interface as `Phase1aPDFEngine`. PPTX speaker notes preserved as `### Notes:` blocks.
+- [x] **doc_parser DAG masking for 3 file-type branches**: Updated `doc_parser/run_all.py` to mask phases by file type — PDF (skip p0c+p0b), Image (skip all text phases), Office (skip all PDF-specific phases).
+- [x] **`state_manager.py` extended**: `PHASES_PDF` now includes `p0c`; `file_ext` now includes `.pptx`, `.docx`, `.xlsx`; `correction_log.md` filtered in `sync_physical_files`.
+- [x] **RouterAgent config-driven routing**: Replaced hardcoded `_ROUTING_TABLE` dict with `_build_routing_table()` that dynamically reads `inbox_config.json`. Adding a new file type now only requires editing JSON, not Python code.
+- [x] **`inbox_daemon.py` cleanup**: Removed duplicate `_load_config()` method — routing now owned entirely by `RouterAgent._build_routing_table()`.
+- [x] **`inbox_config.json` extended**: Added `.pptx`, `.docx`, `.xlsx` to `pdf_knowledge` routing group.
+- [x] **CODING_GUIDELINES §5.4 extended**: Added "Log File Filter Invariant" rule — all state population loops must skip `correction_log.md`.
+- [x] **ADR-013**: Documented config-driven routing design in `memory/DECISIONS.md`.
+- [x] **`skills/doc_parser/docs/DECISIONS.md`**: Added MarkItDown integration ADR with full rationale (Why NOT MarkItDown for audio, PPTX vs Docling trade-offs).
+- [x] **Prompt Engineering**: Improved End-of-Session and Startup prompts — added dynamic MD discovery, explicit `correction_log.md` filter rationale per invariant, corrected Step 4/5 order explanation.
 
 ---
+
+## Previous Session (V9.9 — 2026-05-13)
 
 ## Previous Session (V9.8 — 2026-05-12)
 
@@ -132,12 +134,13 @@ curl http://localhost:18789/health          # Open Claw API
 
 ## Next Session Starting Point
 
-1. **Run live E2E test**: Place a `.m4a` + matching `.pdf` into `data/raw/助人技巧/` and confirm the full chain: `audio_transcriber` → `doc_parser` → `proofreader` (P1 for docs, P2+P3 for audio) completes automatically.
-2. **Proofreader P2/P3 validation**: Verify Phase 2 (Transcript Proofread) runs without the GlobalRegistry deadlock and correctly pulls doc reference text for cross-checking.
-3. **Review Proofreader Dashboard**: Open `http://localhost:8081` and confirm AI-corrected files are visible for Human-in-the-Loop review.
-4. **Run full batch synthesis**: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`.
-5. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
-6. Populate `tests/` stub structure per CODING_GUIDELINES §11.2.
+1. **Test PPTX/DOCX/XLSX pipeline**: Drop a `.pptx` file into `data/raw/助人技巧/` and confirm it routes through Phase0cMarkItDown → downstream proofreader correctly.
+2. **Run live E2E test**: Place `.m4a` + `.pdf` + `.pptx` into `data/raw/助人技巧/` — confirm full `audio_transcriber` → `doc_parser` → `proofreader` chain completes with DAG showing stable counts (no correction_log.md pollution).
+3. **Proofreader P2/P3 validation**: Verify Phase 2 runs correctly with the DAG pollution fix; confirm DAG counts remain stable across multiple runs.
+4. **Fix `openclaw.json` stale workspace path**: Update `agents.defaults.workspace` from `open-claw-sandbox` → `openclaw-sandbox` via `openclaw configure`.
+5. **Run full batch synthesis**: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`
+6. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
+7. Populate `tests/` stub structure per CODING_GUIDELINES §11.2.
 
 > **Startup Protocol**: Copy the prompt from `memory/STARTUP.md` at the start of every new conversation.
 
@@ -155,6 +158,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-13 | V9.10 MarkItDown Integration, RouterAgent & DAG Fixes | Phase0cMarkItDown (PPTX/DOCX/XLSX); config-driven routing; correction_log pollution fix; ADR-013 |
 | 2026-05-13 | Git Recovery & OpenClaw Architecture Investigation | Restored 8 `.docx` files from git; diagnosed `openclaw skills` two-system architecture; documented ADR-012 |
 | 2026-05-13 | V9.9 Doc-Parser & Proofreader Pipeline Standardization | `phase_key` fixed; GlobalRegistry deadlock fixed; Manual State Injection for proofreader; Proofreader Dashboard in start.sh; inbox_daemon path corrected |
 | 2026-05-12 | V9.8 uv-Native Toolchain Migration & Quality Gate | Removed `requirements.txt`; migrated to `uv add`; fixed `check.sh` to use `uv run`; fixed 3 syntax/type bugs; 0 errors in 143 files |

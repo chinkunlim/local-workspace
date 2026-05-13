@@ -155,7 +155,10 @@ skills/
         ├── run_all.py              ← QueueManager orchestrator: batch PDF queue processor
         └── phases/
             ├── p00a_diagnostic.py  ← Phase 0a: Lightweight PDF diagnostic (scan vs digital)
+            ├── p00b_png_pipeline.py ← Phase 0b: Direct PNG/JPG image extraction
+            ├── p00c_markitdown.py  ← Phase 0c: MarkItDown Office conversion (.pptx/.docx/.xlsx → Markdown)
             ├── p01a_engine.py      ← Phase 1a: Docling deep extraction → raw_extracted.md (IMMUTABLE)
+            ├── p01b_text_sanitizer.py ← Phase 1b-S: Text sanitization pass
             ├── p01b_vector_charts.py ← Phase 1b: Vector chart rasterisation (pdftoppm)
             ├── p01c_ocr_gate.py    ← Phase 1c: OCR quality assessment (scan PDFs only)
             └── p01d_vlm_vision.py  ← Phase 1d: VLM visual figure description → figure_list.md
@@ -169,9 +172,9 @@ skills/
 │       ├── run_all.py              ← Orchestrator
 │       ├── dashboard.py            ← Asynchronous Verification Dashboard (Flask UI)
 │       └── phases/
-│           ├── p00_doc_proofread.py        ← Phase 0: Docling extract proofreading & image embed
-│           ├── p01_transcript_proofread.py ← Phase 1: Wait logic, LLM correction, async HITL queue
-│           └── p02_doc_completeness.py     ← Phase 2: PDF extract, image embedding, async HITL queue
+│           ├── p01_doc_proofread.py        ← Phase 1: Doc proofreading (LLM correction, HITL queue)
+│           ├── p02_transcript_proofread.py ← Phase 2: Transcript proofreading (audio-sourced .md files)
+│           └── p03_doc_completeness.py     ← Phase 3: Cross-check completeness (doc vs transcript)
 
 ├── smart_highlighter/              ← Standalone skill: Highlight raw markdown (Anti-Tampering)
 │   ├── SKILL.md                    ← Quick-start

@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-13 (V9.9 — Doc-Parser & Proofreader Pipeline Standardization)
+> **Last Updated:** 2026-05-13 (V9.10 — MarkItDown Integration, RouterAgent Config-Driven Routing & Proofreader DAG Fixes)
 
 ---
 
@@ -12,9 +12,9 @@
 
 ## 🟡 Medium Priority (優化 / 非緊急功能)
 
-- [ ] **Run live E2E test** (V9.9): Place `.m4a` + `.pdf` into `data/raw/助人技巧/` — confirm full `audio_transcriber` → `doc_parser` → `proofreader` chain completes.
-- [ ] **Proofreader P2/P3 validation**: Verify GlobalRegistry deadlock is resolved; check doc reference text is pulled correctly during Transcript Proofread.
-- [ ] Review Proofreader Dashboard at `http://localhost:8081` after `start.sh`.
+- [ ] **Test PPTX/DOCX/XLSX pipeline** (V9.10): Drop `.pptx` into `data/raw/助人技巧/` — confirm Phase0cMarkItDown routes and all downstream phases complete.
+- [ ] **Run live E2E test** (V9.10): Place `.m4a` + `.pdf` + `.pptx` — confirm DAG counts are stable (no correction_log pollution) across multiple runs.
+- [ ] **Fix `openclaw.json` stale workspace path**: `agents.defaults.workspace` → `openclaw-sandbox` via `openclaw configure`.
 - [ ] Run full batch synthesis: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`
 - [ ] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
 - [ ] Rebuild ChromaDB index and validate a Telegram RAG query with `gemma4:e4b`
@@ -33,7 +33,18 @@
 
 ## ✅ Completed
 
-- [x] 2026-05-13: V9.9 Doc-Parser & Proofreader Pipeline Standardization
+- [x] 2026-05-13: V9.10 MarkItDown Integration, RouterAgent Config-Driven Routing & Proofreader DAG Fixes
+  - Fixed `correction_log.md` DAG pollution: added filter in Manual State Injection loops in `p02`, `p03`, `proofreader/run_all.py`, and `state_manager.py`.
+  - Added `Phase0cMarkItDown` (`p00c_markitdown.py`) — PPTX/DOCX/XLSX → Markdown conversion via `markitdown`.
+  - Updated `doc_parser/run_all.py` with 3-branch DAG masking (PDF / Image / Office).
+  - Extended `state_manager.py`: `PHASES_PDF` += `p0c`; `file_ext` += Office extensions.
+  - Refactored `RouterAgent` with `_build_routing_table()` — reads `inbox_config.json` dynamically.
+  - Removed duplicate `_load_config()` from `inbox_daemon.py` (routing fully in RouterAgent).
+  - Added `.pptx`, `.docx`, `.xlsx` to `inbox_config.json` `pdf_knowledge` group.
+  - Added "Log File Filter Invariant" to `CODING_GUIDELINES §5.4`.
+  - Documented ADR-013 (config-driven routing) in `memory/DECISIONS.md`.
+  - Documented MarkItDown ADR in `skills/doc_parser/docs/DECISIONS.md`.
+
   - Fixed `phase_key` mismatch in `p01c_ocr_gate.py` (`phase1c` → `p1c`) and `p01d_vlm_vision.py` (`phase1d` → `p1d`).
   - Fixed `NameError` in `p01d_vlm_vision.py` — missing `pdf_path` declaration before EventBus callback.
   - Fixed `GlobalRegistry` deadlock: `threading.Lock()` → `threading.RLock()`.

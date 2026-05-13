@@ -5,6 +5,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.10] — 2026-05-13: MarkItDown Integration, RouterAgent Config-Driven Routing & Proofreader DAG Fixes
+
+### Added
+- **`doc_parser/p00c_markitdown.py` — Phase 0c**: New `Phase0cMarkItDown` using `markitdown[pptx,docx,xlsx]` (MIT). Converts `.pptx`, `.docx`, `.xlsx` to `{file_id}_raw_extracted.md`. PPTX speaker notes preserved as `### Notes:` blocks. Output interface identical to `Phase1aPDFEngine` — zero downstream changes needed.
+- **`RouterAgent._build_routing_table()`**: Reads `core/config/inbox_config.json` at init to build the `ext:auto` routing table dynamically. Intent-specific overrides (`_INTENT_ROUTES`) remain in code. See ADR-013.
+- **`inbox_config.json` extended**: `.pptx`, `.docx`, `.xlsx` added to `pdf_knowledge` routing group.
+- **`state_manager.py` — Phase `p0c`**: `PHASES_PDF` now includes `p0c`; `file_ext` extended with Office extensions.
+
+### Fixed
+- **Proofreader DAG pollution (`correction_log.md`)**: Proofreader phases (`p02`, `p03`) and `run_all.py` Manual State Injection loops now filter `correction_log.md` explicitly. `state_manager.py` `sync_physical_files` also skips it. Fixes inflating P1/P2 DAG counts and P2 state resetting across multiple pipeline runs.
+- **`doc_parser/run_all.py` — 3-branch DAG masking**: Masking logic now handles PDF (skip `p0c`, `p0b`), Image (skip `p0c` + all text phases), and Office (skip all PDF-specific phases) as separate branches.
+
+### Changed
+- **`inbox_daemon.py`**: Removed duplicate `_load_config()` method — routing is now entirely owned by `RouterAgent._build_routing_table()`. Single Responsibility achieved.
+
+### Docs
+- **`CODING_GUIDELINES §5.4`**: Added "Log File Filter Invariant" — all state population loops must explicitly skip `correction_log.md`.
+- **`memory/DECISIONS.md`**: Added ADR-013 (Config-Driven RouterAgent Routing).
+- **`skills/doc_parser/docs/DECISIONS.md`**: Added MarkItDown integration ADR with full rationale.
+
+### Quality Gate
+- Ruff lint: ✅ (0 errors)
+- Mypy: ✅ (0 errors)
+
+---
+
 ## [V9.9] — 2026-05-13: Doc-Parser & Proofreader Pipeline Standardization
 
 ### Fixed

@@ -254,6 +254,7 @@ The three-layer anti-hallucination defence must not be weakened:
 - **`sync_physical_files()`**: Use ONLY for single-source pipelines (e.g. `audio_transcriber`) where every file belongs to all phases. It blindly recalculates hashes and overwrites existing state flags to `⏳` if changes are detected.
 - **Manual State Injection**: Use for multi-source converging pipelines (e.g. `proofreader`). Iterate directories manually and conditionally inject default state ONLY IF the file is not already in the state dictionary. This prevents wiping out orchestrator masks (e.g. `⏭️`).
 - **Enforce Masking**: When populating state in multi-source pipelines, enforce the mask rules continuously (e.g. `if state.get("p1") != "⏭️": state["p1"] = "⏭️"`). Do not rely on initial assignment.
+- **Log File Filter Invariant**: All state population loops (Manual State Injection and `sync_physical_files` helpers) **MUST** skip pipeline-generated log files. At minimum, filter `correction_log.md`: `if fname == "correction_log.md": continue`. Log files are side effects of phase execution and must never appear as processable state entries.
 
 ### 5.5 PDF Security
 
