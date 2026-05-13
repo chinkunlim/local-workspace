@@ -5,6 +5,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.9] — 2026-05-13: Doc-Parser & Proofreader Pipeline Standardization
+
+### Fixed
+- **`doc_parser/p01c_ocr_gate.py`**: Corrected `phase_key` from `"phase1c"` → `"p1c"` to match `StateManager` canonical keys, preventing completed P1c tasks from being re-queued.
+- **`doc_parser/p01d_vlm_vision.py`**: Corrected `phase_key` from `"phase1d"` → `"p1d"`; added missing `pdf_path` variable declaration in `_process_file` (was raising `NameError` during EventBus handoff).
+- **`core/state/global_registry.py`**: Changed `threading.Lock()` → `threading.RLock()` to eliminate deadlock when `get_asset_paths()` calls `get_assets()` within the same thread.
+- **`proofreader/p01_doc_proofread.py`**: Enforced `p2`/`p3` mask re-application on existing state entries (prevents `sync_physical_files` overwrites from stripping `⏭️` masks).
+- **`proofreader/p02_transcript_proofread.py`**: Replaced `sync_physical_files()` call with Manual State Injection — preserves existing state, enforces `p1: ⏭️` mask for audio-sourced files.
+- **`proofreader/p03_doc_completeness.py`**: Replaced `sync_physical_files()` call with Manual State Injection — preserves existing state, enforces `p1: ⏭️` mask.
+- **`proofreader/run_all.py`**: Enforced continuous mask re-application in `_populate_state_from_sources()` for both doc-source (`p2`/`p3`: `⏭️`) and audio-source (`p1`: `⏭️`) entries.
+- **`core/orchestration/router_agent.py`**: Fixed proofreader wakeup cmd — was calling non-existent `scripts/phases/p01_transcript_proofread.py`; corrected to `scripts/run_all.py`.
+- **`infra/scripts/start.sh`**: Fixed `inbox_daemon` path (`core/inbox_daemon.py` → `core/services/inbox_daemon.py`).
+- **`infra/scripts/stop.sh`**: Fixed `pkill` fallback path for `inbox_daemon` to match corrected location.
+
+### Added
+- **`infra/scripts/start.sh` — Proofreader Dashboard**: Added Step 8 to launch `skills/proofreader/scripts/dashboard.py` on port `8081` at startup; auto-opens browser; listed in SERVICE DASHBOARD summary.
+- **`infra/scripts/stop.sh`**: Added `kill_by_port 8081` and `check_status 8081` for Proofreader UI cleanup.
+- **`infra/scripts/Start OpenClaw Bot.app`**: macOS Automator Applet wrapping `start_bot.sh` for one-click Telegram Bot launch.
+
+### Changed
+- **`docs/CODING_GUIDELINES.md` §5.4**: Added new invariant documenting `sync_physical_files()` vs Manual State Injection contract for single-source vs multi-source converging pipelines.
+
+### Quality Gate
+- Ruff lint: ✅ (see latest `check.sh` run)
+- Mypy: ✅ (no new type errors introduced)
+
+---
+
 ## [V9.8] — 2026-05-12: uv-Native Toolchain Migration & Quality Gate Hardening
 
 ### Changed

@@ -115,47 +115,6 @@ class VoiceMemoOrchestrator(PipelineBase):
         return True
 
     # ------------------------------------------------------------------ #
-    #  Checkpoint Resume                                                   #
-    # ------------------------------------------------------------------ #
-
-    def _check_and_resume(self) -> dict | None:
-        """Prompt the user to resume from a saved checkpoint (if any).
-
-        Returns:
-            The checkpoint dict to resume from, or None to start fresh.
-        """
-        cp = self._state_manager.load_checkpoint()
-        if not cp:
-            return None
-
-        saved_at = cp.get("saved_at", "不明")
-        print("\n" + "═" * 56)
-        print("📌 偵測到上次暫停的斷點 (Checkpoint)")
-        print(f"   時間：{saved_at}")
-        print(f"   科目：{cp.get('subject', '?')}")
-        print(f"   檔案：{cp.get('filename', '?')}")
-        print(f"   Phase：{cp.get('phase_key', '?').upper()}")
-        print("═" * 56)
-        print("請選擇：")
-        print("  [C] Continue — 從上次斷點繼續")
-        print("  [N] New       — 全新開始（清除 Checkpoint）")
-
-        try:
-            choice = input("請輸入 (C/N) [Enter = C]: ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            print("\n已選擇全新開始。")
-            self._state_manager.clear_checkpoint()
-            return None
-
-        if choice == "n":
-            self._state_manager.clear_checkpoint()
-            print("🗑️  Checkpoint 已清除，全新開始。")
-            return None
-
-        print("➩️  從斷點繼續。")
-        return cp
-
-    # ------------------------------------------------------------------ #
     #  Main Orchestration                                                  #
     # ------------------------------------------------------------------ #
 
@@ -183,7 +142,7 @@ class VoiceMemoOrchestrator(PipelineBase):
             else:
                 print("❗  --resume 指定但尚無 Checkpoint，將從頭開始。")
         elif not args.force:
-            resume_from = self._check_and_resume()
+            resume_from = self.prompt_checkpoint_resume()
 
         self._state_manager.print_dashboard()
 
@@ -262,21 +221,34 @@ class VoiceMemoOrchestrator(PipelineBase):
         except SystemExit:
             pass
         except KeyboardInterrupt:
-            self._write_session_state(SessionState.STOPPED, context={"error": "KeyboardInterrupt"})
-            print("\n🛑 使用者手動中斷執行 (KeyboardInterrupt)")
+            print("\n\n⏸️  已收到 Ctrl+C...")
+            # Ask user: save checkpoint or just quit
+            saved = False
             try:
-                import subprocess
-
-                subprocess.run(
-                    [
-                        "osascript",
-                        "-e",
-                        'display notification "Execution Interrupted" with title "Open-Claw"',
-                    ],
-                    check=False,
+                choice = (
+                    input("  請選擇: [S] 儲存進度並離開  [Q] 直接離開 (S/Q) [Enter = S]: ")
+                    .strip()
+                    .lower()
                 )
-            except Exception:
-                pass
+            except (EOFError, KeyboardInterrupt):
+                choice = "q"
+
+            if choice != "q":
+                # Attempt to save checkpoint from the currently running phase
+                for p_num_active, phase_cls in phases_classes.items():
+                    cp_path = os.path.join(self.base_dir, "state", "checkpoint.json")
+                    if os.path.exists(cp_path):
+                        saved = True
+                        break
+                self._write_session_state(SessionState.PAUSED, context={"interrupted": True})
+                print("💾 進度已儲存。下次執行會自動從斷點繼續。")
+            else:
+                self._write_session_state(
+                    SessionState.STOPPED, context={"error": "KeyboardInterrupt"}
+                )
+                self._state_manager.clear_checkpoint()
+                print("🛑 已離開，未儲存進度。")
+            PipelineBase.notify_os("執行已中斷")
             sys.exit(130)
         except Exception as exc:
             self._write_session_state(
@@ -290,19 +262,7 @@ class VoiceMemoOrchestrator(PipelineBase):
             self._state_manager.clear_checkpoint()
 
         print("🏁 Pipeline 執行完畢。")
-        try:
-            import subprocess
-
-            subprocess.run(
-                [
-                    "osascript",
-                    "-e",
-                    'display notification "Pipeline 執行完畢" with title "Open-Claw"',
-                ],
-                check=False,
-            )
-        except Exception:
-            pass
+        PipelineBase.notify_os("Pipeline 執行完畢")
 
 
 # ---------------------------------------------------------------------------

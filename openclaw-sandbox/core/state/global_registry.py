@@ -13,7 +13,7 @@ class GlobalRegistry:
     """
 
     _instance = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __new__(cls, workspace_root: str = None):
         with cls._lock:
@@ -52,20 +52,30 @@ class GlobalRegistry:
             AtomicWriter.write_json(self.registry_path, self._memory_cache)
 
     def register_asset(self, subject: str, file_prefix: str, skill_name: str, filepath: str):
-        """
-        Registers an asset for a given subject and file prefix.
-        file_prefix should be the base name without extensions or suffix markers.
+        """Register an asset path for a given subject, prefix, and skill.
+
+        Supports multiple registrations for the same key: subsequent calls
+        append to a list rather than overwriting, so doc_parser can register
+        L02_1, L02_2, L02_3 all under prefix "L02".
         """
         with self._lock:
             data = self._load()
 
             if subject not in data:
                 data[subject] = {}
-
             if file_prefix not in data[subject]:
                 data[subject][file_prefix] = {}
 
-            data[subject][file_prefix][skill_name] = filepath
+            existing = data[subject][file_prefix].get(skill_name)
+            if existing is None:
+                data[subject][file_prefix][skill_name] = filepath
+            elif isinstance(existing, list):
+                if filepath not in existing:
+                    existing.append(filepath)
+            else:
+                # Upgrade scalar → list on second registration
+                if existing != filepath:
+                    data[subject][file_prefix][skill_name] = [existing, filepath]
             self._save()
 
     def get_assets(self, subject: str, file_prefix: str) -> Dict[str, str]:
@@ -73,6 +83,16 @@ class GlobalRegistry:
         with self._lock:
             data = self._load()
             return data.get(subject, {}).get(file_prefix, {})
+
+    def get_asset_paths(self, subject: str, file_prefix: str, skill_name: str) -> list[str]:
+        """Return registered paths for a skill as a flat list (handles str and list values)."""
+        with self._lock:
+            raw = self.get_assets(subject, file_prefix).get(skill_name)
+        if raw is None:
+            return []
+        if isinstance(raw, list):
+            return raw
+        return [raw]
 
     def get_all_subjects(self) -> list:
         with self._lock:

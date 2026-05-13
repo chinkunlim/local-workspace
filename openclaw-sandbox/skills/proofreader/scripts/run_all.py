@@ -14,9 +14,9 @@ from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
-from phases.p00_doc_proofread import Phase0DocProofread
-from phases.p01_transcript_proofread import Phase1TranscriptProofread
-from phases.p02_doc_completeness import Phase2DocCompleteness
+from phases.p01_doc_proofread import Phase1DocProofread
+from phases.p02_transcript_proofread import Phase2TranscriptProofread
+from phases.p03_doc_completeness import Phase3DocCompleteness
 
 from core import (
     PipelineBase,
@@ -33,50 +33,125 @@ class ProofreaderOrchestrator(PipelineBase):
             phase_name="Proofreader 管線協調器",
             skill_name="proofreader",
         )
-        # Note: Proofreader reads from audio_transcriber/output as its source
-        # But we initialize its StateManager to manage proofreader's own DAG
         self._state_manager = StateManager(self.base_dir, skill_name="proofreader")
 
-    def run(self, args):
-        self._state_manager.sync_physical_files()
+    def _populate_state_from_sources(self, subject_filter: str = None):
+        """Scan both source directories and inject any found files into StateManager.state.
 
-        # Interactive CLI
-        if not args.force and not args.subject and not args.file and args.interactive:
-            self._state_manager.print_dashboard()
+        Persists to JSON so subsequent Phase instances (each with a fresh StateManager)
+        can read the pre-populated entries from disk.
+        """
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
-            # Use CLI menu to select tasks
-            # Wait, Proofreader doesn't have an input folder in the traditional sense.
-            # Its input comes from audio_transcriber output. But we can still list the state.
-            all_files = []
-            for subj, files in self._state_manager.state.items():
-                if subj == "_simple_":
+        # Source 1: doc_parser output (3-level: {subject}/{pdf_id}/{pdf_id}_raw_extracted.md)
+        doc_parser_dir = os.path.join(
+            workspace_root, "data", "doc_parser", "output", "01_processed"
+        )
+        # Source 2: audio_transcriber merged output (2-level: {subject}/{fname}.md)
+        audio_dir = os.path.join(workspace_root, "data", "audio_transcriber", "output", "03_merged")
+
+        with self._state_manager._lock:
+            for source_dir, three_level in [(doc_parser_dir, True), (audio_dir, False)]:
+                if not os.path.exists(source_dir):
                     continue
-                for fname, status in files.items():
-                    all_files.append({"subject": subj, "filename": fname, "status": status})
 
-            if not all_files:
-                print("\n📭 目前沒有偵測到任何需處理的檔案。")
-                return
+                subjects = (
+                    [subject_filter]
+                    if subject_filter
+                    else [
+                        d
+                        for d in os.listdir(source_dir)
+                        if os.path.isdir(os.path.join(source_dir, d))
+                    ]
+                )
 
-            from core.cli.cli_menu import batch_select_tasks
+                for subj in subjects:
+                    subj_dir = os.path.join(source_dir, subj)
+                    if not os.path.isdir(subj_dir):
+                        continue
 
-            chosen = batch_select_tasks(all_files, header="Proofreader 任務選取")
-            if not chosen:
-                print("\n已退出。")
-                return
+                    if subj not in self._state_manager.state:
+                        self._state_manager.state[subj] = {}
 
-            # If user selected specific files, we can set them in args (if single subject)
-            # Since args only supports single subject/file, this is tricky.
-            # We'll rely on the phase scripts to filter them, but phase scripts filter by args.subject.
-            # To support batch_select across multiple subjects properly, we'd need to modify PipelineBase.
-            # For now, we will just proceed, but note that standard PipelineBase.get_tasks
-            # will run everything if args.subject/args.file is empty.
-            # Actually, we can just run the selected tasks.
+                    if three_level:
+                        # doc_parser: {subj_dir}/{pdf_id}/ directories
+                        for pdf_id in os.listdir(subj_dir):
+                            pdf_dir = os.path.join(subj_dir, pdf_id)
+                            if not os.path.isdir(pdf_dir):
+                                continue
+                            raw_md = os.path.join(pdf_dir, f"{pdf_id}_raw_extracted.md")
+                            sanitized_md = os.path.join(pdf_dir, "sanitized.md")
+                            if not os.path.exists(raw_md) and not os.path.exists(sanitized_md):
+                                continue
+                            fname = f"{pdf_id}.md"
+                            if fname not in self._state_manager.state[subj]:
+                                self._state_manager.state[subj][fname] = {
+                                    **dict.fromkeys(self._state_manager.PHASES, "⏳"),
+                                    "p2": "⏭️",
+                                    "p3": "⏭️",  # Doc files skip P2 and P3
+                                    "hash": "",
+                                    "date": "",
+                                    "note": "",
+                                    "output_hashes": {},
+                                    "char_count": {},
+                                }
+                            else:
+                                if self._state_manager.state[subj][fname].get("p2") != "⏭️":
+                                    self._state_manager.state[subj][fname]["p2"] = "⏭️"
+                                if self._state_manager.state[subj][fname].get("p3") != "⏭️":
+                                    self._state_manager.state[subj][fname]["p3"] = "⏭️"
+                    else:
+                        # audio_transcriber: flat *.md files in subj_dir
+                        for fname in os.listdir(subj_dir):
+                            if not fname.endswith(".md"):
+                                continue
+                            if fname not in self._state_manager.state[subj]:
+                                self._state_manager.state[subj][fname] = {
+                                    **dict.fromkeys(self._state_manager.PHASES, "⏳"),
+                                    "p1": "⏭️",  # Audio files skip P1
+                                    "hash": "",
+                                    "date": "",
+                                    "note": "",
+                                    "output_hashes": {},
+                                    "char_count": {},
+                                }
+                            else:
+                                if self._state_manager.state[subj][fname].get("p1") != "⏭️":
+                                    self._state_manager.state[subj][fname]["p1"] = "⏭️"
 
-        phases = [Phase0DocProofread, Phase1TranscriptProofread, Phase2DocCompleteness]
+            # Persist to JSON so fresh Phase StateManager instances can read it
+            self._state_manager._save_state()
 
-        # Let the standard Template Method handle execution
-        PipelineBase.run_skill_pipeline(phases, args, start_phase=args.start_phase)
+    def run(self, args):
+        subject_filter = getattr(args, "subject", None)
+        self._populate_state_from_sources(subject_filter)
+
+        # Checkpoint resume detection
+        resume_from = None
+        if args.resume:
+            resume_from = self._state_manager.load_checkpoint()
+            if resume_from:
+                print(
+                    f"➩️  [強制斷點續傳] {resume_from.get('subject')} / "
+                    f"{resume_from.get('filename')} @ "
+                    f"{resume_from.get('phase_key', '').upper()}"
+                )
+            else:
+                print("❗  --resume 指定但尚無 Checkpoint，將從頭開始。")
+        elif not args.force:
+            resume_from = self.prompt_checkpoint_resume()
+
+        self._state_manager.print_dashboard()
+
+        phases = [Phase1DocProofread, Phase2TranscriptProofread, Phase3DocCompleteness]
+
+        PipelineBase.run_skill_pipeline(
+            phases=phases,
+            args=args,
+            start_phase=getattr(args, "start_phase", 1),
+            resume_from=resume_from,
+            print_dashboard_between=True,
+        )
 
 
 def main():
@@ -90,10 +165,14 @@ def main():
     )
     args = parser.parse_args()
 
-    # Wait, the PipelineBase template method uses args directly.
-    # We instantiate the Orchestrator to do setup if needed.
-    orch = ProofreaderOrchestrator()
-    orch.run(args)
+    # The outer try/except is a last-resort safety net for interrupts that happen outside
+    # a running phase. Inside phases, PipelineBase._setup_signals() handles it.
+    try:
+        ProofreaderOrchestrator().run(args)
+    except KeyboardInterrupt:
+        print("\n\n⏸️  已收到 Ctrl+C（在管線外部），直接離開。")
+        PipelineBase.notify_os("執行已中斷")
+        sys.exit(130)
 
 
 if __name__ == "__main__":

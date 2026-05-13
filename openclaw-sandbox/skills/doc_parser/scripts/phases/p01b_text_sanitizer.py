@@ -39,28 +39,44 @@ class Phase1bTextSanitizer(PipelineBase):
 
     def __init__(self) -> None:
         super().__init__(
-            phase_key="phase1b_sanitizer",
+            phase_key="p1b_s",
             phase_name="文字淨化",
             skill_name="doc_parser",
         )
 
-    def run(self, subject: str, filename: str) -> bool:
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: str = None,
+    ):
         """
-        Execute sanitization on a processed PDF's raw_extracted.md.
-
-        Args:
-            subject:  Subject category folder name.
-            filename: PDF filename (e.g. paper.pdf).
-
-        Returns:
-            True if successful.
+        Execute sanitization on processed PDFs horizontally.
         """
+        self.process_tasks(
+            self._process_file,
+            force=force,
+            subject_filter=subject,
+            file_filter=file_filter,
+            single_mode=single_mode,
+            resume_from=resume_from,
+        )
+
+    def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
+        subject = task["subject"]
+        filename = task["filename"]
         pdf_id = os.path.splitext(filename)[0]
-        raw_path = os.path.join(self.dirs["processed"], subject, pdf_id, "raw_extracted.md")
+        raw_filename = f"{pdf_id}_raw_extracted.md"
+        raw_path = os.path.join(self.dirs["processed"], subject, pdf_id, raw_filename)
         out_path = os.path.join(self.dirs["processed"], subject, pdf_id, "sanitized.md")
 
         if not os.path.exists(raw_path):
-            self.warning(f"⚠️ [Phase 1b-S] 找不到 raw_extracted.md: {raw_path}")
+            self.warning(f"⚠️ [Phase 1b-S] 找不到 {raw_filename}: {raw_path}")
+            self.state_manager.update_task(
+                subject, filename, self.phase_key, "❌", note_tag="找不到 raw_extracted.md"
+            )
             return False
 
         # Load scan_report to get page count for header/footer threshold
@@ -81,7 +97,7 @@ class Phase1bTextSanitizer(PipelineBase):
         # Write sanitized output
         header = (
             "<!-- sanitized.md — Phase 1b output\n"
-            f"     source: raw_extracted.md\n"
+            f"     source: {raw_filename}\n"
             f"     hf_lines_removed: {hf_removed}\n"
             f"     hyphenations_fixed: {hyph_fixed}\n"
             "-->\n\n"
@@ -92,6 +108,7 @@ class Phase1bTextSanitizer(PipelineBase):
             f"✅ [Phase 1b-S] 淨化完成 — "
             f"移除 {hf_removed} 行頁首/頁尾，修復 {hyph_fixed} 處連字號。"
         )
+        self.state_manager.update_task(subject, filename, self.phase_key, "✅")
         return True
 
     # ------------------------------------------------------------------ #

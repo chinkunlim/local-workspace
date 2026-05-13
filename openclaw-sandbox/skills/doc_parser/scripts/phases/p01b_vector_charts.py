@@ -37,7 +37,7 @@ class Phase1bVectorChartExtractor(PipelineBase):
 
     def __init__(self) -> None:
         super().__init__(
-            phase_key="phase1b",
+            phase_key="p1b",
             phase_name="向量圖表補充",
             skill_name="doc_parser",
         )
@@ -54,18 +54,29 @@ class Phase1bVectorChartExtractor(PipelineBase):
     #  Public Entry Point                                                  #
     # ------------------------------------------------------------------ #
 
-    def run(self, subject: str, filename: str) -> bool:
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: str = None,
+    ):
         """
-        Rasterize vector-chart pages and add them to figure_list.md.
-        Automatically loads scan_report.json to discover vector_chart_pages.
-
-        Args:
-            subject: The subject category folder name.
-            filename: The PDF filename.
-
-        Returns:
-            bool: True if successful, False if failed.
+        Rasterize vector-chart pages and add them to figure_list.md horizontally.
         """
+        self.process_tasks(
+            self._process_file,
+            force=force,
+            subject_filter=subject,
+            file_filter=file_filter,
+            single_mode=single_mode,
+            resume_from=resume_from,
+        )
+
+    def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
+        subject = task["subject"]
+        filename = task["filename"]
         pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
         pdf_id = os.path.splitext(filename)[0]
 
@@ -75,6 +86,9 @@ class Phase1bVectorChartExtractor(PipelineBase):
         )
         if not os.path.exists(scan_report_path):
             self.error(f"❌ [VectorChart] 無法找到診斷報告: {scan_report_path}")
+            self.state_manager.update_task(
+                subject, filename, self.phase_key, "❌", note_tag="找不到 scan_report.json"
+            )
             return False
 
         with open(scan_report_path, encoding="utf-8") as f:
@@ -83,6 +97,7 @@ class Phase1bVectorChartExtractor(PipelineBase):
         page_nums = scan_report.get("vector_chart_pages", [])
         if not page_nums:
             self.info("📋 [VectorChart] 無向量圖表頁面需要處理")
+            self.state_manager.update_task(subject, filename, self.phase_key, "✅")
             return True
 
         processed_dir = os.path.join(self.dirs["processed"], subject, pdf_id)
@@ -107,6 +122,7 @@ class Phase1bVectorChartExtractor(PipelineBase):
             self._update_figure_list(processed_dir, extracted)
 
         self.info(f"🎨 [VectorChart] 完成: {len(extracted)}/{len(page_nums)} 頁")
+        self.state_manager.update_task(subject, filename, self.phase_key, "✅")
         return True
 
     # ------------------------------------------------------------------ #
@@ -246,5 +262,5 @@ if __name__ == "__main__":
 
     filename = os.path.basename(args.pdf)
     extractor.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
-    success = extractor.run("Default", filename)
+    success = extractor.run(subject="Default", file_filter=filename)
     print(f"\n{'✅' if success else '❌'} 完成")

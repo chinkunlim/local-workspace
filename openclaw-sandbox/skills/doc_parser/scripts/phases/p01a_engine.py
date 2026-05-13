@@ -53,7 +53,7 @@ class Phase1aPDFEngine(PipelineBase):
 
     def __init__(self) -> None:
         super().__init__(
-            phase_key="phase1a",
+            phase_key="p1a",
             phase_name="Docling 深度提取",
             skill_name="doc_parser",
         )
@@ -81,26 +81,29 @@ class Phase1aPDFEngine(PipelineBase):
     #  Public Entry Point                                                  #
     # ------------------------------------------------------------------ #
 
-    def run(self, subject: str, filename: str) -> bool:
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: str = None,
+    ):
         """
-        Execute full PDF extraction pipeline.
-
-        Steps:
-          1. Load scan_report.json from Phase 0a
-          2. Check early-exit conditions (encrypted, 0 pages)
-          3. Run Docling extraction
-          4. Apply font-broken fallback (if needed)
-          5. Apply terminology protection (Layer 1 substitutions)
-          6. Write IMMUTABLE raw_extracted.md
-          7. gc.collect()
-
-        Args:
-            subject: The subject category folder name.
-            filename: The PDF filename.
-
-        Returns:
-            bool: True if successful, False if failed.
+        Execute full PDF extraction pipeline across all pending tasks horizontally.
         """
+        self.process_tasks(
+            self._process_file,
+            force=force,
+            subject_filter=subject,
+            file_filter=file_filter,
+            single_mode=single_mode,
+            resume_from=resume_from,
+        )
+
+    def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
+        subject = task["subject"]
+        filename = task["filename"]
         pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
         pdf_id = os.path.splitext(filename)[0]
         self.info(f"📄 [Phase 1a] 開始 Docling 提取: {pdf_id}")
@@ -114,10 +117,16 @@ class Phase1aPDFEngine(PipelineBase):
         # Early exit checks
         if scan_report.get("encrypted") and not self._try_empty_password(pdf_path):
             self._move_to_error(pdf_path, pdf_id, "加密 PDF，空密碼解密失敗")
+            self.state_manager.update_task(
+                subject, filename, self.phase_key, "❌", note_tag="加密 PDF，空密碼解密失敗"
+            )
             return False
 
         if scan_report.get("pages", 1) == 0:
             self._move_to_error(pdf_path, pdf_id, "PDF 頁數為 0，可能損壞")
+            self.state_manager.update_task(
+                subject, filename, self.phase_key, "❌", note_tag="PDF 頁數為 0，可能損壞"
+            )
             return False
 
         # Set up output directory
@@ -134,6 +143,9 @@ class Phase1aPDFEngine(PipelineBase):
 
             if extracted_text is None:
                 self._move_to_error(pdf_path, pdf_id, "Docling 提取失敗")
+                self.state_manager.update_task(
+                    subject, filename, self.phase_key, "❌", note_tag="Docling 提取失敗"
+                )
                 return False
 
             # Font-broken fallback
@@ -174,14 +186,19 @@ class Phase1aPDFEngine(PipelineBase):
                 f"✅ [Phase 1a] raw_extracted.md 已寫入 ({len(extracted_text):,} 字元, hash: {file_hash[:8]}...)"
             )
             self.resume_manager.clear_checkpoint(pdf_id)
+            self.state_manager.update_task(subject, filename, self.phase_key, "✅")
             return True
 
         except MemoryError:
             self.error("💥 [Phase 1a] Docling 記憶體耗盡，移至 Error/")
             self._move_to_error(pdf_path, pdf_id, "MemoryError during Docling extraction")
+            self.state_manager.update_task(
+                subject, filename, self.phase_key, "❌", note_tag="MemoryError"
+            )
             return False
         except Exception as e:
             self.error(f"❌ [Phase 1a] 提取失敗: {e}")
+            self.state_manager.update_task(subject, filename, self.phase_key, "❌", note_tag=str(e))
             return False
         finally:
             if self.gc_collect_after:
@@ -637,7 +654,7 @@ if __name__ == "__main__":
 
     pdf_id = args.pdf_id or os.path.splitext(os.path.basename(args.pdf))[0]
     engine = Phase1aPDFEngine()
-    result = engine.run("default_subject", filename=args.pdf)
+    result = engine.run(subject="default_subject", file_filter=os.path.basename(args.pdf))
 
     if result:
         print(f"\n✅ 提取完成: {result}")

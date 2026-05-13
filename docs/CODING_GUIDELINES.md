@@ -249,7 +249,13 @@ The three-layer anti-hallucination defence must not be weakened:
 2. VAD silence trimming with safety valve (`silence_ratio < max_removal_ratio`)
 3. N-gram/zlib repetition detection and chunk-level retry
 
-### 5.4 PDF Security
+### 5.4 State Management & Pipeline Masking
+
+- **`sync_physical_files()`**: Use ONLY for single-source pipelines (e.g. `audio_transcriber`) where every file belongs to all phases. It blindly recalculates hashes and overwrites existing state flags to `⏳` if changes are detected.
+- **Manual State Injection**: Use for multi-source converging pipelines (e.g. `proofreader`). Iterate directories manually and conditionally inject default state ONLY IF the file is not already in the state dictionary. This prevents wiping out orchestrator masks (e.g. `⏭️`).
+- **Enforce Masking**: When populating state in multi-source pipelines, enforce the mask rules continuously (e.g. `if state.get("p1") != "⏭️": state["p1"] = "⏭️"`). Do not rely on initial assignment.
+
+### 5.5 PDF Security
 
 All PDF inputs must pass through `SecurityManager` before any content is read:
 - Path traversal check

@@ -29,12 +29,13 @@ from core.ai.llm_client import OllamaClient
 from core.orchestration.pipeline_base import PipelineBase
 from core.state.resume_manager import ResumeManager
 from core.utils.atomic_writer import AtomicWriter
+from core.utils.file_utils import encode_image_b64
 
 
 class Phase0bPNGPipeline(PipelineBase):
     def __init__(self) -> None:
         super().__init__(
-            phase_key="phase0b_png",
+            phase_key="p0b",
             phase_name="PNG/JPG 直接提取",
             skill_name="doc_parser",
         )
@@ -47,7 +48,29 @@ class Phase0bPNGPipeline(PipelineBase):
 
         self.llm = OllamaClient(api_url="http://localhost:11434/api/generate")
 
-    def run(self, subject: str, filename: str) -> bool:
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: str = None,
+    ):
+        """
+        Execute PNG extraction pipeline across all pending tasks horizontally.
+        """
+        self.process_tasks(
+            self._process_file,
+            force=force,
+            subject_filter=subject,
+            file_filter=file_filter,
+            single_mode=single_mode,
+            resume_from=resume_from,
+        )
+
+    def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
+        subject = task["subject"]
+        filename = task["filename"]
         img_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
         img_id = os.path.splitext(filename)[0]
         ext = os.path.splitext(filename)[1].lower()
@@ -57,11 +80,16 @@ class Phase0bPNGPipeline(PipelineBase):
         # 1. Validation
         if not os.path.exists(img_path):
             self.error(f"❌ 找不到圖片檔案: {img_path}")
+            self.state_manager.update_task(
+                subject, filename, self.phase_key, "❌", note_tag="FileNotFound"
+            )
             return False
 
         file_size_mb = os.path.getsize(img_path) / (1024 * 1024)
         if file_size_mb > 20:
-            self._move_to_error(img_path, img_id, f"檔案過大 ({file_size_mb:.1f}MB > 20MB)")
+            msg = f"檔案過大 ({file_size_mb:.1f}MB > 20MB)"
+            self._move_to_error(img_path, img_id, msg)
+            self.state_manager.update_task(subject, filename, self.phase_key, "❌", note_tag=msg)
             return False
 
         try:
@@ -73,6 +101,9 @@ class Phase0bPNGPipeline(PipelineBase):
                     self.warning(f"⚠️ 圖片解析度偏低 ({w}x{h})，可能影響辨識品質")
         except Exception as e:
             self._move_to_error(img_path, img_id, f"圖片無法開啟: {e}")
+            self.state_manager.update_task(
+                subject, filename, self.phase_key, "❌", note_tag=f"圖片無法開啟: {e}"
+            )
             return False
 
         output_dir = os.path.join(self.dirs["processed"], subject, img_id)
@@ -108,6 +139,9 @@ class Phase0bPNGPipeline(PipelineBase):
                 extraction_method = "Tesseract OCR (Low Confidence Fallback)"
             else:
                 self._move_to_error(img_path, img_id, "OCR 與 VLM 皆無法提取文字")
+                self.state_manager.update_task(
+                    subject, filename, self.phase_key, "❌", note_tag="OCR 與 VLM 皆無法提取文字"
+                )
                 return False
 
         # 4. Write Markdown
@@ -149,6 +183,17 @@ class Phase0bPNGPipeline(PipelineBase):
         )
 
         self.info(f"✅ [Phase 0b] {filename} 處理完成，已寫入 raw_extracted.md 與 assets")
+        self.state_manager.update_task(subject, filename, self.phase_key, "✅")
+
+        from core.orchestration.event_bus import DomainEvent, EventBus
+
+        EventBus.publish(
+            DomainEvent(
+                name="PipelineCompleted",
+                source_skill="doc_parser",
+                payload={"filepath": img_path, "subject": subject, "chain": []},
+            )
+        )
         return True
 
     def _run_tesseract(self, img_path: str) -> Tuple[str, float]:
@@ -183,8 +228,10 @@ class Phase0bPNGPipeline(PipelineBase):
             "Output ONLY the extracted text, no introductory remarks."
         )
         try:
+            # Ollama API requires base64-encoded image strings, not file paths
+            b64_img = encode_image_b64(img_path)
             result = self.llm.generate(
-                model=self.vlm_model, prompt=prompt, images=[img_path], options={"temperature": 0.0}
+                model=self.vlm_model, prompt=prompt, images=[b64_img], options={"temperature": 0.0}
             )
             return result
         except Exception as e:

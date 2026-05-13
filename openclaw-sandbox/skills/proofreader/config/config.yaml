@@ -9,10 +9,13 @@ paths:
   logs: "logs"
 
   phases:
-    p1: "output/01_transcript_proofread"
-    p2: "output/02_doc_completeness"
+    p1: "output/01_doc_proofread"
+    p2: "output/02_transcript_proofread"
+    p3: "output/03_doc_completeness"
 
-phase1:
+# phase1 uses default gemma options right now (no special config section needed yet)
+
+phase2:
   active_profile: strict_gemma
   profiles:
     strict_gemma:
@@ -23,7 +26,7 @@ phase1:
         temperature: 0
         num_predict: 4096
 
-phase2:
+phase3:
   active_profile: strict_gemma
   profiles:
     strict_gemma:

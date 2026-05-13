@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Optional
 
 # Internal Core Bootstrap
 from core.utils.bootstrap import ensure_core_path as _bootstrap
@@ -12,9 +13,7 @@ from core.utils.file_utils import encode_image_b64  # S3: DRY — replaces priva
 
 class Phase1dVLMVision(PipelineBase):
     def __init__(self) -> None:
-        super().__init__(
-            phase_key="phase1d", phase_name="VLM 視覺圖表解析", skill_name="doc_parser"
-        )
+        super().__init__(phase_key="p1d", phase_name="VLM 視覺圖表解析", skill_name="doc_parser")
         config = self.get_config("phase1d")
         self.vlm_model = config.get("model")
         self.vlm_options = config.get("options", {})
@@ -65,17 +64,30 @@ class Phase1dVLMVision(PipelineBase):
         text = text.replace("|", "\\|")
         return text
 
-    def run(self, subject: str, filename: str) -> bool:
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: str = None,
+    ):
         """
-        Execute VLM Vision analysis on the PDF's figures.
-
-        Args:
-            subject: The subject category folder name.
-            filename: The PDF filename.
-
-        Returns:
-            bool: True if successful, False if failed.
+        Execute VLM Vision analysis horizontally.
         """
+        self.process_tasks(
+            self._process_file,
+            force=force,
+            subject_filter=subject,
+            file_filter=file_filter,
+            single_mode=single_mode,
+            resume_from=resume_from,
+        )
+
+    def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
+        subject = task["subject"]
+        filename = task["filename"]
+        pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
         pdf_id = os.path.splitext(filename)[0]
         self.info(f"👁️ [Phase 1d] 啟動 VLM 視覺圖表解析: {pdf_id}")
 
@@ -85,6 +97,7 @@ class Phase1dVLMVision(PipelineBase):
 
             if not os.path.exists(figure_list_path):
                 self.warning("⚠️ [Phase 1d] 找不到 figure_list.md，略過。")
+                self.state_manager.update_task(subject, filename, self.phase_key, "✅")
                 return True
 
             with open(figure_list_path, encoding="utf-8") as f:
@@ -101,6 +114,9 @@ class Phase1dVLMVision(PipelineBase):
 
             if header_idx == -1 or not headers:
                 self.error("❌ 無法解析 figure_list.md 的表格標題格式。")
+                self.state_manager.update_task(
+                    subject, filename, self.phase_key, "❌", note_tag="無法解析 figure_list.md"
+                )
                 return False
 
             try:
@@ -108,11 +124,17 @@ class Phase1dVLMVision(PipelineBase):
                 vlm_col = headers.index("VLM 描述")
             except ValueError:
                 self.error("❌ figure_list.md 缺少必要的 '檔案名稱' 或 'VLM 描述' 欄位。")
+                self.state_manager.update_task(
+                    subject, filename, self.phase_key, "❌", note_tag="figure_list.md 缺少欄位"
+                )
                 return False
 
             prompt = self._get_adaptive_vlm_prompt(subject, pdf_id)
             if not prompt:
                 self.error("❌ 找不到 Phase 1d 的 prompt 指令，請確認 prompt.md 內有對應的段落。")
+                self.state_manager.update_task(
+                    subject, filename, self.phase_key, "❌", note_tag="找不到 prompt 指令"
+                )
                 return False
 
             pending_tasks = []
@@ -193,6 +215,17 @@ class Phase1dVLMVision(PipelineBase):
             else:
                 self.info("🆗 [Phase 1d] 沒有需要解析的新圖片。")
 
+            self.state_manager.update_task(subject, filename, self.phase_key, "✅")
+
+            from core.orchestration.event_bus import DomainEvent, EventBus
+
+            EventBus.publish(
+                DomainEvent(
+                    name="PipelineCompleted",
+                    source_skill="doc_parser",
+                    payload={"filepath": pdf_path, "subject": subject, "chain": []},
+                )
+            )
             return True
         finally:
             self.llm.unload_model(str(self.vlm_model) if self.vlm_model else "", logger=self)
@@ -207,5 +240,5 @@ if __name__ == "__main__":
 
     filename = os.path.basename(args.pdf)
     phase = Phase1dVLMVision()
-    success = phase.run("Default", filename)
+    success = phase.run(subject="Default", file_filter=filename)
     print(f"Success: {success}")

@@ -137,7 +137,7 @@ if [[ -f "${INBOX_DAEMON_PID_FILE}" ]] && kill -0 "$(cat "${INBOX_DAEMON_PID_FIL
 else
     (
         cd "${WORKSPACE_DIR}" || exit
-        python3 core/inbox_daemon.py > "${LOG_DIR}/inbox_daemon.log" 2>&1 &
+        python3 core/services/inbox_daemon.py > "${LOG_DIR}/inbox_daemon.log" 2>&1 &
         echo $! > "${INBOX_DAEMON_PID_FILE}"
     )
     sleep 1
@@ -145,6 +145,18 @@ else
 fi
 
 # (Telegram Bot 已經被分離到獨立的 start_bot.sh 腳本中，不再由 start.sh 自動啟動)
+
+# 8. Proofreader Dashboard
+echo -e "\n${YELLOW}[8/8] Starting Proofreader Dashboard (Port 8081)...${NC}"
+if ! nc -z localhost 8081 >/dev/null 2>&1; then
+    (
+        cd "${WORKSPACE_DIR}" || exit
+        uv run python skills/proofreader/scripts/dashboard.py --port 8081 > "${LOG_DIR}/proofreader_dashboard.log" 2>&1 &
+    )
+    wait_for_port 8081 "Proofreader Dashboard"
+else
+    echo -e "   ${BLUE}─── ℹ️ Proofreader Dashboard already running${NC}"
+fi
 
 
 # --- 最終狀態彙整表 ---
@@ -156,12 +168,16 @@ printf "  %-20s → ${GREEN}%s${NC}\n" "Ollama" "http://localhost:11434"
 printf "  %-20s → ${GREEN}%s${NC}\n" "Gemini Gate" "http://localhost:4000"
 printf "  %-20s → ${GREEN}%s${NC}\n" "Pipelines" "http://localhost:9099"
 printf "  %-20s → ${GREEN}%s${NC}\n" "Open Claw API" "http://127.0.0.1:18789"
+printf "  %-20s → ${GREEN}%s${NC}\n" "Proofreader UI" "http://localhost:8081"
 echo -e "  ${YELLOW}%-20s → open app → Start Server${NC}" "LM Studio"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 # 自動開啟瀏覽器 (只確保 Open WebUI 真正在跑才打開)
 if nc -z localhost 8080 >/dev/null 2>&1; then
     open http://localhost:8080
+fi
+if nc -z localhost 8081 >/dev/null 2>&1; then
+    open http://localhost:8081
 fi
 
 # [測試功能] Telegram 啟動推播通知 (未來不需要可將此段註解)

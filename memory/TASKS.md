@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-12 (V9.8 — uv-Native Toolchain Migration & Quality Gate Hardening)
+> **Last Updated:** 2026-05-13 (V9.9 — Doc-Parser & Proofreader Pipeline Standardization)
 
 ---
 
@@ -12,13 +12,13 @@
 
 ## 🟡 Medium Priority (優化 / 非緊急功能)
 
-- [ ] Review synthesis output quality in Obsidian: `data/note_generator/output/助人歷程/` — verify Mermaid renders, images display, no `<think>` tags
-- [ ] Run full batch synthesis test: `uv run skills/note_generator/scripts/run_all.py --subject 助人歷程 --force` (confirm DAG `❌ 0/5` → `✅ 5/5`)
+- [ ] **Run live E2E test** (V9.9): Place `.m4a` + `.pdf` into `data/raw/助人技巧/` — confirm full `audio_transcriber` → `doc_parser` → `proofreader` chain completes.
+- [ ] **Proofreader P2/P3 validation**: Verify GlobalRegistry deadlock is resolved; check doc reference text is pulled correctly during Transcript Proofread.
+- [ ] Review Proofreader Dashboard at `http://localhost:8081` after `start.sh`.
+- [ ] Run full batch synthesis: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`
 - [ ] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
-- [ ] Run live end-to-end pipeline test: `.m4a` → `data/wiki/`
 - [ ] Rebuild ChromaDB index and validate a Telegram RAG query with `gemma4:e4b`
 - [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
-- [ ] Update `docs/STRUCTURE.md`: remove `requirements.txt` reference, fix `smart-highlighter`/`note-generator` legacy hyphen names
 
 ---
 
@@ -30,6 +30,17 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-05-13: V9.9 Doc-Parser & Proofreader Pipeline Standardization
+  - Fixed `phase_key` mismatch in `p01c_ocr_gate.py` (`phase1c` → `p1c`) and `p01d_vlm_vision.py` (`phase1d` → `p1d`).
+  - Fixed `NameError` in `p01d_vlm_vision.py` — missing `pdf_path` declaration before EventBus callback.
+  - Fixed `GlobalRegistry` deadlock: `threading.Lock()` → `threading.RLock()`.
+  - Replaced `sync_physical_files()` in `p02_transcript_proofread.py` and `p03_doc_completeness.py` with Manual State Injection.
+  - Enforced continuous `⏭️` mask re-application in all proofreader phases and `run_all.py`.
+  - Fixed `RouterAgent` proofreader wakeup to call `scripts/run_all.py` (not individual phase script).
+  - Added Proofreader Dashboard (port `8081`) to `start.sh` and `stop.sh`.
+  - Fixed `inbox_daemon` path in `start.sh`/`stop.sh`: `core/inbox_daemon.py` → `core/services/inbox_daemon.py`.
+  - Documented `sync_physical_files()` vs Manual State Injection in `CODING_GUIDELINES §5.4`.
 
 - [x] 2026-05-12: V9.8 uv-Native Toolchain Migration & Quality Gate Hardening
   - `requirements.txt` and `requirements.in` removed; all 160+ deps migrated to `pyproject.toml` + `uv.lock`.

@@ -384,6 +384,9 @@ class PipelineBase:
                 if prev_phase_key and status.get(prev_phase_key) != "✅":
                     continue
                 task = {"subject": subj, "filename": fname, "status": status}
+                if status.get(self.phase_key) == "⏭️":
+                    continue
+
                 if status.get(self.phase_key) == "✅":
                     if force:
                         all_tasks.append(task)
@@ -518,6 +521,62 @@ class PipelineBase:
             self.log("✅ 完成", "info")
 
     # ------------------------------------------------------------------ #
+    #  Shared Orchestration Utilities                                      #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def notify_os(message: str, title: str = "Open-Claw") -> None:
+        """Send a macOS notification (no-op on non-macOS or if osascript fails)."""
+        import subprocess as _sp
+        import sys as _sys
+
+        if _sys.platform != "darwin":
+            return
+        try:
+            _sp.run(
+                ["osascript", "-e", f'display notification "{message}" with title "{title}"'],
+                check=False,
+            )
+        except Exception:
+            pass
+
+    def prompt_checkpoint_resume(self) -> Optional[Dict]:
+        """Detect a saved checkpoint and ask [C]ontinue / [N]ew start.
+
+        Returns the checkpoint dict to resume from, or None to start fresh.
+        """
+        cp = self.state_manager.load_checkpoint()
+        if not cp:
+            return None
+
+        saved_at = cp.get("saved_at", "不明")
+        print("\n" + "═" * 56)
+        print("📌 偵測到上次暫停的斷點 (Checkpoint)")
+        print(f"   時間：{saved_at}")
+        print(f"   科目：{cp.get('subject', '?')}")
+        print(f"   檔案：{cp.get('filename', '?')}")
+        print(f"   Phase：{cp.get('phase_key', '?').upper()}")
+        print("═" * 56)
+        print("請選擇：")
+        print("  [C] Continue — 從上次斷點繼續")
+        print("  [N] New       — 全新開始（清除 Checkpoint）")
+
+        try:
+            choice = input("請輸入 (C/N) [Enter = C]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\n已選擇全新開始。")
+            self.state_manager.clear_checkpoint()
+            return None
+
+        if choice == "n":
+            self.state_manager.clear_checkpoint()
+            print("🗑️  Checkpoint 已清除，全新開始。")
+            return None
+
+        print("➩️  從斷點繼續。")
+        return cp
+
+    # ------------------------------------------------------------------ #
     #  Template Method — Unified Skill Orchestration Loop (V2.4)          #
     # ------------------------------------------------------------------ #
 
@@ -527,6 +586,8 @@ class PipelineBase:
         phases: "list[type]",
         args: "Any",
         start_phase: int = 1,
+        resume_from: "Optional[Dict[str, str]]" = None,
+        print_dashboard_between: bool = True,
     ) -> None:
         """Unified skill pipeline runner — replaces boilerplate in every run_all.py.
 
@@ -552,9 +613,26 @@ class PipelineBase:
                 args=args,
             )
         """
-        import subprocess
+        """Unified skill pipeline runner — replaces boilerplate in every run_all.py.
 
+        Executes each phase class in ``phases`` in sequence, starting from
+        ``start_phase`` (1-indexed). Handles:
+        - Checkpoint resume: ``resume_from`` is passed only to the matching phase
+        - Graceful stop / pause detection and SessionState persistence
+        - DAG dashboard printed after each phase (``print_dashboard_between``)
+        - Interactive pause between phases (``args.interactive``)
+        - macOS completion notification via ``notify_os()``
+
+        Args:
+            phases:                 Ordered list of PipelineBase subclass types.
+            args:                   Parsed argparse Namespace from build_skill_parser().
+            start_phase:            1-indexed phase to start from.
+            resume_from:            Checkpoint dict from prompt_checkpoint_resume() / load_checkpoint().
+            print_dashboard_between: Print DAG dashboard after each phase.
+        """
         any_stopped = False
+        _resume = resume_from  # consumed once for the matching phase
+
         for idx, PhaseClass in enumerate(phases, start=1):
             if idx < start_phase:
                 continue
@@ -564,13 +642,19 @@ class PipelineBase:
             phase_obj.log(f"🚀 Phase {idx}: {phase_obj.phase_name}")
             phase_obj.log(f"{'=' * 50}")
 
+            # Pass checkpoint only to the phase whose phase_key matches
+            phase_resume = None
+            if _resume and _resume.get("phase_key", "") == phase_obj.phase_key:
+                phase_resume = _resume
+            _resume = None  # consumed — later phases start fresh
+
             try:
                 phase_obj.run(  # type: ignore[attr-defined]
                     force=getattr(args, "force", False),
                     subject=getattr(args, "subject", None),
                     file_filter=getattr(args, "file", None),
                     single_mode=getattr(args, "single", False),
-                    resume_from=None,
+                    resume_from=phase_resume,
                 )
             except Exception as exc:
                 phase_obj._write_session_state(SessionState.FAILED, context={"error": str(exc)})
@@ -590,16 +674,16 @@ class PipelineBase:
 
             phase_obj._write_session_state(SessionState.COMPLETED)
 
+            # DAG dashboard after each phase
+            if print_dashboard_between:
+                phase_obj.state_manager.print_dashboard()
+
+            # Interactive pause between phases
+            if getattr(args, "interactive", False) and idx < len(phases):
+                if sys.stdin.isatty():
+                    phase_obj.log(f"✋ Phase {idx} 已完成。請按 [Enter] 繼續...")
+                    input()
+
         if not any_stopped:
             print("🏁 Pipeline 執行完畢。")
-            try:
-                subprocess.run(
-                    [
-                        "osascript",
-                        "-e",
-                        'display notification "Pipeline 執行完畢" with title "Open-Claw"',
-                    ],
-                    check=False,
-                )
-            except Exception:
-                pass
+            PipelineBase.notify_os("Pipeline 執行完畢")

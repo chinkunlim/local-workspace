@@ -66,7 +66,7 @@ class StateManager:
     # Default phases for audio_transcriber
     PHASES_VOICE = ["p1", "p2", "p3"]
     # Phase set for doc_parser
-    PHASES_PDF = ["p0a", "p1a", "p1b", "p1c", "p1d"]
+    PHASES_PDF = ["p0b", "p0a", "p1a", "p1b_s", "p1b", "p1c", "p1d"]
     # Phase set for knowledge_compiler
     PHASES_COMPILER = ["p1"]
     # Phase set for interactive_reader
@@ -79,12 +79,16 @@ class StateManager:
     PHASES_HIGHLIGHT = ["highlight"]
     # Phase set for note_generator
     PHASES_NOTE = ["synthesize"]
+    # Phase set for proofreader
+    PHASES_PROOFREADER = ["p1", "p2", "p3"]
 
     # Phase labels for checklist rendering
     PHASE_LABELS_VOICE = {"p1": "P1 (轉錄)", "p2": "P2 (校對)", "p3": "P3 (合併)"}
     PHASE_LABELS_PDF = {
+        "p0b": "P0b (圖片提取)",
         "p0a": "P0a (診斷)",
         "p1a": "P1a (提取)",
+        "p1b_s": "P1b-S (文字淨化)",
         "p1b": "P1b (向量圖)",
         "p1c": "P1c (OCR評估)",
         "p1d": "P1d (VLM視覺)",
@@ -95,16 +99,22 @@ class StateManager:
     PHASE_LABELS_ACADEMIC = {"p1": "P1 (RAG 交叉比對)", "p2": "P2 (Anki 生成)"}
     PHASE_LABELS_HIGHLIGHT = {"highlight": "H1 (重點標記)"}
     PHASE_LABELS_NOTE = {"synthesize": "N1 (知識合成)"}
+    PHASE_LABELS_PROOFREADER = {
+        "p1": "P1 (文件校對)",
+        "p2": "P2 (逐字稿校對)",
+        "p3": "P3 (圖表完整性)",
+    }
 
     def __init__(
         self, base_dir: str, skill_name: str = "audio_transcriber", raw_dir: str | None = None
     ):
         self.base_dir = base_dir
         self.skill_name = skill_name
+        self.file_ext: str | tuple[str, ...]  # set per-skill below
         if skill_name == "doc_parser":
             self.PHASES = self.PHASES_PDF
             self._phase_labels = self.PHASE_LABELS_PDF
-            self.file_ext = "*.pdf"
+            self.file_ext = ("*.pdf", "*.png", "*.jpg", "*.jpeg")
         elif skill_name == "knowledge_compiler":
             self.PHASES = self.PHASES_COMPILER
             self._phase_labels = self.PHASE_LABELS_COMPILER
@@ -128,6 +138,10 @@ class StateManager:
         elif skill_name == "note_generator":
             self.PHASES = self.PHASES_NOTE
             self._phase_labels = self.PHASE_LABELS_NOTE
+            self.file_ext = "*.md"
+        elif skill_name == "proofreader":
+            self.PHASES = self.PHASES_PROOFREADER
+            self._phase_labels = self.PHASE_LABELS_PROOFREADER
             self.file_ext = "*.md"
         else:
             self.PHASES = self.PHASES_VOICE
@@ -257,7 +271,12 @@ class StateManager:
 
                 import glob
 
-                physical_files = glob.glob(os.path.join(subj_path, self.file_ext))
+                physical_files = []
+                if isinstance(self.file_ext, (tuple, list)):
+                    for ext in self.file_ext:
+                        physical_files.extend(glob.glob(os.path.join(subj_path, ext)))
+                else:
+                    physical_files = glob.glob(os.path.join(subj_path, self.file_ext))
 
                 for pf in physical_files:
                     fname = os.path.basename(pf)
@@ -395,8 +414,11 @@ class StateManager:
             for subj_data in self.state.values():
                 for _fname, record in subj_data.items():
                     for key in counters:
+                        val = record.get(key)
+                        if val == "⏭️":
+                            continue
                         counters[key]["total"] += 1
-                        if record.get(key) == "✅":
+                        if val == "✅":
                             counters[key]["done"] += 1
 
         lines = []
@@ -410,6 +432,7 @@ class StateManager:
             "note_generator": "筆記生成狀態與 DAG 追蹤面板",
             "smart_highlighter": "智能高亮狀態與 DAG 追蹤面板",
             "telegram_kb_agent": "Telegram 知識庫代理狀態與 DAG 追蹤面板",
+            "proofreader": "Proofreader 狀態與 DAG 追蹤面板",
         }.get(self.skill_name, f"{self.skill_name} 狀態與 DAG 追蹤面板")
 
         lines.append("=" * 36)

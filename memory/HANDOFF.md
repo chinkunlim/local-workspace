@@ -1,14 +1,31 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-12
-> **System Status:** 🟢 Stable / Production-Ready (V9.8 — uv-Native Toolchain Migration & Quality Gate Hardening)
+> **Last Updated:** 2026-05-13
+> **System Status:** 🟢 Stable / Production-Ready (V9.9 — Doc-Parser & Proofreader Pipeline Standardization)
 
 ---
 
 ## Final Sign-off Summary
 
-**Date:** 2026-05-12
-**Milestone:** V9.8 uv-Native Toolchain Migration & Quality Gate Hardening
+**Date:** 2026-05-13
+**Milestone:** V9.9 Doc-Parser & Proofreader Pipeline Standardization
+
+- [x] **`phase_key` Alignment (doc_parser P1c & P1d)**: Fixed `phase_key` mismatches — previously causing completed tasks to be re-queued endlessly.
+- [x] **NameError Fix (doc_parser P1d)**: Declared missing `pdf_path` variable in `_process_file` to prevent crash during EventBus handoff.
+- [x] **GlobalRegistry Deadlock Fix**: Changed `threading.Lock()` → `threading.RLock()` — eliminated silent hang in `get_asset_paths()` recursive lock acquisition.
+- [x] **Manual State Injection (proofreader)**: Replaced `sync_physical_files()` in `p02` and `p03` with manual directory iteration that preserves `⏭️` masks.
+- [x] **Continuous Masking**: Added `else:` branches in all proofreader phases and `run_all.py` to enforce masks on existing state entries.
+- [x] **RouterAgent Proofreader Wakeup Fix**: Corrected wakeup cmd path from individual phase script → `scripts/run_all.py`.
+- [x] **Proofreader Dashboard in start.sh**: Port `8081`, auto-opens browser; integrated into `stop.sh` cleanup.
+- [x] **inbox_daemon path fix**: Corrected `core/inbox_daemon.py` → `core/services/inbox_daemon.py` in both `start.sh` and `stop.sh`.
+- [x] **CODING_GUIDELINES §5.4**: Documented `sync_physical_files()` vs Manual State Injection invariant.
+- [x] **Full Pipeline Architecture Review**: Confirmed audio_transcriber → doc_parser → proofreader handoff via EventBus + GlobalRegistry + session_manifest is intact end-to-end.
+
+---
+
+## Previous Session (V9.8 — 2026-05-12)
+
+**Milestone:** V9.8 uv-Native Toolchain Migration
 
 - [x] **uv-Native Toolchain Migration**: Removed `requirements.txt` and `requirements.in`. All 160+ dependencies now managed exclusively via `pyproject.toml` and `uv.lock`. Added `[project]` table to enable `uv add`.
 - [x] **Dev Dependencies via uv**: `ruff`, `mypy`, `pytest` added as dev dependencies (`uv add --dev`).
@@ -99,12 +116,12 @@ curl http://localhost:18789/health          # Open Claw API
 
 ## Next Session Starting Point
 
-1. **Review synthesis output quality**: Open `data/note_generator/output/助人歷程/` and `data/smart_highlighter/output/助人歷程/` in Obsidian — verify Mermaid renders, images show, `<think>` tags absent.
-2. **Run full batch synthesis**: `uv run skills/note_generator/scripts/run_all.py --subject 助人歷程 --force` — confirm DAG progresses from `❌ 0/5` → `✅ 5/5`.
-3. Run live E2E test: place a `.m4a` file into `data/raw/認知心理學/` and confirm all phases complete.
-4. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
-5. Populate `tests/` stub structure per CODING_GUIDELINES §11.2.
-6. Update `docs/STRUCTURE.md` to remove `requirements.txt` reference and fix `smart-highlighter`/`note-generator` legacy names.
+1. **Run live E2E test**: Place a `.m4a` + matching `.pdf` into `data/raw/助人技巧/` and confirm the full chain: `audio_transcriber` → `doc_parser` → `proofreader` (P1 for docs, P2+P3 for audio) completes automatically.
+2. **Proofreader P2/P3 validation**: Verify Phase 2 (Transcript Proofread) runs without the GlobalRegistry deadlock and correctly pulls doc reference text for cross-checking.
+3. **Review Proofreader Dashboard**: Open `http://localhost:8081` and confirm AI-corrected files are visible for Human-in-the-Loop review.
+4. **Run full batch synthesis**: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`.
+5. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
+6. Populate `tests/` stub structure per CODING_GUIDELINES §11.2.
 
 > **Startup Protocol**: Copy the prompt from `memory/STARTUP.md` at the start of every new conversation.
 
@@ -121,6 +138,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-13 | V9.9 Doc-Parser & Proofreader Pipeline Standardization | `phase_key` fixed; GlobalRegistry deadlock fixed; Manual State Injection for proofreader; Proofreader Dashboard in start.sh; inbox_daemon path corrected |
 | 2026-05-12 | V9.8 uv-Native Toolchain Migration & Quality Gate | Removed `requirements.txt`; migrated to `uv add`; fixed `check.sh` to use `uv run`; fixed 3 syntax/type bugs; 0 errors in 143 files |
 | 2026-05-10 | V9.7 Proofreader & Global Asset Registry | Implemented `GlobalRegistry`, per-file EventBus handoff, and `ProofreaderOrchestrator`. |
 | 2026-05-08 | V9.6 Synthesis Pipeline CLI & DAG Standardisation | `smart_highlighter`/`note_generator` → `run_all.py` Orchestrators; DAG fixed; 4 new §5 invariants |

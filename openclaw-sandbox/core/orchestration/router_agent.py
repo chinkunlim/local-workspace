@@ -262,14 +262,12 @@ class RouterAgent:
                             # Trigger proofreader p01
                             cmd = [
                                 sys.executable,
-                                "scripts/phases/p01_transcript_proofread.py",
+                                "scripts/run_all.py",
                                 "--subject",
                                 subject,
-                                "--file",
-                                a_file,
                             ]
                             task_queue.enqueue(
-                                name=f"proofreader/p01 ({a_file})",
+                                name=f"proofreader ({a_file})",
                                 cmd=cmd,
                                 cwd=cwd,
                                 filepath=os.path.join(

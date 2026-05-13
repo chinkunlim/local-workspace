@@ -87,7 +87,7 @@ class Phase0aDiagnostic(PipelineBase):
 
     def __init__(self) -> None:
         super().__init__(
-            phase_key="phase0a",
+            phase_key="p0a",
             phase_name="PDF 輕量診斷",
             skill_name="doc_parser",
         )
@@ -104,17 +104,32 @@ class Phase0aDiagnostic(PipelineBase):
     #  Public Entry Point                                                  #
     # ------------------------------------------------------------------ #
 
-    def run(self, subject: str, filename: str) -> bool:
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: str = None,
+    ):
         """
-        Execute all six diagnostic checks.
-        This is the main public API — call this before Docling.
+        Execute all six diagnostic checks across all pending PDFs horizontally.
+        """
+        self.process_tasks(
+            self._process_file,
+            force=force,
+            subject_filter=subject,
+            file_filter=file_filter,
+            single_mode=single_mode,
+            resume_from=resume_from,
+        )
 
-        Args:
-            subject: The subject category folder name.
-            filename: The PDF filename (e.g., 'document.pdf').
-
-        Returns:
-            bool: True if successful, False if failed.
+    def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
+        subject = task["subject"]
+        filename = task["filename"]
+        """
+        Process a single PDF for diagnostic checks.
+        Returns True on success, False on failure.
         """
         pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
         pdf_id = os.path.splitext(filename)[0]
@@ -171,7 +186,15 @@ class Phase0aDiagnostic(PipelineBase):
         self._log_summary(report)
 
         gc.collect()
-        return report.success
+
+        if report.success:
+            self.state_manager.update_task(subject, filename, self.phase_key, "✅")
+            return True
+        else:
+            self.state_manager.update_task(
+                subject, filename, self.phase_key, "❌", note_tag=report.error
+            )
+            return False
 
     # ------------------------------------------------------------------ #
     #  Diagnostic Steps                                                    #
@@ -458,7 +481,7 @@ if __name__ == "__main__":
     diag = Phase0aDiagnostic()
     # Mock for CLI standalone run
     diag.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
-    success = diag.run("Default", filename)
+    success = diag.run(subject="Default", file_filter=filename)
 
     print(f"\n{'=' * 50}")
     print(f"Diagnostic Execution Success: {success}")

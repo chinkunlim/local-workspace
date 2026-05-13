@@ -412,10 +412,11 @@ class Phase1Transcribe(PipelineBase):
         self.log("🚀 啟動 Phase 1：語音轉錄 (V8.1 抗幻覺版)")
 
         # Sandbox HuggingFace to strictly inside the project
+        # Use HF_HUB_CACHE (not HF_HOME) so models land directly in models/
+        # HF_HOME would create a models/hub/ subdirectory automatically
         openclaw_root = os.path.abspath(os.path.join(self.base_dir, "..", ".."))
         model_dir = os.path.join(openclaw_root, "models")
         os.makedirs(model_dir, exist_ok=True)
-        os.environ["HF_HOME"] = model_dir
         os.environ["HF_HUB_CACHE"] = model_dir
 
         model = None
@@ -611,9 +612,11 @@ class Phase1Transcribe(PipelineBase):
                             bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
                         )
 
+                    _cancel_requested = False
                     for _chunk_path in chunk_iter:
-                        # 同時壓制 stdout(fd 1) 與 stderr(fd 2)，
-                        # 避免 mlx_whisper 內部 tqdm 進度條輸出至終端
+                        if _cancel_requested:
+                            break
+                        # Suppress mlx_whisper internal tqdm / macOS noise
                         with open(os.devnull, "w") as _devnull, warnings.catch_warnings():
                             warnings.simplefilter("ignore")
                             _old_err = os.dup(2)
@@ -632,11 +635,21 @@ class Phase1Transcribe(PipelineBase):
                                     **lang_kwargs,
                                     verbose=False,
                                 )
+                            except KeyboardInterrupt:
+                                # Restore file descriptors BEFORE re-raising so
+                                # the Ctrl+C prompt is visible in the terminal
+                                os.dup2(_old_err, 2)
+                                os.dup2(_old_out, 1)
+                                os.close(_old_err)
+                                os.close(_old_out)
+                                _cancel_requested = True
+                                raise
                             finally:
                                 os.dup2(_old_err, 2)
                                 os.dup2(_old_out, 1)
                                 os.close(_old_err)
                                 os.close(_old_out)
+
                         segments.extend(result.get("segments", []))
 
                 else:  # faster-whisper

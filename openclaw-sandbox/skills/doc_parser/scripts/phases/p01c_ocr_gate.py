@@ -44,7 +44,7 @@ class Phase1cOCRQualityGate(PipelineBase):
 
     def __init__(self) -> None:
         super().__init__(
-            phase_key="phase1c",
+            phase_key="p1c",
             phase_name="OCR 品質評估",
             skill_name="doc_parser",
         )
@@ -62,17 +62,29 @@ class Phase1cOCRQualityGate(PipelineBase):
     #  Public Entry Point                                                  #
     # ------------------------------------------------------------------ #
 
-    def run(self, subject: str, filename: str) -> bool:
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: str = None,
+    ):
         """
-        Assess OCR quality for all scanned pages.
-
-        Args:
-            subject: The subject category folder name.
-            filename: The PDF filename.
-
-        Returns:
-            bool: True if successful, False if failed.
+        Assess OCR quality for all scanned pages horizontally.
         """
+        self.process_tasks(
+            self._process_file,
+            force=force,
+            subject_filter=subject,
+            file_filter=file_filter,
+            single_mode=single_mode,
+            resume_from=resume_from,
+        )
+
+    def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
+        subject = task["subject"]
+        filename = task["filename"]
         pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
         pdf_id = os.path.splitext(filename)[0]
 
@@ -80,6 +92,7 @@ class Phase1cOCRQualityGate(PipelineBase):
 
         if not scanned_pages:
             self.info("📋 [OCR] 無掃描頁面需要品質評估")
+            self.state_manager.update_task(subject, filename, self.phase_key, "✅")
             return True
 
         self.info(f"🔤 [OCR] 開始評估 {len(scanned_pages)} 個掃描頁面...")
@@ -144,6 +157,7 @@ class Phase1cOCRQualityGate(PipelineBase):
             )
 
         gc.collect()
+        self.state_manager.update_task(subject, filename, self.phase_key, "✅")
         return True
 
     def assess_page_ocr_quality(self, pdf_path: str, page_num: int) -> float:
@@ -314,7 +328,7 @@ if __name__ == "__main__":
 
     gate = Phase1cOCRQualityGate()
     gate.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
-    success = gate.run("Default", filename)
+    success = gate.run(subject="Default", file_filter=filename)
 
     print(f"\n{'=' * 40}")
     print(f"OCR Quality Assessment Success: {success}")

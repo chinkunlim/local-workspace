@@ -56,6 +56,7 @@ fi
 echo -e "\n${YELLOW}[2/4] Cleaning up Python services & Ports...${NC}"
 kill_by_port 4000 "LiteLLM"
 kill_by_port 8080 "Open WebUI"
+kill_by_port 8081 "Proofreader UI"
 kill_by_port 9099 "Pipelines"
 
 # Inbox Daemon (PID-based shutdown)
@@ -73,7 +74,7 @@ if [[ -f "${INBOX_DAEMON_PID_FILE}" ]]; then
     rm -f "${INBOX_DAEMON_PID_FILE}"
 else
     # Fallback: pkill by script name
-    pkill -f "core/inbox_daemon.py" 2>/dev/null || true
+    pkill -f "core/services/inbox_daemon.py" 2>/dev/null || true
 fi
 
 # (Telegram Bot 已經被分離到獨立的 stop_bot.sh 腳本中，不再由 stop.sh 自動關閉)
@@ -134,6 +135,7 @@ check_status() {
 
 check_status 4000  "LiteLLM   "
 check_status 8080  "Open WebUI"
+check_status 8081  "Proofrder "
 check_status 9099  "Pipelines "
 check_status 18789 "Open Claw "
 
