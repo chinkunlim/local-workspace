@@ -1,22 +1,25 @@
 # HANDOFF.md — Session Handoff Record
 
 > **Last Updated:** 2026-05-13
-> **System Status:** 🟢 Stable / Production-Ready (V9.10 — MarkItDown Integration, RouterAgent Config-Driven Routing & Proofreader DAG Fixes)
+> **System Status:** 🟢 Stable / Production-Ready (V9.11 — RouterAgent Config-Driven Routing Refactor + PPTX Image Extraction)
 
 ---
 
-## Current Session (2026-05-13 — Git Recovery & OpenClaw Architecture Investigation)
+## Current Session (2026-05-13 — RouterAgent Refactor + PPTX Image Extraction)
 
 **Date:** 2026-05-13
 
-- [x] **Restored `manual/*.docx` files**: 8 `.docx` files deleted in commit `53bf7e3` were recovered from git history via `git checkout 10251a4 -- "manual/*.docx"` and staged for commit.
-- [x] **Investigated `openclaw skills` not showing project skills**: Diagnosed root cause — `openclaw skills` CLI only lists OpenClaw's own bundled/managed skills. The project's Python pipeline skills (`audio_transcriber`, `doc_parser`, etc.) are managed by `core/orchestration/skill_registry.py`, a completely separate system.
-- [x] **ADR-012 documented**: Formalised the two-system architecture in `memory/DECISIONS.md` to prevent future confusion.
-- [x] **Confirmed `openclaw.json` workspace**: `agents.defaults.workspace` correctly points to `/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox` (note: old path; sandbox is now at `openclaw-sandbox/`). Functional but the path is stale.
-- [x] **Cleaned up test artifacts**: Removed `openclaw-sandbox/skills/audio-transcriber-test/` (created during investigation).
+- [x] **RouterAgent config-driven routing (refactored)**: Replaced hardcoded `_ROUTING_TABLE` global dict with a `_build_routing_table()` instance method. Now reads `core/config/inbox_config.json` at init time. Adding a new file format requires only editing JSON, zero Python changes. `_INTENT_ROUTES` (e.g. `.pdf:study`) remain in code as they are orchestration logic, not file-type config. See ADR-013.
+- [x] **`inbox_daemon.py` dead code cleanup**: Removed `_load_config()` method (31 lines) and its `self.routing_rules`/`self.pdf_routing_rules` dicts. Routing is now entirely owned by `RouterAgent._build_routing_table()`.
+- [x] **PPTX embedded image extraction**: Added `_extract_pptx_images()` to `Phase0cMarkItDown`. Uses python-pptx (bundled with `markitdown[pptx]`) to extract image blobs from all slides, saved to the same directory as `raw_extracted.md`. Filename convention matches MarkItDown's internal convention exactly (`re.sub(r"\W", "", shape.name) + ".jpg"`), so all `![...](filename)` references in the Markdown resolve without modification.
+- [x] **`figure_list.md` updated**: Now lists actual extracted image filenames from PPTX blobs instead of a generic placeholder row.
+- [x] **E2E verified**: `L12_GLP-1 agonists 2026_slide.pptx` processed — 5 images extracted (Picture2.jpg / Picture3.jpg / Picture9.jpg / Picture11.jpg / Picture12.jpg), all referenced correctly in raw_extracted.md.
+- [x] **doc_parser/docs/ARCHITECTURE.md V4.0**: Pipeline DAG diagram updated to show 3-branch routing (Office / PDF / Image); phases directory listing updated with `p00c_markitdown.py`; state tracking phases updated.
+- [x] **doc_parser/docs/DECISIONS.md**: Added PPTX image extraction ADR (co-location rationale + MarkItDown naming convention match).
 
 > [!NOTE]
 > The `openclaw.json` `agents.defaults.workspace` still references the old `open-claw-sandbox` path. The sandbox was renamed to `openclaw-sandbox/`. This may cause issues if OpenClaw tries to access the workspace. Consider updating via `openclaw configure` or `openclaw config set`.
+
 
 ---
 
@@ -134,13 +137,12 @@ curl http://localhost:18789/health          # Open Claw API
 
 ## Next Session Starting Point
 
-1. **Test PPTX/DOCX/XLSX pipeline**: Drop a `.pptx` file into `data/raw/助人技巧/` and confirm it routes through Phase0cMarkItDown → downstream proofreader correctly.
-2. **Run live E2E test**: Place `.m4a` + `.pdf` + `.pptx` into `data/raw/助人技巧/` — confirm full `audio_transcriber` → `doc_parser` → `proofreader` chain completes with DAG showing stable counts (no correction_log.md pollution).
-3. **Proofreader P2/P3 validation**: Verify Phase 2 runs correctly with the DAG pollution fix; confirm DAG counts remain stable across multiple runs.
-4. **Fix `openclaw.json` stale workspace path**: Update `agents.defaults.workspace` from `open-claw-sandbox` → `openclaw-sandbox` via `openclaw configure`.
-5. **Run full batch synthesis**: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`
-6. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
-7. Populate `tests/` stub structure per CODING_GUIDELINES §11.2.
+1. **Run live E2E test**: Place `.m4a` + `.pdf` + `.pptx` into `data/raw/助人技巧/` — confirm full `audio_transcriber` → `doc_parser` → `proofreader` chain completes with DAG showing stable counts (no correction_log.md pollution).
+2. **Proofreader P2/P3 validation**: Verify Phase 2 runs correctly with the DAG pollution fix; confirm DAG counts remain stable across multiple runs.
+3. **Fix `openclaw.json` stale workspace path**: Update `agents.defaults.workspace` from `open-claw-sandbox` → `openclaw-sandbox` via `openclaw configure`.
+4. **Run full batch synthesis**: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`
+5. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
+6. Populate `tests/` stub structure per CODING_GUIDELINES §11.2.
 
 > **Startup Protocol**: Copy the prompt from `memory/STARTUP.md` at the start of every new conversation.
 

@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-13 (V9.10 — MarkItDown Integration, RouterAgent Config-Driven Routing & Proofreader DAG Fixes)
+> **Last Updated:** 2026-05-13 (V9.11 — RouterAgent Config-Driven Routing Refactor + PPTX Image Extraction)
 
 ---
 
@@ -12,7 +12,8 @@
 
 ## 🟡 Medium Priority (優化 / 非緊急功能)
 
-- [ ] **Test PPTX/DOCX/XLSX pipeline** (V9.10): Drop `.pptx` into `data/raw/助人技巧/` — confirm Phase0cMarkItDown routes and all downstream phases complete.
+- [x] **Test PPTX/DOCX/XLSX pipeline** (V9.10): `.pptx` processed — E2E verified. 5 images extracted, markdown references resolved correctly. ✅
+
 - [ ] **Run live E2E test** (V9.10): Place `.m4a` + `.pdf` + `.pptx` — confirm DAG counts are stable (no correction_log pollution) across multiple runs.
 - [ ] **Fix `openclaw.json` stale workspace path**: `agents.defaults.workspace` → `openclaw-sandbox` via `openclaw configure`.
 - [ ] Run full batch synthesis: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`
@@ -32,6 +33,16 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-05-13: **V9.11 RouterAgent Config-Driven Routing Refactor + PPTX Image Extraction**
+  - Replaced hardcoded `_ROUTING_TABLE` global with `_build_routing_table()` reading `inbox_config.json` at init.
+  - Added `_GROUP_FIRST_SKILL`, `_DEFAULT_CHAINS`, `_EXTRACT_ONLY_EXTS`, `_INTENT_ROUTES` constants.
+  - Removed dead `_load_config()` / `self.routing_rules` / `self.pdf_routing_rules` from `inbox_daemon.py`.
+  - Added `_extract_pptx_images()` to `Phase0cMarkItDown` using python-pptx; 5 images extracted from test PPTX.
+  - PPTX image filename convention matches MarkItDown exactly — markdown refs work without path changes.
+  - `figure_list.md` now lists real extracted filenames.
+  - `doc_parser/docs/ARCHITECTURE.md` updated to V4.0 with 3-branch DAG diagram.
+  - `doc_parser/docs/DECISIONS.md` updated with PPTX image extraction ADR.
 
 - [x] 2026-05-13: V9.10 MarkItDown Integration, RouterAgent Config-Driven Routing & Proofreader DAG Fixes
   - Fixed `correction_log.md` DAG pollution: added filter in Manual State Injection loops in `p02`, `p03`, `proofreader/run_all.py`, and `state_manager.py`.

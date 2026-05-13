@@ -1,26 +1,33 @@
 # Open Claw — Doc Parser Skill Architecture
 
-> Version: V3.0 | Last Updated: 2026-05-01
+> Version: V4.0 | Last Updated: 2026-05-13
 
 ## 1. Overview
 
-The Doc Parser skill is Open Claw's PDF-to-knowledge pipeline. It automatically extracts, analyses, and synthesises PDF documents — including VLM image analysis — into structured Markdown knowledge notes.
+The Doc Parser skill is Open Claw's multi-format document-to-knowledge pipeline. It supports `.pdf`, `.png` (image), and Office formats (`.pptx`, `.docx`, `.xlsx`) as inbox inputs, extracting, analysing, and synthesising them into structured Markdown knowledge notes.
 
 ```
-data/raw/<subject>/<pdf_name>.pdf
+data/raw/<subject>/<file>.[pdf|pptx|docx|xlsx|png]
           │
-          ▼ P00a: Lightweight diagnostic (page count, text density, scan detection)
+          ├─ Office formats (.pptx/.docx/.xlsx)
+          │   └──► P0c: MarkItDown conversion → raw_extracted.md (IMMUTABLE)
+          │         + embedded images extracted (python-pptx, same dir)
+          │         + all PDF-specific phases masked ⏭️
           │
-          ▼ P01a: Docling deep extraction → raw_extracted.md (IMMUTABLE)
-          │
-          ├──► P01b: Vector chart rasterisation (pdftoppm @ 300 DPI)
-          │
-          └──► P01c: OCR quality gate (triggered only for scanned PDFs)
-          │
-          ▼ P01d: VLM visual figure analysis (updates figure_list.md)
-          │
-          ▼ P02: Highlight annotations (delegated to smart_highlighter)
-          ▼ P03: Synthesis (delegated to note_generator → data/wiki/)
+          └─ PDF / Image formats
+              ▼ P00b: PDF security diagnostic
+              ▼ P00a: Lightweight diagnostic (page count, text density, scan detection)
+              │
+              ▼ P01a: Docling deep extraction → raw_extracted.md (IMMUTABLE)
+              │
+              ├──► P01b: Vector chart rasterisation (pdftoppm @ 300 DPI)
+              │
+              └──► P01c: OCR quality gate (triggered only for scanned PDFs)
+              │
+              ▼ P01d: VLM visual figure analysis (updates figure_list.md)
+              │
+              ▼ P02: Highlight annotations (delegated to smart_highlighter)
+              ▼ P03: Synthesis (delegated to note_generator → data/wiki/)
 ```
 
 ---
@@ -41,8 +48,10 @@ skills/doc_parser/
 │   ├── DECISIONS.md               # Architectural decision log (ADR format)
 │   └── PROJECT_RULES.md                  # AI collaboration context
 └── scripts/
-    ├── run_all.py                  # Orchestrator — queue-based 7-phase executor
+    ├── run_all.py                  # Orchestrator — 3-branch DAG (PDF / Image / Office)
     └── phases/
+        ├── p00c_markitdown.py     # Phase 0c: MarkItDown Office conversion (PPTX/DOCX/XLSX)
+        ├── p00b_security.py       # Phase 00b: PDF security diagnostic
         ├── p00a_diagnostic.py     # Phase 00a: Lightweight PDF diagnostic
         ├── p01a_engine.py         # Phase 01a: Docling deep extraction
         ├── p01b_vector_charts.py  # Phase 01b: Vector chart supplementation (300 DPI)
@@ -113,9 +122,10 @@ paths:
 
 ### 4.3 State Tracking
 
-- `core.state.state_manager.StateManager(skill_name="doc_parser")` manages 5-phase progress
-- Phase set: `["p0a", "p1a", "p1b", "p1c", "p1d"]`
-- `data/doc_parser/state/checklist.md` tracks processing status for every PDF
+- `core.state.state_manager.StateManager(skill_name="doc_parser")` manages multi-phase progress
+- Phase set: `["p0c", "p0b", "p0a", "p1a", "p1b_s", "p1b", "p1c", "p1d"]`
+- Office formats mask all PDF-specific phases (`p0b`, `p0a`, `p1a`, `p1b_s`, `p1b`, `p1c`, `p1d`) as `⏭️`
+- `data/doc_parser/state/checklist.md` tracks processing status for every document
 
 ### 4.4 IMMUTABLE Source Rule
 

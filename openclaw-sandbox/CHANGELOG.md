@@ -5,6 +5,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.11] — 2026-05-13: RouterAgent Config-Driven Routing Refactor + PPTX Image Extraction
+
+### Changed
+- **`RouterAgent._build_routing_table()`**: Replaced the hardcoded `_ROUTING_TABLE` global dict with an instance-level `_build_routing_table()` method. Reads `core/config/inbox_config.json` at init time. The `ext:auto` routing table is constructed from `_GROUP_FIRST_SKILL` × `_DEFAULT_CHAINS` × `_EXTRACT_ONLY_EXTS` constants. `_INTENT_ROUTES` (intent-specific overrides like `.pdf:study`) remain in code as they are orchestration logic, not file-type config.
+- **`inbox_daemon.py` single-responsibility cleanup**: Removed `_load_config()` method (31 lines), `self.routing_rules` dict, and `self.pdf_routing_rules` list. All routing is now owned exclusively by `RouterAgent._build_routing_table()`.
+
+### Added
+- **`Phase0cMarkItDown._extract_pptx_images()`**: Extracts embedded image blobs from PPTX files using python-pptx. Images saved to the same directory as `raw_extracted.md` using MarkItDown's exact filename convention (`re.sub(r"\W", "", shape.name) + ".jpg"`), ensuring all `![...](filename)` references in the generated Markdown resolve without post-processing. Recurses into group shapes.
+- **`figure_list.md` real filenames**: Now populated with actual extracted image filenames from PPTX blobs (previously a generic placeholder).
+
+### Docs
+- **`skills/doc_parser/docs/ARCHITECTURE.md` → V4.0**: Pipeline DAG diagram updated to show 3-branch routing (Office / PDF / Image). Phases directory listing includes `p00c_markitdown.py`. State tracking phase set updated.
+- **`skills/doc_parser/docs/DECISIONS.md`**: Added PPTX image extraction ADR with rationale for co-location vs assets/ subdirectory.
+
+### Quality Gate
+- Ruff lint: ✅ (0 errors)
+- Mypy: ✅ (0 errors, 144 files)
+
+---
+
 ## [V9.10] — 2026-05-13: MarkItDown Integration, RouterAgent Config-Driven Routing & Proofreader DAG Fixes
 
 ### Added

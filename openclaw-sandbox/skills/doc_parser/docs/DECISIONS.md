@@ -137,3 +137,17 @@
 - `core/config/inbox_config.json`: `.pptx`, `.docx`, `.xlsx` added to `pdf_knowledge` routing group.
 - `core/state/state_manager.py`: `PHASES_PDF` extended with `p0c`; `file_ext` extended with Office extensions.
 - `skills/doc_parser/scripts/run_all.py`: DAG masking logic updated for three file-type branches.
+
+---
+
+## 2026-05-13 — PPTX Image Extraction: Co-location + MarkItDown Naming Convention
+
+**Decision**: Embedded images extracted from PPTX files are saved to the same directory as `raw_extracted.md`, using the exact filename convention as MarkItDown's internal converter: `re.sub(r"\W", "", shape.name) + ".jpg"`.
+
+**Context**: MarkItDown's PPTX converter generates `![alt](Picture11.jpg)` style references in the Markdown output, where the filename derives from `shape.name` with all non-word characters stripped. If extracted images were saved with different names or in a subdirectory, all Markdown references would be broken without post-processing.
+
+**Chosen approach**: `_extract_pptx_images()` in `Phase0cMarkItDown` uses python-pptx (already installed as part of `markitdown[pptx]`) to read image blobs and applies the identical naming rule. Images are saved to `output_dir` (same level as `raw_extracted.md`), making all `![...]()` references work without path modification.
+
+**Why NOT save to `assets/` subdirectory**: Would require post-processing of `raw_extracted.md` to fix all image paths. Co-location is simpler and the output dir contains only one PPTX's artifacts, so clutter is not a concern.
+
+**Impact**: `figure_list.md` now lists extracted image filenames from the real PPTX blobs, not just placeholder references.
