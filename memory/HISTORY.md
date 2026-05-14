@@ -50,3 +50,4 @@
 - **[2026-05-12] [[Archived] Session fab94abb](sessions/2026-05-12_fab94abb.md)** (ID: `fab94abb`)
 - **[2026-05-13] [[Archived] Architectural Alignment: Unified Pipeline Model](sessions/2026-05-13_fab94abb.md)** (ID: `fab94abb`)
 - **[2026-05-13] [[Archived] Session 4ea54372](sessions/2026-05-13_4ea54372.md)** (ID: `4ea54372`)
+- **[2026-05-13] [[Archived] MarkItDown 整合計畫 — OpenClaw doc_parser 擴展](sessions/2026-05-13_db4c8fb5.md)** (ID: `db4c8fb5`)

@@ -1,14 +1,14 @@
 """
-run_all.py — SmartHighlighter Skill Orchestrator (V2.0)
+run_all.py — SmartHighlighter Skill Orchestrator (V3.0)
 ========================================================
 Full pipeline runner with DAG tracking, StateManager integration,
 checkpoint resume, and asset directory copying.
 
-Symmetrical to audio_transcriber / doc_parser / note_generator architecture.
+Symmetrical to audio_transcriber / doc_parser architecture.
 
 Modes:
   1. Batch mode: --subject / --file — processes all .md files in
-     data/proofreader/output/00_doc_proofread/<subject>/
+     data/proofreader/output/04_final_verified/<subject>/
   2. File mode:  --input-file <path> --output-file <path> — single-file
      execution used by RouterAgent / CLI direct invocation.
 """
@@ -17,6 +17,7 @@ import argparse
 import os
 import shutil
 import sys
+from typing import Optional
 
 # Group 2 — Internal Core Bootstrap
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
@@ -36,6 +37,21 @@ from core.utils.atomic_writer import AtomicWriter
 from core.utils.text_utils import smart_split
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _copy_assets(input_file: str, output_file: str) -> None:
+    """Copy the assets/ directory next to input_file to the output directory."""
+    input_dir = os.path.dirname(os.path.abspath(input_file))
+    output_dir = os.path.dirname(os.path.abspath(output_file))
+    src_assets = os.path.join(input_dir, "assets")
+    dst_assets = os.path.join(output_dir, "assets")
+    if os.path.isdir(src_assets) and src_assets != dst_assets:
+        shutil.copytree(src_assets, dst_assets, dirs_exist_ok=True)
+
+
+# ---------------------------------------------------------------------------
 # Inner Phase: Highlight
 # ---------------------------------------------------------------------------
 
@@ -52,6 +68,84 @@ class PhaseHighlight(PipelineBase):
             skill_name="smart_highlighter",
         )
         self.profile_override = profile
+
+        # Route inbox to proofreader output, and processed to our output
+        workspace_root = os.path.abspath(os.path.join(self.base_dir, "..", "..", ".."))
+        self.dirs["inbox"] = os.path.join(
+            workspace_root, "data", "proofreader", "output", "04_final_verified"
+        )
+        self.dirs["processed"] = os.path.join(workspace_root, "data", "smart_highlighter", "output")
+        self.dirs["error"] = os.path.join(workspace_root, "data", "smart_highlighter", "error")
+        # Ensure raw maps to the proofreader inbox for File matching
+        self.dirs["raw"] = self.dirs["inbox"]
+
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: dict = None,
+    ) -> None:
+        self.process_tasks(
+            self._process_file,
+            force=force,
+            subject_filter=subject,
+            file_filter=file_filter,
+            single_mode=single_mode,
+            resume_from=resume_from,
+        )
+
+    def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
+        subject = task["subject"]
+        filename = task["filename"]
+
+        # Exclude non-markdown
+        if not filename.endswith(".md"):
+            return False
+
+        input_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
+
+        out_name = filename.replace("_proofread.md", "_highlighted.md")
+        # if it doesn't have _proofread suffix, fallback
+        if out_name == filename:
+            stem = os.path.splitext(filename)[0]
+            out_name = f"{stem}_highlighted.md"
+
+        output_path = os.path.join(self.dirs["processed"], subject, out_name)
+
+        self.info(f"🚀 [Phase H1] 標記: [{subject}] {filename}")
+
+        if not os.path.exists(input_path):
+            self.error(f"❌ 找不到檔案: {input_path}")
+            self.state_manager.update_task(subject, filename, self.phase_key, "❌")
+            return False
+
+        with open(input_path, encoding="utf-8") as f:
+            text = f.read()
+
+        result = self.run_single(text, subject=subject)
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        _copy_assets(input_path, output_path)
+        AtomicWriter.write_text(output_path, result)
+
+        self.state_manager.update_task(
+            subject=subject,
+            filename=filename,
+            phase_key=self.phase_key,
+            status="✅",
+            char_count=len(result),
+        )
+
+        EventBus.publish(
+            DomainEvent(
+                name="PipelineCompleted",
+                source_skill="smart_highlighter",
+                payload={"filepath": output_path, "subject": subject, "chain": []},
+            )
+        )
+        return True
 
     def run_single(
         self,
@@ -136,16 +230,6 @@ class PhaseHighlight(PipelineBase):
 # ---------------------------------------------------------------------------
 
 
-def _copy_assets(input_file: str, output_file: str) -> None:
-    """Copy the assets/ directory next to input_file to the output directory."""
-    input_dir = os.path.dirname(os.path.abspath(input_file))
-    output_dir = os.path.dirname(os.path.abspath(output_file))
-    src_assets = os.path.join(input_dir, "assets")
-    dst_assets = os.path.join(output_dir, "assets")
-    if os.path.isdir(src_assets) and src_assets != dst_assets:
-        shutil.copytree(src_assets, dst_assets, dirs_exist_ok=True)
-
-
 class SmartHighlighterOrchestrator(PipelineBase):
     """Full smart_highlighter pipeline orchestrator with DAG tracking."""
 
@@ -156,11 +240,11 @@ class SmartHighlighterOrchestrator(PipelineBase):
             skill_name="smart_highlighter",
         )
         workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-        proofread_dir = os.path.join(
-            workspace_root, "data", "proofreader", "output", "00_doc_proofread"
+        inbox_dir = os.path.join(
+            workspace_root, "data", "proofreader", "output", "04_final_verified"
         )
         self._state_manager = StateManager(
-            self.base_dir, skill_name="smart_highlighter", raw_dir=proofread_dir
+            self.base_dir, skill_name="smart_highlighter", raw_dir=inbox_dir
         )
 
     # ------------------------------------------------------------------ #
@@ -202,7 +286,7 @@ class SmartHighlighterOrchestrator(PipelineBase):
             sys.exit(1)
 
         input_text = pathlib.Path(args.input_file).read_text(encoding="utf-8")
-        subject = args.subject or "Default"
+        subject = getattr(args, "subject", None) or "Default"
 
         phase = PhaseHighlight(profile=getattr(args, "profile", None))
         result = phase.run_single(input_text, subject=subject)
@@ -223,7 +307,7 @@ class SmartHighlighterOrchestrator(PipelineBase):
 
     def run(self, args: argparse.Namespace) -> None:
         """Execute the full smart_highlighter pipeline."""
-        if args.input_file:
+        if getattr(args, "input_file", None):
             self.run_file_mode(args)
             return
 
@@ -231,108 +315,92 @@ class SmartHighlighterOrchestrator(PipelineBase):
             sys.exit(1)
 
         self._state_manager.sync_physical_files()
+
+        resume_from = None
+        if args.resume:
+            resume_from = self._state_manager.load_checkpoint()
+            if resume_from:
+                print(
+                    f"➩️  [強制斷點續傳] {resume_from.get('subject')} / "
+                    f"{resume_from.get('filename')} @ "
+                    f"{resume_from.get('phase_key', '').upper()}"
+                )
+            else:
+                print("❗  --resume 指定但尚無 Checkpoint，將從頭開始。")
+        elif not args.force:
+            resume_from = self.prompt_checkpoint_resume()
+
         self._state_manager.print_dashboard()
 
-        # Resolve input root — proofreader output
-        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-        input_root = os.path.join(
-            workspace_root, "data", "proofreader", "output", "00_doc_proofread"
-        )
-        output_root = os.path.join(workspace_root, "data", "smart_highlighter", "output")
-
-        # Gather subjects
-        subject_filter = args.subject
-        subjects = (
-            [subject_filter]
-            if subject_filter
-            else sorted(
-                d for d in os.listdir(input_root) if os.path.isdir(os.path.join(input_root, d))
-            )
-        )
-
         completed_normally = False
+        any_stopped = False
         try:
-            for subj in subjects:
-                subj_dir = os.path.join(input_root, subj)
-                if not os.path.isdir(subj_dir):
-                    continue
+            print(f"\n{'=' * 50}")
+            print("🚀 開始執行重點標記 (Phase H1)...")
+            print(f"{'=' * 50}")
 
-                md_files = sorted(f for f in os.listdir(subj_dir) if f.endswith(".md"))
+            p_obj = PhaseHighlight(profile=getattr(args, "profile", None))
 
-                for md_name in md_files:
-                    if args.file and args.file != md_name:
-                        continue
+            phase_resume = None
+            if resume_from and resume_from.get("phase_key", "") == p_obj.phase_key:
+                phase_resume = resume_from
 
-                    input_path = os.path.join(subj_dir, md_name)
-                    out_name = md_name.replace("_proofread.md", "_highlighted.md")
-                    output_path = os.path.join(output_root, subj, out_name)
+            p_obj.run(
+                force=args.force,
+                subject=args.subject,
+                file_filter=getattr(args, "file", None),
+                single_mode=False,
+                resume_from=phase_resume,
+            )
 
-                    if os.path.exists(output_path) and not args.force:
-                        self.info(f"   ⏭️  已存在，跳過: [{subj}] {md_name}")
-                        continue
+            if p_obj.stop_requested:
+                any_stopped = True
+                if p_obj.pause_requested:
+                    self._write_session_state(SessionState.PAUSED)
+                    print("💾 Pipeline 已暫停並儲存進度，下次執行自動從斷點繼續。")
+                else:
+                    self._write_session_state(SessionState.STOPPED)
+                    self._state_manager.clear_checkpoint()
+                    print("🛑 Pipeline 已停止（不儲存進度）。")
 
-                    print(f"\n{'=' * 50}")
-                    print(f"🚀 標記: [{subj}] {md_name}")
-                    print(f"{'=' * 50}")
+            if not any_stopped:
+                completed_normally = True
 
-                    with open(input_path, encoding="utf-8") as f:
-                        text = f.read()
-                    phase = PhaseHighlight()
-                    result = phase.run_single(text, subject=subj)
-
-                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                    _copy_assets(input_path, output_path)
-                    AtomicWriter.write_text(output_path, result)
-
-                    try:
-                        self._state_manager.update_task(
-                            subject=subj,
-                            filename=md_name,
-                            phase_key="highlight",
-                            status="✅",
-                            char_count=len(result),
-                        )
-                    except Exception:
-                        pass
-
-                    # --- Per-file EventBus Handoff ---
-                    EventBus.publish(
-                        DomainEvent(
-                            name="PipelineCompleted",
-                            source_skill="smart_highlighter",
-                            payload={"filepath": output_path, "subject": subj, "chain": []},
-                        )
-                    )
-
-                    self._state_manager = StateManager(
-                        self.base_dir,
-                        skill_name="smart_highlighter",
-                        raw_dir=os.path.abspath(
-                            os.path.join(
-                                os.path.dirname(__file__),
-                                "..",
-                                "..",
-                                "..",
-                                "data",
-                                "proofreader",
-                                "output",
-                                "00_doc_proofread",
-                            )
-                        ),
-                    )
-                    self._state_manager.print_dashboard()
-
-            completed_normally = True
+        except SystemExit:
+            pass
         except KeyboardInterrupt:
-            self._write_session_state(SessionState.STOPPED, context={"error": "KeyboardInterrupt"})
-            print("\n🛑 使用者手動中斷執行 (KeyboardInterrupt)")
+            print("\n\n⏸️  已收到 Ctrl+C...")
+            saved = False
+            try:
+                choice = (
+                    input("  請選擇: [S] 儲存進度並離開  [Q] 直接離開 (S/Q) [Enter = S]: ")
+                    .strip()
+                    .lower()
+                )
+            except (EOFError, KeyboardInterrupt):
+                choice = "q"
+
+            if choice != "q":
+                cp_path = os.path.join(self.base_dir, "state", "checkpoint.json")
+                if os.path.exists(cp_path):
+                    saved = True
+                self._write_session_state(SessionState.PAUSED, context={"interrupted": True})
+                print("💾 進度已儲存。下次執行會自動從斷點繼續。")
+            else:
+                self._write_session_state(
+                    SessionState.STOPPED, context={"error": "KeyboardInterrupt"}
+                )
+                self._state_manager.clear_checkpoint()
+                print("🛑 已離開，未儲存進度。")
+            PipelineBase.notify_os("執行已中斷")
             sys.exit(130)
         except Exception as exc:
             self._write_session_state(SessionState.FAILED, context={"error": str(exc)})
             print(f"💥 未預期錯誤: {exc}")
 
-        if completed_normally:
+        if completed_normally and not any_stopped:
             self._write_session_state(SessionState.COMPLETED)
+            self._state_manager.clear_checkpoint()
 
         print("🏁 Pipeline 執行完畢。")
         try:
@@ -357,7 +425,7 @@ class SmartHighlighterOrchestrator(PipelineBase):
 
 def main() -> None:
     parser = build_skill_parser(
-        "V2.0 Smart Highlighter Pipeline — Markdown 重點標記",
+        "V3.0 Smart Highlighter Pipeline — Markdown 重點標記",
         include_subject=True,
         include_force=True,
         include_resume=True,

@@ -10,6 +10,10 @@ import json
 import os
 import sys
 
+from core.utils.log_manager import build_logger
+
+logger = build_logger(__name__, console=True)
+
 # Workspace Root Resolver
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -23,7 +27,7 @@ from core.utils.path_builder import PathBuilder
 
 def load_config(config_file):
     if not os.path.exists(config_file):
-        print(f"❌ 找不到設定檔：{config_file}")
+        logger.info(f"❌ 找不到設定檔：{config_file}")
         sys.exit(1)
 
     ext = os.path.splitext(config_file)[1].lower()
@@ -34,7 +38,7 @@ def load_config(config_file):
             with open(config_file, encoding="utf-8") as f:
                 return yaml.safe_load(f), "yaml"
         except ImportError:
-            print("❌ 缺少 PyYAML, 請執行 pip install pyyaml")
+            logger.info("❌ 缺少 PyYAML, 請執行 pip install pyyaml")
             sys.exit(1)
     else:
         with open(config_file, encoding="utf-8") as f:
@@ -46,21 +50,21 @@ def save_config(config_file, config_data, format_type):
         import yaml
 
         AtomicWriter.write_json(config_file, config_data)
-    print(f"✅ 設定已成功儲存至 {config_file}！")
+    logger.info(f"✅ 設定已成功儲存至 {config_file}！")
 
 
 def prompt_choice(phase_key, profiles, current_active):
-    print(f"\n{'-' * 50}")
-    print(f"⚙️  {phase_key.upper()} 模型/組態設定")
-    print(f"{'-' * 50}")
+    logger.info(f"\n{'-' * 50}")
+    logger.info(f"⚙️  {phase_key.upper()} 模型/組態設定")
+    logger.info(f"{'-' * 50}")
     options = list(profiles.keys())
 
     for i, p in enumerate(options, 1):
         note = profiles[p].get("_note", "") if isinstance(profiles[p], dict) else ""
         marker = "✨(目前設定)" if p == current_active else ""
-        print(f"[{i}] {p} {marker}")
+        logger.info(f"[{i}] {p} {marker}")
         if note:
-            print(f"    └─ {note}")
+            logger.info(f"    └─ {note}")
 
     while True:
         try:
@@ -72,9 +76,9 @@ def prompt_choice(phase_key, profiles, current_active):
             idx = int(choice) - 1
             if 0 <= idx < len(options):
                 return options[idx]
-            print("⚠️ 無效的選項，請重新輸入。")
+            logger.info("⚠️ 無效的選項，請重新輸入。")
         except ValueError:
-            print("⚠️ 請輸入數字。")
+            logger.info("⚠️ 請輸入數字。")
 
 
 def main():
@@ -85,11 +89,11 @@ def main():
     args = parser.parse_args()
 
     skill = args.skill
-    print("=" * 60)
-    print(f"  ✨ Open Claw 快速設定精靈 [{skill}] ✨")
-    print("=" * 60)
-    print("本精靈將協助您選擇每個階段要使用的 AI 模型與相關參數。")
-    print("設定結果將會自動寫入該 Skill 的 config 檔案中。")
+    logger.info("=" * 60)
+    logger.info(f"  ✨ Open Claw 快速設定精靈 [{skill}] ✨")
+    logger.info("=" * 60)
+    logger.info("本精靈將協助您選擇每個階段要使用的 AI 模型與相關參數。")
+    logger.info("設定結果將會自動寫入該 Skill 的 config 檔案中。")
 
     pb = PathBuilder(_workspace_root, skill)
     # Prefer config.yaml over config.json
@@ -107,7 +111,7 @@ def main():
     elif os.path.exists(fallback_json):
         config_file = fallback_json
     else:
-        print(f"❌ 找不到 {skill} 的任何設定檔。")
+        logger.info(f"❌ 找不到 {skill} 的任何設定檔。")
         sys.exit(1)
 
     config_data, fmt = load_config(config_file)
@@ -127,15 +131,15 @@ def main():
                 changed = True
 
     if changed:
-        print("\n" + "=" * 60)
+        logger.info("\n" + "=" * 60)
         save_config(config_file, config_data, fmt)
     else:
-        print("\n✅ 沒有變更任何設定。")
+        logger.info("\n✅ 沒有變更任何設定。")
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n🛑 設定精靈已取消。未儲存任何變更。")
+        logger.info("\n\n🛑 設定精靈已取消。未儲存任何變更。")
         sys.exit(0)

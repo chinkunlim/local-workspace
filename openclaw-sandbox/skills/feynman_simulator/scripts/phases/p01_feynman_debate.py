@@ -71,7 +71,9 @@ class Phase1FeynmanDebate(PhaseBase):
                 "- 若質疑不成立，清楚說明為何你的原始解釋是正確的。\n"
                 "- 回應控制在 250 字以內。"
             )
-        return self._llm.generate(model=_STUDENT_MODEL, prompt=prompt)
+        result = self._llm.generate(model=_STUDENT_MODEL, prompt=prompt)
+        self._llm.unload_model(_STUDENT_MODEL)
+        return result
 
     # ------------------------------------------------------------------ #
     #  TutorAgent — Gemini via Playwright                                  #
@@ -182,6 +184,7 @@ class Phase1FeynmanDebate(PhaseBase):
             f"【辯證紀錄】\n{''.join(debate_log)}"
         )
         synthesis = self._llm.generate(model=_STUDENT_MODEL, prompt=synthesis_prompt)
+        self._llm.unload_model(_STUDENT_MODEL)
         debate_log.append(f"\n## 🔍 盲點分析報告\n\n{synthesis}\n")
 
         # Write archive

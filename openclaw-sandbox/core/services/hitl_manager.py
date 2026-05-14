@@ -27,6 +27,10 @@ import os
 from typing import Any, Dict, Optional
 import uuid
 
+from core.utils.log_manager import build_logger
+
+logger = build_logger(__name__, console=True)
+
 from core.utils.atomic_writer import AtomicWriter
 
 # ---------------------------------------------------------------------------
@@ -107,7 +111,7 @@ class HITLManager:
 
         AtomicWriter.write_json(event_path, payload)
 
-        print(
+        logger.info(
             f"⏸️  [HITL] 已暫停 — Phase: {event.phase} | 原因: {event.reason}\n"
             f"   事件 ID: {event.trace_id}\n"
             f"   等待確認：{event_path}"

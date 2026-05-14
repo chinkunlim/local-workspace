@@ -65,42 +65,6 @@ class Phase3DocCompleteness(PipelineBase):
         self._p2_dir = self.dirs.get(
             "p2", os.path.join(self.base_dir, "output", "02_transcript_proofread")
         )
-        self.state_manager.raw_dir = self._p2_dir
-
-        with self.state_manager._lock:
-            if os.path.exists(self._p2_dir):
-                subjects = (
-                    [subject]
-                    if subject
-                    else [
-                        d
-                        for d in os.listdir(self._p2_dir)
-                        if os.path.isdir(os.path.join(self._p2_dir, d))
-                    ]
-                )
-                for subj in subjects:
-                    subj_dir = os.path.join(self._p2_dir, subj)
-                    if not os.path.isdir(subj_dir):
-                        continue
-                    if subj not in self.state_manager.state:
-                        self.state_manager.state[subj] = {}
-                    for fname in os.listdir(subj_dir):
-                        if not fname.endswith(".md") or fname == "correction_log.md":
-                            continue
-                        if fname not in self.state_manager.state[subj]:
-                            self.state_manager.state[subj][fname] = {
-                                **dict.fromkeys(self.state_manager.PHASES, "⏳"),
-                                "p1": "⏭️",
-                                "hash": "",
-                                "date": "",
-                                "note": "",
-                                "output_hashes": {},
-                                "char_count": {},
-                            }
-                        else:
-                            if self.state_manager.state[subj][fname].get("p1") != "⏭️":
-                                self.state_manager.state[subj][fname]["p1"] = "⏭️"
-            self.state_manager._save_state()
         self.process_tasks(
             self._process_file,
             force=force,

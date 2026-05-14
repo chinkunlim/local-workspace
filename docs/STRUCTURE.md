@@ -250,9 +250,25 @@ skills/
 │           ├── p01_claim_extraction.py # Extracts claims from raw notes
 │           └── p02_synthesis.py        # Compiles debates, APA, and Obsidian tags
 │
-└── academic_edu_assistant/ # (Legacy) Conversational tutoring
-    ├── manifest.py       # "academic_edu_assistant"
-    └── scripts/          # Legacy CLI interactive loop
+├── feynman_simulator/      # Simulates Feynman technique via AI debates
+│   ├── SKILL.md
+│   └── scripts/
+│       ├── run_all.py
+│       └── phases/
+│           ├── p01_feynman_debate.py
+│           └── p02_debate_synthesis.py
+│
+├── interactive_reader/     # Interactive reading & chat with document
+│   ├── SKILL.md
+│   └── scripts/
+│       ├── run_all.py
+│       └── phases/
+│           └── p01_interactive.py
+│
+└── video_ingester/         # Video transcription & processing pipeline
+    ├── SKILL.md
+    └── scripts/
+        └── run_all.py
 ```
 
 ---

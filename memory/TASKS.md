@@ -21,7 +21,10 @@
 - [ ] Rebuild ChromaDB index and validate a Telegram RAG query with `gemma4:e4b`
 - [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
 - [ ] **Fix stale `openclaw.json` workspace path**: Update `agents.defaults.workspace` from `/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox` → `openclaw-sandbox/` (run `openclaw configure` or `openclaw config set agents.defaults.workspace /Users/limchinkun/Desktop/local-workspace/openclaw-sandbox`)
-
+- [x] **Migrate core/services & core/cli from rich.print to log_manager for stricter compliance**
+- [x] **Fix untyped functions flagged by Mypy in router_agent.py, p03_merge.py, p00_rss_ingest.py**
+- [ ] **Resolve TODO (P3) #14: emit to telegram_bot in hitl_manager.py**
+- [ ] **Archive session 2026-05-13_db4c8fb5.md properly (run ops/archive_session.py)**
 
 ---
 

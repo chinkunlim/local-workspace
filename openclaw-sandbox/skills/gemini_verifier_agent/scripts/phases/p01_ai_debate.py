@@ -69,6 +69,7 @@ class Phase1AIDebate(PhaseBase):
                 )
                 # primary: qwen3:14b; fallback: qwen3:8b (via config.yaml)
                 followup = self.llm.generate(model="qwen3:14b", prompt=reflection_prompt)
+                self.llm.unload_model("qwen3:14b")
 
                 if "NO_QUESTIONS" not in followup:
                     print(f"🤔 本地模型追問: {followup}")

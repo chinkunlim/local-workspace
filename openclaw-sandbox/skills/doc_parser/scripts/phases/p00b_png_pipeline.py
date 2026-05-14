@@ -233,6 +233,7 @@ class Phase0bPNGPipeline(PipelineBase):
             result = self.llm.generate(
                 model=self.vlm_model, prompt=prompt, images=[b64_img], options={"temperature": 0.0}
             )
+            self.llm.unload_model(self.vlm_model)
             return result
         except Exception as e:
             self.error(f"VLM 執行錯誤: {e}")

@@ -24,6 +24,9 @@ import os
 import re
 from typing import Optional
 
+from core.utils.log_manager import build_logger
+
+logger = build_logger(__name__, console=True)
 import yaml
 
 # ---------------------------------------------------------------------------
@@ -201,7 +204,7 @@ class SecurityManager:
         Returns True if user confirms, False otherwise.
         """
         profile_name = os.path.basename(os.path.normpath(chrome_profile))
-        print(f'\n🔐 Chrome Profile: {profile_name} — 備忘: "{account_hint}"')
+        logger.info(f'\n🔐 Chrome Profile: {profile_name} — 備忘: "{account_hint}"')
         try:
             answer = input("這是你想要使用的帳號嗎？[是/否] ").strip().lower()
         except (EOFError, KeyboardInterrupt):

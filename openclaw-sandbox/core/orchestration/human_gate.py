@@ -15,6 +15,8 @@ import socket
 import threading
 from typing import Optional
 
+from rich import print
+
 
 class _GatedHTTPServer(HTTPServer):
     """HTTPServer subclass that carries a typed `gate` attribute."""

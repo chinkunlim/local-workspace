@@ -7,6 +7,10 @@ core/check_status.py — 全系統狀態報告產生器
 import os
 import sys
 
+from core.utils.log_manager import build_logger
+
+logger = build_logger(__name__, console=True)
+
 # 確保 core 模組可被引入
 _core_dir = os.path.dirname(os.path.abspath(__file__))
 _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(_core_dir, "..")))
@@ -39,4 +43,4 @@ def get_full_status_report() -> str:
 
 
 if __name__ == "__main__":
-    print(get_full_status_report())
+    logger.info(get_full_status_report())

@@ -44,6 +44,7 @@ class Phase1ClaimExtraction(PhaseBase):
                 try:
                     # primary: deepseek-r1:8b (CoT); fallback: qwen3:8b (via config.yaml)
                     response = self.llm.generate(model="deepseek-r1:8b", prompt=prompt)
+                    self.llm.unload_model("deepseek-r1:8b")
 
                     # Clean up JSON
                     start_idx = response.find("[")

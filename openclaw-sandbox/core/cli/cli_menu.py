@@ -9,6 +9,10 @@ import signal
 import sys
 from typing import Dict, List
 
+from core.utils.log_manager import build_logger
+
+logger = build_logger(__name__, console=True)
+
 
 class SafeInputContext:
     """
@@ -52,20 +56,20 @@ def batch_select_tasks(tasks: List[Dict], header: str = "已完成的檔案") ->
     selected: set[int] = set()
 
     def render():
-        print("\n" + "═" * 56)
-        print(f"   ⚠️  偵測到 {len(tasks)} 個 {header}")
-        print("═" * 56)
+        logger.info("\n" + "═" * 56)
+        logger.info(f"   ⚠️  偵測到 {len(tasks)} 個 {header}")
+        logger.info("═" * 56)
         for i, task in enumerate(tasks, 1):
             mark = "●" if (i - 1) in selected else "○"
-            print(f"  [{i:>2}] {mark} {task['subject']} / {task['filename']}")
-        print("-" * 56)
-        print("   數字/範圍 (如 1,3,5 或 1-5) = 切換選取")
-        print("   A = 全選  |  S = 全部跳過")
+            logger.info(f"  [{i:>2}] {mark} {task['subject']} / {task['filename']}")
+        logger.info("-" * 56)
+        logger.info("   數字/範圍 (如 1,3,5 或 1-5) = 切換選取")
+        logger.info("   A = 全選  |  S = 全部跳過")
         if selected:
-            print(f"   已選取 {len(selected)} 個 → 按 [Enter] 確認執行")
+            logger.info(f"   已選取 {len(selected)} 個 → 按 [Enter] 確認執行")
         else:
-            print("   按 [Enter] 或 S = 略過全部")
-        print("-" * 56)
+            logger.info("   按 [Enter] 或 S = 略過全部")
+        logger.info("-" * 56)
 
     render()
 
@@ -74,29 +78,29 @@ def batch_select_tasks(tasks: List[Dict], header: str = "已完成的檔案") ->
             try:
                 raw = input("   > ").strip().lower()
             except (EOFError, KeyboardInterrupt):
-                print("\n   [強制退出]")
+                logger.info("\n   [強制退出]")
                 sys.exit(0)
 
         if raw == "s":
-            print(f"   ⏭️  已選擇跳過全部 {len(tasks)} 個檔案。")
+            logger.info(f"   ⏭️  已選擇跳過全部 {len(tasks)} 個檔案。")
             return {}
         elif raw == "":
             if not selected:
-                print(f"   ⏭️  未選取任何項目，跳過全部 {len(tasks)} 個檔案。")
+                logger.info(f"   ⏭️  未選取任何項目，跳過全部 {len(tasks)} 個檔案。")
                 return {}
             else:
                 chosen = {i: tasks[i] for i in sorted(selected)}
-                print(f"   ✅ 確認處理 {len(chosen)} 個檔案。")
+                logger.info(f"   ✅ 確認處理 {len(chosen)} 個檔案。")
                 return chosen
         elif raw == "a":
             selected = set(range(len(tasks)))
             render()
-            print(f"   ✅ 已全選全部 {len(tasks)} 個檔案。")
+            logger.info(f"   ✅ 已全選全部 {len(tasks)} 個檔案。")
             return {i: tasks[i] for i in sorted(selected)}
         else:
             parsed = parse_selection_range(raw, len(tasks))
             if not parsed:
-                print("   ⚠️  無法辨識指令，請輸入正確的數字、範圍或 A/S。")
+                logger.info("   ⚠️  無法辨識指令，請輸入正確的數字、範圍或 A/S。")
             else:
                 for idx in parsed:
                     if idx in selected:

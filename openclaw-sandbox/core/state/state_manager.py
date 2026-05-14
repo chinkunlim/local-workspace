@@ -7,6 +7,8 @@ import os
 import threading
 from typing import Any, Dict, List, Optional
 
+from rich import print
+
 from core.state.state_backend import get_state_backend
 from core.utils.atomic_writer import AtomicWriter
 

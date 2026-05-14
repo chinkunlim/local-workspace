@@ -102,42 +102,6 @@ class Phase2TranscriptProofread(PipelineBase):
         self._audio_dir = os.path.join(
             workspace_root, "data", "audio_transcriber", "output", "03_merged"
         )
-        self.state_manager.raw_dir = self._audio_dir
-
-        with self.state_manager._lock:
-            if os.path.exists(self._audio_dir):
-                subjects = (
-                    [subject]
-                    if subject
-                    else [
-                        d
-                        for d in os.listdir(self._audio_dir)
-                        if os.path.isdir(os.path.join(self._audio_dir, d))
-                    ]
-                )
-                for subj in subjects:
-                    subj_dir = os.path.join(self._audio_dir, subj)
-                    if not os.path.isdir(subj_dir):
-                        continue
-                    if subj not in self.state_manager.state:
-                        self.state_manager.state[subj] = {}
-                    for fname in os.listdir(subj_dir):
-                        if not fname.endswith(".md") or fname == "correction_log.md":
-                            continue
-                        if fname not in self.state_manager.state[subj]:
-                            self.state_manager.state[subj][fname] = {
-                                **dict.fromkeys(self.state_manager.PHASES, "⏳"),
-                                "p1": "⏭️",
-                                "hash": "",
-                                "date": "",
-                                "note": "",
-                                "output_hashes": {},
-                                "char_count": {},
-                            }
-                        else:
-                            if self.state_manager.state[subj][fname].get("p1") != "⏭️":
-                                self.state_manager.state[subj][fname]["p1"] = "⏭️"
-            self.state_manager._save_state()
         self.process_tasks(
             self._process_file,
             force=force,
@@ -196,6 +160,10 @@ class Phase2TranscriptProofread(PipelineBase):
 
             try:
                 res = self.llm.generate(model=model_name, prompt=prompt, options=options)
+
+                if not res or not res.strip():
+                    raise ValueError("API 回傳空內容（可能原因：num_predict 耗盡、網路超時）")
+
                 corrected = res
                 expl = ""
                 if "---" in res:
@@ -204,15 +172,17 @@ class Phase2TranscriptProofread(PipelineBase):
                     expl = parts_res[1].strip()
 
                 if len(corrected) < len(chunk) * self.VERBATIM_THRESHOLD:
-                    self.log(f"⚠️ 片段 {c_idx + 1} 觸發守衛: 過短，保留原文", "warn")
-                    full_corrected.append(chunk)
+                    self.log(f"⚠️ 片段 {c_idx + 1} 觸發守衛: 過短，產生選擇標籤", "warn")
+                    choice_xml = f"<ProofreadChoice>\n<Original>\n{chunk}\n</Original>\n<AI>\n{corrected}\n</AI>\n</ProofreadChoice>"
+                    full_corrected.append(choice_xml)
                 else:
                     full_corrected.append(corrected)
                     if expl:
                         full_logs.append(expl)
             except Exception as e:
                 self.log(f"❌ 片段 {c_idx + 1} 失敗: {e}", "error")
-                full_corrected.append(chunk)
+                choice_xml = f"<ProofreadChoice>\n<Original>\n{chunk}\n</Original>\n<AI>\n[API 失敗: {e}]\n</AI>\n</ProofreadChoice>"
+                full_corrected.append(choice_xml)
 
         self.finish_spinner(pbar, stop_tick, t)
         self.llm.unload_model(model_name, logger=self)

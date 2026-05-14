@@ -140,7 +140,9 @@ class Phase1bVectorChartExtractor(PipelineBase):
 
         Returns dict with {page, src, type} or None on failure.
         """
-        tmp_prefix = f"/tmp/openclaw_vec_p{page_num}"
+        import tempfile
+
+        tmp_prefix = os.path.join(tempfile.gettempdir(), f"openclaw_vec_p{page_num}")
 
         cmd = [
             "pdftoppm",

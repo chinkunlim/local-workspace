@@ -8,6 +8,13 @@ with the ground truth original files from `data/raw/`.
 
 import json
 import os
+import sys
+
+# Internal Core Bootstrap
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
+from core.utils.bootstrap import ensure_core_path as _bootstrap
+
+_bootstrap(__file__)
 
 from flask import Flask, jsonify, render_template_string, request, send_file
 
@@ -80,7 +87,7 @@ def list_files():
         return jsonify(results)
 
     # Phases to check
-    phases = ["00_doc_proofread", "01_transcript_proofread", "02_doc_completeness"]
+    phases = ["01_doc_proofread", "02_transcript_proofread", "03_doc_completeness"]
 
     for phase in phases:
         phase_dir = os.path.join(PROOFREADER_OUT_DIR, phase)
@@ -102,6 +109,9 @@ def list_files():
                 md_path = os.path.join(subj_dir, fname)
                 orig_path = find_original_media(subj, fname)
 
+                verified_path = os.path.join(PROOFREADER_OUT_DIR, "04_final_verified", subj, fname)
+                is_verified = os.path.exists(verified_path)
+
                 results[subj].append(
                     {
                         "id": f"{phase}/{subj}/{fname}",
@@ -110,6 +120,7 @@ def list_files():
                         "md_path": md_path,
                         "original_path": orig_path,
                         "media_type": get_media_type(orig_path) if orig_path else "unknown",
+                        "verified": is_verified,
                     }
                 )
 
@@ -125,6 +136,13 @@ def get_content():
     # Security check to ensure it stays in workspace
     if WORKSPACE_ROOT not in os.path.abspath(path):
         return "Access denied", 403
+
+    # If verified version exists, load it instead of the raw output
+    subj = os.path.basename(os.path.dirname(path))
+    fname = os.path.basename(path)
+    verified_path = os.path.join(PROOFREADER_OUT_DIR, "04_final_verified", subj, fname)
+    if os.path.exists(verified_path):
+        path = verified_path
 
     with open(path, encoding="utf-8") as f:
         return f.read()
@@ -142,7 +160,12 @@ def save_content():
     if WORKSPACE_ROOT not in os.path.abspath(path):
         return jsonify({"error": "Access denied"}), 403
 
-    AtomicWriter.write_text(path, content)
+    subj = os.path.basename(os.path.dirname(path))
+    fname = os.path.basename(path)
+    final_path = os.path.join(PROOFREADER_OUT_DIR, "04_final_verified", subj, fname)
+
+    os.makedirs(os.path.dirname(final_path), exist_ok=True)
+    AtomicWriter.write_text(final_path, content)
 
     return jsonify({"status": "success"})
 
@@ -168,7 +191,7 @@ def serve_media(filepath):
     return send_file(full_path)
 
 
-HTML_TEMPLATE = """
+HTML_TEMPLATE = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -191,6 +214,7 @@ HTML_TEMPLATE = """
         .badge.p0 { background: #007acc; }
         .badge.p1 { background: #cca700; }
         .badge.p2 { background: #4CAF50; }
+        .badge.verified { background: #009688; }
 
         /* Main Area */
         .main-area { flex: 1; display: flex; flex-direction: column; }
@@ -204,17 +228,25 @@ HTML_TEMPLATE = """
         /* Split View */
         .split-view { display: flex; flex: 1; min-height: 0; }
         .pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid #333; }
-        .pane-header { padding: 10px; background: #1e1e1e; border-bottom: 1px solid #333; font-size: 12px; font-weight: bold; color: #888; text-transform: uppercase; text-align: center; }
-        .pane-content { flex: 1; display: flex; justify-content: center; align-items: center; background: #1e1e1e; overflow: hidden; }
+        .pane-header { padding: 10px; background: #1e1e1e; border-bottom: 1px solid #333; font-size: 12px; font-weight: bold; color: #888; text-transform: uppercase; text-align: center; display: flex; justify-content: space-between; align-items: center; }
+        .pane-content { flex: 1; display: flex; flex-direction: column; background: #1e1e1e; overflow: hidden; }
+
+        /* Toolbars inside Editor Pane */
+        .action-toolbar { background: #333; padding: 10px; display: none; align-items: center; justify-content: space-between; border-bottom: 1px solid #444; }
+        .action-toolbar.visible { display: flex; }
+        .action-group { display: flex; align-items: center; gap: 10px; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn-outline { background: transparent; border: 1px solid #007acc; color: #007acc; }
+        .btn-outline:hover { background: #007acc; color: #fff; }
 
         /* Embedded Media */
         iframe.pdf-viewer { width: 100%; height: 100%; border: none; }
         img.image-viewer { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .audio-container { width: 80%; text-align: center; }
-        .empty-state { color: #666; font-size: 14px; }
+        .audio-container { width: 80%; margin: auto; text-align: center; }
+        .empty-state { color: #666; font-size: 14px; margin: auto; }
 
         /* Editor */
-        #editor { width: 100%; height: 100%; }
+        #editor { flex: 1; width: 100%; }
 
         /* Toast */
         .toast { position: fixed; bottom: 20px; right: 20px; background: #4CAF50; color: white; padding: 10px 20px; border-radius: 4px; display: none; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; }
@@ -240,17 +272,43 @@ HTML_TEMPLATE = """
 
         <div class="split-view">
             <!-- Left: Ground Truth -->
-            <div class="pane">
+            <div class="pane" id="leftPane">
                 <div class="pane-header">Original File (Ground Truth)</div>
-                <div class="pane-content" id="mediaViewer">
+                <div class="pane-content" id="mediaViewer" style="justify-content: center;">
                     <div class="empty-state">No original file selected</div>
                 </div>
             </div>
 
             <!-- Right: Markdown Editor -->
             <div class="pane">
-                <div class="pane-header">Ollama Output (Markdown)</div>
+                <div class="pane-header">
+                    <span>Ollama Output (Markdown)</span>
+                    <span style="font-size: 10px; color: #666; font-weight: normal;">(Hint: Select text + Ctrl+E for Smart Replace)</span>
+                </div>
                 <div class="pane-content">
+                    <div class="action-toolbar" id="resolutionToolbar">
+                        <div class="action-group">
+                            <span id="resolutionStatus" style="font-size: 13px; color: #ffcc00; font-weight: bold;"></span>
+                        </div>
+                        <div class="action-group">
+                            <button class="btn btn-sm" onclick="resolveChoice('original')">Keep Original</button>
+                            <button class="btn btn-sm" onclick="resolveChoice('ai')">Keep AI</button>
+                        </div>
+                    </div>
+                    <div class="action-toolbar" id="replaceToolbar">
+                        <div class="action-group">
+                            <span style="font-size: 13px; font-weight: bold; color: #4dc9f6;">Smart Replace</span>
+                            <input type="text" id="replaceTarget" disabled style="background: #1e1e1e; border: 1px solid #444; color: #ccc; padding: 4px; border-radius: 3px;" />
+                            <span style="font-size: 12px;">with</span>
+                            <input type="text" id="replaceInput" placeholder="New text..." style="background: #1e1e1e; border: 1px solid #007acc; color: #fff; padding: 4px; border-radius: 3px; outline: none;" />
+                            <span id="replaceCount" style="font-size: 12px; color: #888; margin-left: 10px;"></span>
+                        </div>
+                        <div class="action-group">
+                            <button class="btn btn-sm" onclick="doSmartReplace()">Replace (Y)</button>
+                            <button class="btn btn-sm btn-outline" onclick="skipSmartReplace()">Skip (N)</button>
+                            <button class="btn btn-sm btn-outline" onclick="endSmartReplace()">Done (Esc)</button>
+                        </div>
+                    </div>
                     <div id="editor"></div>
                 </div>
             </div>
@@ -280,10 +338,178 @@ HTML_TEMPLATE = """
                 automaticLayout: true
             });
 
+            // Keybindings for Smart Replace Mode
+            editorInstance.onKeyDown(function (e) {
+                if (document.getElementById('replaceToolbar').classList.contains('visible')) {
+                    if (document.activeElement.tagName === 'INPUT') return; // Don't steal keystrokes if typing
+                    if (e.keyCode === monaco.KeyCode.KeyY) { e.preventDefault(); doSmartReplace(); }
+                    if (e.keyCode === monaco.KeyCode.KeyN) { e.preventDefault(); skipSmartReplace(); }
+                    if (e.keyCode === monaco.KeyCode.Escape) { e.preventDefault(); endSmartReplace(); }
+                }
+            });
+
             // Load Files
             loadFiles();
         });
 
+        // ----------------------------------------------------
+        // ProofreadChoice Resolution Logic
+        // ----------------------------------------------------
+        let choices = [];
+        let currentChoiceIndex = 0;
+
+        function parseChoices() {
+            let text = editorInstance.getValue();
+            let regex = /<ProofreadChoice>\s*<Original>([\s\S]*?)<\/Original>\s*<AI>([\s\S]*?)<\/AI>\s*<\/ProofreadChoice>/g;
+            choices = [];
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                choices.push({
+                    start: match.index,
+                    end: match.index + match[0].length,
+                    original: match[1].trim(),
+                    ai: match[2].trim()
+                });
+            }
+
+            const toolbar = document.getElementById('resolutionToolbar');
+            if (choices.length > 0) {
+                toolbar.classList.add('visible');
+                currentChoiceIndex = 0;
+                focusChoice();
+            } else {
+                toolbar.classList.remove('visible');
+            }
+        }
+
+        function focusChoice() {
+            if (currentChoiceIndex >= choices.length) {
+                document.getElementById('resolutionToolbar').classList.remove('visible');
+                return;
+            }
+            document.getElementById('resolutionStatus').innerText = `Decision ${currentChoiceIndex + 1} of ${choices.length}`;
+
+            let choice = choices[currentChoiceIndex];
+            let pos = editorInstance.getModel().getPositionAt(choice.start);
+            let endPos = editorInstance.getModel().getPositionAt(choice.end);
+
+            let range = new monaco.Range(pos.lineNumber, pos.column, endPos.lineNumber, endPos.column);
+            editorInstance.setSelection(range);
+            editorInstance.revealRangeInCenter(range);
+        }
+
+        function resolveChoice(type) {
+            let choice = choices[currentChoiceIndex];
+            let replacement = type === 'original' ? choice.original : choice.ai;
+
+            let pos = editorInstance.getModel().getPositionAt(choice.start);
+            let endPos = editorInstance.getModel().getPositionAt(choice.end);
+            let range = new monaco.Range(pos.lineNumber, pos.column, endPos.lineNumber, endPos.column);
+
+            editorInstance.executeEdits("resolution", [{
+                range: range,
+                text: replacement,
+                forceMoveMarkers: true
+            }]);
+
+            // Re-parse since offsets changed
+            parseChoices();
+        }
+
+        // ----------------------------------------------------
+        // Smart Global Replace Logic
+        // ----------------------------------------------------
+        let replaceMatches = [];
+        let currentReplaceIndex = 0;
+
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                startSmartReplace();
+            }
+        });
+
+        // Enter key inside input
+        document.getElementById('replaceInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.blur();
+                editorInstance.focus();
+                doSmartReplace();
+            }
+        });
+
+        function startSmartReplace() {
+            let selection = editorInstance.getSelection();
+            if (selection.isEmpty()) {
+                alert("Please select a word in the editor to replace.");
+                return;
+            }
+
+            let model = editorInstance.getModel();
+            let text = model.getValueInRange(selection);
+
+            document.getElementById('replaceTarget').value = text;
+            document.getElementById('replaceInput').value = '';
+            document.getElementById('replaceToolbar').classList.add('visible');
+            document.getElementById('replaceInput').focus();
+
+            let matches = model.findMatches(text, false, false, false, null, true);
+            matches.sort((a, b) => a.range.getStartPosition().isBefore(b.range.getStartPosition()) ? -1 : 1);
+
+            currentReplaceIndex = 0;
+            for (let i = 0; i < matches.length; i++) {
+                if (matches[i].range.containsRange(selection)) {
+                    currentReplaceIndex = i;
+                    break;
+                }
+            }
+            replaceMatches = matches;
+            updateReplaceUI();
+        }
+
+        function updateReplaceUI() {
+            if (currentReplaceIndex >= replaceMatches.length) {
+                endSmartReplace();
+                return;
+            }
+            document.getElementById('replaceCount').innerText = `Match ${currentReplaceIndex + 1} of ${replaceMatches.length}`;
+            let match = replaceMatches[currentReplaceIndex];
+            editorInstance.setSelection(match.range);
+            editorInstance.revealRangeInCenter(match.range);
+        }
+
+        function doSmartReplace() {
+            let newVal = document.getElementById('replaceInput').value;
+            if (!newVal) { alert("Please enter replacement text first!"); return; }
+
+            let match = replaceMatches[currentReplaceIndex];
+            editorInstance.executeEdits("smart-replace", [{
+                range: match.range,
+                text: newVal,
+                forceMoveMarkers: true
+            }]);
+
+            let target = document.getElementById('replaceTarget').value;
+            replaceMatches = editorInstance.getModel().findMatches(target, false, false, false, null, true);
+            replaceMatches.sort((a, b) => a.range.getStartPosition().isBefore(b.range.getStartPosition()) ? -1 : 1);
+
+            updateReplaceUI();
+        }
+
+        function skipSmartReplace() {
+            currentReplaceIndex++;
+            updateReplaceUI();
+        }
+
+        function endSmartReplace() {
+            document.getElementById('replaceToolbar').classList.remove('visible');
+            editorInstance.focus();
+        }
+
+        // ----------------------------------------------------
+        // File Loading & Saving
+        // ----------------------------------------------------
         async function loadFiles() {
             try {
                 const res = await fetch('/api/files');
@@ -311,13 +537,15 @@ HTML_TEMPLATE = """
 
                         let badgeClass = 'badge';
                         let badgeText = 'N/A';
-                        if (f.phase.includes('00')) { badgeClass += ' p0'; badgeText = 'Doc'; }
-                        if (f.phase.includes('01')) { badgeClass += ' p1'; badgeText = 'Tx'; }
-                        if (f.phase.includes('02')) { badgeClass += ' p2'; badgeText = 'Comp'; }
+                        if (f.phase.includes('01')) { badgeClass += ' p0'; badgeText = 'Doc'; }
+                        if (f.phase.includes('02')) { badgeClass += ' p1'; badgeText = 'Tx'; }
+                        if (f.phase.includes('03')) { badgeClass += ' p2'; badgeText = 'Comp'; }
+
+                        let verifiedBadge = f.verified ? `<span class="badge verified">✅ Verified</span>` : '';
 
                         item.innerHTML = `
                             <span title="${f.filename}">${f.filename}</span>
-                            <span class="${badgeClass}">${badgeText}</span>
+                            <div>${verifiedBadge} <span class="${badgeClass}">${badgeText}</span></div>
                         `;
 
                         item.onclick = () => selectFile(f, item.id);
@@ -339,6 +567,9 @@ HTML_TEMPLATE = """
             document.getElementById('currentTitle').innerText = fileData.filename;
             document.getElementById('saveBtn').disabled = true;
             document.getElementById('saveBtn').innerText = 'Loading...';
+
+            document.getElementById('resolutionToolbar').classList.remove('visible');
+            document.getElementById('replaceToolbar').classList.remove('visible');
 
             // Render Media View
             const viewer = document.getElementById('mediaViewer');
@@ -375,6 +606,8 @@ HTML_TEMPLATE = """
                     document.getElementById('saveBtn').disabled = false;
                     document.getElementById('saveBtn').innerText = 'Save & Mark Completed';
                     currentFile = fileData;
+
+                    setTimeout(() => parseChoices(), 100);
                 } else {
                     editorInstance.setValue("Failed to load content.");
                 }
@@ -403,6 +636,9 @@ HTML_TEMPLATE = """
                 if (res.ok) {
                     btn.classList.add('btn-success');
                     btn.innerText = 'Saved!';
+
+                    currentFile.verified = true;
+                    loadFiles(); // Refresh badges
 
                     // Show toast
                     const toast = document.getElementById('toast');

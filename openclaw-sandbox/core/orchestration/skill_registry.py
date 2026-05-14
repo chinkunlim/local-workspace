@@ -30,6 +30,8 @@ import os
 import sys
 from typing import Callable, Dict, List, Optional
 
+from rich import print
+
 # ---------------------------------------------------------------------------
 # SkillManifest Protocol (#17)
 # ---------------------------------------------------------------------------

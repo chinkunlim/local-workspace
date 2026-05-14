@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import os
 
+from rich import print
+
 
 def ask_reprocess(subject: str, item_id: str, phase_label: str) -> bool:
     """

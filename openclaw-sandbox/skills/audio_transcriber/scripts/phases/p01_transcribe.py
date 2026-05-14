@@ -401,14 +401,21 @@ def detect_audio_language(
 
 
 class Phase1Transcribe(PipelineBase):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(phase_key="p1", phase_name="語音轉錄", logger=None)
         # Audio Chunk Fallback config (#7)
         fb_cfg = self.config_manager.get_section("phase1_chunk_fallback") or {}
         self.chunk_fallback_enabled = bool(fb_cfg.get("enabled", True))
         self.max_chunk_duration_sec = float(fb_cfg.get("max_chunk_duration_sec", 30.0))
 
-    def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: dict = None,
+    ) -> None:
         self.log("🚀 啟動 Phase 1：語音轉錄 (V8.1 抗幻覺版)")
 
         # Sandbox HuggingFace to strictly inside the project
@@ -654,6 +661,9 @@ class Phase1Transcribe(PipelineBase):
 
                 else:  # faster-whisper
                     from tqdm import tqdm
+
+                    if model is None:
+                        continue
 
                     for _chunk_path in _audio_paths_to_transcribe:
                         segments_gen, info = model.transcribe(

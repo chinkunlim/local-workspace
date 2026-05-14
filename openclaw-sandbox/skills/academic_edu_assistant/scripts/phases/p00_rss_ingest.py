@@ -49,7 +49,7 @@ from core import PipelineBase
 class Phase0RSSIngest(PipelineBase):
     """Phase 0: Proactive RSS/Atom feed ingestion."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             phase_key="p0",
             phase_name="RSS 主動擷取",
@@ -246,7 +246,7 @@ class Phase0RSSIngest(PipelineBase):
         )
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Open Claw RSS Ingest (Phase 0)")
     parser.add_argument("--subject", help="\u50c5\u8655\u7406\u6307\u5b9a\u79d1\u76ee")
     parser.add_argument(

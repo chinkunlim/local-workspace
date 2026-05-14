@@ -74,6 +74,7 @@ class Phase2Synthesis(PhaseBase):
                 try:
                     # primary: deepseek-r1:8b (CoT synthesis); fallback: qwen3:8b (via config.yaml)
                     final_note = self.llm.generate(model="deepseek-r1:8b", prompt=prompt)
+                    self.llm.unload_model("deepseek-r1:8b")
                 except Exception as e:
                     print(f"❌ 生成失敗: {e}")
                     continue

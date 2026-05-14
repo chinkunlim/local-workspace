@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 import json
 import os
 import sys
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from core.cli.cli_runner import SkillRunner
 from core.orchestration.event_bus import DomainEvent, EventBus
@@ -165,7 +165,7 @@ class RouterAgent:
     deliberate orchestration logic, not mere file-type configuration.
     """
 
-    def __init__(self, registry=None, llm_client=None):
+    def __init__(self, registry: Optional[Any] = None, llm_client: Optional[Any] = None) -> None:
         # registry: SkillRegistry instance injected at runtime
         self._registry = registry
         self._llm = llm_client

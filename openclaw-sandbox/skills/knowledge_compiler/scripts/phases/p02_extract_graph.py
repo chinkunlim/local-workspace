@@ -102,6 +102,7 @@ class Phase2ExtractGraph(PipelineBase):
         )
         try:
             raw = self.llm.generate(model=self.model_name, prompt=prompt)
+            self.llm.unload_model(self.model_name)
             for line in raw.split("\n"):
                 parts = [p.strip() for p in line.split(",")]
                 if (len(parts) == 3 and parts[1].isupper() and "_" in parts[1]) or parts[

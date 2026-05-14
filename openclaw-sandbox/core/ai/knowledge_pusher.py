@@ -13,6 +13,8 @@ import sys
 import urllib.error
 import urllib.request
 
+from rich import print
+
 _core_dir = os.path.dirname(os.path.abspath(__file__))
 _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(_core_dir, "..")))
 

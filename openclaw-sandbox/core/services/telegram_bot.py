@@ -11,6 +11,10 @@ from typing import List, Tuple
 
 import requests
 
+from core.utils.log_manager import build_logger
+
+logger = build_logger(__name__, console=True)
+
 
 def _get_bot_config() -> Tuple[str, List[str]]:
     config_path = os.path.expanduser("~/.openclaw/openclaw.json")
@@ -25,7 +29,7 @@ def _get_bot_config() -> Tuple[str, List[str]]:
             users = telegram_cfg.get("allowFrom", [])
             return token, users
     except Exception as e:
-        print(f"⚠️ [TelegramBot] 無法讀取 openclaw.json: {e}")
+        logger.info(f"⚠️ [TelegramBot] 無法讀取 openclaw.json: {e}")
         return "", []
 
 
@@ -48,9 +52,9 @@ def send_message(text: str, chat_id: str = None) -> bool:
             resp = requests.post(url, json={"chat_id": user_id, "text": text}, timeout=10)
             if not resp.ok:
                 success = False
-                print(f"⚠️ [TelegramBot] 推播失敗給 {user_id}: {resp.text}")
+                logger.info(f"⚠️ [TelegramBot] 推播失敗給 {user_id}: {resp.text}")
         except Exception as e:
-            print(f"⚠️ [TelegramBot] 推播連線錯誤: {e}")
+            logger.info(f"⚠️ [TelegramBot] 推播連線錯誤: {e}")
             success = False
 
     return success
@@ -104,7 +108,9 @@ def send_inline_keyboard(
             if not resp.ok:
                 success = False
         except Exception as e:
-            print(f"\u26a0\ufe0f [TelegramBot] send_inline_keyboard \u9023\u7dda\u932f\u8aa4: {e}")
+            logger.info(
+                f"\u26a0\ufe0f [TelegramBot] send_inline_keyboard \u9023\u7dda\u932f\u8aa4: {e}"
+            )
             success = False
     return success
 

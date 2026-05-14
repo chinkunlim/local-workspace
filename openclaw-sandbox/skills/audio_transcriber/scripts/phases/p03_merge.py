@@ -19,18 +19,18 @@ from core.state.global_registry import GlobalRegistry
 
 
 class Phase3Merge(PipelineBase):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(phase_key="p3", phase_name="順序合併", logger=None)
 
-    def _get_lecture_base(self, fname: str):
+    def _get_lecture_base(self, fname: str) -> tuple[str, int | None]:
         stem = os.path.splitext(fname)[0]
         m = re.match(r"^(.+)-(\d+)$", stem)
         if m:
             return m.group(1), int(m.group(2))
         return stem, None
 
-    def _group_tasks(self, tasks):
-        groups = {}
+    def _group_tasks(self, tasks: list[dict]) -> dict[tuple[str, str], list[dict]]:
+        groups: dict[tuple[str, str], list[dict]] = {}
         for task in tasks:
             base, _seg = self._get_lecture_base(task["filename"])
             key = (task["subject"], base)
@@ -39,7 +39,7 @@ class Phase3Merge(PipelineBase):
             groups[key].sort(key=lambda t: self._get_lecture_base(t["filename"])[1] or 0)
         return groups
 
-    def _batch_select_reprocess(self, done_tasks):
+    def _batch_select_reprocess(self, done_tasks: list[dict]) -> dict[int, dict]:
         """Override: show one menu entry per lecture group, not per file.
 
         e.g., "L02  (2 段)" instead of "L02-1.m4a" and "L02-2.m4a".
@@ -77,7 +77,14 @@ class Phase3Merge(PipelineBase):
                 idx += 1
         return result
 
-    def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
+    def run(
+        self,
+        force: bool = False,
+        subject: str = None,
+        file_filter: str = None,
+        single_mode: bool = False,
+        resume_from: dict = None,
+    ) -> None:
         self.log("🧠 啟動 Phase 3：合併模式")
 
         tasks = self.get_tasks(

@@ -79,6 +79,7 @@ class Phase2DebateSynthesis(PhaseBase):
 
                 try:
                     enriched_note = self._llm.generate(model=_SYNTHESIS_MODEL, prompt=prompt)
+                    self._llm.unload_model(_SYNTHESIS_MODEL)
                 except Exception as exc:
                     self.error(f"  ❌ LLM 生成失敗: {exc}")
                     continue

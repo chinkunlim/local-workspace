@@ -194,9 +194,10 @@ def main():
                                 _b64 = encode_image_b64(local_path)
                                 _ans = _llm.generate(
                                     model=_vlm_model,
-                                    prompt="\u8acb\u63cf\u8ff0\u9019\u5f35\u5716\u7247\u7684\u5167\u5bb9\uff0c\u7528\u7e41\u9ad4\u4e2d\u6587\u56de\u7b54\u3002",
+                                    prompt="請描述這張圖片的內容，用繁體中文回答。",
                                     images=[_b64],
                                 )
+                                _llm.unload_model(_vlm_model)
                                 send_message(
                                     f"\U0001f916 VLM \u5206\u6790\u7d50\u679c\uff1a\n\n{_ans}", _cid
                                 )

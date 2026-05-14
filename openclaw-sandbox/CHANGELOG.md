@@ -5,7 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [V9.11] — 2026-05-13: RouterAgent Config-Driven Routing Refactor + PPTX Image Extraction
+## [V9.12] — 2026-05-14: Proofreader DAG State Architecture Fix
+
+### Fixed
+- **Proofreader DAG Ping-Pong Loop**: Removed legacy `self.state_manager.raw_dir` overrides and manual `os.listdir()` state mutations from `p02_transcript_proofread.py` and `p03_doc_completeness.py`. These scripts previously forced `sync_physical_files()` to scan intermediate output directories, resulting in false-positive hash mismatches and infinite `⏳` resets. Orchestration is now strictly top-down via `run_all.py`.
+- **`run_all.py` Hash Initialization**: Updated `_populate_state_from_sources()` to compute the actual `SHA-256` hash of source files (from `01_processed` or `03_merged`) upon initial state insertion instead of defaulting to `""`. This prevents `sync_physical_files()` from invalidating the state on the very first run.
+
+### Changed
+- **Proofreader "Source of Truth" Pipeline**: Fully integrated the `dashboard.py` human-in-the-loop workflow. Downstream skills (`note_generator`, `smart_highlighter`) now properly consume from the verified `04_final_verified/` directory, while `02_transcript_proofread/` preserves the raw `<ProofreadChoice>` XML AI output.
+
+### Quality Gate
+- Ruff lint: ✅ (see latest check.sh run)
+- Mypy: ✅ (no new type errors introduced)
+
+---
 
 ### Changed
 - **`RouterAgent._build_routing_table()`**: Replaced the hardcoded `_ROUTING_TABLE` global dict with an instance-level `_build_routing_table()` method. Reads `core/config/inbox_config.json` at init time. The `ext:auto` routing table is constructed from `_GROUP_FIRST_SKILL` × `_DEFAULT_CHAINS` × `_EXTRACT_ONLY_EXTS` constants. `_INTENT_ROUTES` (intent-specific overrides like `.pdf:study`) remain in code as they are orchestration logic, not file-type config.

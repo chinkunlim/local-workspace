@@ -83,19 +83,27 @@ class ProofreaderOrchestrator(PipelineBase):
                             sanitized_md = os.path.join(pdf_dir, "sanitized.md")
                             if not os.path.exists(raw_md) and not os.path.exists(sanitized_md):
                                 continue
+
+                            target_md = sanitized_md if os.path.exists(sanitized_md) else raw_md
+                            fhash = self._state_manager.get_file_hash(target_md)
                             fname = f"{pdf_id}.md"
+
                             if fname not in self._state_manager.state[subj]:
                                 self._state_manager.state[subj][fname] = {
                                     **dict.fromkeys(self._state_manager.PHASES, "⏳"),
                                     "p2": "⏭️",
                                     "p3": "⏭️",  # Doc files skip P2 and P3
-                                    "hash": "",
+                                    "hash": fhash,
                                     "date": "",
                                     "note": "",
                                     "output_hashes": {},
                                     "char_count": {},
                                 }
                             else:
+                                if self._state_manager.state[subj][fname].get("hash") != fhash:
+                                    self._state_manager.state[subj][fname]["hash"] = fhash
+                                    self._state_manager.state[subj][fname]["p1"] = "⏳"
+                                    self._state_manager.state[subj][fname]["note"] = "來源檔更新"
                                 if self._state_manager.state[subj][fname].get("p2") != "⏭️":
                                     self._state_manager.state[subj][fname]["p2"] = "⏭️"
                                 if self._state_manager.state[subj][fname].get("p3") != "⏭️":
@@ -105,17 +113,25 @@ class ProofreaderOrchestrator(PipelineBase):
                         for fname in os.listdir(subj_dir):
                             if not fname.endswith(".md") or fname == "correction_log.md":
                                 continue
+
+                            fhash = self._state_manager.get_file_hash(os.path.join(subj_dir, fname))
+
                             if fname not in self._state_manager.state[subj]:
                                 self._state_manager.state[subj][fname] = {
                                     **dict.fromkeys(self._state_manager.PHASES, "⏳"),
                                     "p1": "⏭️",  # Audio files skip P1
-                                    "hash": "",
+                                    "hash": fhash,
                                     "date": "",
                                     "note": "",
                                     "output_hashes": {},
                                     "char_count": {},
                                 }
                             else:
+                                if self._state_manager.state[subj][fname].get("hash") != fhash:
+                                    self._state_manager.state[subj][fname]["hash"] = fhash
+                                    self._state_manager.state[subj][fname]["p2"] = "⏳"
+                                    self._state_manager.state[subj][fname]["p3"] = "⏳"
+                                    self._state_manager.state[subj][fname]["note"] = "來源檔更新"
                                 if self._state_manager.state[subj][fname].get("p1") != "⏭️":
                                     self._state_manager.state[subj][fname]["p1"] = "⏭️"
 
@@ -152,6 +168,53 @@ class ProofreaderOrchestrator(PipelineBase):
             resume_from=resume_from,
             print_dashboard_between=True,
         )
+
+        # Check pending files and optionally start dashboard
+        self._check_dashboard_pending()
+
+    def _check_dashboard_pending(self):
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        out_dir = os.path.join(workspace_root, "data", "proofreader", "output")
+        verified_dir = os.path.join(out_dir, "04_final_verified")
+
+        pending_count = 0
+        phases = ["01_doc_proofread", "02_transcript_proofread", "03_doc_completeness"]
+        for phase in phases:
+            phase_dir = os.path.join(out_dir, phase)
+            if not os.path.exists(phase_dir):
+                continue
+            for subj in os.listdir(phase_dir):
+                subj_dir = os.path.join(phase_dir, subj)
+                if not os.path.isdir(subj_dir):
+                    continue
+                for fname in os.listdir(subj_dir):
+                    if not fname.endswith(".md") or fname == "correction_log.md":
+                        continue
+                    verified_path = os.path.join(verified_dir, subj, fname)
+                    if not os.path.exists(verified_path):
+                        pending_count += 1
+
+        print("\n" + "=" * 50)
+        if pending_count > 0:
+            print(f"📊 總結：目前共有 {pending_count} 份文件等待人工核對與合併。")
+            try:
+                choice = input("👉 是否要立即開啟 Dashboard 網頁進行核對？(y/N): ").strip().lower()
+                if choice == "y":
+                    print(
+                        "🚀 啟動 Dashboard (http://localhost:5000) ... 於終端機按 Ctrl+C 可結束伺服器。"
+                    )
+                    import subprocess
+
+                    subprocess.run(
+                        [sys.executable, os.path.join(os.path.dirname(__file__), "dashboard.py")]
+                    )
+            except KeyboardInterrupt:
+                print("\n已取消啟動。")
+        else:
+            print(
+                "✨ 總結：目前【沒有】需要人工核查的文件，所有產出皆已驗證 (位於 04_final_verified)！"
+            )
+        print("=" * 50 + "\n")
 
 
 def main():
