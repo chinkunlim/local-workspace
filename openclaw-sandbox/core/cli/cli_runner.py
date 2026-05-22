@@ -234,6 +234,19 @@ class SkillRunner:
                 file_id,
                 "highlighted.md",
             )
+        elif skill == "proofreader":
+            input_path = os.path.join(
+                _workspace_root,
+                "data",
+                "proofreader",
+                "output",
+                "04_final_verified",
+                subject,
+                f"{file_id}.md",
+            )
+            output_path = os.path.join(
+                _workspace_root, "data", "smart_highlighter", "output", subject, f"{file_id}.md"
+            )
         else:
             raise ValueError(f"Unknown skill: {skill!r}")
 
@@ -288,6 +301,13 @@ class SkillRunner:
                 subject,
                 file_id,
                 "content.md",
+            )
+        elif skill == "smart_highlighter":
+            input_path = os.path.join(
+                _workspace_root, "data", "smart_highlighter", "output", subject, f"{file_id}.md"
+            )
+            output_path = os.path.join(
+                _workspace_root, "data", "note_generator", "output", subject, f"{file_id}.md"
             )
         else:
             raise ValueError(f"Unknown skill: {skill!r}")

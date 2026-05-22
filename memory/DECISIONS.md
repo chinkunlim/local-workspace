@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-05-22] ADR-016: Non-Blocking Proofreader Pipeline with Auto-Resuming Watchdog
+
+**Status:** Active
+
+**Context:** The `proofreader` skill requires manual, asynchronous human review (Human-in-the-Loop) of extracted notes and transcripts. Blocking the task queue synchronously until human approval occurs halts overall pipeline automation.
+
+**Decision:**
+1. **Asynchronous Pause**: When `RouterAgent` detects that the next skill chain is `proofreader`, it halts further queue propagation, serializes the pending skill chain state to `pending_chains.json`, and allows the background daemon to continue other tasks.
+2. **Watchdog Resume Loop**: Enhanced `inbox_daemon.py` to monitor the `data/proofreader/output/04_final_verified/` directory. Upon detecting a human-verified file, it loads the saved state from `pending_chains.json` and publishes a `PipelineCompleted` event on the `EventBus` to auto-resume downstream skills (`smart_highlighter` and `note_generator`).
+3. **Dashboard Skip & Forward**: Added an `/api/skip` endpoint and a "Skip" UI button to allow operators to bypass manual proofreading, copying raw AI output directly to `04_final_verified` to trigger the watchdog resume loop instantly.
+
+**Consequences:**
+- The monorepo gains a non-blocking asynchronous pipeline architecture.
+- Interactive reviews no longer block execution queues, and manual overrides (Skip) allow instantaneous end-to-end automation.
+- `cli_runner.py` correctly resolves paths when `current_skill` is `proofreader` or `smart_highlighter`.
+
+---
+
 ## [2026-05-22] ADR-014: Semantic Routing and Deep Verification Optionality
 
 **Status:** Active
@@ -20,6 +38,24 @@
 - User gets immediate access to their original ideas in Obsidian via the `Incubator` folder.
 - Deep research is modularized, acting as a non-destructive plugin to the base notes.
 - RouterAgent's `_on_pipeline_completed` cleanly hands off files between `student_researcher` and `knowledge_compiler`.
+
+---
+
+## [2026-05-15] ADR-015: VLM Concurrency Limitation and Centralized HITL Telegram Notification
+
+**Status:** Active
+
+**Context:** The VLM parsing phase (`p01d_vlm_vision.py`) ran with `asyncio.Semaphore(2)` in concurrent tasks. On macOS Apple Silicon with 16GB of Unified Memory, launching 2 concurrent 7.8GB `llama3.2-vision` models instantly overloaded the VRAM and caused a 10-minute Ollama API connection timeout, tripping the Tenacity Circuit Breaker. Additionally, the OCR quality gate (`p01c_ocr_gate.py`) used a loose catch-all `except Exception:` block that swallowed `HITLPendingInterrupt`, and Telegram notifications were scattered and duplicated across individual skill phase scripts.
+
+**Decision:**
+1. **Concurrency Cap**: Restrict VLM image parsing concurrency to exactly `1` via `asyncio.Semaphore(1)` inside `p01d_vlm_vision.py` for 16GB VRAM safety.
+2. **HITL Interrupt Isolation**: Explicitly catch and re-raise `HITLPendingInterrupt` inside `p01c_ocr_gate.py` to ensure it propagates correctly to `PipelineBase` and triggers a graceful pipeline pause.
+3. **Notification Centralization**: Centralize all Telegram notification emissions inside the core `HITLManager.trigger()` method (resolving TODO #14) instead of calling `send_hitl_prompt` inside individual phase scripts.
+
+**Consequences:**
+- Sequential VLM processing guarantees stable model loading on local hardware without API timeouts or OOMs.
+- HITL interrupts pause and checkpoint pipeline state reliably.
+- Duplicate Telegram message triggers are completely eliminated.
 
 ---
 

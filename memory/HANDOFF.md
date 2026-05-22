@@ -1,29 +1,38 @@
 # HANDOFF.md — Session Handoff Record
 
 > **Last Updated:** 2026-05-22
-> **System Status:** 🟢 Stable / Production-Ready (V9.12 — VLM Stability, HITL Notification Fixes & E2E Stubs)
+> **System Status:** 🟢 Stable / Production-Ready (V9.15 — Memory Hardening & SSoT Verification)
 
 ---
 
-## Current Session (2026-05-22 — VLM Stability & HITL Fixes)
+## Current Session (2026-05-22 — V9.15 Memory Hardening)
 
 **Date:** 2026-05-22
 
-- [x] **Phase 1d VLM Vision Stabilisation**: Reduced `asyncio.Semaphore` limit from 2 to 1 in `p01d_vlm_vision.py` to prevent OOM and 10-minute timeouts with the 7.8GB `llama3.2-vision:latest` model on 16GB unified memory environments.
-- [x] **HITL Interrupt Propagation**: Fixed `p01c_ocr_gate.py` exception handling by explicitly catching `HITLPendingInterrupt` to allow the pipeline pause event to propagate up, rather than being swallowed by a generic `Exception` catch block.
-- [x] **Centralised Telegram Notification**: Addressed TODO #14 in `core/services/hitl_manager.py` by natively importing and invoking `send_hitl_prompt` within `HITLManager.trigger()`. Removed redundant manual calls from individual Phase scripts.
-- [x] **Test Stubs Added**: Created `tests/e2e/test_pipeline_e2e.py` and `tests/integration/test_vlm_integration.py` to satisfy CODING_GUIDELINES §11.2.
+- [x] **Historical Audit & Code Verification**: Verified and synced core codebase enhancements, ensuring VLM Vision implements sequential `Semaphore(1)` constraint, OCR Gate correctly propagates `HITLPendingInterrupt`, and Telegram dispatch natively integrates without TODO regression risk.
+- [x] **Architecture Decisions Record (ADR) Sync**: Documented ADR-015 (VLM Concurrency and HITL Telegram bot) and ADR-016 (Non-blocking proofreader and Watchdog resumer) inside `memory/DECISIONS.md`.
+- [x] **Guidelines Hardening**: Hardened `docs/CODING_GUIDELINES.md` to v4.2.0. Resolved section 5 duplicate subsection numbers. Appended §5.11 (VLM Concurrency Limit Invariant) and §5.12 (HITL Interrupt Propagation Invariant) as permanent coding requirements.
+- [x] **Rules & Directory Map Sync**: Updated `memory/PROJECT_RULES.md` environment hardware constraints to enforce sequential VLM executions. Synchronized `docs/STRUCTURE.md` registry mapping and updated timestamps to `2026-05-22`.
+- [x] **Handoff Reconciliation**: Reconciled the master handoff protocol to establish the exact post-audit status.
+
+---
+
+## Final Sign-off Summary (V9.14 — Proofreader HITL Pipeline Integration)
+
+**Date:** 2026-05-22
+**Milestone:** V9.14 — Proofreader HITL Pipeline Integration
+
+- [x] **HITL Pipeline Pause/Resume**: Integrated `proofreader` fully into the automated `audio_transcriber` and `doc_parser` chains. The `RouterAgent` now detects when the next skill is `proofreader`, pauses execution by writing to `pending_chains.json`, and stops propagation instead of blindly pushing to the background task queue.
+- [x] **Watchdog Pipeline Resume**: Enhanced `inbox_daemon.py` to watch for saved files in `data/proofreader/output/04_final_verified/`. Upon detection, it loads the saved state and publishes a `PipelineCompleted` event to automatically resume `smart_highlighter`.
+- [x] **Dashboard Skip & Forward**: Added a new API endpoint `/api/skip` and a UI button in the `proofreader` dashboard to allow users to force-skip the manual review process, copying the raw AI output directly to `04_final_verified` to resume the pipeline instantly.
+- [x] **SkillRunner Route Resolution**: Updated `cli_runner.py` to correctly resolve input/output paths when `current_skill` is `proofreader` or `smart_highlighter`, ensuring seamless cross-skill handoffs.
 
 > [!NOTE]
 > The `openclaw.json` `agents.defaults.workspace` still references the old `open-claw-sandbox` path. The sandbox was renamed to `openclaw-sandbox/`. This may cause issues if OpenClaw tries to access the workspace. Consider updating via `openclaw configure` or `openclaw config set`.
 
-
 ---
 
-## Final Sign-off Summary
-
-**Date:** 2026-05-13
-**Milestone:** V9.10 — MarkItDown Integration, RouterAgent Refactor & Proofreader DAG Fixes
+## Previous Session (V9.10 — 2026-05-13)
 
 - [x] **`correction_log.md` DAG Pollution Fix**: Added filter `if fname == "correction_log.md": continue` in Manual State Injection loops inside `p02_transcript_proofread.py`, `p03_doc_completeness.py`, `proofreader/run_all.py`, and `core/state/state_manager.py`. Prevents log files from being treated as processable pipeline entries, which caused inflating DAG counts and P2 resetting across runs.
 - [x] **Phase 0c MarkItDown — PPTX/DOCX/XLSX Support**: New `Phase0cMarkItDown` (`p00c_markitdown.py`) added to `doc_parser`. Uses `markitdown[pptx,docx,xlsx]` to convert Office files to Markdown with identical output interface as `Phase1aPDFEngine`. PPTX speaker notes preserved as `### Notes:` blocks.
@@ -38,8 +47,6 @@
 - [x] **Prompt Engineering**: Improved End-of-Session and Startup prompts — added dynamic MD discovery, explicit `correction_log.md` filter rationale per invariant, corrected Step 4/5 order explanation.
 
 ---
-
-## Previous Session (V9.9 — 2026-05-13)
 
 ## Previous Session (V9.8 — 2026-05-12)
 
@@ -56,34 +63,6 @@
 ---
 
 ## Current System State
-- [x] **Proofreader Orchestrator Refactoring**: Upgraded `proofreader` to use `PipelineBase`, adding an interactive CLI (`--force`, `--resume`, `--subject`) and DAG tracking dashboard mirroring other core skills.
-- [x] **Per-file EventBus Handoff**: Refactored `audio_transcriber`, `proofreader`, `note_generator`, and `smart_highlighter` to emit `PipelineCompleted` per-file rather than per-batch, enabling true asynchronous cross-skill pipelining.
-- [x] **Dynamic Reference Fetching**: `proofreader` (p01, p02) now safely looks up reference doc paths via the `GlobalRegistry` instead of insecure path traversal.
-
-- [x] **audio_transcriber `run_all.py` Import Fix**: Corrected stale import (`Phase2Proofread` → `Phase2GlossaryApply`) that caused `ModuleNotFoundError` on startup. Pipeline now runs end-to-end.
-- [x] **smart_highlighter V2.0 — Orchestrator Architecture**: Renamed `highlight.py` → `run_all.py`. Implemented `SmartHighlighterOrchestrator` with DAG dashboard, `StateManager` tracking, `--force/--resume/--subject/--file` CLI, asset directory copying, and dual file/batch mode (mirrors `audio_transcriber`).
-- [x] **note_generator V2.0 — Orchestrator Architecture**: Renamed `synthesize.py` → `run_all.py`. Implemented `NoteGeneratorOrchestrator` with identical DAG/CLI architecture. Added `strip_think_tags()` for reasoning model compatibility and `fix_mermaid_syntax()` for self-healing Mermaid output.
-- [x] **StateManager — `raw_dir` Override**: Added optional `raw_dir` parameter so skills reading from cross-skill output paths (e.g., `proofreader/output`) can correctly report DAG file counts.
-- [x] **StateManager — New Phase Registrations**: Added `PHASES_HIGHLIGHT = ['highlight']` / `PHASES_NOTE = ['synthesize']` with display labels `H1 (重點標記)` / `N1 (知識合成)`.
-- [x] **highlight.py `skill_name` Bug Fix**: Corrected `skill_name="smart-highlighter"` (hyphen) to `skill_name="smart_highlighter"` (underscore) in old `highlight.py`. Config loading was silently failing.
-- [x] **note_generator API Timeout**: Increased `timeout_seconds` from 600 → 1800 to support 8-model synthesis output.
-- [x] **Both `manifest.py` updated**: `cli_entry` for both skills now points to `scripts/run_all.py`.
-- [x] **CODING_GUIDELINES §5.5–5.8**: Documented four new invariants (skill_name convention, run_all.py naming, think-tag stripping, raw_dir override).
-- [x] **check.sh**: ✅ All Passed — Ruff + Mypy (158 files, 0 errors).
-
-- [x] **Phase A Performance Hardening (V9.1)**: `SqliteSemanticCache` in `llm_client.py`; Exponential Backoff in `task_queue.py`; Scheduler Queue Safety via `LocalTaskQueue`.
-- [x] **Semantic Router & Incubator (V9.13)**: Implemented Phase 0 Semantic Routing for `student_researcher`. It generates 100-word summaries, performs ChromaDB vector search to find parent notes (for `[[WikiLinks]]`), or assigns orphan ideas to the `Incubator` with 3 `#tags`.
-- [x] **Optional Deep Verification (Layer 4)**: Adjusted architecture so `student_researcher` sends basic notes directly to `knowledge_compiler` (Layer 5) immediately. Deep Verification (`academic_library_agent`, `gemini_verifier_agent`) is now an optional, asynchronous execution that creates Extension packs to avoid polluting original divergent ideas.
-- [x] **RouterAgent Handoff Fix**: Fixed `_on_pipeline_completed` to properly move files between pipeline stages (`student_researcher` -> `knowledge_compiler`) using `os.rename`.
-- [x] **OpenClaw Complete Architecture**: Documented all 15 skills and 3 core services into a comprehensive 6-layer architecture guide (`docs/ARCHITECTURE.md`).
-- [x] **Context-Aware Model Routing (V9.1)**: `RouterAgent` assigns `qwen3:14b` (high-complexity) or `qwen3:8b` (low-complexity) based on intent keywords.
-- [x] **Ollama Model Cleanup**: Removed `deepseek-r1:14b` (9GB), `qwen2.5-coder:7b` (4.7GB), `llama3.1` (4.9GB) — saved 23.6GB.
-- [x] **`docs/MODEL_SELECTION.md`**: Created complete per-skill model registry with primary/fallback models, rationale, and quick-switch instructions.
-- [x] **All MD files updated**: `CHANGELOG.md`, `HANDOFF.md`, `TASKS.md`, `memory/DECISIONS.md`, `memory/ARCHITECTURE.md`, `feynman_simulator/SKILL.md`, `note_generator/docs/DECISIONS.md`.
-
----
-
-## Current System State
 
 | Attribute | Value |
 | ---------------------- | -------------------------------------------------------------------------------- |
@@ -96,8 +75,8 @@
 | Ollama models | 9 models present (gemma4, llama3, llama3.2-vision, phi4-mini-reasoning, qwen3:8b, deepseek-r1:8b, gemma4:e2b, gemma4:e4b, nomic-embed-text) |
 | MLX-Whisper model | `mlx-community/whisper-large-v3-mlx` — downloading to `models/` |
 | Faster-Whisper model | `medium` — downloaded to `models/` |
-| Skill package names | `note_generator`, `smart_highlighter` (underscore — enforced §5.5) |
-| Skill entry points | All skills use `scripts/run_all.py` (enforced §5.6) |
+| Skill package names | `note_generator`, `smart_highlighter` (underscore — enforced §5.7) |
+| Skill entry points | All skills use `scripts/run_all.py` (enforced §5.8) |
 | DAG Phases | `smart_highlighter`: H1 (重點標記); `note_generator`: N1 (知識合成) |
 | note_generator timeout | 1800 seconds (supports 8-model synthesis) |
 | Inbox routing | Intent-Driven via `RouterAgent` and `SkillRegistry` |
@@ -133,10 +112,10 @@ curl http://localhost:18789/health          # Open Claw API
 
 ## Next Session Starting Point
 
-1. **Verify Complete End-to-End Incubator Flow**: Drop a raw `.md` file with a `Gemini_` prefix into `data/raw/inbox/`. Verify that `inbox_daemon` routes it to `student_researcher` (Phase 0 -> Phase 1 -> Phase 2), assigns it to `Incubator` or an existing subject, moves it to `knowledge_compiler` via `RouterAgent`, and outputs it into the `wiki/Incubator/` folder in Obsidian.
-2. **Run live E2E test**: Place `.m4a` + `.pdf` + `.pptx` into `data/raw/助人技巧/` — confirm full `audio_transcriber` → `doc_parser` → `proofreader` chain completes with DAG showing stable counts.
-3. **Fix `openclaw.json` stale workspace path**: Update `agents.defaults.workspace` from `open-claw-sandbox` → `openclaw-sandbox` via `openclaw configure`.
-4. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
+1. **Conduct End-to-End Execution Walkthrough**: Perform a real-world validation run by placing a raw audio (`.m4a`) or PDF (`.pdf`) into `data/raw/<Subject>/`, checking that the pipeline pauses at the `proofreader` dashboard, propagates alerts via Telegram, and successfully resumes either through manual confirmation or the dashboard `/api/skip` endpoint.
+2. **Execute Quality Gates**: Run the automated gate sweeps (`cd openclaw-sandbox && ./ops/check.sh`) periodically during routine feature iterations to prevent Ruff/Mypy drift.
+3. **Phase B (Memory & Graph RAG)**: Transition to the integration of ChromaDB vectors and NetworkX relationships to manage multi-level semantic indexing.
+4. **Fix `openclaw.json` Stale Workspace Path**: Clean up `agents.defaults.workspace` config pointers referencing the legacy sandbox directory.
 
 > **Startup Protocol**: Copy the prompt from `memory/STARTUP.md` at the start of every new conversation.
 
@@ -154,6 +133,8 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-22 | V9.15 Memory Hardening & SSoT Verification | Verified core VLM & HITL implementation, synced ADRs, resolved Coding Guidelines numbering, and hardened sequential VLM/HITL exceptions invariants. |
+| 2026-05-22 | V9.14 HITL Proofreader Pipeline Pause/Resume | Integrated `proofreader` via JSON state pause/resume, added Dashboard Force Skip button, added full watchdog resume loop. |
 | 2026-05-22 | V9.13 Semantic Router & Idea Incubator | Added Phase 0 for semantic routing, dynamic Incubator tagging, fixed file handoffs in RouterAgent, mapped full 15-skill 6-layer architecture. |
 | 2026-05-22 | V9.12 VLM Stability & HITL Fixes | Set Semaphore(1) for VLM vision to prevent OOM, fixed HITLPendingInterrupt propagation, integrated Telegram notification natively, added E2E test stubs |
 | 2026-05-13 | V9.11 RouterAgent Refactor & PPTX Image Extraction | Replaced hardcoded routing with inbox_config.json; implemented python-pptx image extraction in Phase 0c; resolved PPTX placeholders in figure_list |
@@ -175,4 +156,3 @@ curl http://localhost:18789/health          # Open Claw API
 | 2026-04-19 | Skill Extraction | `smart_highlighter`, `note_generator` extracted as standalone packages |
 | 2026-04-18 | Monorepo restructure + CODING_GUIDELINES_FINAL v3.0.0 | All config files promoted to root; docs consolidated |
 | 2026-04-15 | Core framework + dual-skill pipeline | `core/` shared framework; `audio_transcriber` + `doc_parser` fully operational |
-

@@ -1,6 +1,6 @@
 # Open Claw — Workspace Structure
 
-> Last Updated: 2026-04-18
+> Last Updated: 2026-05-22
 > Every file and folder in `openclaw-sandbox/` is documented here.
 > Update this file whenever a file is added, removed, or significantly renamed.
 

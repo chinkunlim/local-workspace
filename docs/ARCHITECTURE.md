@@ -278,3 +278,7 @@ data/raw/<Subject>/          ← Universal Inbox (only manual entry point)
 - **Asynchronous Verification Dashboard (2026-05-07, V9.4)**:
   - Deprecated the blocking `VerificationGate` (`_GatedHTTPServer`) which bottlenecked pipeline execution.
   - Introduced a persistent, non-blocking `dashboard.py` (Flask) that surfaces `data/proofreader/output/` alongside the original Ground Truth media (PDF, PNG, M4A) for highly contextual, asynchronous Human-in-the-Loop review.
+- **Proofreader HITL Pipeline Pause/Resume (2026-05-22, V9.14)**:
+  - Integrated `proofreader` fully into automated extraction chains.
+  - `RouterAgent` writes `pending_chains.json` to pause execution instead of blocking on HITL steps.
+  - `inbox_daemon.py` watchdog automatically detects manual completions in `04_final_verified` and publishes `PipelineCompleted` to resume chains autonomously.

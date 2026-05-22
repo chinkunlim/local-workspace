@@ -159,7 +159,18 @@ class SystemInboxDaemon:
                 def on_modified(self, event):
                     if event.is_directory or not event.src_path.endswith(".md"):
                         return
-                    self.daemon._check_rewrite_status(event.src_path)
+
+                    if "04_final_verified" in event.src_path:
+                        self.daemon._check_proofreader_resume(event.src_path)
+                    else:
+                        self.daemon._check_rewrite_status(event.src_path)
+
+                def on_created(self, event):
+                    if event.is_directory or not event.src_path.endswith(".md"):
+                        return
+
+                    if "04_final_verified" in event.src_path:
+                        self.daemon._check_proofreader_resume(event.src_path)
 
             self._observer = Observer()
             _logger.info("監控啟動 (遞迴支援多科目): 全局收件匣 -> %s", self.raw_path)
@@ -298,6 +309,72 @@ class SystemInboxDaemon:
         except Exception as e:
             _logger.error(
                 "_check_rewrite_status 發生未預期錯誤: %s — %s", filepath, e, exc_info=True
+            )
+
+    def _check_proofreader_resume(self, filepath: str) -> None:
+        """Watch for new files in proofreader/output/04_final_verified to resume the pipeline."""
+        with self._lock:
+            if filepath in self._debounce_events:
+                return
+
+        try:
+            filename = os.path.basename(filepath)
+            rel_path = os.path.relpath(
+                filepath,
+                os.path.join(_workspace_root, "data", "proofreader", "output", "04_final_verified"),
+            )
+            parts = rel_path.split(os.sep)
+            if len(parts) < 2:
+                return
+
+            subject = parts[0]
+            file_id = os.path.splitext(filename)[0]
+
+            pending_path = os.path.join(
+                _workspace_root, "data", "proofreader", "pending_chains", subject, f"{file_id}.json"
+            )
+            if not os.path.exists(pending_path):
+                return
+
+            _logger.info("偵測到校對完成，準備喚醒後續管線: %s", filepath)
+
+            with open(pending_path, encoding="utf-8") as f:
+                pending_data = json.load(f)
+
+            remaining_chain = pending_data.get("chain", [])
+            env = pending_data.get("env", {})
+
+            if not remaining_chain:
+                _logger.info("無後續管線需要喚醒。")
+                os.remove(pending_path)
+                return
+
+            # Publish EventBus message so RouterAgent picks it up
+            from core.orchestration.event_bus import DomainEvent, EventBus
+
+            EventBus.publish(
+                DomainEvent(
+                    name="PipelineCompleted",
+                    source_skill="proofreader",
+                    payload={
+                        "filepath": filepath,
+                        "chain": remaining_chain,
+                        "subject": subject,
+                        "model": env.get("OPENCLAW_ROUTER_MODEL") if env else None,
+                    },
+                )
+            )
+
+            # Remove the pending file so we don't trigger it again
+            os.remove(pending_path)
+
+            # Prevent multiple triggers for this file
+            with self._lock:
+                self._debounce_events[filepath] = threading.Event()
+
+        except Exception as e:
+            _logger.error(
+                "_check_proofreader_resume 發生未預期錯誤: %s — %s", filepath, e, exc_info=True
             )
 
     def stop(self) -> None:

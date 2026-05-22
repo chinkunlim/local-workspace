@@ -75,16 +75,21 @@ _GROUP_FIRST_SKILL: Dict[str, str] = {
 _DEFAULT_CHAINS: Dict[str, List[str]] = {
     "audio_transcriber": [
         "audio_transcriber",
+        "proofreader",
+        "smart_highlighter",
         "note_generator",
         "knowledge_compiler",
     ],
     "doc_parser": [
         "doc_parser",
+        "proofreader",
+        "smart_highlighter",
         "note_generator",
         "knowledge_compiler",
     ],
     "video_ingester": [
         "video_ingester",
+        "smart_highlighter",
         "note_generator",
         "knowledge_compiler",
     ],
@@ -111,8 +116,6 @@ _INTENT_ROUTES: Dict[str, List[str]] = {
     ".md:compile": ["knowledge_compiler"],
     ".md:research": [
         "student_researcher",
-        "academic_library_agent",
-        "gemini_verifier_agent",
         "knowledge_compiler",
     ],
     ".md:feynman": [
@@ -121,15 +124,12 @@ _INTENT_ROUTES: Dict[str, List[str]] = {
     ],
     ".mp4:ingest": [
         "video_ingester",
-        "note_generator",
         "student_researcher",
-        "academic_library_agent",
-        "gemini_verifier_agent",
         "knowledge_compiler",
     ],
-    ".mov:ingest": ["video_ingester", "note_generator", "knowledge_compiler"],
-    ".mkv:ingest": ["video_ingester", "note_generator", "knowledge_compiler"],
-    ".webm:ingest": ["video_ingester", "note_generator", "knowledge_compiler"],
+    ".mov:ingest": ["video_ingester", "smart_highlighter", "note_generator", "knowledge_compiler"],
+    ".mkv:ingest": ["video_ingester", "smart_highlighter", "note_generator", "knowledge_compiler"],
+    ".webm:ingest": ["video_ingester", "smart_highlighter", "note_generator", "knowledge_compiler"],
 }
 
 
@@ -362,6 +362,29 @@ class RouterAgent:
             # Auto-discover the output of current_skill to use as input for next_skill
             # We assume next_skill is note-generator or knowledge_compiler
             # In V8 architecture, SkillRunner provides standard resolution.
+            if next_skill == "proofreader":
+                # [NEW LOGIC] Pipeline Pause for Human-in-the-Loop Proofread
+                pending_dir = os.path.join(
+                    workspace_root, "data", "proofreader", "pending_chains", subject
+                )
+                os.makedirs(pending_dir, exist_ok=True)
+
+                # We save the remaining chain to be resumed when proofreader dashboard saves the file.
+                # The key is the file prefix to match whatever output proofreader generates.
+                pending_path = os.path.join(pending_dir, f"{file_id}.json")
+                with open(pending_path, "w", encoding="utf-8") as f:
+                    json.dump({"chain": remaining_chain, "subject": subject, "env": env}, f)
+
+                msg = f"⏸️ [RouterAgent] 管線暫停等候人工校對: {filename}\n👉 請開啟 Dashboard 點擊 Save 或 Skip 繼續。"
+                print(msg)
+                try:
+                    from core.services.telegram_bot import send_message
+
+                    send_message(msg)
+                except ImportError:
+                    pass
+                return
+
             if next_skill == "note_generator":
                 input_path, output_path = SkillRunner.resolve_synthesize_paths(
                     current_skill, subject, file_id
@@ -370,7 +393,7 @@ class RouterAgent:
                     input_file=input_path, output_file=output_path, subject=subject
                 )
                 cwd = os.path.join(
-                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                    workspace_root,
                     "skills",
                     "note_generator",
                 )
@@ -384,39 +407,30 @@ class RouterAgent:
                     subject=subject,
                     env=env,
                 )
-            elif next_skill == "knowledge_compiler":
-                # Move the file to knowledge_compiler's input directory
-                target_dir = os.path.join(
-                    workspace_root, "data", "knowledge_compiler", "input", subject
+            elif next_skill == "smart_highlighter":
+                input_path, output_path = SkillRunner.resolve_highlight_paths(
+                    current_skill, subject, file_id
                 )
-                os.makedirs(target_dir, exist_ok=True)
-                target_path = os.path.join(target_dir, os.path.basename(filepath))
-                if os.path.exists(filepath) and filepath != target_path:
-                    os.rename(filepath, target_path)
-                    filepath = target_path
-
-                cmd = [sys.executable, "scripts/run_all.py", "--subject", subject]
+                cmd = SkillRunner.run_smart_highlighter(
+                    input_file=input_path, output_file=output_path, subject=subject
+                )
                 cwd = os.path.join(
-                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                    workspace_root,
                     "skills",
-                    "knowledge_compiler",
+                    "smart_highlighter",
                 )
                 task_queue.enqueue(
-                    name=f"Knowledge Compiler Pipeline ({subject})",
+                    name=f"Smart Highlighter ({subject})",
                     cmd=cmd,
                     cwd=cwd,
-                    filepath=filepath,
-                    skill="knowledge_compiler",
+                    filepath=input_path,
+                    skill="smart_highlighter",
                     chain=remaining_chain,
                     subject=subject,
                     env=env,
                 )
-            elif next_skill in [
-                "student_researcher",
-                "academic_library_agent",
-                "gemini_verifier_agent",
-                "feynman_simulator",
-            ]:
+            else:
+                # ALL OTHER SKILLS: Unified Handoff
                 # Move the file to the next skill's input directory
                 target_dir = os.path.join(workspace_root, "data", next_skill, "input", subject)
                 os.makedirs(target_dir, exist_ok=True)
@@ -425,10 +439,16 @@ class RouterAgent:
                     os.rename(filepath, target_path)
                     filepath = target_path
 
-                # These skills use the unified interface
-                cmd = [sys.executable, "scripts/run_all.py", "--subject", subject]
+                # Look up entry script from SkillRegistry
+                script_path = "scripts/run_all.py"
+                if self._registry:
+                    skill_manifest = self._registry.get(next_skill)
+                    if skill_manifest and skill_manifest.cli_entry:
+                        script_path = skill_manifest.cli_entry
+
+                cmd = [sys.executable, script_path, "--subject", subject]
                 cwd = os.path.join(
-                    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                    workspace_root,
                     "skills",
                     next_skill,
                 )
@@ -442,8 +462,6 @@ class RouterAgent:
                     subject=subject,
                     env=env,
                 )
-            else:
-                print(f"⚠️ [RouterAgent] 尚不支援自動接力到 {next_skill}，請手動觸發。")
 
         except Exception as e:
             print(f"❌ [RouterAgent] 接力失敗: {e}")

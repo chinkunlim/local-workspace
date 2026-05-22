@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.14] — 2026-05-22: HITL Proofreader Pipeline Pause/Resume
+
+### Added
+- **Pipeline Pause Mechanism**: `RouterAgent` now detects when the next skill in a chain is `proofreader`. Instead of blindly enqueuing it and blocking a background thread, it pauses the chain execution by writing the remaining sequence to `pending_chains.json` and prints a console/Telegram prompt for human intervention.
+- **Watchdog Pipeline Resume**: `inbox_daemon.py` now includes a dedicated watchdog handler that monitors `data/proofreader/output/04_final_verified/`. Upon detecting a newly verified file, it locates the corresponding `pending_chains.json` and emits a `PipelineCompleted` event to seamlessly resume the paused execution string (e.g., triggering `smart_highlighter`).
+- **Dashboard Force Skip**: A new `/api/skip` endpoint and a ⏭️ Skip & Forward UI button were added to the `proofreader` Dashboard. This allows users to explicitly bypass the manual modification step, instantly copying the raw AI output directly to the verified directory to resume the pipeline.
+
+### Changed
+- **Config-Driven Pre-Chains**: `proofreader` was formally inserted into the `_DEFAULT_CHAINS` for both `audio_transcriber` and `doc_parser` within `RouterAgent`, establishing it as the absolute bottleneck between transcription and annotation (as requested).
+- **Skill Path Resolution**: `SkillRunner.resolve_highlight_paths()` and `resolve_synthesize_paths()` were patched to gracefully support `proofreader` as an emitting `current_skill`, accurately mapping cross-skill input folders to `04_final_verified`.
+
 ## [V9.13] — 2026-05-22: Semantic Router & Idea Incubator
 
 ### Added

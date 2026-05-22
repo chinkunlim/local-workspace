@@ -170,6 +170,30 @@ def save_content():
     return jsonify({"status": "success"})
 
 
+@app.route("/api/skip", methods=["POST"])
+def skip_content():
+    data = request.json
+    path = data.get("path")
+
+    if not path or not os.path.exists(path):
+        return jsonify({"error": "File not found"}), 404
+
+    if WORKSPACE_ROOT not in os.path.abspath(path):
+        return jsonify({"error": "Access denied"}), 403
+
+    subj = os.path.basename(os.path.dirname(path))
+    fname = os.path.basename(path)
+    final_path = os.path.join(PROOFREADER_OUT_DIR, "04_final_verified", subj, fname)
+
+    # Just copy the original file to verified
+    import shutil
+
+    os.makedirs(os.path.dirname(final_path), exist_ok=True)
+    shutil.copy2(path, final_path)
+
+    return jsonify({"status": "success"})
+
+
 @app.route("/media/<path:filepath>")
 def serve_media(filepath):
     # Flask <path:filepath> strips the leading slash, so we add it back if absolute
@@ -265,7 +289,8 @@ HTML_TEMPLATE = r"""
     <div class="main-area">
         <div class="toolbar">
             <div class="toolbar-title" id="currentTitle">Select a file to review</div>
-            <div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-outline" id="skipBtn" disabled onclick="skipCurrentFile()" style="border-color: #f39c12; color: #f39c12;">⏭️ Skip & Forward</button>
                 <button class="btn" id="saveBtn" disabled onclick="saveCurrentFile()">Save & Mark Completed</button>
             </div>
         </div>
@@ -567,6 +592,7 @@ HTML_TEMPLATE = r"""
             document.getElementById('currentTitle').innerText = fileData.filename;
             document.getElementById('saveBtn').disabled = true;
             document.getElementById('saveBtn').innerText = 'Loading...';
+            document.getElementById('skipBtn').disabled = true;
 
             document.getElementById('resolutionToolbar').classList.remove('visible');
             document.getElementById('replaceToolbar').classList.remove('visible');
@@ -605,6 +631,7 @@ HTML_TEMPLATE = r"""
                     editorInstance.updateOptions({ readOnly: false });
                     document.getElementById('saveBtn').disabled = false;
                     document.getElementById('saveBtn').innerText = 'Save & Mark Completed';
+                    document.getElementById('skipBtn').disabled = false;
                     currentFile = fileData;
 
                     setTimeout(() => parseChoices(), 100);
@@ -655,6 +682,47 @@ HTML_TEMPLATE = r"""
             } catch (e) {
                 alert('Error saving: ' + e);
                 btn.innerText = 'Save & Mark Completed';
+                btn.disabled = false;
+            }
+        }
+
+        async function skipCurrentFile() {
+            if (!currentFile) return;
+
+            const btn = document.getElementById('skipBtn');
+            btn.disabled = true;
+            btn.innerText = 'Skipping...';
+
+            try {
+                const res = await fetch('/api/skip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path: currentFile.md_path
+                    })
+                });
+
+                if (res.ok) {
+                    btn.innerText = 'Skipped!';
+
+                    currentFile.verified = true;
+                    loadFiles(); // Refresh badges
+
+                    // Show toast
+                    const toast = document.getElementById('toast');
+                    toast.innerText = 'Skipped & Forwarded to next pipeline step!';
+                    toast.style.display = 'block';
+                    setTimeout(() => {
+                        toast.style.display = 'none';
+                        btn.innerText = '⏭️ Skip & Forward';
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error('Skip failed');
+                }
+            } catch (e) {
+                alert('Error skipping: ' + e);
+                btn.innerText = '⏭️ Skip & Forward';
                 btn.disabled = false;
             }
         }

@@ -2,12 +2,12 @@
 
 > **Target Audience:** Development AIs (Google Antigravity, Claude Code, GitHub Copilot)
 > **Purpose:** Defines the active hardware constraints, End-of-Feature protocol, and Documentation update rules for the workspace.
-> **Last Updated:** 2026-05-05
+> **Last Updated:** 2026-05-22
 
 ## 1. Environment Constraints & Toolchain (uv-native)
 
 - **OS**: macOS Apple Silicon
-- **Hardware**: 16 GB RAM (Strict memory limits apply — strictly one heavy model at a time. Watchdog evicts models if memory threshold is exceeded)
+- **Hardware**: 16 GB RAM (Strict memory limits apply — strictly one heavy model at a time. Watchdog evicts models if memory threshold is exceeded. Heavy VLM models like `llama3.2-vision` (7.8GB) force a strict sequential `Semaphore(1)` execution constraint to prevent OOM and API timeouts).
 - **Primary Language**: Code in English, Communication in Traditional Chinese.
 - **Tech Stack**: Python 3.9+, Ollama, MLX-Whisper, Docling, ChromaDB, LiteLLM, Telegram Bot API
 - **Execution Environment**: Headless CLI-first with Ephemeral WebUI gates for Human-in-the-Loop verification.
@@ -73,9 +73,13 @@ Whenever a feature, bug fix, or major task is completed, you MUST perform the fo
 > [!IMPORTANT]
 > `archive_session.py` MUST run after `git push`, never before. The archival log may miss the final conversation turns if run before pushing.
 
+## 6. Architecture Constraints
+
+- **Proofreader as Intermediate Layer**: The `proofreader` skill must exist as an intermediate bottleneck in the automated pipeline (e.g. between `audio_transcriber` and `smart_highlighter`). It must pause the pipeline execution state rather than block it, and rely on `inbox_daemon` Watchdog triggers to resume downstream chains.
+
 ---
 
-## 6. Code Review Checklist (每次深度審查必跑)
+## 7. Code Review Checklist (每次深度審查必跑)
 
 When performing a full code audit (triggered by "讀取 AI_PROFILE.md，深度分析..."), the AI MUST systematically check every item below in addition to running `./ops/check.sh`:
 

@@ -46,6 +46,13 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-22: **V9.14 HITL Proofreader Pipeline Pause/Resume**
+  - Integrated `proofreader` into `audio_transcriber` and `doc_parser` default chains.
+  - Implemented `RouterAgent` pause logic via `pending_chains.json`.
+  - Upgraded `inbox_daemon.py` with Watchdog on `04_final_verified` to resume chains.
+  - Added Dashboard Force Skip endpoint and UI button.
+  - Updated `cli_runner.py` to resolve `proofreader` input/output paths.
+
 - [x] 2026-05-13: **V9.11 RouterAgent Config-Driven Routing Refactor + PPTX Image Extraction**
   - Replaced hardcoded `_ROUTING_TABLE` global with `_build_routing_table()` reading `inbox_config.json` at init.
   - Added `_GROUP_FIRST_SKILL`, `_DEFAULT_CHAINS`, `_EXTRACT_ONLY_EXTS`, `_INTENT_ROUTES` constants.

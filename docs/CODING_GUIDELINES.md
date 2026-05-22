@@ -1,6 +1,6 @@
 # Open Claw Engineering Standards
 
-> **Version:** v4.0.0 (2026-05-01 — Global English Translation & Core Sub-Package Update)
+> **Version:** v4.2.0 (2026-05-22 — Guidelines Hardening & Concurrency / HITL Invariants)
 > **Scope:** All developers and AI agents operating in `local-workspace/`
 > **Tools:** Ruff, Mypy, Shellcheck, pytest
 > **Philosophy:** Simple, Robust, Traceable, AI-Friendly
@@ -253,17 +253,24 @@ The three-layer anti-hallucination defence must not be weakened:
 
 - **`sync_physical_files()`**: Use ONLY for single-source pipelines (e.g. `audio_transcriber`) where every file belongs to all phases. It blindly recalculates hashes and overwrites existing state flags to `⏳` if changes are detected.
 - **Manual State Injection**: Use for multi-source converging pipelines (e.g. `proofreader`). Iterate directories manually and conditionally inject default state ONLY IF the file is not already in the state dictionary. This prevents wiping out orchestrator masks (e.g. `⏭️`).
-- **Enforce Masking**: When populating state in multi-source pipelines, enforce the mask rules continuously (e.g. `if state.get("p1") != "⏭️": state["p1"] = "⏭️"`). Do not rely on initial assignment.
 - **Log File Filter Invariant**: All state population loops (Manual State Injection and `sync_physical_files` helpers) **MUST** skip pipeline-generated log files. At minimum, filter `correction_log.md`: `if fname == "correction_log.md": continue`. Log files are side effects of phase execution and must never appear as processable state entries.
 
-### 5.5 PDF Security
+### 5.5 Pipeline Pause & Resume (Human-in-the-Loop)
+
+When a skill requires an interactive WebUI (like `proofreader`), it **must not** be enqueued into the background `task_queue` to block execution. Instead, the `RouterAgent` must:
+1. Stop the chain propagation.
+2. Save the remaining pipeline chain and context to a `.json` state file (e.g., `pending_chains.json`).
+3. Allow the daemon to continue.
+4. When the human operator completes the task in the WebUI and saves the result to the monitored output directory, a Watchdog handler (`inbox_daemon.py`) must detect it, read the `.json` state file, and publish a `PipelineCompleted` event to the `EventBus` to seamlessly resume the remaining chain.
+
+### 5.6 PDF Security
 
 All PDF inputs must pass through `SecurityManager` before any content is read:
 - Path traversal check
 - Filename allowlist validation
 - File size cap check
 
-### 5.5 Skill Name Convention (underscore only)
+### 5.7 Skill Name Convention (underscore only)
 
 `skill_name` in `PipelineBase.__init__()` **must** use underscores and **must exactly match** the directory name under `skills/`. Using hyphens (e.g. `"smart-highlighter"`) will break `PathBuilder` config resolution.
 
@@ -275,11 +282,11 @@ super().__init__(skill_name="smart_highlighter")
 super().__init__(skill_name="smart-highlighter")
 ```
 
-### 5.6 Skill Entry Point Naming
+### 5.8 Skill Entry Point Naming
 
 All skill pipeline entry points **must** be named `run_all.py`. Custom names (`synthesize.py`, `highlight.py`, etc.) are prohibited. This ensures uniform routing by `RouterAgent` and consistent CLI conventions across all skills.
 
-### 5.7 Reasoning Model `<think>` Tag Stripping
+### 5.9 Reasoning Model `<think>` Tag Stripping
 
 When using reasoning models (`phi4-mini-reasoning`, `deepseek-r1`, `qwen3` with thinking), the LLM output **must** be passed through `strip_think_tags()` before any further processing or file writes:
 
@@ -290,7 +297,7 @@ result = self.llm.generate(model=model, prompt=prompt, options=options)
 result = strip_think_tags(result)  # ← mandatory for reasoning models
 ```
 
-### 5.8 StateManager `raw_dir` Override
+### 5.10 StateManager `raw_dir` Override
 
 When a skill's input files originate from another skill's output directory (not from `data/<skill>/input/`), the `raw_dir` parameter **must** be explicitly passed to `StateManager` so the DAG dashboard shows correct file counts.
 
@@ -301,6 +308,41 @@ self._state_manager = StateManager(self.base_dir, skill_name="note_generator", r
 
 # ❌ Wrong — StateManager defaults to data/note_generator/input/*.m4a
 self._state_manager = StateManager(self.base_dir, skill_name="note_generator")
+```
+
+### 5.11 VLM Concurrency Limit Invariant
+
+To prevent Out-Of-Memory (OOM) situations on resource-constrained environments (specifically 16GB RAM Apple Silicon setups), heavy Vision-Language Model (VLM) tasks, such as those running `llama3.2-vision` (7.8GB model size), must strictly implement sequential execution. All VLM execution blocks must be throttled with a centralized semaphore limit of 1:
+
+```python
+import asyncio
+
+# Enforce strict sequential execution for heavy VLM calls
+self._vlm_semaphore = asyncio.Semaphore(1)
+
+async def run_vlm_vision(self):
+    async with self._vlm_semaphore:
+        # Perform VLM operations
+        ...
+```
+
+This prevents 10-minute API timeouts and Tenacity circuit-breaker trips during simultaneous document processing runs.
+
+### 5.12 HITL Interrupt Propagation Invariant
+
+Any Phase execution or routing gate that implements human-in-the-loop (HITL) checkpoints must guarantee that the `HITLPendingInterrupt` exception is never swallowed by broad `except Exception:` catches. The orchestrator relies on this exception to checkpoint the execution state and persist outstanding chains:
+
+```python
+from core.orchestration.pipeline_base import HITLPendingInterrupt
+
+try:
+    # Operations that might trigger a HITL block
+    self.check_hitl_status()
+except HITLPendingInterrupt:
+    # Explicitly re-raise to bubble up to orchestrator
+    raise
+except Exception as e:
+    self.logger.error("❌ Recoverable standard failure: %s", e)
 ```
 
 ---
@@ -749,6 +791,7 @@ To prevent context loss while maintaining a clean workspace, files are strictly 
 
 | Version | Date | Changes |
 |---|---|---|
+| v4.2.0 | 2026-05-22 | Hardened coding guidelines: fixed section 5 duplicate numbering, and added §5.11 VLM Concurrency Limit Invariant and §5.12 HITL Interrupt Propagation Invariant |
 | v4.1.0 | 2026-05-05 | Appended §15 AI-Native Documentation & Memory System rules and archival protocols |
 | v4.0.0 | 2026-05-01 | Global English translation; added core/ sub-package import rules; added Task Queue OOM invariant; updated test mock path rules; added Mypy strict guidelines |
 | v3.0.0 | 2026-04-22 | Added SSoT doc strategy; Anti-Truncation Protocol; dual-tier doc boundary rule |
