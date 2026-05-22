@@ -1,10 +1,16 @@
 import json
 import os
-import uuid
+import sys
 
-from core.ai.llm_client import OllamaClient
+# Core Bootstrap
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
+from core.utils.bootstrap import ensure_core_path as _bootstrap
+
+_bootstrap(__file__)
+
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.atomic_writer import AtomicWriter
+from skills.note_generator.scripts.run_all import strip_think_tags
 
 
 class Phase1ClaimExtraction(PhaseBase):
@@ -14,7 +20,6 @@ class Phase1ClaimExtraction(PhaseBase):
             phase_name="Claim Extraction",
             skill_name="student_researcher",
         )
-        self.llm = OllamaClient()
 
     def run(self, force: bool = False, **kwargs) -> None:
         input_dir = self.dirs["input"]
@@ -25,7 +30,7 @@ class Phase1ClaimExtraction(PhaseBase):
                     continue
 
                 filepath = os.path.join(root, file)
-                print(f"\n📂 處理筆記檔案: {file}")
+                self.info(f"📂 處理筆記檔案: {file}")
 
                 with open(filepath, encoding="utf-8") as f:
                     content = f.read()
@@ -40,10 +45,11 @@ class Phase1ClaimExtraction(PhaseBase):
                     "只輸出 JSON 陣列，不要有其他文字。"
                 )
 
-                print("🧠 正在萃取需查證之論點...")
+                self.info("🧠 正在萃取需查證之論點...")
                 try:
                     # primary: deepseek-r1:8b (CoT); fallback: qwen3:8b (via config.yaml)
                     response = self.llm.generate(model="deepseek-r1:8b", prompt=prompt)
+                    response = strip_think_tags(response)
                     self.llm.unload_model("deepseek-r1:8b")
 
                     # Clean up JSON
@@ -56,12 +62,12 @@ class Phase1ClaimExtraction(PhaseBase):
                         raise ValueError("No JSON array found in LLM response.")
 
                 except Exception as e:
-                    print(f"❌ 萃取失敗: {e}")
+                    self.error(f"❌ 萃取失敗: {e}")
                     continue
 
                 out_path = os.path.splitext(filepath)[0] + ".json"
                 AtomicWriter.write_json(out_path, {"source_md": filepath, "claims": claims})
 
-                print(f"✅ 萃取完成，共 {len(claims)} 個論點，輸出至: {out_path}")
+                self.info(f"✅ 萃取完成，共 {len(claims)} 個論點，輸出至: {out_path}")
 
         self.state_manager.sync_physical_files()

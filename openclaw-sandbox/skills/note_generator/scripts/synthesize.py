@@ -21,6 +21,7 @@ _bootstrap(__file__)
 
 from core import PipelineBase
 from core.utils.text_utils import smart_split
+from skills.note_generator.scripts.run_all import fix_mermaid_syntax, strip_think_tags
 
 
 class NoteGenerator(PipelineBase):
@@ -63,6 +64,7 @@ class NoteGenerator(PipelineBase):
             pbar, stop_tick, t = self.create_spinner(f"Agentic 自我修正 ({attempt})")
             try:
                 node_text = self.llm.generate(model=model, prompt=retry_prompt, options=options)
+                node_text = strip_think_tags(node_text)
             except Exception as e:
                 self.error(f"❌ Retry LLM 失敗: {e}")
                 break
@@ -124,7 +126,8 @@ class NoteGenerator(PipelineBase):
         map_success = 0
         for ci, extracted in enumerate(raw_map_results, 1):
             if extracted:
-                map_results.append(f"<!-- \u5206\u584a {ci}/{tc} -->\n{extracted.strip()}")
+                cleaned = strip_think_tags(extracted)
+                map_results.append(f"<!-- \u5206\u584a {ci}/{tc} -->\n{cleaned.strip()}")
                 map_success += 1
             else:
                 self.warning(
@@ -149,6 +152,7 @@ class NoteGenerator(PipelineBase):
         pbar, stop_tick, t = self.create_spinner(f"Reduce ({label})")
         try:
             final_note = self.llm.generate(model=model, prompt=fin_prompt, options=options)
+            final_note = strip_think_tags(final_note)
         finally:
             self.finish_spinner(pbar, stop_tick, t)
 
@@ -239,10 +243,14 @@ class NoteGenerator(PipelineBase):
                 pbar, stop_tick, t = self.create_spinner(f"合成 ({label})")
                 try:
                     res = self.llm.generate(model=model, prompt=pmpt, options=options)
+                    res = strip_think_tags(res)
                 finally:
                     self.finish_spinner(pbar, stop_tick, t)
                 yaml_mr = "false"
                 yaml_chk = "N/A"
+
+            # Post-processing
+            res = fix_mermaid_syntax(res)
 
             # Agentic Mermaid Retry
             res, mm_tag = self._agentic_mermaid_retry(

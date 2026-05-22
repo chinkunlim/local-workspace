@@ -31,7 +31,7 @@ class Phase2DebateSynthesis(PhaseBase):
             phase_name="Feynman Debate Synthesis → Enriched Note",
             skill_name="feynman_simulator",
         )
-        self._llm = OllamaClient()
+        self._llm = self.llm
 
     def run(self, force: bool = False, **kwargs) -> None:
         input_dir = self.dirs["output"]  # Phase 1 outputs are our inputs

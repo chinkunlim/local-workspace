@@ -128,7 +128,7 @@ class SkillRunner:
             profile:     Optional config profile override.
         """
         script = os.path.join(
-            _workspace_root, "skills", "smart-highlighter", "scripts", "highlight.py"
+            _workspace_root, "skills", "smart_highlighter", "scripts", "highlight.py"
         )
         cmd = [
             sys.executable,
@@ -168,7 +168,7 @@ class SkillRunner:
             profile:     Optional config profile override.
         """
         script = os.path.join(
-            _workspace_root, "skills", "note-generator", "scripts", "synthesize.py"
+            _workspace_root, "skills", "note_generator", "scripts", "synthesize.py"
         )
         cmd = [
             sys.executable,

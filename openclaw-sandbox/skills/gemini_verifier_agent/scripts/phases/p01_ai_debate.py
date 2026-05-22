@@ -15,7 +15,6 @@ class Phase1AIDebate(PhaseBase):
             phase_name="AI-to-AI Debate and Verification",
             skill_name="gemini_verifier_agent",
         )
-        self.llm = OllamaClient()
 
     async def _debate_gemini(self, claim: str, evidence: str) -> str | None:
         archive_dir = os.path.join(self.base_dir, "data", "gemini_verifier_agent", "archives")
@@ -23,7 +22,7 @@ class Phase1AIDebate(PhaseBase):
 
         async with get_persistent_context(headless=False) as context:
             page = await context.new_page()
-            print("🤖 連線至 Gemini 進行查證...")
+            self.log("🤖 連線至 Gemini 進行查證...")
             try:
                 await page.goto(
                     "https://gemini.google.com/app", wait_until="domcontentloaded", timeout=60000
@@ -44,7 +43,7 @@ class Phase1AIDebate(PhaseBase):
 
                 # Wait for response to generate (Gemini UI typically has a response container)
                 # This is a heuristic: wait for the stop generating button to appear and disappear, or wait for text.
-                print("⏳ 等待 Gemini 回覆...")
+                self.log("⏳ 等待 Gemini 回覆...")
                 await asyncio.sleep(15)  # Wait for network and generation
 
                 # Extract the last response message
@@ -72,7 +71,7 @@ class Phase1AIDebate(PhaseBase):
                 self.llm.unload_model("qwen3:14b")
 
                 if "NO_QUESTIONS" not in followup:
-                    print(f"🤔 本地模型追問: {followup}")
+                    self.log(f"🤔 本地模型追問: {followup}")
                     await page.fill('div[contenteditable="true"]', followup)
                     await page.keyboard.press("Enter")
                     await asyncio.sleep(15)
@@ -91,7 +90,7 @@ class Phase1AIDebate(PhaseBase):
                 debate_text = "\n\n".join(debate_history)
                 AtomicWriter.write_text(archive_path, debate_text)
 
-                print(f"✅ AI 辯證階段完成，輸出至: {archive_path}")
+                self.log(f"✅ AI 辯證階段完成，輸出至: {archive_path}")
 
             except Exception as exc:
                 self.warning(f"⚠️  Playwright 流程失敗: {exc}")

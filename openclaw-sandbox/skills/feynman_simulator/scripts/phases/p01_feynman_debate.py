@@ -40,7 +40,7 @@ class Phase1FeynmanDebate(PhaseBase):
             phase_name="Feynman Debate Loop (Student ↔ Tutor)",
             skill_name="feynman_simulator",
         )
-        self._llm = OllamaClient()
+        self._llm = self.llm
 
     # ------------------------------------------------------------------ #
     #  StudentAgent — Local Ollama                                         #

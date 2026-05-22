@@ -1,11 +1,17 @@
 import json
 import os
-import uuid
+import sys
 
-from core.ai.llm_client import OllamaClient
+# Core Bootstrap
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
+from core.utils.bootstrap import ensure_core_path as _bootstrap
+
+_bootstrap(__file__)
+
 from core.orchestration.event_bus import DomainEvent, EventBus
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.atomic_writer import AtomicWriter
+from skills.note_generator.scripts.run_all import strip_think_tags
 
 
 class Phase2Synthesis(PhaseBase):
@@ -15,7 +21,6 @@ class Phase2Synthesis(PhaseBase):
             phase_name="Final Synthesis and APA Output",
             skill_name="student_researcher",
         )
-        self.llm = OllamaClient()
 
     def run(self, force: bool = False, **kwargs) -> None:
         input_dir = self.dirs["input"]
@@ -34,7 +39,7 @@ class Phase2Synthesis(PhaseBase):
                     continue
 
                 filepath = os.path.join(root, file)
-                print(f"\n📂 處理查證完成檔案: {file}")
+                self.info(f"📂 處理查證完成檔案: {file}")
 
                 with open(filepath, encoding="utf-8") as f:
                     data = json.load(f)
@@ -43,7 +48,7 @@ class Phase2Synthesis(PhaseBase):
                 debated_claims = data.get("debated_claims", [])
 
                 if not source_md_path or not os.path.exists(source_md_path):
-                    print(f"❌ 找不到原始筆記檔案: {source_md_path}")
+                    self.error(f"❌ 找不到原始筆記檔案: {source_md_path}")
                     continue
 
                 with open(source_md_path, encoding="utf-8") as f:
@@ -58,7 +63,7 @@ class Phase2Synthesis(PhaseBase):
                             debate_texts.append(f"【討論紀錄 {idx + 1}】\n" + f.read())
 
                 if not debate_texts:
-                    print("⚠️ 沒有查證到任何有效討論紀錄，直接輸出原檔案。")
+                    self.warning("⚠️ 沒有查證到任何有效討論紀錄，直接輸出原檔案。")
                     out_path = os.path.splitext(filepath)[0] + "_research.md"
                     AtomicWriter.write_text(out_path, original_note)
                     continue
@@ -78,7 +83,7 @@ class Phase2Synthesis(PhaseBase):
                 if is_orphan and new_tags:
                     semantic_instructions = f"6. [特別指示] 這是一個全新的靈感點子，請在文末強制加上以下標籤 (Hashtags) 以放入孵化器 (Incubator)：{', '.join(new_tags)}\n"
                 elif related_files:
-                    semantic_instructions = f"6. [特別指示] 系統在舊有知識庫中發現這篇對話與以下檔案高度相關：{', '.join(related_files)}。請你在總結時，強制在關鍵名詞處插入對應的 Obsidian 雙向連結 (例如 [[{related_files[0]}]])。\n"
+                    semantic_instructions = f"6. [特別指示] 系統在舊有知識庫中發現這篇對話與以下檔案高度相關：{', '.join(related_files)}。請你在總結時，強制在關鍵名詞處插入對應 Obsidian 雙向連結 (例如 [[{related_files[0]}]])。\n"
 
                 prompt = (
                     "請扮演一位嚴謹的研究助理。你現在有一份「原始點子/筆記」與數份「AI 文獻查證討論紀錄」。\n"
@@ -95,19 +100,20 @@ class Phase2Synthesis(PhaseBase):
                     "請直接輸出完整的 Markdown 延伸報告內容。"
                 )
 
-                print("✍️  正在綜合學習與生成最終筆記...")
+                self.info("✍️  正在綜合學習與生成最終筆記...")
                 try:
                     # primary: deepseek-r1:8b (CoT synthesis); fallback: qwen3:8b (via config.yaml)
                     final_note = self.llm.generate(model="deepseek-r1:8b", prompt=prompt)
+                    final_note = strip_think_tags(final_note)
                     self.llm.unload_model("deepseek-r1:8b")
                 except Exception as e:
-                    print(f"❌ 生成失敗: {e}")
+                    self.error(f"❌ 生成失敗: {e}")
                     continue
 
                 out_path = os.path.splitext(filepath)[0] + "_research.md"
                 AtomicWriter.write_text(out_path, final_note)
 
-                print(f"✅ 最終筆記生成完成: {out_path}")
+                self.info(f"✅ 最終筆記生成完成: {out_path}")
 
                 # Emit PipelineCompleted to trigger knowledge_compiler
                 target_subj = "Incubator" if is_orphan else kwargs.get("subject", subj)

@@ -360,7 +360,7 @@ identity/
 
 ```
 docs/
-├── ARCHITECTURE.md         ← High-level system architecture and component interactions (V9.2 Intent-Driven)
+├── ARCHITECTURE.md         ← High-level system architecture and component interactions (V3.0 5-Layer Workflow)
 ├── DEVELOPMENT_MANUAL.md   ← Chronological onboarding guide for new developers
 ├── CODING_GUIDELINES.md    ← Definitive engineering standards:
 │                              §1  Core design principles

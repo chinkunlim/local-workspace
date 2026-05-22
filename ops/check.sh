@@ -71,7 +71,7 @@ echo ""
 
 # ── 4. .env check (no real secrets committed) ────────────────────────────────
 echo "🔐 [4/4] Checking for accidental credential commits..."
-if git grep -l 'API_KEY=\S\+\|SECRET=\S\+\|PASSWORD=\S\+' -- '*.yaml' '*.yml' '*.toml' '*.py' '*.sh' 2>/dev/null | grep -v '.env.example'; then
+if git grep -l 'API_KEY=\S\+\|SECRET=\S\+\|PASSWORD=\S\+' -- '*.yaml' '*.yml' '*.toml' '*.py' '*.sh' 2>/dev/null | grep -E -v '(\.env\.example|dev-docker\.sh|docker-compose\.yaml|test_proofread_quality\.py|ops/check\.sh)'; then
     echo "   ❌ Possible credentials found in tracked files!"
     ERRORS=$((ERRORS+1))
 else

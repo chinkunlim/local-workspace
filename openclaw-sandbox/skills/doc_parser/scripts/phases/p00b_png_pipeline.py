@@ -25,7 +25,6 @@ from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
-from core.ai.llm_client import OllamaClient
 from core.orchestration.pipeline_base import PipelineBase
 from core.state.resume_manager import ResumeManager
 from core.utils.atomic_writer import AtomicWriter
@@ -45,8 +44,6 @@ class Phase0bPNGPipeline(PipelineBase):
         self.vlm_model = cfg.get("vlm_model", "llama3.2-vision")
         self.ocr_confidence_threshold = float(cfg.get("ocr_confidence_threshold", 75.0))
         self.tesseract_lang = cfg.get("tesseract_lang", "chi_tra+eng")
-
-        self.llm = OllamaClient(api_url="http://localhost:11434/api/generate")
 
     def run(
         self,

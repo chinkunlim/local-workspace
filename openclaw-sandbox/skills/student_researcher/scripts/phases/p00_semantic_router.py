@@ -130,7 +130,7 @@ class Phase0SemanticRouter(PipelineBase):
             )
             try:
                 tag_res = self.llm.generate(
-                    model=self.model_name, prompt=tag_prompt, options={"temperature": 0.3}
+                    model=self.model_name, prompt=tag_prompt, options={"temperature": 0.0}
                 )
                 # Extract tags matching #xxx
                 new_tags = re.findall(r"#[^\s,]+", tag_res)

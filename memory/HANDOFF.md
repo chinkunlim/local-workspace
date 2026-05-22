@@ -133,9 +133,10 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-22 | V9.16 Dual-Track 5-Layer Architecture | Reorganized system workflows into a clean 5-layer design with Parallel Dual-Track data flows (L3->L5 bypass, and L3->L4->L5 research route). Connected TG Bot directly to Layer 4, moved note_generator to Layer 3, and updated docs/ARCHITECTURE.md and system_workflow_guide.md. |
 | 2026-05-22 | V9.15 Memory Hardening & SSoT Verification | Verified core VLM & HITL implementation, synced ADRs, resolved Coding Guidelines numbering, and hardened sequential VLM/HITL exceptions invariants. |
 | 2026-05-22 | V9.14 HITL Proofreader Pipeline Pause/Resume | Integrated `proofreader` via JSON state pause/resume, added Dashboard Force Skip button, added full watchdog resume loop. |
-| 2026-05-22 | V9.13 Semantic Router & Idea Incubator | Added Phase 0 for semantic routing, dynamic Incubator tagging, fixed file handoffs in RouterAgent, mapped full 15-skill 6-layer architecture. |
+| 2026-05-22 | V9.13 Semantic Router & Idea Incubator | Added Phase 0 for semantic routing, dynamic Incubator tagging, fixed file handoffs in RouterAgent, mapped full 15-skill 5-layer architecture. |
 | 2026-05-22 | V9.12 VLM Stability & HITL Fixes | Set Semaphore(1) for VLM vision to prevent OOM, fixed HITLPendingInterrupt propagation, integrated Telegram notification natively, added E2E test stubs |
 | 2026-05-13 | V9.11 RouterAgent Refactor & PPTX Image Extraction | Replaced hardcoded routing with inbox_config.json; implemented python-pptx image extraction in Phase 0c; resolved PPTX placeholders in figure_list |
 | 2026-05-13 | V9.10 MarkItDown Integration, RouterAgent & DAG Fixes | Phase0cMarkItDown (PPTX/DOCX/XLSX); config-driven routing; correction_log pollution fix; ADR-013 |
