@@ -431,6 +431,7 @@ def main() -> None:
         include_resume=True,
         include_interactive=False,
         include_start_phase=False,
+        include_process_all=True,
     )
     parser.add_argument(
         "--input-file", dest="input_file", help="單一輸入 .md 檔案路徑 (RouterAgent / CLI)"

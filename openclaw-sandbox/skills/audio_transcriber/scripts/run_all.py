@@ -278,6 +278,7 @@ def main() -> None:
         include_resume=True,
         include_interactive=True,
         include_start_phase=True,
+        include_process_all=True,
     )
     parser.add_argument("--glossary", action="store_true", help="執行詞庫自動生成 (Phase 0)")
     parser.add_argument("--glossary-merge", action="store_true", help="合併現有詞庫")

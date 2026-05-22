@@ -148,6 +148,7 @@ def main():
         include_resume=True,
         include_interactive=True,
         include_start_phase=True,
+        include_process_all=True,
     )
     args = parser.parse_args()
 

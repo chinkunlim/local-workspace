@@ -549,6 +549,10 @@ class PipelineBase:
         if not cp:
             return None
 
+        if not sys.stdin.isatty():
+            print("➩️  [非互動模式] 自動從斷點繼續。")
+            return cp
+
         saved_at = cp.get("saved_at", "不明")
         print("\n" + "═" * 56)
         print("📌 偵測到上次暫停的斷點 (Checkpoint)")
