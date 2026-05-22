@@ -1,227 +1,243 @@
-# Open Claw PKMS — User Manual
+# Open Claw PKMS — 使用者手冊 (User Manual)
 
-> **System Version**: V9.2 (Quality-First Model Optimization)
+> **System Version**: V9.17 (Coding Guidelines Full Compliance)
 > **Status**: Production-Grade Headless CLI Deployment
-> **Last Updated**: 2026-05-05
+> **Last Updated**: 2026-05-23
 
 ---
 
-## Quick Start (TL;DR)
+## 快速開始 (Quick Start — TL;DR)
 
-### Absolute Beginner Setup
-If you are entirely new to this project, don't worry. This system is designed to run completely autonomously. 
+### 每日使用流程
 
-**Prerequisites:**
-1. You must be on macOS (Apple Silicon recommended).
-2. You must have the required LLM models downloaded via Ollama (run `ollama run qwen3:8b` and `ollama run qwen3:14b` once).
-
-**Daily Usage:**
 ```bash
-# Step 1: Start all services
+# Step 1: 啟動所有服務
 cd ~/Desktop/local-workspace
 ./infra/scripts/start.sh
 
-# Step 2: Drop your files into the universal inbox
+# Step 2: 將檔案放入通用收件匣
 cp lecture.m4a  openclaw-sandbox/data/raw/YourSubject/
 cp textbook.pdf openclaw-sandbox/data/raw/YourSubject/
 
-# Step 3: Wait — the system parses your intent and routes files automatically.
-# Through the magic of the RouterAgent and EventBus, your file will be processed through
-# extraction, note generation, and knowledge compilation automatically.
-# When complete, your notes appear in:
+# Step 3: 等待自動化流程
+# inbox_daemon 監測到檔案 → RouterAgent 自動分流 → 校對 → HITL Dashboard 通知
+# 當 Telegram 收到通知後，前往 http://localhost:5000 確認校對結果
+# 確認後，系統自動繼續後續高亮、筆記、費曼、閃卡全流程
+
+# Step 4: 查看成果
 open openclaw-sandbox/data/wiki/YourSubject/
 
-# Step 4: Shutdown
+# Step 5: 關閉服務
 ./infra/scripts/stop.sh
 ```
 
-That's it. The rest of this manual explains what happens in between, how the system routes files, and how to interact with Human-in-the-Loop gates.
-
 ---
 
-## Part 1: How the System Works (V9.2 Intent-Driven Architecture)
+## Part 1: 系統架構全景 (V9.17 SSoT 循序處理架構)
 
-### The Magic of the RouterAgent
-
-You might wonder: *How does the system know what to do with my file without me clicking any buttons?*
-
-Open Claw uses an **Intent-Driven RouterAgent** and an **EventBus** to automatically chain multiple AI skills together. Think of the `RouterAgent` as a smart traffic controller. When you drop a file into the inbox, the controller looks at the file type and context, decides which "Skills" (like transcribing, highlighting, or formatting) are needed, and automatically passes the file down the assembly line.
+### 全局工作流圖 (Mermaid)
 
 ```mermaid
 graph TD
-    A[📥 Drop file in data/raw/Subject] --> B[👁️ Inbox Daemon (File Stabilisation)]
-    B --> C[🗺️ RouterAgent (Intent Resolution + Model Selection)]
+    classDef core fill:#e0f2f1,stroke:#00796b,stroke-width:2px,font-weight:bold;
+    classDef input fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef parse fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef annot fill:#ede7f6,stroke:#5e35b1,stroke-width:2px;
+    classDef synth fill:#fce4ec,stroke:#c2185b,stroke-width:2px,font-weight:bold;
+    classDef vault fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,font-weight:bold;
 
-    C -- "Low Complexity → qwen2.5-coder:7b" --> D[🎧 audio_transcriber]
-    C -- "Low Complexity → qwen2.5-coder:7b" --> E[📄 doc_parser]
-    C -- "High Complexity → deepseek-r1:14b" --> F_[🧠 feynman_simulator]
+    subgraph L1["第一層：資料分流 (Ingestion)"]
+        In_File["📂 data/raw/{Subject}/<br>(音檔、文件、Chat.md)"]:::input
+        In_TG["📱 Telegram Bot<br>(/idea 靈感旁路)"]:::input
+        Daemon("⚙️ inbox_daemon.py<br>(Watchdog 24/7)"):::core
+        Router("🗺️ RouterAgent"):::core
+        In_File --> Daemon
+        Daemon -->|TaskManifest| Router
+    end
 
-    D -- "Event: PipelineCompleted" --> F[📝 note_generator]
-    E -- "Event: PipelineCompleted" --> F
+    subgraph L2["第二層：萃取與三維校對 (Extraction)"]
+        Router -->|.m4a/.mp3| S_AT["🎙️ audio_transcriber<br>(Whisper 轉錄)"]:::parse
+        Router -->|.pdf/.pptx/.docx| S_DP["📄 doc_parser<br>(OCR / VLM)"]:::parse
+        S_AT -->|Raw MD| S_PR["⚖️ proofreader<br>(三維相互校對)"]:::parse
+        S_DP -->|Raw MD| S_PR
+    end
 
-    F -- "Event: PipelineCompleted" --> G[🧠 knowledge_compiler]
-    G --> H[📚 Obsidian Vault (data/wiki)]
+    subgraph L3L4["第三與四層：HITL 關卡與循序加工鏈"]
+        S_PR -->|非阻塞暫停| State["📂 pending_chains.json<br>(釋放 VRAM)"]:::core
+        State -->|Dashboard 人工確認| Verified["📤 04_final_verified/<br>(100% 乾淨 Ground Truth)"]:::vault
+        Verified -->|1. 獨立讀取| S_SH["🖍️ smart_highlighter"]:::annot
+        S_SH -->|2. 依序| S_NG["📝 note_generator"]:::annot
+        S_NG -->|3. 依序| S_FS["🎓 feynman_simulator"]:::synth
+        S_FS -->|4. 依序| S_AE["🎴 academic_edu_assistant"]:::synth
+        Verified -.-|獨立讀取 SSoT| S_NG
+        Verified -.-|獨立讀取 SSoT| S_FS
+        Verified -.-|獨立讀取 SSoT| S_AE
+        In_File -->|1. Chat.md| S_SR["🧬 student_researcher<br>(需人工啟動)"]:::synth
+        In_TG -->|2. /idea| S_SR
+        Verified -->|3. Verified 輸出| S_SR
+    end
+
+    subgraph L5["第五層：全域編譯 (Compilation)"]
+        S_SH --> S_KC["📚 knowledge_compiler"]:::vault
+        S_NG --> S_KC
+        S_FS --> S_KC
+        S_AE --> S_KC
+        S_SR --> S_KC
+        S_KC -->|AtomicWriter| Vault[("🗂️ Obsidian Vault")]:::vault
+        S_KC -->|Graph Extraction| ChromaDB[("🧠 ChromaDB")]:::vault
+    end
+
+    class Daemon,Router,State core;
 ```
 
-### What is `data/raw/`?
+### 設計理念：SSoT & Traceable
 
-This is your **only manual input point**. You never need to touch any other data directory. Simply:
+本系統嚴格遵循兩大核心理念：
 
-1. Create a subfolder named after your subject: `data/raw/Cognitive_Psychology/`
-2. Drop your files in:
-   - Audio: `lecture01.m4a`
-   - PDF: `textbook.pdf`
-   - Video: `class_recording.mp4` (or `.mov`, `.mkv`)
-3. The `inbox_daemon` detects the file, waits for it to stabilize (debounce), and hands it to the `RouterAgent`.
-4. The `RouterAgent` resolves the required Skill Chain (e.g. `[audio_transcriber, note_generator, knowledge_compiler]`) and enqueues the first task.
-5. As each skill successfully completes, it fires a `PipelineCompleted` event, which automatically triggers the next skill in the chain.
+1. **SSoT (Single Source of Truth)**: 所有智慧加工模組均獨立讀取 `04_final_verified/` 的同一份 Ground Truth。絕不將 LLM 產出串聯傳遞（防止格式污染與幻覺累積）。
 
-### What is `data/wiki/`?
-
-This is your finished knowledge base. Open it as an Obsidian vault to get:
-- Bi-directional `[[WikiLinks]]` between related concepts
-- Mermaid mind maps embedded in each note
-- Cornell-format lecture notes with YAML metadata
-- `[[WikiLinks]]` for concept network navigation
-- Cornell-format lecture notes with YAML metadata
-- Highlighted key terms and definitions
-- **Cross-Semester Semantic Links**: related past notes automatically injected via ChromaDB similarity search
-- Embedded FFmpeg keyframes interleaved with audio transcripts (for video ingestions)
+2. **Traceable (全程可追蹤)**: `proofreader` 同時保存唯讀的 `01_raw/`（校對前）與 `04_final_verified/`（校對後），並自動生成 `correction_log.md` 修改紀錄。
 
 ---
 
-## Part 2: Context-Aware Model Routing (V9.2)
+## Part 2: 五大處理層詳解
 
-The `RouterAgent` now automatically selects the optimal local LLM based on the **complexity** of the task. You do **not** need to configure this manually — it is fully transparent to you.
+### 第一層：資料分流門 (Ingestion)
 
-| Task Complexity | Intent Keywords | Model Used | Why |
-|:---|:---|:---|:---|
-| **Low** | `auto`, `transcribe`, `parse`, `compile` | `qwen3:8b` | Fast, low VRAM, suitable for structured extraction |
-| **High** | `debate`, `research`, `feynman`, `analyze`, `deep`, `study` | `qwen3:14b` | Deep reasoning required for Socratic debate and academic verification |
+`inbox_daemon.py` 持續監聽 `data/raw/{Subject}/`，使用穩定狀態校驗（每 5 秒檢查檔案大小，連續 3 次一致才處理）防止半程複製的檔案被搶先處理。
 
-**How to observe model selection in logs:**
+**RouterAgent 自動分流規則：**
+
+| 檔案類型 | 目標 Skill | 控制方式 |
+|---------|------------|---------|
+| `.m4a`, `.mp3` | `audio_transcriber` | inbox_daemon 自動觸發 |
+| `.pdf`, `.pptx`, `.docx`, `.xlsx` | `doc_parser` | inbox_daemon 自動觸發 |
+| `*Chat*.md`, `*chat*.md` | `student_researcher` 輸入區 | **需人工手動啟動** |
+| Telegram `/idea` | `student_researcher` 輸入區 | **需人工手動啟動** |
+
+**Context-Aware 模型分流：**
+
+| 任務複雜度 | 關鍵字 | 使用模型 |
+|-----------|--------|---------|
+| 低 | `auto`, `transcribe`, `parse` | `qwen3:8b` |
+| 高 | `debate`, `research`, `feynman`, `analyze` | `qwen3:14b` / `deepseek-r1:8b` |
+
+---
+
+### 第二層：萃取與三維校對 (Extraction & Proofreading)
+
+#### `audio_transcriber`
+- **VAD 靜音預處理**：剪去長靜音，防止 Whisper 重覆字幻覺
+- **單詞時間戳**：低信心度單詞標記 `[? word | timestamp ?]`
+
+#### `doc_parser`
+- **PyMuPDF 300 DPI 萃取**：精確定位多欄排版，防止 multi-column layout bleed
+- **VLM 旁路優化**：若圖表 Caption 語意已充分，跳過昂貴的 VLM 解析
+
+#### `proofreader` (三維相互校對)
+- **Mode A (一對一)**：推理大模型對全稿進行語法糾錯
+- **Mode B (一對多)**：段落分發給 3 個平行輕量 LLM，少數服從多數
+- **Mode C (多源互助)**：若同一 Subject 同時有簡報檔與音頻，自動從簡報抽取詞彙庫校正語音轉錄
+
+---
+
+### 第三層：HITL 非阻塞審核 (Human-in-the-Loop Gate)
+
+> **重要**: V9.14+ 已將舊版阻塞式 `VerificationGate` 替換為非阻塞的 Flask Dashboard 架構。
+
+**新版 HITL 流程：**
+
+1. `proofreader` 完成後，`RouterAgent` 將後續管線序列化至 `pending_chains.json`
+2. **主程式立即退出**，釋放所有 GPU/VRAM（防止人工等待期間的記憶體浪費）
+3. Telegram Bot 推送通知（附上 Dashboard 連結）
+4. 用戶前往 `http://localhost:5000` 開啟 Dashboard：
+   - 左側：原始音檔/文件（可播放/預覽）
+   - 右側：AI 校對版本（可即時編輯）
+5. 點擊 **「Save」** 或 **「Skip」**，乾淨文件寫入 `04_final_verified/{Subject}/`
+6. Watchdog 自動偵測寫入，讀取 `pending_chains.json`，重新調度後續管線
+
+---
+
+### 第四層：循序智慧加工鏈 (Sequential Shared-SSoT Chain)
+
+> **核心設計**：四個模組採嚴格循序執行，但每一站都**獨立讀取**同一份 `04_final_verified/` 基準真相，絕不消費前一站的 LLM 輸出。
+
+1. 🖍️ **`smart_highlighter`**：為原文標記 `**粗體**` 與 `==高亮==`。內建防篡改錨點，原文每個字元不被刪改
+2. 📝 **`note_generator`**：等高亮完成後，獨立讀取 Ground Truth，生成結構條列大綱筆記
+3. 🎓 **`feynman_simulator`**：等大綱完成後，獨立讀取 Ground Truth，模擬蘇格拉底式師生對辯（本地 DeepSeek 學生 vs. 雲端 Gemini 老師）
+4. 🎴 **`academic_edu_assistant`**：等費曼完成後，獨立讀取 Ground Truth，生成 SM-2 間隔重複閃卡，推送至 Anki
+
+---
+
+### `student_researcher` 多源漏斗 (Multi-Ingress Funnel)
+
+> **重要**：此模組嚴格需要人工手動啟動，不參與自動化流水線。
+
+**三個輸入源：**
+
+```
+📥 1. data/raw/ 的 Chat.md ─────────┐
+                                    │
+📱 2. Telegram /idea 靈感旁路 ──────┼─➔ 🧬 student_researcher
+                                    │
+⚖️ 3. proofreader Verified 輸出 ────┘
+```
+
+| 輸入源 | 適用對象 | 狀態 |
+|--------|---------|------|
+| `data/raw/` Chat.md | Gemini/Ollama 長篇 Q&A 對話備份 | 路由至輸入區，等待手動啟動 |
+| Telegram `/idea` | 行動端速記靈感、語音備忘 | 寫入暫存區，等待手動啟動 |
+| `proofreader` Verified 輸出 | 完整講座錄音 / 學術 PDF | 寫入原料庫，等待手動啟動 |
+
+**啟動命令：**
 ```bash
-# Watch the RouterAgent routing decisions in real-time
-tail -f openclaw-sandbox/logs/task_queue.log | grep "Model:"
-
-# Or simulate the routing decision directly:
 cd openclaw-sandbox
-export WORKSPACE_DIR="$(pwd)"
-export PYTHONPATH="$(dirname $(pwd)):$(pwd):$PYTHONPATH"
-
-python3 - <<'EOF'
-from core.orchestration.router_agent import RouterAgent, TaskManifest
-router = RouterAgent()
-
-# Low Complexity
-m1 = TaskManifest(source_path="/tmp/test.m4a", intent="auto", subject="Physics")
-router.resolve(m1)
-print(f"auto → {m1.model}")
-
-# High Complexity
-m2 = TaskManifest(source_path="/tmp/test.md", intent="feynman debate", subject="Physics")
-router.resolve(m2)
-print(f"feynman debate → {m2.model}")
-EOF
+uv run skills/student_researcher/scripts/run_all.py --process-all
 ```
 
-Expected output:
-```
-auto → qwen3:8b
-feynman debate → qwen3:14b
-```
+**內部流程（啟動後）：**
+- **Phase 0**：在 ChromaDB 做語意搜尋。有關聯 → 生成 `[[WikiLinks]]`；孤兒點子 → 加 `#incubating` 標籤，歸入 `Incubator/`
+- **Phase 1**：抽取複雜學術假設論點（claims）
+- **Phase 2**：`academic_library_agent` 繞過付費資料庫取得論文快照，`gemini_verifier_agent` 進行雲地 AI 三輪對辯
 
 ---
 
-## Part 3: Semantic Caching (V9.2)
+### 第五層：全域編譯與 Stub Note Mode
 
-To reduce redundant GPU computation, all LLM calls with `temperature=0` (deterministic) are automatically cached in a local SQLite database at:
-```
-openclaw-sandbox/data/llm_cache.sqlite3
-```
+#### Dead-Link Guard — 樹苗筆記模式 (Stub Note Mode)
 
-**How it works:**
-- On every LLM call, a `SHA-256` hash of `(model, prompt)` is computed.
-- If a matching hash is found in the cache, the stored response is returned **instantly**, skipping inference entirely.
-- If not found, the LLM is called normally, and the result is stored for future use.
-- The cache is persistent across reboots — it accumulates over sessions.
+V9.16+ 改變了死鏈處理策略：
 
-**Log message when a cache hit occurs:**
-```
-⚡ 命中語意快取 (Semantic Cache)，跳過推理。
-```
+- **舊版**：若 `[[WikiLinks]]` 目標不存在，降級為純文字
+- **新版**：保持 `[[WikiLinks]]` 不變，並在 `wiki/stubs/` 自動生成極簡佔位筆記（含標題、時間戳、`#stub` 標籤）
 
-**To clear the cache (e.g., when prompts change significantly):**
-```bash
-rm openclaw-sandbox/data/llm_cache.sqlite3
-```
+效果：Obsidian 中不再有紅字死鏈，完整保持圖譜跳轉體驗。
+
+#### `AtomicWriter` 防崩潰寫入
+
+所有寫入使用 `tempfile + os.replace()`，即使停電也不損壞舊筆記。
 
 ---
 
-## Part 4: Multimodal Video Ingestion
+## Part 3: 服務啟動與停止
 
-If you drop a video file (`.mp4`, `.mov`, `.mkv`) into `data/raw/`, the system automatically routes it to the `video_ingester` skill.
-1. The system extracts high-quality screenshots (keyframes) every 30 seconds.
-2. It transcribes the video's audio track.
-3. It interleaves the screenshots with the text, creating an illustrated Markdown document.
-4. The output is forwarded to `note_generator` and compiled into your Obsidian vault.
-
----
-
-## Part 5: Spaced Repetition via Telegram
-
-Open Claw includes a built-in **SuperMemo-2 (SM-2)** engine to help you retain knowledge. When you process academic notes, the system automatically generates Anki flashcards.
-
-1. **Daily Push**: At 09:00 AM every day, the `scheduler` daemon checks for due cards and sends them to your connected Telegram account.
-2. **Interactive Review**:
-   - Reply to a card with `/reveal <card_id>` to view the answer.
-   - Reply with `/rate <card_id> <0-5>` to score your memory (5 = Perfect, 0 = Forgot completely).
-3. The SM-2 algorithm will automatically schedule the next review date based on your score.
-
----
-
-## Part 6: Human-in-the-Loop (HITL) Verification Gates
-
-Open Claw enforces strict GIGO (Garbage-In, Garbage-Out) prevention. Before allowing potentially hallucinated data to pollute your knowledge base, the system will pause and ask for your verification.
-
-### How to use the Verification Gate
-
-When a skill (like `audio_transcriber` Phase 2, or `academic_edu_assistant` Anki export) reaches a critical juncture, it will spawn a temporary Web UI and pause the pipeline:
-
-1. You will see a terminal message like: `🌐 啟動 Human-in-the-Loop 驗證閘門: http://localhost:8080`
-2. Open your browser and navigate to `http://localhost:8080`.
-3. You will see a side-by-side diff:
-   - **Left Side**: The original raw text (or source audio with click-to-play timestamps).
-   - **Right Side**: The AI's proposed corrections or generated Anki cards.
-4. Review the changes. You can manually edit the text on the right side if the AI made a mistake.
-5. Click **"Approve & Resume Pipeline"**.
-6. The web server shuts down instantly, and the pipeline resumes using your approved, high-integrity data.
-
----
-
-## Part 7: Starting and Stopping
-
-### Start All Services
+### 啟動所有服務
 
 ```bash
 cd ~/Desktop/local-workspace
 ./infra/scripts/start.sh
 ```
 
-This launches:
-1. **Ollama** — local LLM inference engine
-2. **LiteLLM** — OpenAI-compatible proxy (port 4000)
-3. **Open WebUI** — Chat UI at `http://localhost:3000`
-4. **Inbox Daemon** — 24/7 file watcher on `data/raw/` (Includes RouterAgent)
-5. **RAM Watchdog** — Monitors memory; throttles tasks if RAM drops below 15%
+啟動項目：
+1. **Ollama** — 本地 LLM 推理引擎
+2. **LiteLLM** — OpenAI 相容代理 (port 4000)
+3. **Open WebUI** — 聊天介面 `http://localhost:3000`
+4. **Inbox Daemon** — 24/7 監聽 `data/raw/` (含 RouterAgent)
+5. **RAM Watchdog** — RAM 低於 15% 時節流任務
+6. **HITL Dashboard** — Flask 審核儀表板 `http://localhost:5000`
+7. **Telegram Bot** — 推播通知與 KB 查詢助理
 
-### Check Service Status
-
-```bash
-./ops/check.sh
-```
-
-### Stop All Services
+### 停止服務
 
 ```bash
 ./infra/scripts/stop.sh
@@ -229,139 +245,180 @@ This launches:
 
 ---
 
-## Part 8: Processing Files Manually (Advanced)
-
-While the `RouterAgent` handles automatic chaining, you can also trigger pipelines manually via CLI. This is useful for forcing re-runs or resuming from checkpoints.
+## Part 4: 手動執行各管線 (Advanced CLI)
 
 ### Audio Transcriber
 
 ```bash
 cd openclaw-sandbox
 
-# Process all pending audio files
-python3 skills/audio_transcriber/scripts/run_all.py --process-all
+# 處理所有待處理音頻
+uv run skills/audio_transcriber/scripts/run_all.py --process-all
 
-# Process only one subject
-python3 skills/audio_transcriber/scripts/run_all.py --subject Cognitive_Psychology
+# 只處理特定科目
+uv run skills/audio_transcriber/scripts/run_all.py --subject Cognitive_Psychology
 
-# Resume after an interruption
-python3 skills/audio_transcriber/scripts/run_all.py --process-all --resume
+# 從中斷點繼續
+uv run skills/audio_transcriber/scripts/run_all.py --process-all --resume
 
-# Force re-run (even completed files)
-python3 skills/audio_transcriber/scripts/run_all.py --process-all --force
-
-# Start from a specific phase (e.g., phase 2)
-python3 skills/audio_transcriber/scripts/run_all.py --from 2
+# 強制重跑
+uv run skills/audio_transcriber/scripts/run_all.py --process-all --force
 ```
 
 ### Doc Parser
 
 ```bash
 cd openclaw-sandbox
+uv run skills/doc_parser/scripts/run_all.py --process-all
+uv run skills/doc_parser/scripts/run_all.py --subject AI_Papers
+```
 
-# Process all pending PDFs
-python3 skills/doc_parser/scripts/run_all.py --process-all
+### student_researcher (需人工啟動)
 
-# Process only one subject
-python3 skills/doc_parser/scripts/run_all.py --subject AI_Papers
+```bash
+cd openclaw-sandbox
+# 確認 data/student_researcher/input/ 中已有待處理檔案後執行：
+uv run skills/student_researcher/scripts/run_all.py --process-all
 ```
 
 ### Knowledge Compiler
 
-Compiles all skill outputs into your Obsidian Vault with bi-directional WikiLinks. (Note: The RouterAgent usually triggers this automatically at the end of a chain).
-
 ```bash
 cd openclaw-sandbox
-python3 skills/knowledge_compiler/scripts/run_all.py --process-all
+uv run skills/knowledge_compiler/scripts/run_all.py --process-all
 ```
 
 ---
 
-## Part 9: Checking Progress
+## Part 5: 語意快取 (Semantic Cache)
 
-### Task Queue Status
-Because tasks are executed in a single-threaded queue with exponential backoff retry, you can view the queue activity in the inbox daemon logs:
+所有 `temperature=0` 的 LLM 呼叫會自動快取於：
+```
+openclaw-sandbox/data/llm_cache.sqlite3
+```
+
+命中時日誌顯示：
+```
+⚡ 命中語意快取 (Semantic Cache)，跳過推理。
+```
+
+清除快取（當 prompt 大幅修改後）：
+```bash
+rm openclaw-sandbox/data/llm_cache.sqlite3
+```
+
+---
+
+## Part 6: SM-2 間隔重複 / Telegram 閃卡
+
+`academic_edu_assistant` 自動生成 Anki 閃卡，並由 `scheduler` 在每天 09:00 推送至 Telegram。
+
+**Telegram 操作指令：**
+- `/reveal <card_id>` — 查看答案
+- `/rate <card_id> <0-5>` — 評分（5=完全記住，0=完全忘記）
+- SM-2 演算法根據評分自動安排下次複習日期
+
+---
+
+## Part 7: 檢查進度
+
+### 即時日誌監控
 
 ```bash
 tail -f openclaw-sandbox/logs/task_queue.log
 ```
 
-**Key log patterns to watch for:**
-| Log Message | Meaning |
-|:---|:---|
-| `▶️ [TaskQueue] 開始執行任務` | A skill pipeline has started |
-| `✅ [TaskQueue] 任務成功完成` | A pipeline finished successfully |
-| `🔄 [TaskQueue] 準備重試任務 (等待 Xs)` | Exponential backoff triggered; task will retry after X seconds |
-| `☠️ [DLQ] 已隔離毒藥檔案` | A file failed 3 times and was moved to `data/quarantine/` |
-| `⚡ 命中語意快取` | LLM call skipped due to cache hit |
-| `🗺️ [RouterAgent] 接力觸發` | A pipeline handoff between skills occurred |
+**關鍵日誌模式：**
 
-### Skill State Checklists
-Each skill writes a persistent JSON/MD checklist to its state directory:
+| 日誌訊息 | 含義 |
+|---------|------|
+| `▶️ [TaskQueue] 開始執行任務` | 管線已啟動 |
+| `✅ [TaskQueue] 任務成功完成` | 管線完成 |
+| `🔄 [TaskQueue] 準備重試 (等待 Xs)` | 指數退避重試中 |
+| `☠️ [DLQ] 已隔離毒藥檔案` | 檔案失敗 3 次，移至 `data/quarantine/` |
+| `⚡ 命中語意快取` | LLM 呼叫跳過推理 |
+| `🗺️ [RouterAgent] 接力觸發` | Skill 之間的管線移交 |
+| `📂 [Watchdog] 偵測到 verified 寫入` | HITL 確認後的自動喚醒 |
+| `⛓️ [Chain] 恢復 pending_chains` | 從 pending_chains.json 復原管線 |
+
+### Skill 狀態清單
 
 ```bash
-# Audio transcriber progress
 cat openclaw-sandbox/data/audio_transcriber/state/checklist.md
-
-# Doc parser progress
 cat openclaw-sandbox/data/doc_parser/state/checklist.md
+cat openclaw-sandbox/data/student_researcher/state/checklist.md
 ```
 
 ---
 
-## Part 10: Obsidian Vault Setup
+## Part 8: Obsidian Vault 設定
 
-1. Open **Obsidian** → `Open folder as vault`
-2. Navigate to: `~/Desktop/local-workspace/openclaw-sandbox/data/wiki/`
-3. Enable the **Mermaid** plugin for mind map rendering
-4. Enable **Dataview** (optional) for dynamic note queries
+1. 開啟 **Obsidian** → `Open folder as vault`
+2. 路徑：`~/Desktop/local-workspace/openclaw-sandbox/data/wiki/`
+3. 開啟 **Mermaid** 插件（用於心智圖渲染）
+4. 開啟 **Dataview**（可選，用於動態查詢）
 
-Your knowledge base is fully structured with:
-- YAML frontmatter for filtering and queries
-- Mermaid mind maps for visual learning
-- `[[WikiLinks]]` for concept network navigation
-- Cornell-format tables for structured review
-
----
-
-## Part 11: Troubleshooting
-
-| Problem | Solution |
-|---|---|
-| Files not processing automatically | Check if `infra/scripts/start.sh` was run; verify `data/raw/` has files. Check `task_queue.log` for errors. |
-| LLM timeout / slow processing | Normal for large files; check `data/<skill>/state/checklist.md` for progress. |
-| `ModuleNotFoundError: No module named 'core'` | Run scripts from inside `openclaw-sandbox/` and ensure `WORKSPACE_DIR` and `PYTHONPATH` are set. |
-| Out of memory / system freeze | The single-threaded `task_queue` should prevent this. If it happens, ensure `watchdog.sh` is running to throttle processes. |
-| Corrupted state file | Delete `data/<skill>/state/` and re-run with `--force`. |
-| File failed to process 3 times | Check `data/quarantine/<skill>/quarantine_log.json` for the error. Fix the root cause and copy the file back to `data/raw/`. |
-| Semantic cache returning stale results | Delete `data/llm_cache.sqlite3` to clear all cached LLM responses. |
+Vault 內容結構：
+- YAML frontmatter（用於篩選與查詢）
+- Mermaid 心智圖（視覺學習）
+- `[[WikiLinks]]` 雙向連結
+- `wiki/stubs/` — Stub Note 佔位檔（等待填充的知識節點）
+- `wiki/Incubator/` — 待孵化的靈感筆記（`#incubating` 標籤）
 
 ---
 
-## Part 12: Monorepo Structure Reference
+## Part 9: 故障排除
+
+| 問題 | 解決方案 |
+|------|---------|
+| 檔案未自動處理 | 確認已執行 `start.sh`；檢查 `task_queue.log` |
+| LLM 超時/慢速 | 正常（大型檔案）；查看 `state/checklist.md` 確認進度 |
+| `ModuleNotFoundError: No module named 'core'` | 從 `openclaw-sandbox/` 內執行，確保設定 `WORKSPACE_DIR` |
+| 記憶體耗盡 / 系統凍結 | 單線程 `task_queue` 應已防止；確認 `watchdog.sh` 運行中 |
+| 狀態檔損壞 | 刪除 `data/<skill>/state/` 並重跑加 `--force` |
+| 檔案失敗 3 次 | 查看 `data/quarantine/<skill>/quarantine_log.json`；修復後複製回 `data/raw/` |
+| HITL Dashboard 無回應 | 重啟 `python3 -m skills.proofreader.scripts.dashboard` |
+| Telegram 通知未收到 | 確認 Bot Token 設定正確；查看 `logs/telegram_bot.log` |
+
+---
+
+## Part 10: Monorepo 目錄結構
 
 ```
 local-workspace/
-├── openclaw-sandbox/    ← Main application (all skill code lives here)
+├── openclaw-sandbox/        ← 主應用程式
 │   ├── core/
-│   │   ├── ai/           ← LLM Client with Semantic Cache (llm_cache.sqlite3)
-│   │   ├── orchestration/ ← RouterAgent (Model Routing), TaskQueue (Exponential Backoff), EventBus
-│   │   ├── services/     ← inbox_daemon, scheduler (SM-2), telegram_bot
-│   │   └── state/        ← StateManager with fcntl locking (JsonBackend / RedisBackend)
-│   ├── skills/           ← Individual skill plugins (dynamically loaded via manifest.py)
-│   ├── data/             ← Runtime data (gitignored)
-│   │   ├── raw/          ← 📥 YOUR INPUT FOLDER
-│   │   ├── wiki/         ← 🧠 YOUR OUTPUT (Obsidian Vault)
-│   │   ├── quarantine/   ← ☠️ Failed files (after 3 retry attempts)
-│   │   └── llm_cache.sqlite3 ← ⚡ Semantic Cache
-│   └── tests/            ← Unit tests
+│   │   ├── ai/              ← LLM 客戶端（含 Semantic Cache）
+│   │   ├── orchestration/   ← RouterAgent, TaskQueue, EventBus
+│   │   ├── services/        ← inbox_daemon, scheduler, telegram_bot
+│   │   └── state/           ← StateManager (atomic JSON)
+│   ├── skills/              ← 各 Skill 管線
+│   ├── data/                ← 執行期資料（不含於 git）
+│   │   ├── raw/             ← 📥 您的輸入資料夾
+│   │   ├── wiki/            ← 🧠 您的 Obsidian Vault
+│   │   ├── proofreader/
+│   │   │   ├── 01_raw/                ← 校對前唯讀備份
+│   │   │   ├── 04_final_verified/     ← 人工確認後的 Ground Truth
+│   │   │   └── pending_chains/        ← 管線暫停狀態
+│   │   ├── student_researcher/input/  ← 學術研究輸入暫存區
+│   │   ├── quarantine/      ← ☠️ 連續失敗 3 次的隔離檔案
+│   │   └── llm_cache.sqlite3          ← ⚡ 語意快取
+│   └── tests/               ← 單元測試 (pytest)
 │
 ├── infra/
-│   ├── scripts/          ← Start/Stop scripts
-│   ├── litellm/          ← LLM proxy config
-│   ├── open-webui/       ← Chat interface
-│   └── pipelines/        ← Pipeline plugins
+│   ├── scripts/             ← start.sh / stop.sh / watchdog.sh
+│   ├── litellm/             ← LLM 代理設定 (port 4000)
+│   ├── open-webui/          ← 聊天介面 (port 3000)
+│   └── pipelines/           ← Pipeline 插件
 │
-├── docs/                 ← System documentation
-└── memory/               ← AI agent memory & architecture docs
+├── docs/                    ← 全域文件（SSoT）
+│   ├── ARCHITECTURE.md      ← 宏觀系統架構圖（AI agents 初始化必讀）
+│   ├── USER_MANUAL.md       ← 本文件
+│   ├── CODING_GUIDELINES.md ← 工程規範 v4.2.0
+│   └── STRUCTURE.md         ← 完整目錄結構地圖
+└── memory/                  ← AI agent 記憶層
+    ├── HANDOFF.md            ← 跨 session 接力記錄
+    ├── DECISIONS.md          ← 架構決策記錄 (ADR)
+    ├── TASKS.md              ← 現行任務追蹤
+    └── PROJECT_RULES.md      ← AI agent 協作規範
 ```

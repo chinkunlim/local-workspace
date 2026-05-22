@@ -10,7 +10,7 @@ This `INDEX.md` serves as the definitive map to the documentation ecosystem. Due
 These documents define the universal rules and layout of the entire `local-workspace/` monorepo.
 
 - **[Development Manual](../docs/DEVELOPMENT_MANUAL.md)**: The onboarding guide for new developers, explaining how to build skills and test. Start here!
-- **[Coding Guidelines & Protocols](../docs/CODING_GUIDELINES.md)**: The Single Source of Truth (SSoT) for all AI and Human engineering rules. Includes the Anti-Truncation Protocol.
+- **[Coding Guidelines & Protocols](../docs/CODING_GUIDELINES.md)**: The Single Source of Truth (SSoT) for all AI and Human engineering rules. Current version: **v4.2.0**. Includes Anti-Truncation Protocol, §8.1 structured logging requirement, and §5.11/§5.12 VLM/HITL invariants.
 - **[System Structure Map](../docs/STRUCTURE.md)**: Annotated map of every critical file and folder.
 - **[Technology Stack & Principles](../docs/OPENCLAW_TECH_STACK.md)**: Exhaustive reference of security defenses, multi-agent architecture, DAG states, and advanced Python implementations.
 - **[Infrastructure Setup](../docs/INFRA_SETUP.md)**: Installation and configuration instructions for the underlying third-party infrastructure (Ollama, LM Studio, Open WebUI, LiteLLM, MCP Servers).
@@ -50,15 +50,21 @@ Each of the 9 core skills inside `openclaw-sandbox/skills/` maintains absolute a
 |:---|:---|:---|
 | **`audio_transcriber`** | Voice-to-Wiki pipeline | [Architecture](../openclaw-sandbox/skills/audio_transcriber/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/audio_transcriber/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/audio_transcriber/docs/DECISIONS.md) |
 | **`doc_parser`** | PDF-to-Wiki extraction | [Architecture](../openclaw-sandbox/skills/doc_parser/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/doc_parser/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/doc_parser/docs/DECISIONS.md) |
+| **`proofreader`** | Tri-mode mutual calibration & Non-blocking HITL Gate | [Architecture](../openclaw-sandbox/skills/proofreader/docs/ARCHITECTURE.md) \| [Decisions](../openclaw-sandbox/skills/proofreader/docs/DECISIONS.md) |
 | **`note_generator`** | Map-Reduce synthesis engine | [Architecture](../openclaw-sandbox/skills/note_generator/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/note_generator/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/note_generator/docs/DECISIONS.md) |
 | **`smart_highlighter`** | Anti-tampering annotation | [Architecture](../openclaw-sandbox/skills/smart_highlighter/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/smart_highlighter/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/smart_highlighter/docs/DECISIONS.md) |
-| **`knowledge_compiler`** | Glossary & WikiLink generator | [Architecture](../openclaw-sandbox/skills/knowledge_compiler/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/knowledge_compiler/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/knowledge_compiler/docs/DECISIONS.md) |
+| **`feynman_simulator`** | Multi-agent Socratic debate loop (Local DeepSeek vs Cloud Gemini) | [Architecture](../openclaw-sandbox/skills/feynman_simulator/docs/ARCHITECTURE.md) \| [SKILL](../openclaw-sandbox/skills/feynman_simulator/SKILL.md) |
+| **`academic_edu_assistant`** | Anki export & SM-2 Spaced Repetition | [Architecture](../openclaw-sandbox/skills/academic_edu_assistant/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/academic_edu_assistant/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/academic_edu_assistant/docs/DECISIONS.md) |
+| **`student_researcher`** | Multi-Ingress Funnel — academic deep research (Manual Trigger only) | [Architecture](../openclaw-sandbox/skills/student_researcher/docs/ARCHITECTURE.md) |
+| **`academic_library_agent`** | Playwright-based paywall traversal & paper snapshot | [Architecture](../openclaw-sandbox/skills/academic_library_agent/docs/ARCHITECTURE.md) |
+| **`gemini_verifier_agent`** | Cloud-Local AI-to-AI debate & claim verification | [Architecture](../openclaw-sandbox/skills/gemini_verifier_agent/docs/ARCHITECTURE.md) |
+| **`knowledge_compiler`** | Stub Note Mode Dead-Link Guard & Vault compiler | [Architecture](../openclaw-sandbox/skills/knowledge_compiler/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/knowledge_compiler/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/knowledge_compiler/docs/DECISIONS.md) |
 | **`interactive_reader`** | In-place annotation resolver | [Architecture](../openclaw-sandbox/skills/interactive_reader/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/interactive_reader/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/interactive_reader/docs/DECISIONS.md) |
-| **`academic_edu_assistant`** | Anki export & Multi-doc RAG | [Architecture](../openclaw-sandbox/skills/academic_edu_assistant/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/academic_edu_assistant/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/academic_edu_assistant/docs/DECISIONS.md) |
 | **`telegram_kb_agent`** | Telegram Bot RAG interface | [Architecture](../openclaw-sandbox/skills/telegram_kb_agent/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/telegram_kb_agent/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/telegram_kb_agent/docs/DECISIONS.md) |
 | **`inbox_manager`** | CLI config route mutator | [Architecture](../openclaw-sandbox/skills/inbox_manager/docs/ARCHITECTURE.md) \| [Claude](../openclaw-sandbox/skills/inbox_manager/docs/PROJECT_RULES.md) \| [Decisions](../openclaw-sandbox/skills/inbox_manager/docs/DECISIONS.md) |
-| **`feynman_simulator`** | Multi-agent Socratic debate loop | [SKILL](../openclaw-sandbox/skills/feynman_simulator/SKILL.md) |
 | **`video_ingester`** | Multimodal video processing pipeline | [SKILL](../openclaw-sandbox/skills/video_ingester/SKILL.md) |
 
+> [!NOTE]
+> Skills marked with only `[SKILL]` link to their standalone SKILL.md. Skills marked `[Architecture]` have full tri-document suites. Always consult the skill-level `docs/` folder for implementation details.
 > [!TIP]
 > **To Developers & AI Agents:** Always consult this `INDEX.md` before generating new documentation. Ensure that any architectural shift is logged in the appropriate `DECISIONS.md` (global or skill-level) and that no history is ever deleted.

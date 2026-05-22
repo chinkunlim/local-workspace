@@ -5,6 +5,52 @@
 
 ---
 
+## [2026-05-23] ADR-018: Coding Guidelines Full Compliance — Structured Logging & PipelineBase Self.llm Invariant
+
+**Status:** Active
+
+**Context:** A codebase-wide audit (V9.17) against `docs/CODING_GUIDELINES.md` (v4.2.0) identified three categories of compliance violations in production code:
+1. A syntax error (unclosed parenthesis) in `gemini_verifier_agent/p01_ai_debate.py`.
+2. Manual `OllamaClient()` instantiation overriding the inherited `self.llm` in two skill phases.
+3. 14 bare `print()` calls in production methods, violating §8.1.
+
+**Decision:**
+1. **Structured Logging Mandate (§8.1)**: All production code (methods within skill phase classes) must use `self.info()`, `self.error()`, `self.warning()`, or `self.log()`. Bare `print()` is only acceptable within `if __name__ == "__main__":` CLI blocks.
+2. **PipelineBase `self.llm` Invariant**: Skill phases must never instantiate `OllamaClient()` directly. The `PipelineBase` provides a pre-configured `self.llm` instance. Manual instantiation breaks config-driven model selection and semantic caching.
+3. **Syntax Integrity**: All phase files must pass Ruff lint, Ruff format, and Mypy without errors (verified via `./ops/check.sh`).
+
+**Files Changed:**
+- `gemini_verifier_agent/p01_ai_debate.py`: Fixed `super().__init__` syntax error; migrated 4 `print()` to `self.log()`.
+- `knowledge_compiler/p02_extract_graph.py`: Removed manual `OllamaClient()`; uses `self.llm`.
+- `doc_parser/p00b_png_pipeline.py`: Removed manual `OllamaClient(api_url=...)`; uses `self.llm`.
+- `student_researcher/p01_claim_extraction.py`: Migrated 4 `print()` to `self.info/self.error`.
+- `student_researcher/p02_synthesis.py`: Migrated 6 `print()` to `self.info/self.error/self.warning`.
+
+**Consequences:**
+- All 147 source files pass Mypy with 0 errors.
+- Unified structured logging enables consistent audit trails across all skill phases.
+
+---
+
+## [2026-05-23] ADR-017: Sequential Shared-SSoT Cognitive Chain (Formally Codified)
+
+**Status:** Active
+
+**Context:** The four cognitive annotation modules (`smart_highlighter`, `note_generator`, `feynman_simulator`, `academic_edu_assistant`) were previously described as a "parallel matrix" in architectural discussions. This misrepresentation risked future implementations running them in parallel, causing VRAM OOM on 16 GB Apple Silicon.
+
+**Decision:** Formally codify the **Sequential Shared-SSoT Chain** as an immutable architectural invariant:
+1. **Strict Sequential Execution**: The four modules execute in a fixed order: `smart_highlighter` ➔ `note_generator` ➔ `feynman_simulator` ➔ `academic_edu_assistant`. Each module must complete before the next begins.
+2. **Independent SSoT Consumption**: Each module independently reads the same `04_final_verified/{Subject}/{file_id}.md` as its base input. No module may consume the output of a preceding LLM phase.
+3. **OOM Prevention**: Sequential execution ensures only one LLM model is loaded at any time, preventing VRAM exhaustion on constrained hardware.
+4. **Cascading Contamination Prevention**: Independent SSoT reads prevent formatting errors, hallucinations, or structural distortions from one LLM phase propagating to the next.
+
+**Consequences:**
+- Processing time is additive (not concurrent), but correctness and stability are guaranteed.
+- The architecture now matches the description in `openclaw-sandbox/docs/ARCHITECTURE.md` (V9.17).
+- Any future addition of a fifth cognitive module must respect this sequential invariant.
+
+---
+
 ## [2026-05-22] ADR-016: Non-Blocking Proofreader Pipeline with Auto-Resuming Watchdog
 
 **Status:** Active

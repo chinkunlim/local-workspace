@@ -1,7 +1,7 @@
 # ARCHITECTURE.md — Global System Architecture
 
 > **Scope:** Entire `local-workspace/` monorepo
-> **Last Updated:** 2026-05-04
+> **Last Updated:** 2026-05-23
 > **Audience:** All AI agents and developers operating in this workspace
 
 ---
@@ -35,7 +35,7 @@ local-workspace/                    ← Monorepo root (git repo)
 ├── docs/                           ← Global documentation (SSoT)
 │   ├── INDEX.md                    ← Master navigation index for AI agents and humans
 │   ├── USER_MANUAL.md              ← End-user operational guide
-│   ├── CODING_GUIDELINES.md  ← Engineering standards (v3.0.0)
+│   ├── CODING_GUIDELINES.md  ← Engineering standards (v4.2.0)
 │   └── STRUCTURE.md                ← Monorepo directory structure reference
 │
 ├── memory/                         ← Global AI memory (this directory)
@@ -412,5 +412,8 @@ The final assembly line that formats and indexes the knowledge base into human-a
     2. **Telegram `/idea` inputs** directly from the Telegram bot bypass.
     3. **Clean, verified outputs from the `proofreader`** (after HITL verification in Layer 2).
   - This architecture bypasses any linear processing constraints, ensuring that high-overhead academic validation, claim verification, and semantic conceptual incubation can operate directly on primary sources without intermediate formatting pollution.
-
-
+- **Coding Guidelines Full Compliance Audit (2026-05-23, V9.17)**:
+  - Fixed syntax error (unclosed parenthesis in `super().__init__`) in `gemini_verifier_agent/p01_ai_debate.py` — was causing Ruff/Mypy parse failure.
+  - Removed redundant manual `OllamaClient()` instantiation in `knowledge_compiler/p02_extract_graph.py` and `doc_parser/p00b_png_pipeline.py`; both now reuse `self.llm` inherited from `PipelineBase`.
+  - Migrated 14 bare `print()` calls in production methods to `self.info/self.error/self.warning/self.log` (§8.1 of CODING_GUIDELINES v4.2.0): `student_researcher/p01_claim_extraction.py` (4), `student_researcher/p02_synthesis.py` (6), `gemini_verifier_agent/p01_ai_debate.py` (4).
+  - Quality gate: ✅ Ruff lint, ✅ Ruff format, ✅ Mypy 0 errors (147 files), ✅ 22 tests passed.
