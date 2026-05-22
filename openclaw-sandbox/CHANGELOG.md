@@ -5,6 +5,62 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.17] — 2026-05-23: Coding Guidelines Full Compliance Audit
+
+### Fixed
+- **`gemini_verifier_agent/p01_ai_debate.py`**: Repaired unclosed parenthesis in `super().__init__()` — was causing Ruff parse failure and Mypy type-check cascade errors.
+- **14 bare `print()` violations (§8.1)**: Migrated to structured `self.info/self.error/self.warning/self.log` calls:
+  - `student_researcher/p01_claim_extraction.py` — 4 calls
+  - `student_researcher/p02_synthesis.py` — 6 calls
+  - `gemini_verifier_agent/p01_ai_debate.py` — 4 calls
+
+### Changed
+- **`knowledge_compiler/p02_extract_graph.py`**: Removed manual `OllamaClient()` instantiation; now reuses `self.llm` from `PipelineBase` (§8.1 `self.llm` Invariant).
+- **`doc_parser/p00b_png_pipeline.py`**: Removed manual `OllamaClient(api_url=...)` instantiation; now reuses `self.llm`.
+
+### Documentation
+- **ADR-017**: Sequential Shared-SSoT Cognitive Chain — codified as immutable architectural invariant.
+- **ADR-018**: Coding Guidelines Full Compliance — structured logging & `PipelineBase.self.llm` invariant.
+- **`docs/ARCHITECTURE.md`** (global): Updated `Last Updated`, `CODING_GUIDELINES` version, added V9.17 compliance audit to Historical Evolution.
+- **`docs/USER_MANUAL.md`**: Complete rewrite from V9.2 → V9.17. Added HITL Dashboard, Sequential SSoT Chain, student_researcher Multi-Ingress Funnel, Stub Note Mode.
+- **`docs/INDEX.md`**: Added `proofreader`, `student_researcher`, `academic_library_agent`, `gemini_verifier_agent` to skill table.
+- **`AGENTS.md`**: Expanded from 9 to 13 skills; added Sequential SSoT Chain, HITL, Stub Note Mode descriptions.
+
+### Quality Gate
+- Ruff lint: ✅ 0 errors | Ruff format: ✅ | Mypy: ✅ 0 errors (147 files) | pytest: ✅ 22 passed, 5 skipped
+
+---
+
+## [V9.16] — 2026-05-22: student_researcher Multi-Ingress Funnel Architecture
+
+### Added
+- **Multi-Ingress Funnel (student_researcher)**: Formally accepts three independent input streams:
+  1. Chat/Q&A Markdown files from `data/raw/` (auto-routed to staging, manually triggered)
+  2. Telegram `/idea` captures (bypass Layer 2, auto-staged, manually triggered)
+  3. `proofreader` verified output from `04_final_verified/` (auto-staged, manually triggered)
+- **Strict Manual Trigger Gate**: `student_researcher` is excluded from all automated pipeline chains. Inputs stage in `data/student_researcher/input/`. Execution requires explicit `uv run skills/student_researcher/scripts/run_all.py`.
+
+### Architecture
+- **5-Layer Dual-Track finalized**: Ingestion → Extraction → HITL Gate → Sequential SSoT Chain → Compilation.
+- **Sequential Shared-SSoT Chain**: `smart_highlighter` ➔ `note_generator` ➔ `feynman_simulator` ➔ `academic_edu_assistant`. Each station independently reads the same `04_final_verified/` — never consuming the prior station's LLM output.
+
+---
+
+## [V9.15] — 2026-05-22: VLM Memory Hardening & HITL Centralization
+
+### Fixed
+- **VLM OOM**: `asyncio.Semaphore(1)` enforced for `llama3.2-vision` in `p01d_vlm_vision.py`. Semaphore(2) caused 10-minute API timeout on 16 GB Apple Silicon.
+- **HITL Interrupt Propagation**: `HITLPendingInterrupt` now explicitly caught in `p01c_ocr_gate.py`; no longer swallowed by generic `except Exception`.
+- **Telegram Notification Centralization**: Moved `send_hitl_prompt` to `HITLManager.trigger()`. Phase scripts no longer construct Telegram messages directly.
+
+### Added
+- **ADR-015**: VLM Concurrency Limitation + Centralized HITL Notification.
+- **`CODING_GUIDELINES.md` §5.11**: VLM `Semaphore(1)` invariant — heavy vision models (`llama3.2-vision`) must never run concurrently.
+- **`CODING_GUIDELINES.md` §5.12**: HITL Interrupt Propagation Invariant — `HITLPendingInterrupt` must never be caught by generic `except Exception`.
+- **E2E & Integration Test Stubs**: `tests/e2e/test_pipeline_e2e.py`, `tests/integration/test_vlm_integration.py` (CODING_GUIDELINES §11.2).
+
+---
+
 ## [V9.14] — 2026-05-22: HITL Proofreader Pipeline Pause/Resume
 
 ### Added

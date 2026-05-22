@@ -7,14 +7,20 @@
 | Skill | Input | Output | Status |
 |:---|:---|:---|:---:|
 | [audio_transcriber](audio_transcriber/SKILL.md) | `.m4a` / `.mp3` audio recordings | Obsidian-ready `.md` knowledge notes | ✅ Production |
-| [doc_parser](doc_parser/SKILL.md) | `.pdf` academic / technical documents | Structured Markdown knowledge notes | ✅ Production |
+| [doc_parser](doc_parser/SKILL.md) | `.pdf`, `.pptx`, `.docx`, `.xlsx`, `.png` | Structured Markdown knowledge notes | ✅ Production |
+| [proofreader](proofreader/SKILL.md) | `audio_transcriber` or `doc_parser` output | HITL-verified clean transcript (non-blocking) | ✅ Production |
 | [smart_highlighter](smart_highlighter/SKILL.md) | Plain Markdown text | Highlight-annotated Markdown (Anti-Tampering) | ✅ Production (Standalone) |
 | [note_generator](note_generator/SKILL.md) | Plain Markdown text | Structured YAML / Mermaid study notes | ✅ Production (Standalone) |
-| [knowledge_compiler](knowledge_compiler/SKILL.md) | Factory skill outputs | `data/wiki/` (Obsidian Vault) | ✅ Production |
+| [feynman_simulator](feynman_simulator/SKILL.md) | Verified Markdown from `04_final_verified/` | Socratic debate transcript + summary | ✅ Production |
+| [academic_edu_assistant](academic_edu_assistant/SKILL.md) | Verified Markdown from `04_final_verified/` | Comparison report + Anki CSV | ✅ Production |
+| [student_researcher](student_researcher/SKILL.md) | Multi-ingress (Chat MD / Telegram / Verified) | Academic claim verification report | ✅ Production (Manual Trigger) |
+| [academic_library_agent](academic_library_agent/SKILL.md) | Claim list from `student_researcher` | PDF snapshots from academic databases | ✅ Production |
+| [gemini_verifier_agent](gemini_verifier_agent/SKILL.md) | Claims + evidence from `student_researcher` | AI-debate Verification Report | ✅ Production |
+| [knowledge_compiler](knowledge_compiler/SKILL.md) | All skill outputs | `data/wiki/` (Obsidian Vault) + ChromaDB | ✅ Production |
 | [telegram_kb_agent](telegram_kb_agent/SKILL.md) | Telegram query via Open Claw | RAG text answer | ✅ Production |
-| [academic_edu_assistant](academic_edu_assistant/SKILL.md) | ChromaDB vector store | Comparison report + Anki CSV | ✅ Production |
 | [interactive_reader](interactive_reader/SKILL.md) | Markdown with `> [AI:]` tags | In-place resolved annotations | ✅ Production |
 | [inbox_manager](inbox_manager/SKILL.md) | `core/inbox_config.json` | Terminal output (routing rules) | ✅ Production |
+| [video_ingester](video_ingester/SKILL.md) | Video files (`.mp4`, `.mov`, `.mkv`) | Illustrated Markdown transcript | ✅ Production (Standalone) |
 
 ## Standard Skill Directory Structure
 
@@ -42,7 +48,7 @@ skills/<skill-name>/
 ### 1. Create Directories
 
 ```bash
-mkdir -p skills/my-skill/{config,docs,scripts/phases}
+mkdir -p skills/my_skill/{config,docs,scripts/phases}
 ```
 
 ### 2. Configure `config/config.yaml`
@@ -77,7 +83,7 @@ class Phase1Process(PipelineBase):
         super().__init__(
             phase_key="p1",
             phase_name="My Processing Phase",
-            skill_name="my-skill"
+            skill_name="my_skill"  # underscore, not hyphen (CODING_GUIDELINES §5.5)
         )
         # self.dirs["phase1"] is automatically resolved from config.yaml
 ```
@@ -86,9 +92,12 @@ class Phase1Process(PipelineBase):
 
 Inherit `PipelineBase`. After `startup_check()`, call `self.state_manager.sync_physical_files()` to initialise progress tracking.
 
-### 5. Register with `inbox_daemon`
+### 5. Register Routing Rule
 
-Add the new skill's routing extension to `core/services/inbox_daemon.py` and to `core/inbox_config.json`.
+Add the new skill's routing extension to `core/config/inbox_config.json` using `RouterAgent._build_routing_table()`.
+Do NOT add routing logic directly to `core/services/inbox_daemon.py` (deprecated pattern as of V9.9).
+
+To test routing: `uv run skills/inbox_manager/scripts/run_all.py --list`
 
 ## Global Conventions
 

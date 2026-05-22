@@ -8,7 +8,59 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [9.17.0] — 2026-05-23: Coding Guidelines Full Compliance Audit
+
+### Fixed
+- **`gemini_verifier_agent/p01_ai_debate.py`**: Repaired unclosed parenthesis in `super().__init__()` causing Ruff/Mypy parse failures across all 3 quality checks.
+- **14 bare `print()` in production code** (§8.1 violation): Migrated to `self.info()`, `self.error()`, `self.warning()`, `self.log()` across:
+  - `student_researcher/p01_claim_extraction.py` (4 calls)
+  - `student_researcher/p02_synthesis.py` (6 calls)
+  - `gemini_verifier_agent/p01_ai_debate.py` (4 calls)
+
+### Changed
+- **`knowledge_compiler/p02_extract_graph.py`**: Removed manual `OllamaClient()` instantiation; now reuses `self.llm` inherited from `PipelineBase`.
+- **`doc_parser/p00b_png_pipeline.py`**: Removed manual `OllamaClient(api_url=...)` instantiation; now reuses `self.llm`.
+- **`docs/CODING_GUIDELINES.md`**: Formally documented the `self.llm` reuse invariant and structured logging mandate at §8.1.
+
+### Added
+- **ADR-017**: Sequential Shared-SSoT Cognitive Chain formally codified as an immutable architectural invariant.
+- **ADR-018**: Coding Guidelines Full Compliance — Structured Logging & PipelineBase self.llm invariant.
+
+### Quality Gate
+- Ruff lint: ✅ 0 errors | Ruff format: ✅ 170 files | Mypy: ✅ 0 errors (147 files) | pytest: ✅ 22 passed, 5 skipped
+
+---
+
+## [9.16.0] — 2026-05-22: V9.17 student_researcher Multi-Ingress Funnel
+
+### Added
+- **Multi-Ingress Funnel**: `student_researcher` formally accepts input from three independent sources simultaneously:
+  1. Chat/Q&A Markdown files manually placed in `data/raw/` (auto-routed, manually triggered)
+  2. Telegram Bot `/idea` voice or text captures (bypass Layer 2, staged for manual trigger)
+  3. Clean `04_final_verified/` output from `proofreader` (staged for manual trigger)
+- **Strict Manual Trigger Gating**: `student_researcher` never executes automatically. All inputs are staged in `data/student_researcher/input/`. User must manually invoke `uv run skills/student_researcher/scripts/run_all.py`.
+
+### Architecture
+- **V9.17 Dual-Track 5-Layer**: Streamlined to 5 layers — Ingestion, Extraction, HITL Gate, Sequential SSoT Chain, Compilation.
+- **Sequential Shared-SSoT Chain**: Four cognitive modules (`smart_highlighter` ➔ `note_generator` ➔ `feynman_simulator` ➔ `academic_edu_assistant`) execute sequentially, each independently reading `04_final_verified/` — prevents cascading LLM contamination and OOM on 16 GB Apple Silicon.
+
+---
+
+## [9.15.0] — 2026-05-22: Memory Hardening & SSoT Verification
+
+### Added
+- **ADR-015**: VLM Concurrency Limitation (`asyncio.Semaphore(1)` for `llama3.2-vision`) and centralized HITL Telegram notification.
+- **ADR-016**: Non-Blocking Proofreader Pipeline with Auto-Resuming Watchdog — formally codified.
+- **`CODING_GUIDELINES.md` v4.2.0**: Added §5.11 (VLM Concurrency Limit Invariant) and §5.12 (HITL Interrupt Propagation Invariant).
+
+### Changed
+- **`memory/PROJECT_RULES.md`**: Updated hardware constraints to enforce sequential VLM executions.
+- **`docs/STRUCTURE.md`**: Synchronized directory registry mapping with all post-V9.14 additions.
+
+---
+
 ## [9.2.0] — 2026-05-05
+
 
 ### Added
 - **docs**: Established a formal `identity/` directory for global persona configuration.

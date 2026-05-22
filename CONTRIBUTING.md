@@ -5,10 +5,12 @@ This is a private workspace. The following guidelines apply to all contributors 
 ## Before You Start
 
 Read the mandatory context in order:
-1. `openclaw-sandbox/memory/PROJECT_RULES.md`
-2. `openclaw-sandbox/memory/ARCHITECTURE.md`
-3. `openclaw-sandbox/docs/CODING_GUIDELINES.md`
-4. `openclaw-sandbox/AGENTS.md`
+1. `memory/PROJECT_RULES.md`
+2. `memory/HANDOFF.md`
+3. `docs/ARCHITECTURE.md`
+4. `docs/CODING_GUIDELINES.md`
+5. `openclaw-sandbox/AGENTS.md`
+6. `openclaw-sandbox/HEARTBEAT.md` (run health checks)
 
 ## Development Workflow
 
@@ -23,16 +25,16 @@ Read the mandatory context in order:
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-feat(voice-memo): add retry logic for transcription phase
+feat(audio_transcriber): add retry logic for transcription phase
 fix(core): handle empty config.yaml gracefully
 docs(memory): update HANDOFF.md after session
-refactor(pdf-knowledge): extract security check into core
+refactor(doc_parser): extract security check into core
 ```
 
 ## Code Standards
 
-All code must pass `./openclaw-sandbox/ops/check.sh`:
+All code must pass `./ops/check.sh` (run via `uv run` inside `openclaw-sandbox/`):
 - **Ruff** lint and format (zero warnings)
-- **Mypy** type check on `core/`
+- **Mypy** type check on `core/ + skills/` (all 147 source files)
 
-See `docs/CODING_GUIDELINES.md` for full standards.
+See `docs/CODING_GUIDELINES.md` (v4.2.0) for full standards.

@@ -53,6 +53,10 @@
     - `student_researcher/p01_claim_extraction.py` (4), `student_researcher/p02_synthesis.py` (6), `gemini_verifier_agent/p01_ai_debate.py` (4).
   - Quality gate: ✅ Ruff lint, ✅ Ruff format, ✅ Mypy 0 errors (147 files), ✅ 22 tests passed.
 
+- [x] 2026-05-23: **Global Documentation Sync (V9.17)**
+  - Audited and updated all root and `docs/` files to match the new 5-Layer Dual-Track architecture.
+  - Added the 4 missing `ARCHITECTURE.md` truth documents for new skills (`proofreader`, `student_researcher`, `academic_library_agent`, `gemini_verifier_agent`).
+  - Synced `USER_MANUAL.md` with HITL Dashboard workflow and Multi-Ingress Funnel.
 - [x] 2026-05-22: **V9.14 HITL Proofreader Pipeline Pause/Resume**
   - Integrated `proofreader` into `audio_transcriber` and `doc_parser` default chains.
   - Implemented `RouterAgent` pause logic via `pending_chains.json`.

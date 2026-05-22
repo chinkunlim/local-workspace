@@ -34,6 +34,10 @@ local-workspace/
     │   └── workspace-state.json  ← Open Claw agent bootstrap state (version + seed timestamp)
     │
     ├── memory/               ← AI collaboration memory layer (read by agents at every session start)
+    │   ├── DECISIONS.md                ← Global architectural decision log (ADR format)
+    │   ├── HANDOFF.md                  ← Session handoff records
+    │   ├── PROJECT_RULES.md                   ← AI agent collaboration context
+    │   └── TASKS.md                    ← Active task tracking
     ├── core/                 ← Shared framework — all skills import ONLY from here, never from each other
     ├── skills/               ← Self-contained skill pipelines
     ├── data/                 ← Runtime data: pipeline outputs (excluded from git)
@@ -328,7 +332,6 @@ memory/
 ├── TASKS.md         ← Prioritised task list (High / Medium / Low / Done)
 ├── HISTORY.md       ← Index of all archived sessions with [Archived] links
 ├── DECISIONS.md     ← Architectural Decision Records (ADRs)
-├── ARCHITECTURE.md  ← System architecture narrative
 sessions/          ← Individual session archive files (append-only)
 ```
 
@@ -337,7 +340,6 @@ sessions/          ← Individual session archive files (append-only)
 |---|---|
 | `STARTUP.md` | Startup sequence or session workflow changes |
 | `PROJECT_RULES.md` | Project rules, hardware constraints, or checklist items change |
-| `ARCHITECTURE.md` | New module, skill, or service added/removed |
 | `HANDOFF.md` | End of every working session |
 | `TASKS.md` | Task status changes (start / complete / add / defer) |
 | `HISTORY.md` | A session is archived (auto-updated by `archive_session.py`) |

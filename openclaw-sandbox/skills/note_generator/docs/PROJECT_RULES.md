@@ -11,11 +11,11 @@ and a Mermaid mind-map. It is a **Secondary Processing Skill**: it does NOT own 
 directories and performs NO file I/O of its own. All data routing, `AtomicWriter` calls, and
 `StateManager` updates are the exclusive responsibility of the calling orchestrator.
 
-## Current State (2026-04-30)
+## Current State (2026-05-04)
 
 - **Status**: Production
-- **Model in use**: `gemma3:12b` (Ollama) via `core.ai.llm_client.OllamaClient`
-- **Active consumers**: `audio_transcriber` Phase 3 (post-merge), `doc_parser` final synthesis
+- **Model in use**: `qwen3:14b` (primary, `qwen3_reasoning` profile) via `core.ai.llm_client.OllamaClient`; `phi4-mini-reasoning` as fallback
+- **Active consumers**: Called by `smart_highlighter` orchestrator after highlighting; downstream of the Sequential SSoT Chain (`04_final_verified/` → `smart_highlighter` → `note_generator`)
 - **Architecture version**: V2.0 (Map-Reduce, Agentic Mermaid Retry, Content-Loss Guard)
 
 ## Key Invariants
@@ -84,8 +84,7 @@ final_note = NoteGenerator().run(
 python3 core/cli/cli_config_wizard.py --skill note_generator
 ```
 
-**Adjusting chunk size**: Edit `config.yaml` → `chunking.map_chunk_size`. Do NOT go above 4000
-characters without RAM profiling — `gemma3:12b` can OOM on large context windows.
+**Adjusting chunk size**: Edit `config.yaml` → `chunking.map_chunk_size`. Default is 5000 for `qwen3:14b`. Do NOT go above 6000 without RAM profiling — larger contexts can trigger 16GB OOM.
 
 **Debugging a synthesis failure**: Check the `ValueError` message from `Content-Loss Guard`.
 If the ratio is < threshold, the LLM produced an excessively short output. Try lowering the
@@ -94,6 +93,5 @@ temperature or switching to a reasoning model profile.
 ## What NOT to Change Without Reading DECISIONS.md
 
 - `content_loss_threshold` — calibrated to reject LLM laziness without being too strict
-- `verbatim_threshold` in the anti-tampering guard — ensures the LLM actually adds value
 - The Map-Reduce chunk boundary logic — overlapping boundaries prevent mid-sentence splits
 - `max_retries` in the Mermaid retry loop — higher values cause infinite loops on broken prompts

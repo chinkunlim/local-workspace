@@ -21,6 +21,7 @@
 - [x] **Quality Gate Verified**: `./ops/check.sh` ✅ Ruff lint, ✅ Ruff format, ✅ Mypy 0 errors (147 files)
 - [x] **Test Suite**: `pytest` ✅ 22 passed, 5 skipped (34.88s)
 - [x] **Committed**: `fix(skills): migrate bare print() to structured logging; fix syntax error; remove manual OllamaClient`
+- [x] **Global Documentation Sync (V9.17)**: Fully audited all Markdown files. Synced `docs/ARCHITECTURE.md`, `docs/INDEX.md`, `docs/STRUCTURE.md`, `USER_MANUAL.md`, and created missing architecture docs for `proofreader`, `student_researcher`, `academic_library_agent`, and `gemini_verifier_agent` to enforce SSoT compliance.
 
 ---
 

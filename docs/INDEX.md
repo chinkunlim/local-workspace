@@ -16,13 +16,13 @@ These documents define the universal rules and layout of the entire `local-works
 - **[Infrastructure Setup](../docs/INFRA_SETUP.md)**: Installation and configuration instructions for the underlying third-party infrastructure (Ollama, LM Studio, Open WebUI, LiteLLM, MCP Servers).
 - **[User Manual](../docs/USER_MANUAL.md)**: High-level usage guide for human operators.
 - **[Changelog](../CHANGELOG.md)**: The global chronological history of the project.
+- **[Global Architecture](../docs/ARCHITECTURE.md)**: Macro-level system diagram and service mapping.
 
 ---
 
 ## 2. Active AI Agent Memory (`memory/`)
 These files manage the state, context, and high-level architectural history of the ecosystem. AI Agents read these on every initialization.
 
-- **[Global Architecture](../docs/ARCHITECTURE.md)**: Macro-level system diagram and service mapping.
 - **[Global Decisions (ADR)](../memory/DECISIONS.md)**: A historical log of all major architectural design decisions, including integrated legacy analyses.
 - **[Agent Behavior Contract](../memory/PROJECT_RULES.md)**: Real-time context, environment rules, and hardware constraints.
 - **[Task Tracker](../memory/TASKS.md)**: Live checklist of current and pending tasks.

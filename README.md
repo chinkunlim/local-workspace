@@ -1,57 +1,89 @@
-# local-workspace (Open Claw Ecosystem)
+# local-workspace — Open Claw Ecosystem
 
-> An Event-driven, Human-in-the-Loop (HITL), Multi-Agent Orchestration Framework for local-first AI automation.
+> An Event-driven, Human-in-the-Loop (HITL), Multi-Agent Orchestration Framework for local-first AI automation on macOS Apple Silicon.
 
-## 🏗️ Architecture Data Flow
+## Architecture Overview
+
 ```mermaid
 graph TD
-    User([User / Inbox]) -->|File Drop / Message| Core
-    Core[core/ Orchestration] -->|Parse Intent| RouterAgent
-    RouterAgent -->|Generate DAG| Skills[skills/ (Pipelines)]
-    Skills -->|Generate/Embed| LLM[LLM Client / Chroma]
-    Skills -->|Pause for Review| HITL[HITL Manager]
-    HITL -.->|Telegram Alert| User
+    classDef core fill:#e0f2f1,stroke:#00796b,stroke-width:2px;
+    classDef input fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef vault fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    User([User / data/raw/]) -->|File Drop| Daemon[inbox_daemon.py]
+    TG([Telegram /idea]) -->|Bypass| Student
+    Daemon --> Router[RouterAgent]
+    Router -->|.m4a/.mp3| AT[audio_transcriber]
+    Router -->|.pdf/.pptx/.docx| DP[doc_parser]
+    AT --> PR[proofreader]
+    DP --> PR
+    PR -->|Non-blocking pause| Chain[pending_chains.json]
+    Chain -->|Dashboard HITL| Verified[04_final_verified/]
+    Verified -->|1. Sequential| SH[smart_highlighter]
+    SH -->|2. Sequential| NG[note_generator]
+    NG -->|3. Sequential| FS[feynman_simulator]
+    FS -->|4. Sequential| AE[academic_edu_assistant]
+    Verified -->|Manual trigger| Student[student_researcher]
+    SH --> KC[knowledge_compiler]
+    NG --> KC
+    FS --> KC
+    AE --> KC
+    Student --> KC
+    KC --> Vault[(Obsidian Vault)]:::vault
+    KC --> ChromaDB[(ChromaDB)]:::vault
+    ChromaDB <-->|RAG| TGBot[Telegram KB Agent]
 ```
 
 ## Structure
 
 ```
 local-workspace/
-├── openclaw-sandbox/   ← Open Claw AI automation (voice-memo, pdf-knowledge)
+├── openclaw-sandbox/   ← Open Claw AI automation (13-skill pipeline ecosystem)
 ├── infra/               ← LiteLLM proxy, Open WebUI, Pipelines, lifecycle scripts
-├── docs/                ← Global documentation (CODING_GUIDELINES, INFRA_SETUP)
-├── memory/              ← Global AI memory (ARCHITECTURE, DECISIONS)
+├── docs/                ← Global documentation SSoT (ARCHITECTURE, USER_MANUAL, CODING_GUIDELINES)
+├── memory/              ← Global AI memory (DECISIONS, HANDOFF, TASKS)
 ├── ops/                 ← Global quality gate (check.sh)
 └── tests/               ← E2E and integration test stubs
 ```
 
-## 🚀 Quick Start (Foolproof Setup)
+## Quick Start
 
-1. **Clone the repository:**
+1. **Clone:**
    ```bash
    git clone <your-repo-url> local-workspace
    cd local-workspace
    ```
 
-2. **Configure Environment:**
-   Copy the example environment file and fill in your API keys:
+2. **Configure environment:**
    ```bash
    cp .env.example .env
-   # Edit .env with your favorite editor
+   # Set TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
    ```
 
-3. **Install Dependencies:**
+3. **Install dependencies (uv):**
    ```bash
    cd openclaw-sandbox
-   pip install pip-tools
-   pip-sync requirements.txt
-   cd ..
+   uv sync
    ```
 
-4. **Start the Infrastructure:**
-   Start all services including Ollama, Open WebUI, Pipelines, and the Open Claw Daemon.
+4. **Start all services:**
    ```bash
+   cd ..
    ./infra/scripts/start.sh
+   ```
+
+5. **Drop files into the universal inbox:**
+   ```bash
+   cp lecture.m4a  openclaw-sandbox/data/raw/YourSubject/
+   cp textbook.pdf openclaw-sandbox/data/raw/YourSubject/
+   ```
+
+6. **When Telegram notifies you**, open `http://localhost:5000` to approve the proofread output.
+
+7. **For academic research** (manually triggered):
+   ```bash
+   cd openclaw-sandbox
+   uv run skills/student_researcher/scripts/run_all.py --process-all
    ```
 
 ## Service Endpoints
@@ -62,16 +94,21 @@ local-workspace/
 | LiteLLM Proxy | http://127.0.0.1:4000 |
 | Ollama | http://127.0.0.1:11434 |
 | Pipelines | http://127.0.0.1:9099 |
+| HITL Dashboard | http://127.0.0.1:5000 |
 | Open Claw API | http://127.0.0.1:18789 |
 
 ## Documentation
 
-- `docs/USER_MANUAL.md` — The complete guide on how to use this ecosystem (Start Here)
-- `docs/CODING_GUIDELINES.md` — Single source of truth for all development rules (v3.0.0)
-- `memory/ARCHITECTURE.md` — Full system architecture and design decisions
-- `openclaw-sandbox/AGENTS.md` — AI agent behaviour contract
-- `openclaw-sandbox/docs/STRUCTURE.md` — Annotated file map of the sandbox
+| Document | Purpose |
+|---|---|
+| `docs/USER_MANUAL.md` | Complete V9.17 usage guide — **start here** |
+| `docs/ARCHITECTURE.md` | Global system architecture & design decisions |
+| `docs/CODING_GUIDELINES.md` | Engineering standards **v4.2.0** — SSoT for all rules |
+| `openclaw-sandbox/docs/ARCHITECTURE.md` | V9.17 Sequential SSoT pipeline canonical reference |
+| `memory/DECISIONS.md` | Architectural Decision Records (ADR-001 → ADR-018) |
+| `openclaw-sandbox/AGENTS.md` | Internal skill agent registry |
 
 ## Change Discipline
 
 Any code change must be accompanied by documentation updates in the same commit. See `CONTRIBUTING.md`.
+Run `./ops/check.sh` before every commit to validate Ruff lint, Ruff format, and Mypy.

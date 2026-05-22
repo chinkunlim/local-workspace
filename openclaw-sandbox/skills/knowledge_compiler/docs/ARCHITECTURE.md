@@ -13,6 +13,7 @@ It is the bridge between raw pipeline outputs and the human-readable knowledge b
 2. **Bidirectional `[[linking]]`**: Generates Obsidian `[[WikiLink]]` connections between related notes based on shared terminology and topic overlap.
 3. **Temperature = 0**: All linking and synthesis calls enforce deterministic output.
 4. **Additive only**: Never deletes existing wiki notes. New notes are published; existing notes are updated by appending or replacing specific sections.
+5. **Dead-Link Guard (Stub Note Mode)**: Never downgrades `[[WikiLinks]]` to plain text. If a referenced link points to a non-existent document, the compiler generates a minimal `#stub` placeholder in `wiki/stubs/` to resolve the red link while preserving knowledge graph traversal.
 
 ## Processing Flow
 

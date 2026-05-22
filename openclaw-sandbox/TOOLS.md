@@ -16,6 +16,7 @@ Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELI
 | LiteLLM Proxy | `http://127.0.0.1:4000` | External — `infra/scripts/start.sh` |
 | Open WebUI | `http://127.0.0.1:3000` | External — `infra/scripts/start.sh` |
 | Pipelines | `http://127.0.0.1:9099` | External — `infra/scripts/start.sh` |
+| **HITL Dashboard** | `http://127.0.0.1:5000` | `infra/scripts/start.sh` (proofreader dashboard) |
 
 > Ollama is the primary **skill-runtime** dependency. Its availability is verified by `startup_check()` in each `run_all.py` orchestrator (calls `http://127.0.0.1:11434/api/tags`).
 
@@ -29,15 +30,22 @@ Do not duplicate logic already in `skills/<skill>/docs/` or `docs/CODING_GUIDELI
 | Shared core framework | `core/` (7 sub-packages: cli/, config/, state/, orchestration/, services/, ai/, utils/) |
 | Audio-transcriber skill | `skills/audio_transcriber/` |
 | Doc-parser skill | `skills/doc_parser/` |
+| Proofreader skill | `skills/proofreader/` |
+| Student researcher skill | `skills/student_researcher/` |
+| Knowledge compiler skill | `skills/knowledge_compiler/` |
 | Universal Inbox | `data/raw/` (routed by `inbox_daemon`) |
 | Audio runtime data | `data/audio_transcriber/` |
 | PDF runtime data | `data/doc_parser/` |
+| Proofreader output | `data/proofreader/output/` |
+| Verified Ground Truth | `data/proofreader/output/04_final_verified/` |
+| HITL pending chains | `data/proofreader/output/pending_chains/` |
+| Student researcher input staging | `data/student_researcher/input/` |
 | Obsidian Wiki Vault | `data/wiki/` |
-| ChromaDB vector store | `data/doc_parser/output/vector_db/` |
+| ChromaDB vector store | `data/chroma/` |
 | Ops & maintenance scripts | `ops/` (sandbox), `../ops/` (global) |
 | Lifecycle scripts | `../infra/scripts/` |
 | Model cache (HuggingFace) | `models/` — set via `HF_HOME` env var |
-| Structure map | `docs/STRUCTURE.md` |
+| Structure map | `../docs/STRUCTURE.md` |
 
 ---
 

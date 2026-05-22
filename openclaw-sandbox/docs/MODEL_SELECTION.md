@@ -2,7 +2,7 @@
 
 > **Strategy**: Quality-First (2026-05-04)
 > **Hardware**: Apple Silicon, 16GB Unified RAM
-> **Last Updated**: 2026-05-04
+> **Last Updated**: 2026-05-23 (V9.17)
 
 All model choices are driven by **output quality** as the primary criterion.
 Resource constraints are secondary — all models listed below are confirmed
@@ -121,10 +121,24 @@ runnable on the target hardware (RUNS GREAT / RUNS WELL / DECENT tiers from
 ### `audio_transcriber`
 | Role | Model | Rationale |
 |:---|:---|:---|
-| **Phase 2 (cleanup)** | `gemma4:e4b` | Google Gemma4 excels at instruction-following for disfluency removal |
-| **Phase 3 (highlights)** | `gemma4:e4b` | Consistent structured output for highlight extraction |
+| **Phase 1 (ASR)** | `mlx-community/whisper-large-v3-turbo` | Fixed — MLX Whisper |
+| **Phase 2 (glossary apply)** | `gemma4:e4b` | Instruction-following for constrained rewrite |
+| **Phase 3 (merge)** | `gemma4:e4b` | Consistent Map-Reduce synthesis quality |
 | **Fallback** | `gemma4:e2b` (configurable) | Faster, lower VRAM |
-| **ASR** | `mlx-community/whisper-large-v3-turbo` | Fixed — MLX Whisper |
+
+> ⚠️ **Note**: Highlighting and note synthesis are delegated to `smart_highlighter` and `note_generator` respectively. Audio_transcriber does NOT run those models directly.
+
+---
+
+### `proofreader`
+| Role | Model | Rationale |
+|:---|:---|:---|
+| **Primary (Mode A/B/C)** | `qwen3:14b` | Highest accuracy for calibration across transcript+reference material |
+| **Fallback** | `qwen3:8b` (config) | Faster for simpler single-source proofreading |
+
+```yaml
+# config.yaml: models.default.name: "qwen3:14b"
+```
 
 ---
 
@@ -185,3 +199,5 @@ Each skill's `config.yaml` has commented fallback options. To use a fallback:
 | 2026-05-04 | knowledge_compiler, gemini_verifier, edu_assistant, library_agent, interactive_reader, video_ingester: qwen3:8b → qwen3:14b |
 | 2026-05-04 | telegram_kb_agent: gemma4:e2b → gemma4:e4b |
 | 2026-05-04 | RouterAgent high-complexity: deepseek-r1:14b → qwen3:14b |
+| 2026-05-23 | Added proofreader section (V9.17 audit) |
+| 2026-05-23 | Fixed audio_transcriber section: highlights delegated to smart_highlighter |

@@ -183,7 +183,7 @@ graph TD
         Router -->|Audio .m4a/.mp3| S_AT["🎙️ audio_transcriber<br>(MLX-Whisper)"]:::parse
         Router -->|Doc .pdf| S_DP["📄 doc_parser<br>(OCR + VLM Extract)"]:::parse
         
-        S_VI -->|Output Audio Track| S_AT
+        S_VI -.->|Standalone Transcript| Verified
         S_AT -->|Transcribed Text| S_PR["⚖️ proofreader<br>(Consensus Proofreader)"]:::parse
         S_DP -->|Extracted Text| S_PR
     end
