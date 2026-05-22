@@ -5,6 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.13] — 2026-05-22: Semantic Router & Idea Incubator
+
+### Added
+- **Phase 0 Semantic Router (`p00_semantic_router.py`)**: Added to `student_researcher` to generate LLM summaries of input ideas and perform ChromaDB semantic vector search to identify related subjects automatically.
+- **Idea Incubator Concept**: If `p00_semantic_router.py` finds no highly related knowledge, the file is designated as an orphan. It is assigned to the `Incubator` target subject and generated 3 ontological `#tags`.
+- **Knowledge Compiler Extension**: Adjusted architecture so that after Phase 2 Synthesis, `student_researcher` directly hands off the pure summarized idea/notes to `knowledge_compiler` via `RouterAgent`, bypassing the Deep Verification layer (Layer 4) initially.
+- **Router Agent Handoff Fix**: Fixed `_on_pipeline_completed` in `router_agent.py` to properly `os.rename` handoff files between `student_researcher` and `knowledge_compiler`.
+- **15-Skill Architecture Documentation**: Extensively updated architecture documentation mapping all 15 skills and 6 layers of the system.
+
+### Changed
+- **Deep Verification as Extension**: `academic_library_agent` and `gemini_verifier_agent` are now optional, asynchronous extensions that create "Extension Packs" appended to the knowledge base without polluting the original unstructured idea/note.
+
+---
+
 ## [V9.12] — 2026-05-22: VLM Stability & HITL Notification Fixes
 
 ### Fixed

@@ -26,14 +26,50 @@ class Phase3DocCompleteness(PipelineBase):
     def _workspace_root(self) -> str:
         return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 
-    def _get_reference_data(self, subject: str, prefix: str) -> tuple[str, str]:
+    def _get_reference_data(
+        self, subject: str, prefix: str, transcript_text: str
+    ) -> tuple[str, str]:
         """Fetch doc_parser reference text and figure list for this prefix.
 
         Reads all paths registered under (subject, prefix, "doc_parser") in GlobalRegistry.
-        For each path, also looks for a sibling figure_list.md in the same directory.
+        If no exact match is found, fallback to Semantic Matcher to find related docs.
         """
         registry = GlobalRegistry(self._workspace_root())
         paths = registry.get_asset_paths(subject, prefix, "doc_parser")
+
+        # Fast Path Fallback: Semantic Matching
+        if not paths:
+            self.log(f"⚠️ 找不到前綴 {prefix} 的直接配對，啟動語意檢索 (Semantic Pairing)...")
+
+            from core.ai.semantic_matcher import SemanticMatcher
+
+            matcher = SemanticMatcher(self.llm)
+
+            subject_assets = registry.get_subject_assets(subject)
+            candidate_docs = {}
+            for doc_prefix, skills_map in subject_assets.items():
+                raw_paths = skills_map.get("doc_parser")
+                if not raw_paths:
+                    continue
+                path_list = raw_paths if isinstance(raw_paths, list) else [raw_paths]
+                first_path = path_list[0]
+                if os.path.exists(first_path):
+                    try:
+                        with open(first_path, encoding="utf-8") as f:
+                            candidate_docs[doc_prefix] = f.read()[:500]
+                    except Exception:
+                        pass
+
+            if candidate_docs:
+                best_prefixes = matcher.find_best_matches(
+                    transcript_text, candidate_docs, logger=self
+                )
+                for bp in best_prefixes:
+                    paths.extend(registry.get_asset_paths(subject, bp, "doc_parser"))
+                if not best_prefixes:
+                    self.log("⚠️ 語意檢索未能找到相關講義，放棄配對。")
+            else:
+                self.log("⚠️ 該 subject 無任何 doc_parser 候選講義，放棄配對。")
 
         ref_parts: list[str] = []
         fig_parts: list[str] = []
@@ -93,15 +129,15 @@ class Phase3DocCompleteness(PipelineBase):
             self.state_manager.update_task(subj, fname, "p3", "✅")
             return
 
+        with open(in_path, encoding="utf-8") as f:
+            raw_text = f.read()
+
         prefix = fname.split("_")[0] if "_" in fname else os.path.splitext(fname)[0]
-        ref_text, figure_list = self._get_reference_data(subj, prefix)
+        ref_text, figure_list = self._get_reference_data(subj, prefix, raw_text)
 
         p3_dir = self.dirs.get("p3", os.path.join(self.base_dir, "output", "03_doc_completeness"))
         out_path = os.path.join(p3_dir, subj, fname)
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
-
-        with open(in_path, encoding="utf-8") as f:
-            raw_text = f.read()
 
         if not ref_text and not figure_list:
             self.log(f"⏭️ [{subj}] {fname}: 無參考講義或圖表，略過 Completeness Check。")

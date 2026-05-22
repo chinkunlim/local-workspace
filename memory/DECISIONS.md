@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-05-22] ADR-014: Semantic Routing and Deep Verification Optionality
+
+**Status:** Active
+
+**Context:** Originally, any idea/note sent to `student_researcher` would be automatically passed through the Deep Verification layer (Layer 4: `academic_library_agent`, `gemini_verifier_agent`) before arriving at the `knowledge_compiler`. However, Deep Verification is costly, slow, and often alters the divergent, original nature of a raw thought.
+
+**Decision:** 
+1. **Semantic Routing (Phase 0)**: Introduce a pre-synthesis phase that vector-searches ChromaDB. If related knowledge exists, it marks it for `[[WikiLinks]]`. If not, it marks it as an orphan for the `Incubator` subject with 3 `#tags`.
+2. **Layer 4 Optionality**: The output of Phase 2 Synthesis now goes *directly* to the `knowledge_compiler` (Layer 5) without passing through Deep Verification.
+3. **Deep Verification as Extension**: Layer 4 (`academic_library_agent`, `gemini_verifier_agent`) becomes an asynchronous, optional, manual (or scheduled) trigger. When triggered, it produces an "Extension Pack" that is appended to the knowledge base, ensuring it does not pollute the original unstructured notes.
+
+**Consequences:**
+- User gets immediate access to their original ideas in Obsidian via the `Incubator` folder.
+- Deep research is modularized, acting as a non-destructive plugin to the base notes.
+- RouterAgent's `_on_pipeline_completed` cleanly hands off files between `student_researcher` and `knowledge_compiler`.
+
+---
+
 ## [2026-05-13] ADR-012: OpenClaw CLI Skills vs Internal Python SkillRegistry (Two Independent Systems)
 
 **Status:** Active

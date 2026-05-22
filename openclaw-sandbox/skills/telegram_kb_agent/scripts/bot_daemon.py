@@ -360,6 +360,27 @@ def main():
                             resolution = parts[1].lower()
                             trace_id = parts[2]
 
+                            if resolution in ["idea_approve", "idea_skip"]:
+                                filepath = trace_id
+                                if resolution == "idea_approve":
+                                    if os.path.exists(filepath):
+                                        filename = os.path.basename(filepath)
+                                        inbox_path = os.path.join(
+                                            _workspace_root, "data", "raw", "inbox", filename
+                                        )
+                                        os.makedirs(os.path.dirname(inbox_path), exist_ok=True)
+                                        os.rename(filepath, inbox_path)
+                                        send_message(
+                                            "✅ 已將靈感投入收件匣，即刻啟動深度研究！", chat_id
+                                        )
+                                    else:
+                                        send_message(
+                                            "❌ 找不到該靈感檔案，可能已啟動或刪除。", chat_id
+                                        )
+                                else:
+                                    send_message("⏸️ 好的，靈感保留在暫存區。", chat_id)
+                                continue
+
                             # P0-5: HITLManager stores events under data/<skill>/state/hitl_pending/
                             # We must search across all skills, not just _workspace_root
                             snapshot = None
@@ -393,25 +414,69 @@ def main():
 
                     elif text == "/start" or text == "/help":
                         send_message(
-                            "\U0001f44b \u6b61\u8fce\u4f7f\u7528 Open Claw \u5168\u80fd\u9059\u63a7\u4e2d\u6a1e\uff01\n\n"
-                            "[\u9032\u5ea6\u7ba1\u7406]\n"
-                            "/status - \u67e5\u770b\u7cfb\u7d71\u8655\u7406\u4f47\u5217\u9032\u5ea6\n"
-                            "/run \u6216 /resume - \u4f9d\u5e8f\u57f7\u884c\u5f85\u8fa6\u4efb\u52d9\n"
-                            "/pause - \u66ab\u505c\u57f7\u884c\u4e26\u91cb\u653e\u6240\u6709\u8a18\u61b6\u9ad4\n\n"
-                            "[\u7cfb\u7d71\u7ba1\u7406]\n"
-                            "/start_system - \u958b\u555f\u6574\u500b\u751f\u614b\u7cfb\u5c08\u6848\n"
-                            "/stop_system - \u95dc\u9589\u6574\u500b\u751f\u614b\u7cfb\u5c08\u6848 (\u4e0d\u542b Bot)\n\n"
-                            "[\u77e5\u8b58\u554f\u7b54]\n"
-                            "/query <\u554f\u984c> - \u5728\u77e5\u8b58\u5eab\u4e2d\u767c\u554f\n\n"
-                            "[\u6a21\u578b\u7ba1\u7406]\n"
-                            "/model <\u540d\u7a31> - \u5207\u63db LLM \u6a21\u578b (\u7a7a\u767d = \u67e5\u8a62\u76ee\u524d)\n\n"
-                            "[HITL \u4ecb\u5165]\n"
-                            "/hitl approve|skip <trace_id> - \u56de\u61c9\u7cfb\u7d71\u66ab\u505c\u7684\u4ecb\u5165\u4e8b\u4ef6\n\n"
-                            "[\u6392\u7a0b\u4ee3\u7406 P2]\n"
-                            "/schedule list - \u67e5\u770b\u6240\u6709\u6392\u7a0b\u4efb\u52d9\n"
-                            "/schedule add <id> <cron> <skill> <\u8aaa\u660e> - \u65b0\u589e\u6392\u7a0b\n"
-                            "/schedule remove <id> - \u522a\u9664\u6392\u7a0b\n"
-                            '  \u4f8b: /schedule add rss_daily "0 7 * * *" academic_edu_assistant \u6bcf\u65e5\u6293\u53d6',
+                            "👋 歡迎使用 Open Claw 全能遙控中樞！\n\n"
+                            "[進度管理]\n"
+                            "/status - 查看系統處理佇列進度\n"
+                            "/run 或 /resume - 依序執行待辦任務\n"
+                            "/pause - 暫停執行並釋放所有記憶體\n\n"
+                            "[系統管理]\n"
+                            "/start_system - 開啟整個生態系專案\n"
+                            "/stop_system - 關閉整個生態系專案 (不含 Bot)\n\n"
+                            "[知識問答]\n"
+                            "/query <問題> - 在知識庫中發問\n\n"
+                            "[靈感捕捉]\n"
+                            "/idea <內容> #<標籤> - 記錄靈感，週末自動提醒啟動研究\n\n"
+                            "[模型管理]\n"
+                            "/model <名稱> - 切換 LLM 模型 (空白 = 查詢目前)\n\n"
+                            "[HITL 介入]\n"
+                            "/hitl approve|skip <trace_id> - 回應系統暫停的介入事件\n\n"
+                            "[排程代理 P2]\n"
+                            "/schedule list - 查看所有排程任務\n"
+                            "/schedule add <id> <cron> <skill> <說明> - 新增排程\n"
+                            "/schedule remove <id> - 刪除排程\n"
+                            '  例: /schedule add rss_daily "0 7 * * *" academic_edu_assistant 每日抓取',
+                            chat_id,
+                        )
+
+                    elif text.startswith("/idea "):
+                        idea_content = text[6:].strip()
+                        if not idea_content:
+                            send_message("⚠️ 用法: `/idea [您的點子內容] #[標籤]`", chat_id)
+                            continue
+
+                        import uuid
+
+                        idea_id = str(uuid.uuid4())[:8]
+                        filename = f"Ollama_Idea_{idea_id}.md"
+
+                        drafts_dir = os.path.join(_workspace_root, "data", "raw", "ideas_drafts")
+                        os.makedirs(drafts_dir, exist_ok=True)
+                        filepath = os.path.join(drafts_dir, filename)
+
+                        AtomicWriter.write_text(filepath, idea_content)
+
+                        # Add a cron job to remind on Saturday at 10:00 (for weekend)
+                        from core.orchestration.scheduler import get_scheduler
+
+                        sched = get_scheduler(_workspace_root)
+                        cron_expr = "0 10 * * 6"
+
+                        script_path = os.path.join(
+                            _workspace_root, "core", "scripts", "idea_reminder.py"
+                        )
+                        command = [sys.executable, script_path, filepath]
+                        job_id = f"idea_remind_{idea_id}"
+
+                        sched.add_job(
+                            job_id=job_id,
+                            cron_expr=cron_expr,
+                            skill_name="telegram_kb_agent",
+                            command=command,
+                            description=f"靈感提醒: {filename}",
+                            enabled=True,
+                        )
+                        send_message(
+                            f"✅ 您的靈感已暫存！\n我已將它排入週末 (星期六早上 10:00) 的提醒排程。\n(`{filename}`)",
                             chat_id,
                         )
 

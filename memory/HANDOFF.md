@@ -72,12 +72,11 @@
 - [x] **check.sh**: ✅ All Passed — Ruff + Mypy (158 files, 0 errors).
 
 - [x] **Phase A Performance Hardening (V9.1)**: `SqliteSemanticCache` in `llm_client.py`; Exponential Backoff in `task_queue.py`; Scheduler Queue Safety via `LocalTaskQueue`.
+- [x] **Semantic Router & Incubator (V9.13)**: Implemented Phase 0 Semantic Routing for `student_researcher`. It generates 100-word summaries, performs ChromaDB vector search to find parent notes (for `[[WikiLinks]]`), or assigns orphan ideas to the `Incubator` with 3 `#tags`.
+- [x] **Optional Deep Verification (Layer 4)**: Adjusted architecture so `student_researcher` sends basic notes directly to `knowledge_compiler` (Layer 5) immediately. Deep Verification (`academic_library_agent`, `gemini_verifier_agent`) is now an optional, asynchronous execution that creates Extension packs to avoid polluting original divergent ideas.
+- [x] **RouterAgent Handoff Fix**: Fixed `_on_pipeline_completed` to properly move files between pipeline stages (`student_researcher` -> `knowledge_compiler`) using `os.rename`.
+- [x] **OpenClaw Complete Architecture**: Documented all 15 skills and 3 core services into a comprehensive 6-layer architecture guide (`docs/ARCHITECTURE.md`).
 - [x] **Context-Aware Model Routing (V9.1)**: `RouterAgent` assigns `qwen3:14b` (high-complexity) or `qwen3:8b` (low-complexity) based on intent keywords.
-- [x] **Quality-First Model Upgrade (V9.2)**: All skills upgraded to optimal models (see `docs/MODEL_SELECTION.md`). Key changes:
-  - `note_generator`: `phi4-mini-reasoning` → `qwen3:14b` (active profile `qwen3_reasoning`)
-  - `student_researcher`: `qwen3:8b` → `deepseek-r1:8b` (CoT claim extraction)
-  - `knowledge_compiler`, `gemini_verifier_agent`, `academic_edu_assistant`, `academic_library_agent`, `interactive_reader`, `video_ingester`: `qwen3:8b` → `qwen3:14b`
-  - `telegram_kb_agent`: `gemma4:e2b` → `gemma4:e4b`
 - [x] **Ollama Model Cleanup**: Removed `deepseek-r1:14b` (9GB), `qwen2.5-coder:7b` (4.7GB), `llama3.1` (4.9GB) — saved 23.6GB.
 - [x] **`docs/MODEL_SELECTION.md`**: Created complete per-skill model registry with primary/fallback models, rationale, and quick-switch instructions.
 - [x] **All MD files updated**: `CHANGELOG.md`, `HANDOFF.md`, `TASKS.md`, `memory/DECISIONS.md`, `memory/ARCHITECTURE.md`, `feynman_simulator/SKILL.md`, `note_generator/docs/DECISIONS.md`.
@@ -134,12 +133,10 @@ curl http://localhost:18789/health          # Open Claw API
 
 ## Next Session Starting Point
 
-1. **Run live E2E test**: Place `.m4a` + `.pdf` + `.pptx` into `data/raw/助人技巧/` — confirm full `audio_transcriber` → `doc_parser` → `proofreader` chain completes with DAG showing stable counts (no correction_log.md pollution).
-2. **Proofreader P2/P3 validation**: Verify Phase 2 runs correctly with the DAG pollution fix; confirm DAG counts remain stable across multiple runs.
+1. **Verify Complete End-to-End Incubator Flow**: Drop a raw `.md` file with a `Gemini_` prefix into `data/raw/inbox/`. Verify that `inbox_daemon` routes it to `student_researcher` (Phase 0 -> Phase 1 -> Phase 2), assigns it to `Incubator` or an existing subject, moves it to `knowledge_compiler` via `RouterAgent`, and outputs it into the `wiki/Incubator/` folder in Obsidian.
+2. **Run live E2E test**: Place `.m4a` + `.pdf` + `.pptx` into `data/raw/助人技巧/` — confirm full `audio_transcriber` → `doc_parser` → `proofreader` chain completes with DAG showing stable counts.
 3. **Fix `openclaw.json` stale workspace path**: Update `agents.defaults.workspace` from `open-claw-sandbox` → `openclaw-sandbox` via `openclaw configure`.
-4. **Run full batch synthesis**: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`
-5. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
-6. Populate `tests/` stub structure per CODING_GUIDELINES §11.2.
+4. Rebuild ChromaDB index: `uv run skills/telegram_kb_agent/scripts/indexer.py`
 
 > **Startup Protocol**: Copy the prompt from `memory/STARTUP.md` at the start of every new conversation.
 
@@ -157,6 +154,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-22 | V9.13 Semantic Router & Idea Incubator | Added Phase 0 for semantic routing, dynamic Incubator tagging, fixed file handoffs in RouterAgent, mapped full 15-skill 6-layer architecture. |
 | 2026-05-22 | V9.12 VLM Stability & HITL Fixes | Set Semaphore(1) for VLM vision to prevent OOM, fixed HITLPendingInterrupt propagation, integrated Telegram notification natively, added E2E test stubs |
 | 2026-05-13 | V9.11 RouterAgent Refactor & PPTX Image Extraction | Replaced hardcoded routing with inbox_config.json; implemented python-pptx image extraction in Phase 0c; resolved PPTX placeholders in figure_list |
 | 2026-05-13 | V9.10 MarkItDown Integration, RouterAgent & DAG Fixes | Phase0cMarkItDown (PPTX/DOCX/XLSX); config-driven routing; correction_log pollution fix; ADR-013 |

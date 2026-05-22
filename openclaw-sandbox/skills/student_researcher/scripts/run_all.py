@@ -6,6 +6,7 @@ from core.utils.bootstrap import ensure_core_path as _bootstrap
 
 _bootstrap(__file__)
 
+from phases.p00_semantic_router import Phase0SemanticRouter
 from phases.p01_claim_extraction import Phase1ClaimExtraction
 from phases.p02_synthesis import Phase2Synthesis
 
@@ -23,7 +24,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     PipelineBase.run_skill_pipeline(
-        phases=[Phase1ClaimExtraction, Phase2Synthesis],
+        phases=[Phase0SemanticRouter, Phase1ClaimExtraction, Phase2Synthesis],
         args=args,
         start_phase=getattr(args, "start_phase", 1),
     )

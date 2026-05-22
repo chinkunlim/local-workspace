@@ -16,6 +16,7 @@ Design:
 import json
 import logging
 import os
+import re
 import sys
 import threading
 import time
@@ -79,8 +80,27 @@ class SystemInboxDaemon:
         parts = rel_path.split(os.sep)
         subject = parts[0] if len(parts) > 1 else "Default"
 
+        intent = "auto"
+        if subject.lower() == "inbox":
+            subject = "Default"
+            if filename.lower().endswith((".md", ".txt")):
+                try:
+                    with open(filepath, encoding="utf-8") as f:
+                        content = f.read()
+                    # Find first hashtag
+                    match = re.search(r"#([a-zA-Z0-9_\u4e00-\u9fa5]+)", content)
+                    if match:
+                        subject = match.group(1)
+                        _logger.info("標籤解析成功: 找到主題 %s", subject)
+                except Exception as e:
+                    _logger.error("讀取標籤失敗: %s", e)
+
+        if filename.startswith("Gemini_") or filename.startswith("Ollama_"):
+            intent = "research"
+            _logger.info("偵測到對話紀錄，強制掛載研究意圖: %s", intent)
+
         # Ask RouterAgent to resolve the intent based on file
-        manifest = TaskManifest(source_path=filepath, subject=subject)
+        manifest = TaskManifest(source_path=filepath, subject=subject, intent=intent)
         chain = self.router.resolve(manifest)
 
         if not chain:
@@ -104,7 +124,7 @@ class SystemInboxDaemon:
             update_session_manifest(_workspace_root, subject, filename, target_skill, "pending")
 
             if os.sep + "input" + os.sep in target_dir + os.sep:
-                self._schedule_trigger(target_skill, target_path)
+                self._schedule_trigger(target_skill, target_path, intent=intent)
         except Exception as e:
             _logger.error("無法移動檔案 %s: %s", filename, e)
 
@@ -155,7 +175,7 @@ class SystemInboxDaemon:
         except ImportError:
             _logger.warning("watchdog 未安裝 (pip install watchdog)，忽略即時監控。")
 
-    def _schedule_trigger(self, skill: str, filepath: str):
+    def _schedule_trigger(self, skill: str, filepath: str, intent: str = "auto"):
         """
         Debounce: cancel any existing poll thread for this file path,
         then start a fresh one with its own stop Event.
@@ -169,12 +189,14 @@ class SystemInboxDaemon:
 
         t = threading.Thread(
             target=self._wait_and_trigger,
-            args=(skill, filepath, stop_event),
+            args=(skill, filepath, stop_event, intent),
             daemon=True,
         )
         t.start()
 
-    def _wait_and_trigger(self, skill: str, filepath: str, stop_event: threading.Event):
+    def _wait_and_trigger(
+        self, skill: str, filepath: str, stop_event: threading.Event, intent: str = "auto"
+    ):
         """
         Poll file size until stable (unchanged for one interval).
         Exits on: size stable, stop_event set, file disappeared, or timeout.
@@ -208,9 +230,9 @@ class SystemInboxDaemon:
         with self._lock:
             self._debounce_events.pop(filepath, None)
 
-        self._trigger_pipeline(skill, filepath)
+        self._trigger_pipeline(skill, filepath, intent)
 
-    def _trigger_pipeline(self, skill: str, filepath: str) -> None:
+    def _trigger_pipeline(self, skill: str, filepath: str, intent: str = "auto") -> None:
         """Route trigger through RouterAgent."""
         _logger.info("檔案已穩定，開始分發: %s (%s)", filepath, skill)
 
@@ -219,7 +241,7 @@ class SystemInboxDaemon:
         parts = rel_path.split(os.sep)
         subject = parts[0] if len(parts) > 1 else "Default"
 
-        manifest = TaskManifest(source_path=filepath, subject=subject)
+        manifest = TaskManifest(source_path=filepath, subject=subject, intent=intent)
         self.router.dispatch(manifest)
 
     def _check_rewrite_status(self, filepath: str) -> None:

@@ -10,6 +10,16 @@
 
 ---
 
+## 1. 優先處理 (High Priority)
+- [ ] **Verify Complete End-to-End Incubator Flow**: Drop a raw `.md` file with a `Gemini_` prefix into `data/raw/inbox/`. Verify that `inbox_daemon` routes it to `student_researcher` (Phase 0 -> Phase 1 -> Phase 2), assigns it to `Incubator` or an existing subject, moves it to `knowledge_compiler` via `RouterAgent`, and outputs it into the `wiki/Incubator/` folder in Obsidian.
+- [ ] **E2E Stability Test**: Run `.m4a` + `.pdf` + `.pptx` through the full pipeline (`audio_transcriber` → `doc_parser` → `proofreader` → `note_generator`) to ensure pipeline state remains clean and files do not get stuck in intermediate stages.
+- [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
+- [x] **Fix stale `openclaw.json` workspace path**: Update `agents.defaults.workspace` from `/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox` → `openclaw-sandbox/` (run `openclaw configure` or `openclaw config set agents.defaults.workspace /Users/limchinkun/Desktop/local-workspace/openclaw-sandbox`)
+- [x] **Migrate core/services & core/cli from rich.print to log_manager for stricter compliance**
+- [x] **Resolve TODO (P3) #14: emit to telegram_bot in hitl_manager.py**
+
+---
+
 ## 🟡 Medium Priority (優化 / 非緊急功能)
 
 - [x] **Test PPTX/DOCX/XLSX pipeline** (V9.10): `.pptx` processed — E2E verified. 5 images extracted, markdown references resolved correctly. ✅

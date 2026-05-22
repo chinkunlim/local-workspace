@@ -57,7 +57,7 @@ class Phase1SearchLiterature(PhaseBase):
         """Return cleaned article text from ScienceDirect, or None on failure."""
         search_url = f"https://www.sciencedirect.com/search?qs={query.replace(' ', '%20')}"
         try:
-            async with get_persistent_context(headless=True) as context:
+            async with get_persistent_context(headless=False) as context:
                 page = await context.new_page()
                 self.info(f"  🔍 ScienceDirect: '{query}'")
                 await page.goto(search_url, wait_until="domcontentloaded", timeout=60000)

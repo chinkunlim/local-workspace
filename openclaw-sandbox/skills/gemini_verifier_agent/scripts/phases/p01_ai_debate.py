@@ -21,7 +21,7 @@ class Phase1AIDebate(PhaseBase):
         archive_dir = os.path.join(self.base_dir, "data", "gemini_verifier_agent", "archives")
         os.makedirs(archive_dir, exist_ok=True)
 
-        async with get_persistent_context(headless=True) as context:
+        async with get_persistent_context(headless=False) as context:
             page = await context.new_page()
             print("🤖 連線至 Gemini 進行查證...")
             try:

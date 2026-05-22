@@ -76,25 +76,16 @@ _DEFAULT_CHAINS: Dict[str, List[str]] = {
     "audio_transcriber": [
         "audio_transcriber",
         "note_generator",
-        "student_researcher",
-        "academic_library_agent",
-        "gemini_verifier_agent",
         "knowledge_compiler",
     ],
     "doc_parser": [
         "doc_parser",
         "note_generator",
-        "student_researcher",
-        "academic_library_agent",
-        "gemini_verifier_agent",
         "knowledge_compiler",
     ],
     "video_ingester": [
         "video_ingester",
         "note_generator",
-        "student_researcher",
-        "academic_library_agent",
-        "gemini_verifier_agent",
         "knowledge_compiler",
     ],
     "knowledge_compiler": ["knowledge_compiler"],
@@ -394,7 +385,16 @@ class RouterAgent:
                     env=env,
                 )
             elif next_skill == "knowledge_compiler":
-                # For knowledge_compiler, the input is just the subject/file from the previous step.
+                # Move the file to knowledge_compiler's input directory
+                target_dir = os.path.join(
+                    workspace_root, "data", "knowledge_compiler", "input", subject
+                )
+                os.makedirs(target_dir, exist_ok=True)
+                target_path = os.path.join(target_dir, os.path.basename(filepath))
+                if os.path.exists(filepath) and filepath != target_path:
+                    os.rename(filepath, target_path)
+                    filepath = target_path
+
                 cmd = [sys.executable, "scripts/run_all.py", "--subject", subject]
                 cwd = os.path.join(
                     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -417,6 +417,14 @@ class RouterAgent:
                 "gemini_verifier_agent",
                 "feynman_simulator",
             ]:
+                # Move the file to the next skill's input directory
+                target_dir = os.path.join(workspace_root, "data", next_skill, "input", subject)
+                os.makedirs(target_dir, exist_ok=True)
+                target_path = os.path.join(target_dir, os.path.basename(filepath))
+                if os.path.exists(filepath) and filepath != target_path:
+                    os.rename(filepath, target_path)
+                    filepath = target_path
+
                 # These skills use the unified interface
                 cmd = [sys.executable, "scripts/run_all.py", "--subject", subject]
                 cwd = os.path.join(
