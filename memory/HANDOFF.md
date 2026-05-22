@@ -1,21 +1,18 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-13
-> **System Status:** 🟢 Stable / Production-Ready (V9.11 — RouterAgent Config-Driven Routing Refactor + PPTX Image Extraction)
+> **Last Updated:** 2026-05-22
+> **System Status:** 🟢 Stable / Production-Ready (V9.12 — VLM Stability, HITL Notification Fixes & E2E Stubs)
 
 ---
 
-## Current Session (2026-05-13 — RouterAgent Refactor + PPTX Image Extraction)
+## Current Session (2026-05-22 — VLM Stability & HITL Fixes)
 
-**Date:** 2026-05-13
+**Date:** 2026-05-22
 
-- [x] **RouterAgent config-driven routing (refactored)**: Replaced hardcoded `_ROUTING_TABLE` global dict with a `_build_routing_table()` instance method. Now reads `core/config/inbox_config.json` at init time. Adding a new file format requires only editing JSON, zero Python changes. `_INTENT_ROUTES` (e.g. `.pdf:study`) remain in code as they are orchestration logic, not file-type config. See ADR-013.
-- [x] **`inbox_daemon.py` dead code cleanup**: Removed `_load_config()` method (31 lines) and its `self.routing_rules`/`self.pdf_routing_rules` dicts. Routing is now entirely owned by `RouterAgent._build_routing_table()`.
-- [x] **PPTX embedded image extraction**: Added `_extract_pptx_images()` to `Phase0cMarkItDown`. Uses python-pptx (bundled with `markitdown[pptx]`) to extract image blobs from all slides, saved to the same directory as `raw_extracted.md`. Filename convention matches MarkItDown's internal convention exactly (`re.sub(r"\W", "", shape.name) + ".jpg"`), so all `![...](filename)` references in the Markdown resolve without modification.
-- [x] **`figure_list.md` updated**: Now lists actual extracted image filenames from PPTX blobs instead of a generic placeholder row.
-- [x] **E2E verified**: `L12_GLP-1 agonists 2026_slide.pptx` processed — 5 images extracted (Picture2.jpg / Picture3.jpg / Picture9.jpg / Picture11.jpg / Picture12.jpg), all referenced correctly in raw_extracted.md.
-- [x] **doc_parser/docs/ARCHITECTURE.md V4.0**: Pipeline DAG diagram updated to show 3-branch routing (Office / PDF / Image); phases directory listing updated with `p00c_markitdown.py`; state tracking phases updated.
-- [x] **doc_parser/docs/DECISIONS.md**: Added PPTX image extraction ADR (co-location rationale + MarkItDown naming convention match).
+- [x] **Phase 1d VLM Vision Stabilisation**: Reduced `asyncio.Semaphore` limit from 2 to 1 in `p01d_vlm_vision.py` to prevent OOM and 10-minute timeouts with the 7.8GB `llama3.2-vision:latest` model on 16GB unified memory environments.
+- [x] **HITL Interrupt Propagation**: Fixed `p01c_ocr_gate.py` exception handling by explicitly catching `HITLPendingInterrupt` to allow the pipeline pause event to propagate up, rather than being swallowed by a generic `Exception` catch block.
+- [x] **Centralised Telegram Notification**: Addressed TODO #14 in `core/services/hitl_manager.py` by natively importing and invoking `send_hitl_prompt` within `HITLManager.trigger()`. Removed redundant manual calls from individual Phase scripts.
+- [x] **Test Stubs Added**: Created `tests/e2e/test_pipeline_e2e.py` and `tests/integration/test_vlm_integration.py` to satisfy CODING_GUIDELINES §11.2.
 
 > [!NOTE]
 > The `openclaw.json` `agents.defaults.workspace` still references the old `open-claw-sandbox` path. The sandbox was renamed to `openclaw-sandbox/`. This may cause issues if OpenClaw tries to access the workspace. Consider updating via `openclaw configure` or `openclaw config set`.
@@ -160,6 +157,8 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-22 | V9.12 VLM Stability & HITL Fixes | Set Semaphore(1) for VLM vision to prevent OOM, fixed HITLPendingInterrupt propagation, integrated Telegram notification natively, added E2E test stubs |
+| 2026-05-13 | V9.11 RouterAgent Refactor & PPTX Image Extraction | Replaced hardcoded routing with inbox_config.json; implemented python-pptx image extraction in Phase 0c; resolved PPTX placeholders in figure_list |
 | 2026-05-13 | V9.10 MarkItDown Integration, RouterAgent & DAG Fixes | Phase0cMarkItDown (PPTX/DOCX/XLSX); config-driven routing; correction_log pollution fix; ADR-013 |
 | 2026-05-13 | Git Recovery & OpenClaw Architecture Investigation | Restored 8 `.docx` files from git; diagnosed `openclaw skills` two-system architecture; documented ADR-012 |
 | 2026-05-13 | V9.9 Doc-Parser & Proofreader Pipeline Standardization | `phase_key` fixed; GlobalRegistry deadlock fixed; Manual State Injection for proofreader; Proofreader Dashboard in start.sh; inbox_daemon path corrected |

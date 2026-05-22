@@ -191,8 +191,8 @@ class Phase1dVLMVision(PipelineBase):
 
                 async def _run_all():
                     semaphore = asyncio.Semaphore(
-                        2
-                    )  # Max 2 concurrent VLM requests to avoid VRAM OOM
+                        1
+                    )  # Max 1 concurrent VLM request to avoid 16GB VRAM OOM
 
                     async def _bounded_process(*args):
                         async with semaphore:

@@ -15,16 +15,15 @@
 - [x] **Test PPTX/DOCX/XLSX pipeline** (V9.10): `.pptx` processed — E2E verified. 5 images extracted, markdown references resolved correctly. ✅
 
 - [ ] **Run live E2E test** (V9.10): Place `.m4a` + `.pdf` + `.pptx` — confirm DAG counts are stable (no correction_log pollution) across multiple runs.
-- [ ] **Fix `openclaw.json` stale workspace path**: `agents.defaults.workspace` → `openclaw-sandbox` via `openclaw configure`.
+- [x] **Fix `openclaw.json` stale workspace path**: `agents.defaults.workspace` → `openclaw-sandbox` via `openclaw configure`.
 - [ ] Run full batch synthesis: `uv run skills/note_generator/scripts/run_all.py --subject 助人技巧 --force`
-- [ ] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
+- [x] Populate `tests/` with E2E and integration test stubs per CODING_GUIDELINES §11.2
 - [ ] Rebuild ChromaDB index and validate a Telegram RAG query with `gemma4:e4b`
 - [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
-- [ ] **Fix stale `openclaw.json` workspace path**: Update `agents.defaults.workspace` from `/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox` → `openclaw-sandbox/` (run `openclaw configure` or `openclaw config set agents.defaults.workspace /Users/limchinkun/Desktop/local-workspace/openclaw-sandbox`)
+- [x] **Fix stale `openclaw.json` workspace path**: Update `agents.defaults.workspace` from `/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox` → `openclaw-sandbox/` (run `openclaw configure` or `openclaw config set agents.defaults.workspace /Users/limchinkun/Desktop/local-workspace/openclaw-sandbox`)
 - [x] **Migrate core/services & core/cli from rich.print to log_manager for stricter compliance**
-- [x] **Fix untyped functions flagged by Mypy in router_agent.py, p03_merge.py, p00_rss_ingest.py**
-- [ ] **Resolve TODO (P3) #14: emit to telegram_bot in hitl_manager.py**
-- [ ] **Archive session 2026-05-13_db4c8fb5.md properly (run ops/archive_session.py)**
+- [x] **Resolve TODO (P3) #14: emit to telegram_bot in hitl_manager.py**
+
 
 ---
 

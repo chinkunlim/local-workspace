@@ -5,9 +5,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [V9.12] — 2026-05-14: Proofreader DAG State Architecture Fix
+## [V9.12] — 2026-05-22: VLM Stability & HITL Notification Fixes
 
 ### Fixed
+- **VLM Out-Of-Memory / Timeout**: Reduced `asyncio.Semaphore` limit from 2 to 1 in `p01d_vlm_vision.py` for `llama3.2-vision:latest` to prevent 16GB unified memory environments from thrashing and triggering 10-minute API timeouts (Tenacity Circuit Breaker trips).
+- **HITL Interrupt Propagation**: Explicitly caught `HITLPendingInterrupt` in `p01c_ocr_gate.py` to prevent it from being swallowed by the generic `Exception` catch-all. The pipeline now successfully pauses and awaits user intervention via Telegram/Console instead of blindly proceeding.
+- **Telegram Notification Centralization**: Moved `send_hitl_prompt` emission into `HITLManager.trigger()` (resolving TODO #14 in `hitl_manager.py`). Phase scripts no longer need to manually construct Telegram messages.
+
+### Added
+- **E2E & Integration Test Stubs**: Created `tests/e2e/test_pipeline_e2e.py` and `tests/integration/test_vlm_integration.py` to satisfy `CODING_GUIDELINES §11.2` requirements for downstream testing.
+
+---
+
+## [V9.11] — 2026-05-14: Proofreader DAG State Architecture Fix### Fixed
 - **Proofreader DAG Ping-Pong Loop**: Removed legacy `self.state_manager.raw_dir` overrides and manual `os.listdir()` state mutations from `p02_transcript_proofread.py` and `p03_doc_completeness.py`. These scripts previously forced `sync_physical_files()` to scan intermediate output directories, resulting in false-positive hash mismatches and infinite `⏳` resets. Orchestration is now strictly top-down via `run_all.py`.
 - **`run_all.py` Hash Initialization**: Updated `_populate_state_from_sources()` to compute the actual `SHA-256` hash of source files (from `01_processed` or `03_merged`) upon initial state insertion instead of defaulting to `""`. This prevents `sync_physical_files()` from invalidating the state on the very first run.
 

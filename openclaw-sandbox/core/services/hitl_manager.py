@@ -117,19 +117,17 @@ class HITLManager:
             f"   等待確認：{event_path}"
         )
 
-        # TODO (P3) #14: emit to telegram_bot
-        if self.telegram_bot:
-            msg = (
-                f"⚠️ *OpenClaw HITL 介入*\n"
-                f"Phase: `{event.phase}`\n"
-                f"原因: {event.reason}\n"
-                f"Trace ID: `{event.trace_id}`\n"
-                f"請回覆 `/hitl approve {event.trace_id}` 或 `/hitl skip {event.trace_id}`"
+        # Resolved TODO (P3) #14: emit to telegram_bot directly
+        try:
+            from core.services.telegram_bot import send_hitl_prompt
+
+            send_hitl_prompt(
+                trace_id=event.trace_id,
+                phase=event.phase,
+                reason=event.reason,
             )
-            try:
-                self.telegram_bot.send_message(msg)
-            except Exception:
-                pass  # HITL notification must never crash the pipeline
+        except Exception as _telegram_exc:
+            logger.debug(f"⚠️ [HITL] 無法發送 Telegram 推播: {_telegram_exc}")
 
         raise HITLPendingInterrupt(event.trace_id, f"HITL event triggered: {event.trace_id}")
 

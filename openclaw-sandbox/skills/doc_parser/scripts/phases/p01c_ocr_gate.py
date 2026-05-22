@@ -123,8 +123,7 @@ class Phase1cOCRQualityGate(PipelineBase):
             )
             # H3: Trigger HITL intervention — pipeline pauses; user approves/skips via Telegram
             try:
-                from core.services.hitl_manager import HITLEvent, HITLManager
-                from core.services.telegram_bot import send_hitl_prompt
+                from core.services.hitl_manager import HITLEvent, HITLManager, HITLPendingInterrupt
 
                 hitl_mgr = HITLManager(base_dir=self.base_dir)
                 event = HITLEvent(
@@ -142,11 +141,8 @@ class Phase1cOCRQualityGate(PipelineBase):
                     },
                 )
                 hitl_mgr.trigger(event)
-                send_hitl_prompt(
-                    trace_id=event.trace_id,
-                    phase=event.phase,
-                    reason=event.reason,
-                )
+            except HITLPendingInterrupt:
+                raise
             except Exception as _hitl_exc:
                 self.warning(
                     f"\u26a0\ufe0f [HITL] \u7121\u6cd5\u767c\u9001 HITL \u4e8b\u4ef6: {_hitl_exc}"
