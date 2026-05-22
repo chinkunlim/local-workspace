@@ -1,7 +1,7 @@
 """
 tests/e2e/test_pipeline_e2e.py
 ==============================
-End-to-End Test stubs for the OpenClaw pipeline, checking file ingesting, 
+End-to-End Test stubs for the OpenClaw pipeline, checking file ingesting,
 DAG task creation, Phase execution, and StateManager invariants.
 
 Ref: CODING_GUIDELINES §11.2 (Test Stubs)
@@ -9,8 +9,8 @@ Ref: CODING_GUIDELINES §11.2 (Test Stubs)
 
 import unittest
 
+
 class TestPipelineE2E(unittest.TestCase):
-    
     def setUp(self):
         # TODO: Setup isolated test workspace directory and configuration
         pass
@@ -37,5 +37,6 @@ class TestPipelineE2E(unittest.TestCase):
         # TODO: Clean up workspace
         pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
