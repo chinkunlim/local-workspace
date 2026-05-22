@@ -17,6 +17,23 @@ logger = build_logger(__name__, console=True)
 
 
 def _get_bot_config() -> Tuple[str, List[str]]:
+    # 優先讀取 Sandbox 專屬的 bot_config.json 以避免與 Open Claw AI 發生搶 token 衝突
+    _core_dir = os.path.dirname(os.path.abspath(__file__))
+    _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.dirname(os.path.dirname(_core_dir)))
+    config_path = os.path.join(_workspace_root, "bot_config.json")
+
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                cfg = json.load(f)
+                token = cfg.get("botToken", "")
+                users = cfg.get("allowFrom", [])
+                return token, users
+        except Exception as e:
+            logger.info(f"⚠️ [TelegramBot] 無法讀取 bot_config.json: {e}")
+            return "", []
+
+    # 如果沒有專屬設定檔，則回退讀取 ~/.openclaw/openclaw.json
     config_path = os.path.expanduser("~/.openclaw/openclaw.json")
     if not os.path.exists(config_path):
         return "", []

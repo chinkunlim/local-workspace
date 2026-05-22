@@ -5,8 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [V9.17] — 2026-05-23: Coding Guidelines Full Compliance Audit
+## [V9.18] — 2026-05-23: OpenClaw Native Pipeline Skills Integration (ADR-013)
 
+### Added
+- **Native OpenClaw Agent Integration**: Pipeline skills (`doc_parser`, `audio_transcriber`, etc.) are now natively recognized by the OpenClaw Agent. `SKILL.md` files are hard-copied to `~/.openclaw/skills/` to bypass the `symlink-escape` security restriction.
+- **ADR-013**: Documented the architectural decision to unify Telegram bot interfaces and expose Pipeline Skills to the OpenClaw CLI Agent via hard-copied SKILL manifests.
+
+### Deprecated
+- **`bot_daemon.py`**: The dedicated pipeline Telegram bot is deprecated in favor of a single-bot architecture using OpenClaw's native Telegram plugin.
+
+---
+
+## [V9.17] — 2026-05-23: Coding Guidelines Full Compliance Audit
 ### Fixed
 - **`gemini_verifier_agent/p01_ai_debate.py`**: Repaired unclosed parenthesis in `super().__init__()` — was causing Ruff parse failure and Mypy type-check cascade errors.
 - **14 bare `print()` violations (§8.1)**: Migrated to structured `self.info/self.error/self.warning/self.log` calls:

@@ -5,9 +5,17 @@
 
 ---
 
-## Current Session (2026-05-23 — V9.17 Coding Guidelines Full Compliance)
+## Current Session (2026-05-23 — V9.18 OpenClaw Native Pipeline Skills Integration)
 
 **Date:** 2026-05-23
+
+- [x] **ADR-013 OpenClaw Integration**: Unified the Telegram bot architecture by enabling the OpenClaw Agent to natively discover and trigger heavy Python ML pipelines.
+- [x] **Symlink Security Bypass**: Hard-copied `openclaw-sandbox/skills/*/SKILL.md` to `~/.openclaw/skills/` to bypass the OpenClaw `symlink-escape` security block.
+- [x] **Deprecated bot_daemon.py**: Eliminated the need for a separate pipeline Telegram bot. OpenClaw now handles all NLP requests and file routing via its native interface.
+
+---
+
+## Previous Session (2026-05-23 — V9.17 Coding Guidelines Full Compliance)
 
 - [x] **Syntax Fix**: Repaired unclosed parenthesis in `gemini_verifier_agent/p01_ai_debate.py` (`super().__init__` call missing `)`) — was causing Ruff/Mypy parse failure across all 3 checks.
 - [x] **OllamaClient Refactor**: Removed manual `OllamaClient()` instantiation in 2 skill phases:

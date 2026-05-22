@@ -27,7 +27,10 @@ def build_skill_parser(
     if include_subject:
         parser.add_argument("--subject", "-s", type=str, help="只處理指定 subject")
         parser.add_argument(
-            "--file", type=str, help="從指定檔案名稱開始 (或配合 --single 只處理該檔案)"
+            "--file",
+            type=str,
+            nargs="+",
+            help="指定一或多個檔案名稱 (配合 --single 只處理該檔案，或指定多個檔案自動進入多檔模式)",
         )
         parser.add_argument(
             "--single",

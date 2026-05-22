@@ -46,6 +46,11 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-23: **V9.18 OpenClaw Native Pipeline Skills Integration (ADR-013)**
+  - Diagnosed `symlink-escape` block preventing OpenClaw from recognizing sandbox pipeline skills.
+  - Hard-copied all 15+ `SKILL.md` manifests to `~/.openclaw/skills/` to enable native OpenClaw discovery.
+  - Deprecated the dual-bot architecture (`bot_daemon.py`) in favor of OpenClaw's single-bot native Telegram plugin.
+
 - [x] 2026-05-23: **V9.17 Coding Guidelines Full Compliance Audit**
   - Fixed syntax error (unclosed parenthesis in `super().__init__`) in `gemini_verifier_agent/p01_ai_debate.py`.
   - Removed redundant manual `OllamaClient()` instantiation in `knowledge_compiler/p02_extract_graph.py` and `doc_parser/p00b_png_pipeline.py`; both now reuse `self.llm` from `PipelineBase`.
@@ -156,7 +161,9 @@
 - [ ] Run live end-to-end pipeline test with new `qwen3:14b` routing: `.m4a` / `.mp4` → `data/wiki/`
 - [ ] Rebuild ChromaDB index and validate a Telegram RAG query with `gemma4:e4b`
 - [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
-
+- [ ] **Code Review 待修復 (Phase 4)**: 清理裸露的 `print()` (共 8 處，改用 log_manager)。
+- [ ] **Code Review 待修復 (Phase 4)**: 檢查 22 個呼叫 LLM 的檔案是否都有落實 `unload_model()`。
+- [ ] **Code Review 待修復 (Phase 4)**: 修正 `router_agent.py` 與 `file_utils.py` 中的 `open(..., "w")`，改用 `AtomicWriter`。
 ---
 
 ## 🟢 Low Priority (技術債 / 探索性研究)

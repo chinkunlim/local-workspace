@@ -363,7 +363,7 @@ class PipelineBase:
         prev_phase_key: str = None,
         force: bool = False,
         subject_filter: str = None,
-        file_filter: str = None,
+        file_filter: "str | list[str] | None" = None,
         single_mode: bool = False,
         resume_from: Dict[str, str] = None,
     ) -> List[Dict]:
@@ -421,22 +421,27 @@ class PipelineBase:
             all_tasks = all_tasks[start_idx:]
 
         if file_filter:
-            start_idx = 0
-            for i, t in enumerate(all_tasks):
-                if t["filename"] == file_filter:
-                    start_idx = i
-                    break
+            if isinstance(file_filter, str):
+                file_filter = [file_filter]
 
-            if single_mode:
-                if start_idx < len(all_tasks) and all_tasks[start_idx]["filename"] == file_filter:
-                    all_tasks = [all_tasks[start_idx]]
-                    self.log(f"🎯  單檔模式：僅執行 {file_filter}")
-                else:
+            if len(file_filter) > 1 or single_mode:
+                filtered_tasks = [t for t in all_tasks if t["filename"] in file_filter]
+                if not filtered_tasks:
+                    self.log(f"❌  指定檔案模式：找不到目標檔案 {file_filter}", "warn")
                     all_tasks = []
-                    self.log(f"❌  單檔模式：找不到目標檔案 {file_filter}", "warn")
+                else:
+                    found_files = [t["filename"] for t in filtered_tasks]
+                    self.log(f"🎯  指定檔案模式：僅執行 {', '.join(found_files)}")
+                    all_tasks = filtered_tasks
             else:
+                target_file = file_filter[0]
+                start_idx = 0
+                for i, t in enumerate(all_tasks):
+                    if t["filename"] == target_file:
+                        start_idx = i
+                        break
                 if start_idx > 0:
-                    self.log(f"➩️  指定起點：從 {file_filter} 開始執行。")
+                    self.log(f"➩️  指定起點：從 {target_file} 開始執行。")
                 all_tasks = all_tasks[start_idx:]
 
         return all_tasks
