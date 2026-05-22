@@ -1,19 +1,26 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-22
-> **System Status:** 🟢 Stable / Production-Ready (V9.15 — Memory Hardening & SSoT Verification)
+> **Last Updated:** 2026-05-23
+> **System Status:** 🟢 Stable / Production-Ready (V9.17 — Coding Guidelines Full Compliance)
 
 ---
 
-## Current Session (2026-05-22 — V9.15 Memory Hardening)
+## Current Session (2026-05-23 — V9.17 Coding Guidelines Full Compliance)
 
-**Date:** 2026-05-22
+**Date:** 2026-05-23
 
-- [x] **Historical Audit & Code Verification**: Verified and synced core codebase enhancements, ensuring VLM Vision implements sequential `Semaphore(1)` constraint, OCR Gate correctly propagates `HITLPendingInterrupt`, and Telegram dispatch natively integrates without TODO regression risk.
-- [x] **Architecture Decisions Record (ADR) Sync**: Documented ADR-015 (VLM Concurrency and HITL Telegram bot) and ADR-016 (Non-blocking proofreader and Watchdog resumer) inside `memory/DECISIONS.md`.
-- [x] **Guidelines Hardening**: Hardened `docs/CODING_GUIDELINES.md` to v4.2.0. Resolved section 5 duplicate subsection numbers. Appended §5.11 (VLM Concurrency Limit Invariant) and §5.12 (HITL Interrupt Propagation Invariant) as permanent coding requirements.
-- [x] **Rules & Directory Map Sync**: Updated `memory/PROJECT_RULES.md` environment hardware constraints to enforce sequential VLM executions. Synchronized `docs/STRUCTURE.md` registry mapping and updated timestamps to `2026-05-22`.
-- [x] **Handoff Reconciliation**: Reconciled the master handoff protocol to establish the exact post-audit status.
+- [x] **Syntax Fix**: Repaired unclosed parenthesis in `gemini_verifier_agent/p01_ai_debate.py` (`super().__init__` call missing `)`) — was causing Ruff/Mypy parse failure across all 3 checks.
+- [x] **OllamaClient Refactor**: Removed manual `OllamaClient()` instantiation in 2 skill phases:
+  - `knowledge_compiler/p02_extract_graph.py` — now reuses `self.llm` inherited from `PipelineBase`
+  - `doc_parser/p00b_png_pipeline.py` — now reuses `self.llm` inherited from `PipelineBase`
+- [x] **print() → Structured Logging Migration** (§8.1 compliance): Migrated 14 bare `print()` calls in production methods to `self.info/self.error/self.warning/self.log`:
+  - `student_researcher/p01_claim_extraction.py` (4 calls)
+  - `student_researcher/p02_synthesis.py` (6 calls)
+  - `gemini_verifier_agent/p01_ai_debate.py` (4 calls)
+  - Note: `print()` in `if __name__ == "__main__":` CLI blocks are explicitly excluded (acceptable per convention)
+- [x] **Quality Gate Verified**: `./ops/check.sh` ✅ Ruff lint, ✅ Ruff format, ✅ Mypy 0 errors (147 files)
+- [x] **Test Suite**: `pytest` ✅ 22 passed, 5 skipped (34.88s)
+- [x] **Committed**: `fix(skills): migrate bare print() to structured logging; fix syntax error; remove manual OllamaClient`
 
 ---
 

@@ -46,6 +46,13 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-23: **V9.17 Coding Guidelines Full Compliance Audit**
+  - Fixed syntax error (unclosed parenthesis in `super().__init__`) in `gemini_verifier_agent/p01_ai_debate.py`.
+  - Removed redundant manual `OllamaClient()` instantiation in `knowledge_compiler/p02_extract_graph.py` and `doc_parser/p00b_png_pipeline.py`; both now reuse `self.llm` from `PipelineBase`.
+  - Migrated 14 bare `print()` calls in production code to `self.info/self.error/self.warning/self.log` (§8.1 compliance):
+    - `student_researcher/p01_claim_extraction.py` (4), `student_researcher/p02_synthesis.py` (6), `gemini_verifier_agent/p01_ai_debate.py` (4).
+  - Quality gate: ✅ Ruff lint, ✅ Ruff format, ✅ Mypy 0 errors (147 files), ✅ 22 tests passed.
+
 - [x] 2026-05-22: **V9.14 HITL Proofreader Pipeline Pause/Resume**
   - Integrated `proofreader` into `audio_transcriber` and `doc_parser` default chains.
   - Implemented `RouterAgent` pause logic via `pending_chains.json`.
