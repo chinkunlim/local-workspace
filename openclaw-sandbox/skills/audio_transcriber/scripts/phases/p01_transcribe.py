@@ -36,11 +36,11 @@ def vad_preprocess(
     min_silence_len_ms: int = 1500,
     silence_thresh_dbfs: int = -35,
     padding_ms: int = 300,
-    max_removal_ratio: float = 0.90,
+    max_removal_ratio: float = 0.10,
     log_fn=None,
-) -> str:
+) -> tuple[str, float]:
     """
-    使用 pydub.silence 切除長靜音，輸出乾淨的 16kHz mono WAV 供 Whisper 使用。
+    使用 pydub.silence 切除長靜音，輸出乾淨 of 16kHz mono WAV 供 Whisper 使用。
 
     Args:
         audio_path:         原始 .m4a 路徑
@@ -53,7 +53,8 @@ def vad_preprocess(
         log_fn:             日誌回呼函數（可選）
 
     Returns:
-        cleaned_wav_path: 去靜音後的 .wav 絕對路徑；若全靜音、過度移除或套件未安裝則回傳原路徑
+        (cleaned_wav_path, silence_ratio): 去靜音後的 .wav 絕對路徑與實際移除率。
+                                          若未移除，silence_ratio 為 0.0
     """
 
     def _log(msg):
@@ -65,13 +66,13 @@ def vad_preprocess(
         from pydub.silence import detect_nonsilent
     except ImportError:
         _log("⚠️  pydub 未安裝，跳過 VAD 前處理。請執行: pip install pydub")
-        return audio_path
+        return audio_path, 0.0
 
     try:
         audio = AudioSegment.from_file(audio_path)
     except Exception as e:
         _log(f"⚠️  pydub 無法解碼音檔（{e}），跳過 VAD 前處理。")
-        return audio_path
+        return audio_path, 0.0
 
     # 標準化為 16kHz mono（Whisper 最佳格式）
     audio = audio.set_channels(1).set_frame_rate(16000)
@@ -85,7 +86,7 @@ def vad_preprocess(
 
     if not nonsilent_ranges:
         _log("⚠️  VAD：偵測到全靜音音檔，跳過前處理。")
-        return audio_path
+        return audio_path, 0.0
 
     # 拼接非靜音片段（前後各加 padding 避免截頭去尾）
     chunks = []
@@ -106,7 +107,7 @@ def vad_preprocess(
             f"⚠️  VAD 移除率 {silence_ratio:.1%} 超過上限 {max_removal_ratio:.0%}，"
             f"閾值可能過高（誤判語音為靜音）— fallback 回原始音檔。"
         )
-        return audio_path
+        return audio_path, 0.0
 
     _log(
         f"🔇 VAD 前處理完成：移除 {silence_ratio:.1%} 靜音，"
@@ -118,7 +119,7 @@ def vad_preprocess(
     cleaned_path = os.path.join(tmp_dir, f"{base_name}_vad.wav")
     cleaned_audio.export(cleaned_path, format="wav")
 
-    return cleaned_path
+    return cleaned_path, silence_ratio
 
 
 # ---------------------------------------------------------------------------
@@ -469,7 +470,7 @@ class Phase1Transcribe(PipelineBase):
             vad_min_silence_ms = int(ah.get("vad_min_silence_len_ms", 1500))
             vad_silence_dbfs = int(ah.get("vad_silence_thresh_dbfs", -35))
             vad_padding_ms = int(ah.get("vad_padding_ms", 300))
-            vad_max_removal_ratio = float(ah.get("vad_max_removal_ratio", 0.90))
+            vad_max_removal_ratio = float(ah.get("vad_max_removal_ratio", 0.10))
             # Language detection
             lang_detect_enabled = bool(ah.get("language_detection_enabled", True))
             lang_detect_clip_sec = float(ah.get("language_detection_clip_sec", 30.0))
@@ -537,11 +538,12 @@ class Phase1Transcribe(PipelineBase):
 
                 # ── Layer 1: VAD 前處理 ──────────────────────────────────
                 cleaned_path = audio_path
+                silence_ratio = 0.0
                 if vad_enabled:
                     self.log(
                         f"🔇 Layer 1: VAD 前處理中（閾值 {vad_silence_dbfs} dBFS，上限移除率 {vad_max_removal_ratio:.0%}）..."
                     )
-                    cleaned_path = vad_preprocess(
+                    cleaned_path, silence_ratio = vad_preprocess(
                         audio_path=audio_path,
                         tmp_dir=tmp_dir,
                         min_silence_len_ms=vad_min_silence_ms,
@@ -778,7 +780,10 @@ class Phase1Transcribe(PipelineBase):
 
                 # DAG 追蹤
                 out_hash = self.state_manager.get_file_hash(pure_out_path)
-                self.state_manager.update_task(subj, fname, "p1", status="✅", output_hash=out_hash)
+                note_tag = f"VAD 移除靜音 {silence_ratio:.1%}" if silence_ratio > 0.0 else None
+                self.state_manager.update_task(
+                    subj, fname, "p1", status="✅", output_hash=out_hash, note_tag=note_tag
+                )
 
                 self.log(f"✅ [{idx}/{len(tasks)}] 轉錄完成：{fname}")
 

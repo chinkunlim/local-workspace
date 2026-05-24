@@ -62,6 +62,13 @@ class CompilerOrchestrator(PipelineBase):
         return cp
 
     def run(self, args):
+        # ── --clear 早期退出 ────────────────────────────────────────────────
+        if getattr(args, "clear", False):
+            self._state_manager.sync_physical_files()
+            self._state_manager.clear_progress()
+            print("🗑️  [knowledge_compiler] 所有進度記錄已清除，phase 狀態重設為 ⏳。")
+            return
+
         if not self.startup_check():
             sys.exit(1)
         self._state_manager.sync_physical_files()
@@ -99,7 +106,9 @@ class CompilerOrchestrator(PipelineBase):
 
 
 def main():
-    parser = build_skill_parser("Knowledge Compiler", include_subject=True, include_force=True)
+    parser = build_skill_parser(
+        "Knowledge Compiler", include_subject=True, include_force=True, include_clear=True
+    )
     args = parser.parse_args()
     CompilerOrchestrator().run(args)
 

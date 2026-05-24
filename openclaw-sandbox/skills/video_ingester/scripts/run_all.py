@@ -23,6 +23,7 @@ def main():
     parser.add_argument("--process-all", action="store_true", help="Run without prompts")
     parser.add_argument("--subject", type=str, help="Filter by subject folder")
     parser.add_argument("--single", action="store_true", help="Stop after first file")
+    parser.add_argument("--clear", "-c", action="store_true", help="清除此 skill 的所有進度記錄")
     args = parser.parse_args()
 
     PipelineBase.run_skill_pipeline(phases, args)

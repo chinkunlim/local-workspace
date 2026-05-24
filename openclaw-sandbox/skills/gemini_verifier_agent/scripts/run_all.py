@@ -19,6 +19,7 @@ def main() -> None:
         include_resume=False,
         include_interactive=False,
         include_start_phase=False,
+        include_clear=True,
     )
     args = parser.parse_args()
     PipelineBase.run_skill_pipeline(phases=[Phase1AIDebate], args=args)

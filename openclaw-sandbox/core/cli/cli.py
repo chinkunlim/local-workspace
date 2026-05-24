@@ -16,6 +16,7 @@ def build_skill_parser(
     include_process_all: bool = False,
     include_config: bool = False,
     include_log_json: bool = False,
+    include_clear: bool = False,
 ) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
     if include_interactive:
@@ -24,6 +25,13 @@ def build_skill_parser(
         parser.add_argument("--force", "-f", action="store_true", help="強制重新處理所有項目")
     if include_resume:
         parser.add_argument("--resume", "-r", action="store_true", help="強制從 checkpoint 繼續")
+    if include_clear:
+        parser.add_argument(
+            "--clear",
+            "-c",
+            action="store_true",
+            help="清除此 skill 的所有進度記錄（phase 狀態重設為 ⏳，並清除 checkpoint）",
+        )
     if include_subject:
         parser.add_argument("--subject", "-s", type=str, help="只處理指定 subject")
         parser.add_argument(

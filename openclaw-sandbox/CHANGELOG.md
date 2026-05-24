@@ -5,6 +5,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.19] — 2026-05-24: VAD Safety Limits & Global Clear Flag
+
+### Added
+- **Global `--clear` CLI Flag**: Implemented `--clear` (and `-c`) universally across all 12 pipeline skills. Resolves the pain point of needing to manually delete `state.json` or output folders to restart a skill.
+- **`StateManager.clear_progress()`**: New method to safely reset all registered phase records back to `⏳` and purge hashes, notes, and checkpoints without deleting physical output files.
+- **Dynamic VAD Ratio Logging**: `audio_transcriber` now injects a dynamic Note Tag (`VAD 移除靜音 XX.X%`) into the pipeline DAG checklist when silence removal is performed.
+
+### Changed
+- **VAD Safety Valve**: Configured `vad_max_removal_ratio` in `audio_transcriber` config to `0.10` (10%). `vad_preprocess()` now automatically triggers a safety fallback, bypassing silence removal entirely if the VAD engine strips more than 10% of the audio track (indicates false-positive triggers on background music).
+- **Skill Parsers (`core/cli/cli.py`)**: Centralized `build_skill_parser()` now accepts `include_clear=True` to enforce consistent arguments.
+- **Pipeline Orchestrators**: Upgraded all Batch A (`Orchestrator` classes) and Batch B (`PipelineBase.run_skill_pipeline()`) entry points to intercept the `--clear` flag, invoke `clear_progress()`, and early-exit cleanly.
+
+---
 ## [V9.18] — 2026-05-23: OpenClaw Native Pipeline Skills Integration (ADR-013)
 
 ### Added

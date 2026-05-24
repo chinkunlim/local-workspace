@@ -46,6 +46,13 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-24: **V9.19 VAD Safety Limits & Global Clear Flag**
+  - Configured `vad_max_removal_ratio` (10%) safety valve in `audio_transcriber`.
+  - Added Dynamic Silence Removal Ratio Logging (`note_tag`) to state manager checklist.
+  - Implemented universal `--clear` / `-c` CLI argument across all 12 skills.
+  - Added `clear_progress()` method to `StateManager`.
+  - Unified `--clear` handling in `PipelineBase.run_skill_pipeline()`.
+
 - [x] 2026-05-23: **V9.18 OpenClaw Native Pipeline Skills Integration (ADR-013)**
   - Diagnosed `symlink-escape` block preventing OpenClaw from recognizing sandbox pipeline skills.
   - Hard-copied all 15+ `SKILL.md` manifests to `~/.openclaw/skills/` to enable native OpenClaw discovery.

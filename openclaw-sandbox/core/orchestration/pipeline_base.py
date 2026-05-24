@@ -639,6 +639,13 @@ class PipelineBase:
             resume_from:            Checkpoint dict from prompt_checkpoint_resume() / load_checkpoint().
             print_dashboard_between: Print DAG dashboard after each phase.
         """
+        if getattr(args, "clear", False) and phases:
+            first_phase: PipelineBase = phases[0]()  # type: ignore[call-arg]
+            first_phase.state_manager.sync_physical_files()
+            first_phase.state_manager.clear_progress()
+            print(f"🗑️  [{first_phase.skill_name}] 所有進度記錄已清除，phase 狀態重設為 ⏳。")
+            return
+
         any_stopped = False
         _resume = resume_from  # consumed once for the matching phase
 

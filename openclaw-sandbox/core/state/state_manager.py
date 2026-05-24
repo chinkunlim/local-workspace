@@ -505,6 +505,30 @@ class StateManager:
             self._checkpoint = None
             self._save_state()
 
+    def clear_progress(self) -> None:
+        """清除所有任務的進度記錄，將所有 phase 重設為 ⏳，並清除 checkpoint 和備注。
+
+        --clear CLI 旗標的後端實作。呼叫後：
+        - 所有任務的 phase 狀態恢復為 ⏳
+        - output_hashes 和 char_count 清空
+        - note 清空
+        - checkpoint 清除
+        - checklist.md 重新渲染
+        """
+        with self._lock:
+            for subj in self.state:
+                for fname, record in self.state[subj].items():
+                    # Reset all phase keys
+                    for phase in self.PHASES:
+                        if phase in record:
+                            record[phase] = "⏳"
+                    # Clear auxiliary tracking fields
+                    record.pop("output_hashes", None)
+                    record.pop("char_count", None)
+                    record.pop("note", None)
+            self._checkpoint = None
+            self._save_state()
+
     # ------------------------------------------------------------------ #
     #  Granular Chunk-Level Checkpointing (#6)                            #
     # ------------------------------------------------------------------ #

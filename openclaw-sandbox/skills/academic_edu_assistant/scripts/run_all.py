@@ -57,6 +57,13 @@ class AcademicOrchestrator(PipelineBase):
         return cp
 
     def run(self, args):
+        # ── --clear 早期退出 ────────────────────────────────────────────────
+        if getattr(args, "clear", False):
+            self._state_manager.sync_physical_files()
+            self._state_manager.clear_progress()
+            print("🗑️  [academic_edu_assistant] 所有進度記錄已清除，phase 狀態重設為 ⏳。")
+            return
+
         if not self.startup_check():
             sys.exit(1)
         self._state_manager.sync_physical_files()
@@ -109,6 +116,7 @@ def main():
         include_subject=True,
         include_force=True,
         include_process_all=True,
+        include_clear=True,
     )
     parser.add_argument("--query", type=str, help="直接指定查詢字串來進行 RAG 交叉比對 (Option B)")
     args = parser.parse_args()

@@ -1,11 +1,25 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-23
-> **System Status:** 🟢 Stable / Production-Ready (V9.17 — Coding Guidelines Full Compliance)
+> **Last Updated:** 2026-05-24
+> **System Status:** 🟢 Stable / Production-Ready (V9.19 — VAD Safety Limits & Global Clear Flag)
 
 ---
 
-## Current Session (2026-05-23 — V9.18 OpenClaw Native Pipeline Skills Integration)
+## Current Session (2026-05-24 — V9.19 VAD Safety Limits & Global Clear Flag)
+
+**Date:** 2026-05-24
+
+- [x] **VAD Silence Removal Safety Limit**: Configured `vad_max_removal_ratio` in `audio_transcriber` config to `0.10` (10%). Modified `vad_preprocess()` in `p01_transcribe.py` to activate a safety fallback that ignores VAD if more than 10% of the audio is removed.
+- [x] **Silence Ratio Note Tag Logging**: Integrated the actual silence removal ratio (e.g., `VAD 移除靜音 XX.X%`) into the pipeline state checklist via `StateManager.update_task` `note_tag` argument.
+- [x] **Global `--clear` CLI Flag**: Implemented the `--clear` / `-c` CLI argument universally across all 12 skills.
+  - Added `StateManager.clear_progress()` to reset all phase records to `⏳` and wipe hashes/notes/checkpoints.
+  - Injected `include_clear=True` into `core/cli/cli.py` `build_skill_parser()`.
+  - Added fast early-exit `--clear` block in all standalone skill orchestrator `run()` methods (Batch A).
+  - Integrated native `--clear` processing in `PipelineBase.run_skill_pipeline()` for unified skills (Batch B).
+
+---
+
+## Previous Session (2026-05-23 — V9.18 OpenClaw Native Pipeline Skills Integration)
 
 **Date:** 2026-05-23
 

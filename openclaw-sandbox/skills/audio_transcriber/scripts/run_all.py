@@ -124,6 +124,13 @@ class VoiceMemoOrchestrator(PipelineBase):
         Args:
             args: Parsed argparse Namespace from build_skill_parser().
         """
+        # ── --clear 早期退出 ────────────────────────────────────────────────
+        if getattr(args, "clear", False):
+            self._state_manager.sync_physical_files()
+            self._state_manager.clear_progress()
+            print("🗑️  [audio_transcriber] 所有進度記錄已清除，phase 狀態重設為 ⏳。")
+            return
+
         if not self.startup_check():
             sys.exit(1)
 
@@ -279,6 +286,7 @@ def main() -> None:
         include_interactive=True,
         include_start_phase=True,
         include_process_all=True,
+        include_clear=True,
     )
     parser.add_argument("--glossary", action="store_true", help="執行詞庫自動生成 (Phase 0)")
     parser.add_argument("--glossary-merge", action="store_true", help="合併現有詞庫")

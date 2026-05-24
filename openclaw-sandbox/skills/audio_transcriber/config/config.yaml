@@ -66,7 +66,7 @@ phase1:
     vad_min_silence_len_ms: 1500 # 超過 1500ms 才切除靜音
     vad_silence_thresh_dbfs: -35 # -35dBFS 適合有背景噪音的環境
     vad_padding_ms: 300 # 切除靜音時前後保留 300ms buffer
-    vad_max_removal_ratio: 0.90 # 移除率上限：超過 90% 視為閾值誤判，fallback 回原始音檔
+    vad_max_removal_ratio: 0.10 # 移除率上限：超過 10% 視為閾值誤判，fallback 回原始音檔
 
     # Language Detection — 在 VAD 前偵測語言，鎖定後轉錄，防止靜音段誤判
     language_detection_enabled: true

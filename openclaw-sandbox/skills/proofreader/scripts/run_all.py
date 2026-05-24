@@ -139,6 +139,12 @@ class ProofreaderOrchestrator(PipelineBase):
             self._state_manager._save_state()
 
     def run(self, args):
+        # ── --clear 早期退出 ────────────────────────────────────────────────
+        if getattr(args, "clear", False):
+            self._state_manager.clear_progress()
+            print("🗑️  [proofreader] 所有進度記錄已清除，phase 狀態重設為 ⏳。")
+            return
+
         subject_filter = getattr(args, "subject", None)
         self._populate_state_from_sources(subject_filter)
 
@@ -226,6 +232,7 @@ def main():
         include_interactive=True,
         include_start_phase=True,
         include_process_all=True,
+        include_clear=True,
     )
     args = parser.parse_args()
 

@@ -72,6 +72,13 @@ class DocParserOrchestrator(PipelineBase):
         return True
 
     def run(self, args) -> None:
+        # ── --clear 早期退出 ────────────────────────────────────────────────
+        if getattr(args, "clear", False):
+            self._state_manager.sync_physical_files()
+            self._state_manager.clear_progress()
+            print("🗑️  [doc_parser] 所有進度記錄已清除，phase 狀態重設為 ⏳。")
+            return
+
         if not self.startup_check():
             sys.exit(1)
 
@@ -149,6 +156,7 @@ def main():
         include_interactive=True,
         include_start_phase=True,
         include_process_all=True,
+        include_clear=True,
     )
     args = parser.parse_args()
 
