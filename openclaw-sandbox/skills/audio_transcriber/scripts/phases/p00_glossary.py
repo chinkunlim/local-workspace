@@ -10,11 +10,6 @@ import os
 import sys
 
 # Group 2 — Internal Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 # Group 3 — Core imports
 from core import AtomicWriter, PipelineBase
 
@@ -22,7 +17,9 @@ from core import AtomicWriter, PipelineBase
 class Phase0Glossary(PipelineBase):
     def __init__(self):
         # We define phase_key as 'p0' for phase 0 context
-        super().__init__(phase_key="p0", phase_name="詞庫自動生成", logger=None)
+        super().__init__(
+            phase_key="p0", phase_name="詞庫自動生成", skill_name="audio_transcriber", logger=None
+        )
         self.prompt_tpl = self.get_prompt("Phase 0: 詞庫自動生成指令")
 
         self.SAMPLE_CHARS = 3000

@@ -3,11 +3,6 @@ import os
 import sys
 
 # Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.atomic_writer import AtomicWriter
 from skills.note_generator.scripts.run_all import strip_think_tags

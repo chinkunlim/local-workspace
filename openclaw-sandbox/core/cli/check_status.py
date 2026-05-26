@@ -11,13 +11,9 @@ from core.utils.log_manager import build_logger
 
 logger = build_logger(__name__, console=True)
 
-# 確保 core 模組可被引入
-_core_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.environ.get(
-    "WORKSPACE_DIR", os.path.abspath(os.path.join(_core_dir, "..", ".."))
-)
-if _workspace_root not in sys.path:
-    sys.path.insert(0, _workspace_root)
+from core.utils.workspace import get_workspace_root
+
+_workspace_root = get_workspace_root()
 
 from core.state.state_manager import StateManager
 from core.utils.path_builder import PathBuilder

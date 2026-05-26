@@ -5,12 +5,15 @@
 
 ---
 
-## Current Session (2026-05-26 — Architecture Workflow Consultation)
+## Current Session (2026-05-26 — Phase 6: System State, VRAM Leaks, & Import Architecture)
 
 **Date:** 2026-05-26
 
-- [x] **HITL Workflow Mechanics**: Confirmed and documented that manual file placement in `04_final_verified` acts as an automated HITL-bypass trigger. `inbox_daemon.py` detects this and automatically resumes the paused pipeline (via `pending_chains.json`) emitting `PipelineCompleted` without needing manual CLI execution.
-- [x] **Race Condition Warning**: Clarified the dual-execution race condition risk when manually running CLI commands against the automated daemon pipeline.
+- [x] **Editable Install Mandate**: Removed all manual `sys.path.insert()` and `sys.path.append()` hacks. The project is now strictly an installable module via `uv pip install -e .`.
+- [x] **File Debouncing Standardization**: Replaced fragile `threading.Event` dictionaries and arbitrary `time.sleep()` loops in `inbox_daemon.py` with a centralized `FileStabilityPoller` to prevent race conditions on Watchdog triggers.
+- [x] **VRAM Leak Prevention**: Added `llm_session()` context manager to `PipelineBase` to ensure Ollama models are forcefully unloaded (`keep_alive=0`) even if the pipeline crashes, preventing silent OOM issues.
+- [x] **Structured State Hardening**: Replaced raw dictionaries in `state_manager.py` and across pipelines with strictly typed `PipelineStateSnapshot` Dataclasses.
+- [x] **E2E Routing Validation**: Created a dummy file test stub to confirm that files dropped in `data/raw/` are correctly debounced, resolved by `RouterAgent`, and dispatched to `TaskQueue`.
 
 ---
 

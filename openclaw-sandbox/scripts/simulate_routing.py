@@ -2,9 +2,9 @@ import os
 import sys
 
 # Ensure workspace root is in path
-workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if workspace_root not in sys.path:
-    sys.path.insert(0, workspace_root)
+from core.utils.workspace import get_workspace_root
+
+workspace_root = get_workspace_root()
 
 from core.orchestration.event_bus import DomainEvent, EventBus
 from core.orchestration.router_agent import RouterAgent, TaskManifest

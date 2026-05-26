@@ -23,11 +23,6 @@ import sys
 from typing import Optional
 
 # Group 2 — Internal Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 # Group 3 — Core imports
 from core import (
     PipelineBase,
@@ -169,13 +164,7 @@ class PhaseNoteGenerator(PipelineBase):
             char_count=len(result),
         )
 
-        EventBus.publish(
-            DomainEvent(
-                name="PipelineCompleted",
-                source_skill="note_generator",
-                payload={"filepath": output_path, "subject": subject, "chain": []},
-            )
-        )
+        self.emit_completed(output_path, subject, chain=[])
         return True
 
     # -- Mermaid validator -- #

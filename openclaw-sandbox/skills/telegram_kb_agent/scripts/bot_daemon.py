@@ -6,21 +6,13 @@ import time
 
 import requests
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from core.services.hitl_manager import HITLManager
 from core.services.telegram_bot import _get_bot_config, send_inline_keyboard, send_message
 from core.utils.atomic_writer import AtomicWriter
 from core.utils.log_manager import build_logger
+from core.utils.workspace import get_workspace_root
 
-_workspace_root = os.environ.get(
-    "WORKSPACE_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-)
-# S2: Resolve canonical path — prevents symlink/env-var path traversal attack
-_workspace_root = os.path.realpath(_workspace_root)
+_workspace_root = get_workspace_root()
 
 _logger = build_logger(
     "OpenClaw.BotDaemon", log_file=os.path.join(_workspace_root, "logs", "bot_daemon.log")
@@ -97,7 +89,9 @@ def main():
                     offset = update["update_id"] + 1
                     msg = update.get("message", {})
                     chat_id = str(msg.get("chat", {}).get("id", ""))
-                    text = msg.get("text", "").strip()
+                    from core.services.security_manager import SecurityManager
+
+                    text = SecurityManager.sanitize_user_input(msg.get("text", "").strip())
 
                     # Security check
                     if chat_id not in allowed_users:

@@ -18,8 +18,9 @@ logger = build_logger(__name__, console=True)
 
 def _get_bot_config() -> Tuple[str, List[str]]:
     # 優先讀取 Sandbox 專屬的 bot_config.json 以避免與 Open Claw AI 發生搶 token 衝突
-    _core_dir = os.path.dirname(os.path.abspath(__file__))
-    _workspace_root = os.environ.get("WORKSPACE_DIR", os.path.dirname(os.path.dirname(_core_dir)))
+    from core.utils.workspace import get_workspace_root
+
+    _workspace_root = get_workspace_root()
     config_path = os.path.join(_workspace_root, "bot_config.json")
 
     if os.path.exists(config_path):
@@ -205,9 +206,19 @@ def download_file(file_id: str, dest_dir: str) -> str:
             f"[TelegramBot] File download failed for {file_path_remote}: {bin_resp.status_code}"
         )
 
+    import pathlib
+
     os.makedirs(dest_dir, exist_ok=True)
     local_filename = os.path.basename(file_path_remote)
-    local_path = os.path.join(dest_dir, local_filename)
+
+    dest_path_obj = pathlib.Path(dest_dir).resolve()
+    final_path_obj = (dest_path_obj / local_filename).resolve()
+    if not str(final_path_obj).startswith(str(dest_path_obj) + os.sep) and str(
+        final_path_obj
+    ) != str(dest_path_obj):
+        raise RuntimeError(f"Unsafe download path detected: {final_path_obj}")
+
+    local_path = str(final_path_obj)
 
     with open(local_path, "wb") as f:
         for chunk in bin_resp.iter_content(chunk_size=65536):

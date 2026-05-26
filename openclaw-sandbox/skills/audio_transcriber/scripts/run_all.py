@@ -19,11 +19,6 @@ import os
 import sys
 
 # Group 2 — Internal Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 # Group 3 — Core imports
 from phases.p00_glossary import Phase0Glossary
 from phases.p01_transcribe import Phase1Transcribe
@@ -241,12 +236,6 @@ class VoiceMemoOrchestrator(PipelineBase):
                 choice = "q"
 
             if choice != "q":
-                # Attempt to save checkpoint from the currently running phase
-                for p_num_active, phase_cls in phases_classes.items():
-                    cp_path = os.path.join(self.base_dir, "state", "checkpoint.json")
-                    if os.path.exists(cp_path):
-                        saved = True
-                        break
                 self._write_session_state(SessionState.PAUSED, context={"interrupted": True})
                 print("💾 進度已儲存。下次執行會自動從斷點繼續。")
             else:

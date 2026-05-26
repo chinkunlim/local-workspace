@@ -5,6 +5,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.21] — 2026-05-26: Phase 6 Architectural Standardization & State Hardening
+
+### Added
+- **`FileStabilityPoller`**: Centralized file debouncing utility (`core/utils/file_stability.py`) replacing unsafe `threading.Event` dictionaries and `time.sleep` loops. Prevents race conditions during Watchdog file processing.
+- **`llm_session()` Context Manager**: Added to `PipelineBase` to strictly manage VRAM lifecycle (`keep_alive=0`), preventing silent memory leaks and GPU lockups on crashes.
+- **Structured State Models**: Replaced raw dictionaries with `PipelineStateSnapshot` Dataclasses in `state_manager.py` to enforce strict data contracts and prevent `KeyError` bugs.
+
+### Changed
+- **Editable Install Mandate (`uv pip install -e .`)**: Formalized module resolution by removing all manual `sys.path.insert()` and `sys.path.append()` hacks across the codebase.
+- **`docs/CODING_GUIDELINES.md`**: Upgraded to v4.3.0. Added §5.13–§5.15 invariants for file debouncing, VRAM leak prevention, structured state, and forbidden `sys.path` modification.
+
+---
+
 ## [V9.20] — 2026-05-25: Proofreader Optimization & Auto-Checklist Logging
 
 ### Added

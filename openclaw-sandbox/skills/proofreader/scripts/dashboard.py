@@ -11,11 +11,6 @@ import os
 import sys
 
 # Internal Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from flask import Flask, jsonify, render_template_string, request, send_file
 
 from core.utils.atomic_writer import AtomicWriter

@@ -8,11 +8,6 @@ import re
 import sys
 
 # Internal Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from core import AtomicWriter, PipelineBase
 from core.orchestration.event_bus import DomainEvent, EventBus
 from core.state.global_registry import GlobalRegistry
@@ -20,7 +15,9 @@ from core.state.global_registry import GlobalRegistry
 
 class Phase3Merge(PipelineBase):
     def __init__(self) -> None:
-        super().__init__(phase_key="p3", phase_name="順序合併", logger=None)
+        super().__init__(
+            phase_key="p3", phase_name="順序合併", skill_name="audio_transcriber", logger=None
+        )
 
     def _get_lecture_base(self, fname: str) -> tuple[str, int | None]:
         stem = os.path.splitext(fname)[0]
@@ -149,16 +146,7 @@ class Phase3Merge(PipelineBase):
             self.log(f"✅ 合併完成：{base_name}.md")
 
             # --- Per-file EventBus Handoff ---
-            workspace_root = os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
-            EventBus.publish(
-                DomainEvent(
-                    name="PipelineCompleted",
-                    source_skill="audio_transcriber",
-                    payload={"filepath": out_path, "subject": subj, "chain": []},
-                )
-            )
+            self.emit_completed(out_path, subj, chain=[])
 
             if self.stop_requested:
                 break

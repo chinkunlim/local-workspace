@@ -91,10 +91,13 @@ class NetworkXGraphStore:
     def _load(self) -> None:
         if self._persist_path and os.path.exists(self._persist_path):
             try:
-                import pickle
+                import json
 
-                with open(self._persist_path, "rb") as f:
-                    self._G = pickle.load(f)
+                from networkx.readwrite import json_graph
+
+                with open(self._persist_path, encoding="utf-8") as f:
+                    data = json.load(f)
+                self._G = json_graph.node_link_graph(data, directed=True, multigraph=False)
                 _logger.info("[GraphStore/NX] Loaded graph from %s", self._persist_path)
                 return
             except Exception as exc:
@@ -105,12 +108,15 @@ class NetworkXGraphStore:
         if not self._persist_path:
             return
         try:
-            import pickle
+            import json
+
+            from networkx.readwrite import json_graph
 
             os.makedirs(os.path.dirname(self._persist_path), exist_ok=True)
             tmp = self._persist_path + ".tmp"
-            with open(tmp, "wb") as f:
-                pickle.dump(self._G, f)
+            data = json_graph.node_link_data(self._G)
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
             os.replace(tmp, self._persist_path)
         except Exception as exc:
             _logger.warning("[GraphStore/NX] Failed to persist graph: %s", exc)
@@ -284,10 +290,6 @@ def get_graph_store(workspace_root: str, skill_name: str = "knowledge_compiler")
     Returns:
         A GraphStore-compatible instance (NetworkXGraphStore or Neo4jGraphStore).
     """
-    # Lazy import to avoid circular dependency
-    import sys
-
-    sys.path.insert(0, workspace_root)
     from core.config.config_manager import ConfigManager  # type: ignore[import]
 
     cfg_mgr = ConfigManager(workspace_root, skill_name)
@@ -299,12 +301,12 @@ def get_graph_store(workspace_root: str, skill_name: str = "knowledge_compiler")
         return Neo4jGraphStore(
             uri=neo_cfg.get("uri", "bolt://localhost:7687"),
             user=neo_cfg.get("user", "neo4j"),
-            password=neo_cfg.get("password", ""),
+            password=os.environ.get("NEO4J_PASSWORD", neo_cfg.get("password", "")),
         )
 
     # Default: NetworkX
     persist_path = graph_cfg.get(
         "persist_path",
-        os.path.join(workspace_root, "skills", skill_name, "data", "state", "graph.gpickle"),
+        os.path.join(workspace_root, "skills", skill_name, "data", "state", "graph.json"),
     )
     return NetworkXGraphStore(persist_path=persist_path)

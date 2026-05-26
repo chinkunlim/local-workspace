@@ -24,17 +24,18 @@ from typing import Any, Dict, List, Optional
 
 # Path Resolution MUST happen before importing internal packages
 _core_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.environ.get("WORKSPACE_DIR", os.path.dirname(os.path.dirname(_core_dir)))
-# Ensure workspace root is on sys.path so `from core.xxx` always resolves
-if _workspace_root not in sys.path:
-    sys.path.insert(0, _workspace_root)
+from core.utils.workspace import get_workspace_root
+
+_workspace_root = get_workspace_root()
 
 from core.cli.cli_runner import SkillRunner
 from core.orchestration.router_agent import RouterAgent, TaskManifest
 from core.orchestration.session_manifest import update_session_manifest
 from core.orchestration.skill_registry import SkillRegistry
-from core.orchestration.task_queue import task_queue
 from core.utils.atomic_writer import AtomicWriter
+from core.utils.file_stability import FileStabilityPoller
+from core.utils.log_manager import build_logger
+from core.utils.path_builder import PathBuilder
 
 _logger = logging.getLogger("OpenClaw.InboxDaemon")
 if not _logger.handlers:
@@ -51,10 +52,16 @@ _POLL_INTERVAL_SEC = 2.0
 class SystemInboxDaemon:
     def __init__(self) -> None:
         self._observer: Optional[Any] = None
-        self._debounce_events: Dict[str, threading.Event] = {}
         self._lock = threading.Lock()
+        self.router = RouterAgent()
+        self.stability_poller = FileStabilityPoller(
+            poll_interval_sec=_POLL_INTERVAL_SEC, timeout_sec=_WAIT_TIMEOUT_SEC
+        )
         # B-2 Fix: track files already dispatched to prevent dual-trigger
-        self._seen_files: set = set()
+        import collections
+
+        self._seen_files: collections.OrderedDict[str, bool] = collections.OrderedDict()
+        self.MAX_SEEN = 10000
 
         # Configure global raw path
         self.raw_path = os.path.join(_workspace_root, "data", "raw")
@@ -71,7 +78,9 @@ class SystemInboxDaemon:
         with self._lock:
             if filepath in self._seen_files:
                 return
-            self._seen_files.add(filepath)
+            self._seen_files[filepath] = True
+            if len(self._seen_files) > self.MAX_SEEN:
+                self._seen_files.popitem(last=False)
 
         filename = os.path.basename(filepath)
 
@@ -79,6 +88,9 @@ class SystemInboxDaemon:
         rel_path = os.path.relpath(filepath, self.raw_path)
         parts = rel_path.split(os.sep)
         subject = parts[0] if len(parts) > 1 else "Default"
+        subject = re.sub(r"[^a-zA-Z0-9_\-\u4e00-\u9fa5]", "", subject)
+        if not subject:
+            subject = "Default"
 
         intent = "auto"
         if subject.lower() == "inbox":
@@ -111,6 +123,16 @@ class SystemInboxDaemon:
 
         # Strict Sandbox Routing
         target_dir = os.path.join(_workspace_root, "data", target_skill, "input", subject)
+
+        import pathlib
+
+        target_resolved = pathlib.Path(target_dir).resolve()
+        sandbox_resolved = pathlib.Path(_workspace_root, "data").resolve()
+        # 確保 target_dir 完全在 sandbox 內，防範惡意 subject / target_skill 造成的目錄逃逸
+        if not str(target_resolved).startswith(str(sandbox_resolved) + os.sep):
+            _logger.error("🚨 Path traversal detected! Blocking move: %s", target_dir)
+            return
+
         _logger.info("路由派發: [%s] %s → %s", subject, filename, target_skill)
 
         os.makedirs(target_dir, exist_ok=True)
@@ -124,7 +146,10 @@ class SystemInboxDaemon:
             update_session_manifest(_workspace_root, subject, filename, target_skill, "pending")
 
             if os.sep + "input" + os.sep in target_dir + os.sep:
-                self._schedule_trigger(target_skill, target_path, intent=intent)
+                self.stability_poller.schedule_trigger(
+                    target_path,
+                    callback=lambda path: self._trigger_pipeline(target_skill, path, intent),
+                )
         except Exception as e:
             _logger.error("無法移動檔案 %s: %s", filename, e)
 
@@ -186,63 +211,6 @@ class SystemInboxDaemon:
         except ImportError:
             _logger.warning("watchdog 未安裝 (pip install watchdog)，忽略即時監控。")
 
-    def _schedule_trigger(self, skill: str, filepath: str, intent: str = "auto"):
-        """
-        Debounce: cancel any existing poll thread for this file path,
-        then start a fresh one with its own stop Event.
-        """
-        with self._lock:
-            existing_event = self._debounce_events.get(filepath)
-            if existing_event:
-                existing_event.set()  # Signal old thread to stop (correct API)
-            stop_event = threading.Event()
-            self._debounce_events[filepath] = stop_event
-
-        t = threading.Thread(
-            target=self._wait_and_trigger,
-            args=(skill, filepath, stop_event, intent),
-            daemon=True,
-        )
-        t.start()
-
-    def _wait_and_trigger(
-        self, skill: str, filepath: str, stop_event: threading.Event, intent: str = "auto"
-    ):
-        """
-        Poll file size until stable (unchanged for one interval).
-        Exits on: size stable, stop_event set, file disappeared, or timeout.
-        """
-        prev_size = -1
-        elapsed = 0.0
-
-        while elapsed < _WAIT_TIMEOUT_SEC:
-            if stop_event.is_set():
-                _logger.debug("去抖取消，停止等待: %s", filepath)
-                return
-
-            try:
-                if not os.path.exists(filepath):
-                    _logger.warning("檔案已消失，放棄觸發: %s", filepath)
-                    return
-                current_size = os.path.getsize(filepath)
-                if current_size == prev_size and current_size > 0:
-                    break  # Stable!
-                prev_size = current_size
-            except OSError as e:
-                _logger.debug("輪詢檔案大小時發生 OSError: %s — %s", filepath, e)
-
-            time.sleep(_POLL_INTERVAL_SEC)
-            elapsed += _POLL_INTERVAL_SEC
-        else:
-            _logger.error("等待超時 (%ss)，放棄觸發: %s", _WAIT_TIMEOUT_SEC, filepath)
-            return
-
-        # Clean up debounce map
-        with self._lock:
-            self._debounce_events.pop(filepath, None)
-
-        self._trigger_pipeline(skill, filepath, intent)
-
     def _trigger_pipeline(self, skill: str, filepath: str, intent: str = "auto") -> None:
         """Route trigger through RouterAgent."""
         _logger.info("檔案已穩定，開始分發: %s (%s)", filepath, skill)
@@ -251,6 +219,9 @@ class SystemInboxDaemon:
         rel_path = os.path.relpath(filepath, os.path.join(_workspace_root, "data", skill, "input"))
         parts = rel_path.split(os.sep)
         subject = parts[0] if len(parts) > 1 else "Default"
+        subject = re.sub(r"[^a-zA-Z0-9_\-\u4e00-\u9fa5]", "", subject)
+        if not subject:
+            subject = "Default"
 
         manifest = TaskManifest(source_path=filepath, subject=subject, intent=intent)
         self.router.dispatch(manifest)
@@ -264,9 +235,11 @@ class SystemInboxDaemon:
         file-arrival debounce map.
         """
         # Use a dedicated set so Watchdog debounce doesn't block file-arrival debounce
+        # Check if the poller is already tracking it
         with self._lock:
-            if filepath in self._debounce_events:
+            if filepath in self._seen_files:
                 return
+            self._seen_files[filepath] = True
 
         try:
             with open(filepath, encoding="utf-8") as f:
@@ -285,6 +258,9 @@ class SystemInboxDaemon:
             rel_path = os.path.relpath(filepath, os.path.join(_workspace_root, "data"))
             parts = rel_path.split(os.sep)
             subject = parts[3] if len(parts) > 3 else "Default"
+            subject = re.sub(r"[^a-zA-Z0-9_\-\u4e00-\u9fa5]", "", subject)
+            if not subject:
+                subject = "Default"
 
             # 3. Enqueue the task
             cmd = SkillRunner.run_note_generator(
@@ -292,17 +268,15 @@ class SystemInboxDaemon:
                 output_file=filepath.replace(".md", "_rewrite.md"),
                 subject=subject,
             )
-            task_queue.enqueue(
+            from core.orchestration.task_queue import LocalTaskQueue
+
+            LocalTaskQueue().enqueue(
                 "Note Generator (Rewrite)",
                 cmd,
                 os.path.join(
                     _workspace_root, "skills", "note_generator"
                 ),  # P0-1: underscore (matches skills/ dir)
             )
-
-            # Prevent multiple triggers for this file
-            with self._lock:
-                self._debounce_events[filepath] = threading.Event()
 
         except OSError as e:
             _logger.error("讀取重寫狀態時發生 I/O 錯誤: %s — %s", filepath, e, exc_info=True)
@@ -314,8 +288,9 @@ class SystemInboxDaemon:
     def _check_proofreader_resume(self, filepath: str) -> None:
         """Watch for new files in proofreader/output/04_final_verified to resume the pipeline."""
         with self._lock:
-            if filepath in self._debounce_events:
+            if filepath in self._seen_files:
                 return
+            self._seen_files[filepath] = True
 
         try:
             filename = os.path.basename(filepath)
@@ -328,6 +303,9 @@ class SystemInboxDaemon:
                 return
 
             subject = parts[0]
+            subject = re.sub(r"[^a-zA-Z0-9_\-\u4e00-\u9fa5]", "", subject)
+            if not subject:
+                subject = "Default"
             file_id = os.path.splitext(filename)[0]
 
             pending_path = os.path.join(
@@ -368,9 +346,7 @@ class SystemInboxDaemon:
             # Remove the pending file so we don't trigger it again
             os.remove(pending_path)
 
-            # Prevent multiple triggers for this file
-            with self._lock:
-                self._debounce_events[filepath] = threading.Event()
+            # File stability poller already debounces this, no need for manual lock
 
         except Exception as e:
             _logger.error(
@@ -384,9 +360,6 @@ class SystemInboxDaemon:
             self._observer.join()
             _logger.info("監控已停止")
         with self._lock:
-            for event in self._debounce_events.values():
-                event.set()
-            self._debounce_events.clear()
             self._seen_files.clear()
 
 

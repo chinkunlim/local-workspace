@@ -21,7 +21,9 @@ from core.orchestration.event_bus import DomainEvent, EventBus
 from core.utils.log_manager import build_logger
 
 # Use workspace root to locate the data directory for quarantine
-_workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+from core.utils.workspace import get_workspace_root
+
+_workspace_root = get_workspace_root()
 _logger = build_logger(
     "OpenClaw.TaskQueue", log_file=os.path.join(_workspace_root, "logs", "task_queue.log")
 )

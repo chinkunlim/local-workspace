@@ -1,11 +1,6 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from phases.p00_semantic_router import Phase0SemanticRouter
 from phases.p01_claim_extraction import Phase1ClaimExtraction
 from phases.p02_synthesis import Phase2Synthesis

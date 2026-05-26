@@ -10,18 +10,15 @@ import os
 import re
 import sys
 
+from phases.base_proofread import BaseProofreadPhase
+
 # Internal Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
-from core import AtomicWriter, PipelineBase
+from core import AtomicWriter
 from core.state.global_registry import GlobalRegistry
 from core.utils.text_utils import smart_split
 
 
-class Phase2TranscriptProofread(PipelineBase):
+class Phase2TranscriptProofread(BaseProofreadPhase):
     def __init__(self):
         super().__init__(
             phase_key="p2", phase_name="Transcript Proofread", skill_name="proofreader"
@@ -29,8 +26,7 @@ class Phase2TranscriptProofread(PipelineBase):
         self.LOOKBACK_CHARS = 200
         self.VERBATIM_THRESHOLD = 0.85
 
-    def _workspace_root(self) -> str:
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+        self.VERBATIM_THRESHOLD = 0.85
 
     def _get_manifest_status(self, subject: str, prefix: str) -> str:
         """Determine reference mode for this transcript.
@@ -40,7 +36,7 @@ class Phase2TranscriptProofread(PipelineBase):
         3. semantic_only — no docs found anywhere
         """
         manifest_path = os.path.join(
-            self._workspace_root(), "data", "raw", subject, ".session_manifest.json"
+            self.workspace_root, "data", "raw", subject, ".session_manifest.json"
         )
 
         if os.path.exists(manifest_path):
@@ -61,50 +57,15 @@ class Phase2TranscriptProofread(PipelineBase):
                 pass
 
         # Fallback: GlobalRegistry (written by doc_parser on completion)
-        registry = GlobalRegistry(self._workspace_root())
+        registry = GlobalRegistry(self.workspace_root)
         if registry.get_asset_paths(subject, prefix, "doc_parser"):
             return "with_reference"
         return "semantic_only"
 
-    def _get_reference_data(self, subject: str, prefix: str) -> tuple[str, str]:
-        """Fetch doc_parser reference text and figure list for this prefix."""
-        registry = GlobalRegistry(self._workspace_root())
-        paths = registry.get_asset_paths(subject, prefix, "doc_parser")
-
-        ref_parts: list[str] = []
-        fig_parts: list[str] = []
-        ref_files = []
-
-        for p in paths:
-            if not os.path.exists(p):
-                continue
-
-            # Record the filename used as reference
-            ref_files.append(os.path.basename(p))
-
-            try:
-                with open(p, encoding="utf-8") as f:
-                    ref_parts.append(f.read()[:6000])
-            except Exception:
-                pass
-
-            fig_path = os.path.join(os.path.dirname(p), "figure_list.md")
-            if os.path.exists(fig_path):
-                try:
-                    with open(fig_path, encoding="utf-8") as f:
-                        fig_parts.append(f.read())
-                except Exception:
-                    pass
-
-        self._current_ref_files = ref_files
-        ref_text = ("\n\n---\n\n".join(ref_parts))[:20000]
-        figure_list_text = "\n\n".join(fig_parts)
-        return ref_text, figure_list_text
-
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log("🧠 啟動 Phase 2：Transcript Proofread")
 
-        workspace_root = self._workspace_root()
+        workspace_root = self.workspace_root
         self._audio_dir = os.path.join(
             workspace_root, "data", "audio_transcriber", "output", "03_merged"
         )
@@ -117,16 +78,13 @@ class Phase2TranscriptProofread(PipelineBase):
             resume_from=resume_from,
         )
 
-        # Unload any models used during this phase
-        if hasattr(self, "_used_models"):
-            for m in self._used_models:
-                self.llm.unload_model(m, logger=self)
+        self._unload_used_models()
 
     def _process_file(self, idx: int, task: dict, total: int):
         subj = task["subject"]
         fname = task["filename"]
         audio_dir = getattr(
-            self, "_audio_dir", self._workspace_root() + "/data/audio_transcriber/output/03_merged"
+            self, "_audio_dir", self.workspace_root + "/data/audio_transcriber/output/03_merged"
         )
         in_path = os.path.join(audio_dir, subj, fname)
 
@@ -238,7 +196,7 @@ class Phase2TranscriptProofread(PipelineBase):
 
         orig_filename = fname.replace(".md", ".m4a")  # Approximation
         update_session_manifest(
-            self._workspace_root(), subj, orig_filename, "proofreader", "done", "proofread_done"
+            self.workspace_root, subj, orig_filename, "proofreader", "done", "proofread_done"
         )
 
         self.log(f"✅ [{idx}/{total}] 校對完成：{fname}")

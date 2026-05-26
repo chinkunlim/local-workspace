@@ -23,7 +23,6 @@ from core.state.resume_manager import ResumeManager
 from core.state.session_state import SessionState, read_session_state, write_session_state
 from core.state.state_manager import StateManager
 from core.utils.atomic_writer import AtomicWriter
-from core.utils.bootstrap import ensure_core_path
 from core.utils.data_layout import DataLayoutManager, DataLayoutPlan
 from core.utils.diff_engine import AuditEngine, DiffEngine
 from core.utils.error_classifier import ClassifiedError, ErrorCategory, classify_exception

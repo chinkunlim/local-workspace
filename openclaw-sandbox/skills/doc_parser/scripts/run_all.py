@@ -9,11 +9,6 @@ import os
 import sys
 
 # Internal Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from phases.p00a_diagnostic import Phase0aDiagnostic
 from phases.p00b_png_pipeline import Phase0bPNGPipeline
 from phases.p00c_markitdown import Phase0cMarkItDown

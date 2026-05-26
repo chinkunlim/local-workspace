@@ -63,7 +63,12 @@ class VerificationGateHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         """Handle the submit action."""
         if self.path == "/submit":
-            content_length = int(self.headers["Content-Length"])
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length > 5 * 1024 * 1024:  # 5 MB limit
+                self.send_response(413)  # Payload Too Large
+                self.end_headers()
+                self.wfile.write(b'{"error": "Payload Too Large"}')
+                return
             post_data = self.rfile.read(content_length).decode("utf-8")
             try:
                 data = json.loads(post_data)

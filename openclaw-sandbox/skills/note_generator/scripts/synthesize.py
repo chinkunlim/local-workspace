@@ -14,11 +14,6 @@ import re
 import sys
 
 # Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from core import PipelineBase
 from core.utils.text_utils import smart_split
 from skills.note_generator.scripts.run_all import fix_mermaid_syntax, strip_think_tags

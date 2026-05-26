@@ -15,10 +15,9 @@ import sys
 import tempfile
 
 from core.utils.atomic_writer import AtomicWriter
+from core.utils.workspace import get_workspace_root
 
-# ── Path bootstrap ─────────────────────────────────────────────────────────────
-_script_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.path.abspath(os.path.join(_script_dir, "..", "..", ".."))
+_workspace_root = get_workspace_root()
 _config_path = os.path.join(_workspace_root, "core", "inbox_config.json")
 
 

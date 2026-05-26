@@ -21,13 +21,14 @@ PipelineBase — OpenClaw Shared Base Class (V2.3)
     super().__init__("phase1a", "PDF Diagnostic", skill_name="doc_parser")
 """
 
+import contextlib
 from dataclasses import dataclass, field
 import logging
 import os
 import signal
 import sys
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 import uuid
 
 import psutil
@@ -70,9 +71,9 @@ class PipelineBase:
         self.skill_name = skill_name
         self.logger = logger
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        default_workspace = os.path.abspath(os.path.join(script_dir, "..", ".."))
-        self.workspace_root = os.environ.get("WORKSPACE_DIR", default_workspace)
+        from core.utils.workspace import get_workspace_root
+
+        self.workspace_root = get_workspace_root()
 
         self.path_builder = PathBuilder(self.workspace_root, skill_name)
         self.config_manager = config_manager or ConfigManager(self.workspace_root, skill_name)
@@ -573,8 +574,10 @@ class PipelineBase:
         if _sys.platform != "darwin":
             return
         try:
+            safe_msg = message.replace('"', "'").replace("\n", " ")[:200]
+            safe_title = title.replace('"', "'").replace("\n", " ")[:100]
             _sp.run(
-                ["osascript", "-e", f'display notification "{message}" with title "{title}"'],
+                ["osascript", "-e", f'display notification "{safe_msg}" with title "{safe_title}"'],
                 check=False,
             )
         except Exception:
@@ -623,6 +626,25 @@ class PipelineBase:
     # ------------------------------------------------------------------ #
     #  Template Method — Unified Skill Orchestration Loop (V2.4)          #
     # ------------------------------------------------------------------ #
+
+    def emit_completed(self, filepath: str, subject: str, chain: list = None) -> None:
+        """Emit a PipelineCompleted event to the EventBus."""
+        try:
+            from core.orchestration.event_bus import DomainEvent, EventBus
+
+            EventBus.publish(
+                DomainEvent(
+                    name="PipelineCompleted",
+                    source_skill=self.skill_name,
+                    payload={
+                        "filepath": filepath,
+                        "subject": subject,
+                        "chain": chain or [],
+                    },
+                )
+            )
+        except ImportError:
+            self.log("⚠️ EventBus not found, unable to emit PipelineCompleted", "warn")
 
     @classmethod
     def run_skill_pipeline(

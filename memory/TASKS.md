@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-13 (V9.11 — RouterAgent Config-Driven Routing Refactor + PPTX Image Extraction)
+> **Last Updated:** 2026-05-26 (V9.21 — Phase 6 Architectural Standardization & State Hardening)
 
 ---
 
@@ -45,6 +45,13 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-05-26: **V9.21 Phase 6 Architectural Standardization & State Hardening**
+  - Implemented `FileStabilityPoller` replacing unsafe dictionaries and sleep loops.
+  - Formally mandated Editable Install (`uv pip install -e .`) and purged all `sys.path` hacks.
+  - Wrapped all local LLM calls in `llm_session()` to guarantee VRAM cleanup on exception.
+  - Refactored `StateManager` to use structured `PipelineStateSnapshot` dataclasses.
+  - Added test stub to ensure end-to-end routing (`inbox_daemon` to `proofreader`).
 
 - [x] 2026-05-25: **V9.20 Proofreader Optimization & Auto-Checklist Logging**
   - Optimized `proofreader` to unload LLM models per phase instead of per file, significantly boosting batch performance.

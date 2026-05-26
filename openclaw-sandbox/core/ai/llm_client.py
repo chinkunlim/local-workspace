@@ -132,6 +132,24 @@ class SqliteSemanticCache:
             pass
 
 
+_LLMGUARD_SCANNER = None
+_LLMGUARD_LOADED = False
+
+
+def _get_llmguard_scanner():
+    global _LLMGUARD_SCANNER, _LLMGUARD_LOADED
+    if not _LLMGUARD_LOADED:
+        _LLMGUARD_LOADED = True
+        try:
+            from llm_guard.input_scanners import PromptInjection
+            from llm_guard.input_scanners.prompt_injection import MatchType
+
+            _LLMGUARD_SCANNER = PromptInjection(threshold=0.8, match_type=MatchType.FULL)
+        except ImportError:
+            _LLMGUARD_SCANNER = None
+    return _LLMGUARD_SCANNER
+
+
 class OllamaClient:
     # Number of consecutive failures before triggering circuit breaker
     CIRCUIT_BREAKER_THRESHOLD = 3
@@ -214,13 +232,8 @@ class OllamaClient:
 
         # P1.1: Security Manager - LLMGuard Prompt Injection Filter
         if os.environ.get("OPENCLAW_ENABLE_LLMGUARD", "1") == "1":
-            try:
-                from llm_guard.input_scanners import PromptInjection
-                from llm_guard.input_scanners.prompt_injection import MatchType
-
-                # We instantiate it lazily to avoid heavy loading on import.
-                # In a real production environment, this should be cached in SecurityManager.
-                scanner = PromptInjection(threshold=0.8, match_type=MatchType.FULL)
+            scanner = _get_llmguard_scanner()
+            if scanner is not None:
                 _, is_valid, risk_score = scanner.scan(prompt)
 
                 if risk_score > 0.8:
@@ -229,7 +242,7 @@ class OllamaClient:
                             f"{trace_pfx}🚨 LLMGuard 攔截到潛在的 Prompt Injection 攻擊！(風險值: {risk_score:.2f})"
                         )
                     raise ValueError(f"Prompt injection detected (Risk: {risk_score:.2f})")
-            except ImportError:
+            else:
                 if logger:
                     logger.debug(f"{trace_pfx}⚠️ llm-guard 未安裝，略過 Prompt Injection 檢查。")
 
@@ -382,11 +395,8 @@ class OllamaClient:
 
         # P1.1: Security Manager - LLMGuard Prompt Injection Filter
         if os.environ.get("OPENCLAW_ENABLE_LLMGUARD", "1") == "1":
-            try:
-                from llm_guard.input_scanners import PromptInjection
-                from llm_guard.input_scanners.prompt_injection import MatchType
-
-                scanner = PromptInjection(threshold=0.8, match_type=MatchType.FULL)
+            scanner = _get_llmguard_scanner()
+            if scanner is not None:
                 _, is_valid, risk_score = scanner.scan(prompt)
 
                 if risk_score > 0.8:
@@ -395,7 +405,7 @@ class OllamaClient:
                             f"{trace_pfx}🚨 LLMGuard 攔截到潛在的 Prompt Injection 攻擊！(風險值: {risk_score:.2f})"
                         )
                     raise ValueError(f"Prompt injection detected (Risk: {risk_score:.2f})")
-            except ImportError:
+            else:
                 if logger:
                     logger.debug(f"{trace_pfx}⚠️ llm-guard 未安裝，略過 Prompt Injection 檢查。")
 

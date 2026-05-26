@@ -22,20 +22,7 @@ import json
 import os
 import shutil
 import sys
-
-# Temporary path injection just to reach core/bootstrap.py from skills/doc_parser/scripts/phases
-import sys as _sys
 from typing import Dict, Optional
-
-_sys.path.insert(
-    0,
-    __import__("os").path.abspath(
-        __import__("os").path.join(__import__("os").path.dirname(__file__), "..", "..", "..", "..")
-    ),
-)
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
 
 from core.orchestration.pipeline_base import PipelineBase
 from core.state.resume_manager import ResumeManager

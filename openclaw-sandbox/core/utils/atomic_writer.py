@@ -16,8 +16,12 @@ _workspace_root = os.environ.get(
 class AtomicWriter:
     @staticmethod
     def write_text(path: str, content: str, encoding: str = "utf-8") -> None:
-        abs_path = os.path.abspath(os.path.expanduser(path))
-        if not abs_path.startswith(_workspace_root):
+        abs_path = os.path.realpath(os.path.expanduser(path))
+        safe_root = os.path.realpath(_workspace_root)
+        if not safe_root.endswith(os.sep):
+            safe_root += os.sep
+
+        if not abs_path.startswith(safe_root):
             raise PermissionError(
                 f"🚨 Path Traversal 防禦觸發！禁止寫入 Workspace 外的絕對路徑: {abs_path}"
             )

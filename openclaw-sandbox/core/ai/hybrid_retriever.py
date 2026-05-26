@@ -38,9 +38,6 @@ class HybridRetriever:
         self._graph_store: Any = None
         self._llm: Any = None
 
-        import sys
-
-        sys.path.insert(0, workspace_root)
         from core.config.config_manager import ConfigManager  # type: ignore[import]
 
         cfg = ConfigManager(workspace_root, skill_name)

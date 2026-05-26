@@ -8,27 +8,21 @@ import json
 import os
 import sys
 
+from phases.base_proofread import BaseProofreadPhase
+
 # Internal Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
-from core import AtomicWriter, PipelineBase
+from core import AtomicWriter
 from core.utils.text_utils import smart_split
 
 
-class Phase1DocProofread(PipelineBase):
+class Phase1DocProofread(BaseProofreadPhase):
     def __init__(self):
         super().__init__(phase_key="p1", phase_name="Doc Proofread", skill_name="proofreader")
-
-    def _workspace_root(self) -> str:
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 
     def run(self, force=False, subject=None, file_filter=None, single_mode=False, resume_from=None):
         self.log("🧠 啟動 Phase 1：Doc Proofread")
 
-        workspace_root = self._workspace_root()
+        workspace_root = self.workspace_root
         doc_input_dir = os.path.join(workspace_root, "data", "doc_parser", "output", "01_processed")
 
         # Manually scan 3-level doc_parser structure and inject into state_manager.state
@@ -101,9 +95,7 @@ class Phase1DocProofread(PipelineBase):
             resume_from=resume_from,
         )
 
-        if hasattr(self, "_used_models"):
-            for m in self._used_models:
-                self.llm.unload_model(m, logger=self)
+        self._unload_used_models()
 
     def _process_file(self, idx: int, task: dict, total: int):
         subj = task["subject"]
@@ -120,7 +112,7 @@ class Phase1DocProofread(PipelineBase):
                 "3. Output ONLY the finalized markdown text. Do not output anything else."
             )
 
-        workspace_root = self._workspace_root()
+        workspace_root = self.workspace_root
         doc_input_dir = os.path.join(workspace_root, "data", "doc_parser", "output", "01_processed")
 
         pdf_dir = os.path.join(doc_input_dir, subj, pdf_id)

@@ -1,6 +1,6 @@
 # Open Claw Engineering Standards
 
-> **Version:** v4.2.0 (2026-05-22 — Guidelines Hardening & Concurrency / HITL Invariants)
+> **Version:** v4.3.0 (2026-05-26 — Phase 6: System State, VRAM Leaks, & Import Architecture)
 > **Scope:** All developers and AI agents operating in `local-workspace/`
 > **Tools:** Ruff, Mypy, Shellcheck, pytest
 > **Philosophy:** Simple, Robust, Traceable, AI-Friendly
@@ -106,14 +106,11 @@ from core.pipeline_base import PipelineBase
 from core.state_manager import StateManager
 ```
 
-### 3.2 Skill Bootstrap — Every Phase Script Must Start With
+### 3.2 Module Resolution (No sys.path hacks)
 
-```python
-from core.utils.bootstrap import ensure_core_path
-ensure_core_path(__file__)
-```
+> ⚠️ **The `openclaw-sandbox` package must be installed in editable mode: `uv pip install -e .`**
 
-This idempotently adds the correct `openclaw-sandbox/` root to `sys.path`.
+Do not use `sys.path.insert(0, ...)` or `sys.path.append(...)` anywhere in the codebase. All imports must rely on the editable installation of the `core` package.
 
 ### 3.3 Skill Phase Conventions
 
@@ -344,6 +341,36 @@ except HITLPendingInterrupt:
 except Exception as e:
     self.logger.error("❌ Recoverable standard failure: %s", e)
 ```
+
+### 5.13 File Debouncing Invariant
+
+Never use `threading.Event` dictionaries, `time.sleep()` loops, or arbitrary wait delays to handle file system stability during Watchdog events. Always use the centralized `FileStabilityPoller` to ensure cross-platform compatibility and prevent race conditions when reading large incoming files.
+
+```python
+from core.utils.file_stability import FileStabilityPoller
+
+poller = FileStabilityPoller(poll_interval_sec=2.0, timeout_sec=300)
+if poller.wait_for_file_stability(filepath):
+    # File is completely written
+    ...
+```
+
+### 5.14 VRAM Memory Leak Prevention (LLM Sessions)
+
+All interactions with local LLM clients (e.g., Ollama) must be wrapped inside the `llm_session()` context manager provided by `PipelineBase`. This guarantees that the model is gracefully unloaded (`keep_alive=0`) from VRAM even if the pipeline crashes or raises an exception, preventing silent memory leaks and GPU lockups.
+
+```python
+# ✅ Correct — Context manager guarantees cleanup
+with self.llm_session(model="qwen3:8b", keep_alive=-1):
+    response = self.llm.generate(prompt)
+
+# ❌ Wrong — If exception occurs, VRAM leaks
+self.llm.generate(model="qwen3:8b", keep_alive=-1)
+```
+
+### 5.15 Structured State Invariant
+
+Never use raw dictionaries to pass state between pipeline phases or routing nodes. Always use strongly typed structured data models (e.g., Pydantic or Dataclass schemas like `PipelineStateSnapshot`) to prevent subtle KeyError bugs and enforce data contracts.
 
 ---
 
@@ -697,6 +724,8 @@ Decisions are **never deleted**. Abandoned decisions are marked `[ABANDONED]` wi
 | Bare `open(path, "w")` for final output | Not crash-safe | `AtomicWriter.write_text()` |
 | `.bak`, `.tmp`, test files left in repo | Noise in version control | Delete before committing |
 | Deleting records from `DECISIONS.md` | Historical context loss | Mark as `[ABANDONED]` |
+| `sys.path.insert(0, ...)` | Hacks module resolution | `uv pip install -e .` |
+| `self.llm.generate()` unmanaged | Leaks VRAM on crash | `with self.llm_session():` |
 
 ---
 
@@ -740,8 +769,6 @@ uv run skills/<skill-name>/scripts/run_all.py --process-all
 ### Core Import Cheat Sheet
 
 ```python
-from core.utils.bootstrap import ensure_core_path; ensure_core_path(__file__)
-
 from core.utils.atomic_writer import AtomicWriter
 from core.utils.log_manager import build_logger
 from core.utils.path_builder import PathBuilder
@@ -791,6 +818,7 @@ To prevent context loss while maintaining a clean workspace, files are strictly 
 
 | Version | Date | Changes |
 |---|---|---|
+| v4.3.0 | 2026-05-26 | Phase 6 architectural standards: forbid `sys.path.insert`, mandate `uv pip install -e .`, require `FileStabilityPoller`, `llm_session()`, and structured state |
 | v4.2.0 | 2026-05-22 | Hardened coding guidelines: fixed section 5 duplicate numbering, and added §5.11 VLM Concurrency Limit Invariant and §5.12 HITL Interrupt Propagation Invariant |
 | v4.1.0 | 2026-05-05 | Appended §15 AI-Native Documentation & Memory System rules and archival protocols |
 | v4.0.0 | 2026-05-01 | Global English translation; added core/ sub-package import rules; added Task Queue OOM invariant; updated test mock path rules; added Mypy strict guidelines |

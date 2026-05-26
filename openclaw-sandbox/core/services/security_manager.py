@@ -22,6 +22,7 @@ from datetime import datetime
 import fnmatch
 import os
 import re
+import threading
 from typing import Optional
 
 from core.utils.log_manager import build_logger
@@ -58,15 +59,20 @@ class SecurityManager:
     """
 
     def __init__(self, config_dir: str, audit_log_path: Optional[str] = None):
+        self._audit_lock = threading.Lock()
         self.config_dir = config_dir
         self.policy = self._load_policy()
 
         if audit_log_path is None:
             skill_root = os.path.dirname(config_dir)
+            skill_name = os.path.basename(skill_root)
+            from core.utils.workspace import get_workspace_root
+
+            _workspace_root = get_workspace_root()
             audit_log_path = os.path.join(
-                os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(skill_root, ".."))),
+                _workspace_root,
                 "data",
-                "doc_parser",
+                skill_name,
                 "logs",
                 "security_audit.log",
             )
@@ -220,7 +226,7 @@ class SecurityManager:
         timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         line = f"[{timestamp}] [{action:<10}] [{result:<7}] → {target}\n"
         try:
-            with open(self.audit_log_path, "a", encoding="utf-8") as f:
+            with self._audit_lock, open(self.audit_log_path, "a", encoding="utf-8") as f:
                 f.write(line)
         except Exception:
             pass  # Audit failure must not block pipeline

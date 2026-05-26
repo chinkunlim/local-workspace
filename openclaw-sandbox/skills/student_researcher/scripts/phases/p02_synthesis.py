@@ -3,11 +3,6 @@ import os
 import sys
 
 # Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from core.orchestration.event_bus import DomainEvent, EventBus
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.atomic_writer import AtomicWriter
@@ -117,19 +112,8 @@ class Phase2Synthesis(PhaseBase):
 
                 # Emit PipelineCompleted to trigger knowledge_compiler
                 target_subj = "Incubator" if is_orphan else kwargs.get("subject", subj)
-                EventBus.publish(
-                    DomainEvent(
-                        name="PipelineCompleted",
-                        source_skill="student_researcher",
-                        payload={
-                            "filepath": out_path,
-                            "subject": target_subj,
-                            "chain": [
-                                "student_researcher",
-                                "knowledge_compiler",
-                            ],  # handoff to compiler
-                        },
-                    )
+                self.emit_completed(
+                    out_path, target_subj, chain=["student_researcher", "knowledge_compiler"]
                 )
 
         self.state_manager.sync_physical_files()

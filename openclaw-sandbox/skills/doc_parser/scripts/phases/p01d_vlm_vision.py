@@ -3,10 +3,6 @@ import os
 from typing import Optional
 
 # Internal Core Bootstrap
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from core import AtomicWriter, PipelineBase
 from core.utils.file_utils import encode_image_b64  # S3: DRY — replaces private _encode_image()
 
@@ -220,15 +216,7 @@ class Phase1dVLMVision(PipelineBase):
 
             self.state_manager.update_task(subject, filename, self.phase_key, "✅")
 
-            from core.orchestration.event_bus import DomainEvent, EventBus
-
-            EventBus.publish(
-                DomainEvent(
-                    name="PipelineCompleted",
-                    source_skill="doc_parser",
-                    payload={"filepath": pdf_path, "subject": subject, "chain": []},
-                )
-            )
+            self.emit_completed(pdf_path, subject, chain=[])
             return True
         except Exception as e:
             self.error(f"❌ [Phase 1d] 處理失敗: {e}")

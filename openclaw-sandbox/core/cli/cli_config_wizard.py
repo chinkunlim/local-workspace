@@ -15,7 +15,6 @@ from core.utils.log_manager import build_logger
 logger = build_logger(__name__, console=True)
 
 # Workspace Root Resolver
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 _workspace_root = os.environ.get(
     "WORKSPACE_DIR", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

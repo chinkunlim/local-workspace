@@ -25,11 +25,6 @@ import re
 import sys
 
 # Internal Core Bootstrap
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from core import AtomicWriter, PipelineBase
 
 # Phases that are PDF-specific and should be skipped for Office format files

@@ -1,6 +1,6 @@
-# OpenClaw V9.17 智慧循序資料處理工作流 (SSoT & Traceable)
+# OpenClaw V9.21 智慧循序資料處理工作流 (SSoT & Traceable)
 
-本文件為 `openclaw-sandbox` 內部的系統架構與模組設計指南。整個系統以 **單一真理源 (Single Source of Truth, SSoT)** 與 **全程可追蹤 (Traceable)** 為核心理念，重構為防過載且穩健的 **5層雙軌雙向處理工作流**。
+本文件為 `openclaw-sandbox` 內部的系統架構與模組設計指南。整個系統以 **單一真理源 (Single Source of Truth, SSoT)** 與 **全程可追蹤 (Traceable)** 為核心理念，重構為防過載且穩健的 **5層雙軌雙向處理工作流**。此版本(Phase 6)全面導入了 Editable Install (`uv pip install -e .`) 模組解析，以及 `FileStabilityPoller` 防抖與 `llm_session` VRAM 安全機制。
 
 ---
 

@@ -8,8 +8,6 @@ reset_files.py — 重置指定檔案的 P1 狀態，強制下一次執行時重
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-
 from core.state.state_manager import StateManager
 from core.utils.atomic_writer import AtomicWriter
 

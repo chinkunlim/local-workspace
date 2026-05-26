@@ -9,8 +9,6 @@ import re
 import sys
 
 # 確保可以 import core
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-
 from core.state.state_manager import StateManager
 
 LOG_PATH = os.path.join(

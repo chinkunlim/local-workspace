@@ -12,20 +12,22 @@ class GlobalRegistry:
     Stored at data/state/global_manifest.json.
     """
 
-    _instance = None
+    _instances: Dict[str, "GlobalRegistry"] = {}
     _lock = threading.RLock()
 
     def __new__(cls, workspace_root: str = None):
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super().__new__(cls)
-                cls._instance._init(workspace_root)
-            return cls._instance
-
-    def _init(self, workspace_root: str = None):
         if not workspace_root:
             script_dir = os.path.dirname(os.path.abspath(__file__))
             workspace_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
+
+        with cls._lock:
+            if workspace_root not in cls._instances:
+                instance = super().__new__(cls)
+                instance._init(workspace_root)
+                cls._instances[workspace_root] = instance
+            return cls._instances[workspace_root]
+
+    def _init(self, workspace_root: str):
 
         self.registry_path = os.path.join(workspace_root, "data", "state", "global_manifest.json")
         os.makedirs(os.path.dirname(self.registry_path), exist_ok=True)

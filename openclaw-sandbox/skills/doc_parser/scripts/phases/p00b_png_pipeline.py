@@ -20,11 +20,6 @@ from PIL import Image
 import pytesseract
 
 # Temporary path injection just to reach core/bootstrap.py from skills/doc_parser/scripts/phases
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..")))
-from core.utils.bootstrap import ensure_core_path as _bootstrap
-
-_bootstrap(__file__)
-
 from core.orchestration.pipeline_base import PipelineBase
 from core.state.resume_manager import ResumeManager
 from core.utils.atomic_writer import AtomicWriter
@@ -185,15 +180,7 @@ class Phase0bPNGPipeline(PipelineBase):
         self.info(f"✅ [Phase 0b] {filename} 處理完成，已寫入 raw_extracted.md 與 assets")
         self.state_manager.update_task(subject, filename, self.phase_key, "✅")
 
-        from core.orchestration.event_bus import DomainEvent, EventBus
-
-        EventBus.publish(
-            DomainEvent(
-                name="PipelineCompleted",
-                source_skill="doc_parser",
-                payload={"filepath": img_path, "subject": subject, "chain": []},
-            )
-        )
+        self.emit_completed(img_path, subject, chain=[])
         return True
 
     def _run_tesseract(self, img_path: str) -> Tuple[str, float]:
