@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-05-26] ADR-019: Architectural Decoupling of StateManager and RouterAgent
+
+**Status:** Proposed / Planned
+
+**Context:** An architectural analysis identified severe coupling in the core framework:
+1. `StateManager` hardcoded the phases (`PHASES_VOICE`, `PHASES_PDF`) and UI labels (`PHASE_LABELS_PDF`) for all 10 skills via a massive `if/elif` block. Adding a new skill required modifying the core engine.
+2. `RouterAgent` hardcoded handoff paths (e.g., `if next_skill == "proofreader"`) and hardcoded LLM prompt decomposition names, preventing generic skill chaining.
+
+**Decision:**
+1. **Decouple StateManager (Phase 1)**: Shift the Single Source of Truth for phase tracking to the individual skill's `SKILL.md` (YAML Frontmatter). The `StateManager` will dynamically load `state_tracking: phases` and `labels` at runtime via `SkillRegistry`.
+2. **Dynamic Routing via Contracts (Phase 2)**: Shift `RouterAgent` from hardcoded skill names to Input/Output Contracts. Skills will declare `io_contracts: consumes: [type], produces: [type]` in `SKILL.md`.
+
+**Consequences:** 
+- The core framework will no longer need modification when new skills are added.
+- The system achieves full Dependency Inversion (IoC).
+
+---
+
 ## [2026-05-23] ADR-018: Coding Guidelines Full Compliance — Structured Logging & PipelineBase Self.llm Invariant
 
 **Status:** Active

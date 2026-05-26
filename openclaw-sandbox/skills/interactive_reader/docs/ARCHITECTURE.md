@@ -56,7 +56,7 @@ skills/interactive_reader/
 ├── SKILL.md              ← Quick-start guide
 ├── docs/
 │   ├── ARCHITECTURE.md   ← This file
-│   ├── PROJECT_RULES.md         ← AI agent collaboration context
+│   ├── SKILL_RULE.md         ← AI agent collaboration context
 │   └── DECISIONS.md      ← Technical decision log
 └── scripts/
     ├── run_all.py        ← Orchestrator: scans wiki, processes markers

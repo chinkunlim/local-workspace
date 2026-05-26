@@ -20,6 +20,12 @@ Standalone Markdown annotation skill. Given any Markdown text, applies
 Designed to be reusable across any upstream skill that produces Markdown output
 (audio_transcriber, doc_parser, web-clipper, etc.).
 
+## Quick Start
+
+```bash
+uv run skills/smart_highlighter/scripts/run_all.py --process-all
+```
+
 ## Input Payload
 
 ```

@@ -26,6 +26,7 @@
 
 ### Decision-making patterns
 - Reviews implementation plans via artifact comments before approving execution
+- **Architecture Analysis Protocol**: When performing architecture analysis or proposing structural changes, always draft the deep analysis and implementation plan into markdown files first, then wait for user review/modification before executing any code changes.
 - Makes structural decisions through comments (e.g. "不需移動", "按建議移動")
 - Often asks for updates to the plan before executing if scope changes
 - Prefers conservative moves for high-risk changes (e.g. live service paths)

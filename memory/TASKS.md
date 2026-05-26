@@ -11,6 +11,8 @@
 ---
 
 ## 1. 優先處理 (High Priority)
+- [ ] **Phase 1 (StateManager Decoupling)**: Shift `state_tracking: phases` and `labels` to the `SKILL.md` YAML Frontmatter for all skills, and refactor `StateManager.__init__` to load them dynamically via `SkillRegistry`.
+- [ ] **Phase 2 (RouterAgent Decoupling)**: Shift `io_contracts: consumes/produces` to `SKILL.md`, and refactor `RouterAgent._on_pipeline_completed` to use standard `resolve_paths()` handoffs instead of hardcoded skill names. Move LLM decomposition descriptions out of code.
 - [ ] **Verify Complete End-to-End Incubator Flow**: Drop a raw `.md` file with a `Gemini_` prefix into `data/raw/inbox/`. Verify that `inbox_daemon` routes it to `student_researcher` (Phase 0 -> Phase 1 -> Phase 2), assigns it to `Incubator` or an existing subject, moves it to `knowledge_compiler` via `RouterAgent`, and outputs it into the `wiki/Incubator/` folder in Obsidian.
 - [ ] **E2E Stability Test**: Run `.m4a` + `.pdf` + `.pptx` through the full pipeline (`audio_transcriber` → `doc_parser` → `proofreader` → `note_generator`) to ensure pipeline state remains clean and files do not get stuck in intermediate stages.
 - [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration

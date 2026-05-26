@@ -1,3 +1,15 @@
+---
+name: feynman_simulator
+description: Simulates the Feynman Technique by instantiating a multi-agent debate loop with Playwright.
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "🧑‍🏫"
+      }
+  }
+---
+
 # Feynman Simulator
 
 This skill simulates the Feynman Technique by instantiating a multi-agent debate loop. It uses Playwright to bypass login walls, placing a Student Agent (local Ollama) against a Tutor Agent (Google Gemini).
@@ -18,3 +30,7 @@ python3 skills/feynman_simulator/scripts/run_all.py --process-all
 
 - `config/config.yaml`: Sets model choices — primary: `deepseek-r1:8b` (CoT reasoning for Socratic debate), fallback: `qwen3:8b`. Also configures debate rounds limit.
 - Playwright persistent context is used for Gemini interaction.
+
+## Safety & Hallucination Defenses
+
+- The debate loop uses strict constraints to prevent LLMs from hallucinating external facts. All generated explanations must be grounded in the context.

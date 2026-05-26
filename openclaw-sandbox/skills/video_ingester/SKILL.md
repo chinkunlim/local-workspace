@@ -1,3 +1,15 @@
+---
+name: video_ingester
+description: Ingests lecture videos, extracts keyframes with FFmpeg, transcribes audio, and outputs interleaved Markdown.
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "🎬"
+      }
+  }
+---
+
 # Video Ingester
 
 A multimodal video processing pipeline designed for lecture recordings and seminars.
@@ -21,3 +33,7 @@ python3 skills/video_ingester/scripts/run_all.py --process-all
 ## Config Pointers
 
 - `config/config.yaml`: Sets Whisper model (`mlx-community/whisper-large-v3-turbo`) and `keyframe_interval_sec`.
+
+## Safety Guardrails
+
+- **Zero Temperature**: All audio transcription via Whisper is run at Zero Temperature to prevent hallucinations in spoken text.

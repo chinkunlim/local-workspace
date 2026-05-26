@@ -21,6 +21,12 @@ optional Mermaid mindmap.
 Designed to be reusable across any upstream skill that needs to condense long
 texts into structured study materials.
 
+## Quick Start
+
+```bash
+uv run skills/note_generator/scripts/run_all.py --process-all
+```
+
 ## Input Payload
 
 ```

@@ -36,7 +36,7 @@ skills/<skill-name>/
 ├── docs/
 │   ├── ARCHITECTURE.md   # Technical architecture document
 │   ├── DECISIONS.md      # Architectural decision log (ADR format)
-│   └── PROJECT_RULES.md         # AI collaboration context & constraints
+│   └── SKILL_RULE.md            # AI collaboration context & constraints
 └── scripts/
     ├── run_all.py         # Entry-point orchestrator
     └── phases/

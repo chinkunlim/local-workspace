@@ -674,7 +674,7 @@ The global quality gate (`ops/check.sh`) runs a credential detection scan on eve
 |---|---|---|---|
 | **Global** | `docs/` | Monorepo | `USER_MANUAL.md`, `CODING_GUIDELINES.md`, `STRUCTURE.md`, `INDEX.md` |
 | **Global AI** | `memory/` | AI Agents | `ARCHITECTURE.md`, `DECISIONS.md`, `HANDOFF.md`, `PROJECT_RULES.md`, `TASKS.md` |
-| **Skill** | `openclaw-sandbox/skills/<skill>/docs/` | Skill owner | `ARCHITECTURE.md`, `PROJECT_RULES.md`, `DECISIONS.md` |
+| **Skill** | `openclaw-sandbox/skills/<skill>/docs/` | Skill owner | `ARCHITECTURE.md`, `SKILL_RULE.md`, `DECISIONS.md` |
 
 ### 12.2 Documentation Language
 

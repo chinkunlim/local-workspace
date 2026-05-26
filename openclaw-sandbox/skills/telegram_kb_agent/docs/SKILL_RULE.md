@@ -1,4 +1,4 @@
-# PROJECT_RULES.md — Telegram KB Agent Skill
+# SKILL_RULE.md — Telegram KB Agent Skill
 
 > AI agent collaboration context for the `telegram_kb_agent` skill.
 > Read this before touching the bot daemon, indexer, or ChromaDB configuration.

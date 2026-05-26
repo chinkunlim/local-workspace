@@ -24,7 +24,7 @@ A utility skill for managing how files dropped into `data/raw/` are automaticall
 
 All rules live in `core/inbox_config.json`. This skill provides a clean CLI interface so you never need to edit JSON manually.
 
-## CLI Usage
+## Quick Start (CLI Usage)
 
 ```bash
 # Show all current routing rules
@@ -47,6 +47,11 @@ python3 skills/inbox_manager/scripts/query.py --remove "_ppt"
 | `audio_ref` | PDF sent to audio_transcriber as a proofreading reference only |
 | `doc_parser` | PDF sent to doc_parser for full Markdown extraction |
 | `both` | PDF copied to BOTH destinations simultaneously |
+
+## Security & Safeguards
+
+- **Path Traversal Protection**: Routing patterns are sanitized to prevent `../` attacks or unauthorized directory access.
+- **Infinite Loop Guard**: `both` routing mode ensures files are physically copied, not symlinked, avoiding recursive daemon triggers.
 
 ## Global Standards
 

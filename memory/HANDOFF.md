@@ -5,15 +5,14 @@
 
 ---
 
-## Current Session (2026-05-26 — Phase 6: System State, VRAM Leaks, & Import Architecture)
+## Current Session (2026-05-26 — Phase 7: Architecture Decoupling & Inversion of Control)
 
 **Date:** 2026-05-26
 
-- [x] **Editable Install Mandate**: Removed all manual `sys.path.insert()` and `sys.path.append()` hacks. The project is now strictly an installable module via `uv pip install -e .`.
-- [x] **File Debouncing Standardization**: Replaced fragile `threading.Event` dictionaries and arbitrary `time.sleep()` loops in `inbox_daemon.py` with a centralized `FileStabilityPoller` to prevent race conditions on Watchdog triggers.
-- [x] **VRAM Leak Prevention**: Added `llm_session()` context manager to `PipelineBase` to ensure Ollama models are forcefully unloaded (`keep_alive=0`) even if the pipeline crashes, preventing silent OOM issues.
-- [x] **Structured State Hardening**: Replaced raw dictionaries in `state_manager.py` and across pipelines with strictly typed `PipelineStateSnapshot` Dataclasses.
-- [x] **E2E Routing Validation**: Created a dummy file test stub to confirm that files dropped in `data/raw/` are correctly debounced, resolved by `RouterAgent`, and dispatched to `TaskQueue`.
+- [x] **Architecture Discovery**: Mapped `core/orchestration`, `core/state`, and `core/ai` modules. Identified the "God Object" anti-pattern in `StateManager` and hardcoded routing logic in `RouterAgent`.
+- [x] **Decoupling Roadmap**: Formulated a 3-phase architectural refactoring plan in `implementation_plan.md` to shift phase/routing configuration from hardcoded python lists to `SKILL.md` (YAML Frontmatter).
+- [x] **ADR-019**: Published architectural decision record for Dependency Inversion of StateManager and RouterAgent in `DECISIONS.md`.
+- [x] **New AI Principle**: Added Architecture Analysis Protocol to `AI_PROFILE.md` (mandating markdown plan drafts before code execution).
 
 ---
 
@@ -166,10 +165,11 @@ curl http://localhost:18789/health          # Open Claw API
 
 ## Next Session Starting Point
 
-1. **Conduct End-to-End Execution Walkthrough**: Perform a real-world validation run by placing a raw audio (`.m4a`) or PDF (`.pdf`) into `data/raw/<Subject>/`, checking that the pipeline pauses at the `proofreader` dashboard, propagates alerts via Telegram, and successfully resumes either through manual confirmation or the dashboard `/api/skip` endpoint.
-2. **Execute Quality Gates**: Run the automated gate sweeps (`cd openclaw-sandbox && ./ops/check.sh`) periodically during routine feature iterations to prevent Ruff/Mypy drift.
-3. **Phase B (Memory & Graph RAG)**: Transition to the integration of ChromaDB vectors and NetworkX relationships to manage multi-level semantic indexing.
-4. **Fix `openclaw.json` Stale Workspace Path**: Clean up `agents.defaults.workspace` config pointers referencing the legacy sandbox directory.
+1. **Phase 1: Decouple StateManager**: The implementation plan is ready (`implementation_plan.md`). Start by modifying `core/orchestration/skill_registry.py` to parse custom frontmatter arrays, then refactor `StateManager.__init__` to load them.
+2. **Phase 2: Decouple RouterAgent**: Shift I/O contracts into `SKILL.md` and remove hardcoded routing paths in `RouterAgent._on_pipeline_completed`.
+3. **Conduct End-to-End Execution Walkthrough**: Perform a real-world validation run by placing a raw audio (`.m4a`) or PDF (`.pdf`) into `data/raw/<Subject>/`, checking that the pipeline pauses at the `proofreader` dashboard, propagates alerts via Telegram, and successfully resumes either through manual confirmation or the dashboard `/api/skip` endpoint.
+4. **Execute Quality Gates**: Run the automated gate sweeps (`cd openclaw-sandbox && ./ops/check.sh`) periodically during routine feature iterations to prevent Ruff/Mypy drift.
+5. **Phase B (Memory & Graph RAG)**: Transition to the integration of ChromaDB vectors and NetworkX relationships to manage multi-level semantic indexing.
 
 > **Startup Protocol**: Copy the prompt from `memory/STARTUP.md` at the start of every new conversation.
 

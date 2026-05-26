@@ -44,7 +44,7 @@ Open Claw is an extensible platform. Adding a new capability means creating a ne
 6. **Create the Orchestrator**:
    Create `scripts/run_all.py` which loads the phases and utilizes `run_skill_pipeline` to manage the execution flow.
 7. **Document the Skill**:
-   Create the strict Tri-Document Suite in the skill's `docs/` folder: `ARCHITECTURE.md`, `PROJECT_RULES.md`, and `DECISIONS.md`. Add a quick-start `SKILL.md` at the skill root.
+   Create the strict Tri-Document Suite in the skill's `docs/` folder: `ARCHITECTURE.md`, `SKILL_RULE.md`, and `DECISIONS.md`. Add a quick-start `SKILL.md` at the skill root.
 
 ---
 

@@ -131,7 +131,7 @@ skills/
 │   ├── docs/
 │   │   ├── ARCHITECTURE.md         ← Directory layout, class hierarchy, data-flow diagram
 │   │   ├── DECISIONS.md            ← Technical decision log (date-stamped entries)
-│   │   └── PROJECT_RULES.md               ← AI collaboration context for this skill
+│   │   └── SKILL_RULE.md                  ← AI collaboration context for this skill
 │   └── scripts/
 │       ├── run_all.py              ← Orchestrator: interactive 5-phase runner with resume/force
 │       ├── phases/
@@ -154,7 +154,7 @@ skills/
     ├── docs/
     │   ├── ARCHITECTURE.md         ← Subject-based hierarchy, IMMUTABLE principle, core deps
     │   ├── DECISIONS.md            ← Technical decision log
-    │   └── PROJECT_RULES.md               ← AI collaboration context for this skill
+    │   └── SKILL_RULE.md                  ← AI collaboration context for this skill
     └── scripts/
         ├── run_all.py              ← QueueManager orchestrator: batch PDF queue processor
         └── phases/

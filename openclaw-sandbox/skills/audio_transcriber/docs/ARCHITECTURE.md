@@ -42,7 +42,7 @@ skills/audio_transcriber/
 ├── docs/
 │   ├── ARCHITECTURE.md         # This file
 │   ├── DECISIONS.md            # Architectural decision log (ADR format)
-│   └── PROJECT_RULES.md               # AI collaboration context
+│   └── SKILL_RULE.md               # AI collaboration context
 └── scripts/
     ├── run_all.py              # Orchestrator — interactive 5-phase executor
     ├── phases/

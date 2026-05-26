@@ -1,3 +1,15 @@
+---
+name: proofreader
+description: Centralized module ensuring accuracy and completeness of generated transcripts against reference materials via HITL.
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "🔎"
+      }
+  }
+---
+
 # Proofreader Skill
 
 ## Overview
@@ -31,3 +43,6 @@ Triggered automatically via the `RouterAgent` or manually:
 ```bash
 python scripts/run_all.py --subject [SubjectName]
 ```
+
+## Safety Guardrails
+- **Human-in-the-Loop (HITL)**: Ensures that no AI modifications to Ground Truth are automatically accepted without user verification. 
