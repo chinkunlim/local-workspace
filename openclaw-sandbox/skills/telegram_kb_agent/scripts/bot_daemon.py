@@ -46,7 +46,7 @@ def _save_user_prefs(prefs: dict) -> None:
 
 def run_status_check() -> str:
     # Run full system status check via check_status.py
-    status_script = os.path.join(_workspace_root, "core", "check_status.py")
+    status_script = os.path.join(_workspace_root, "core", "cli", "check_status.py")
     try:
         # Popen to capture stdout
         result = subprocess.run(
@@ -86,6 +86,7 @@ def main():
 
     offset = 0
     url = f"https://api.telegram.org/bot{token}/getUpdates"
+    _user_states = {}
 
     while True:
         try:
@@ -100,6 +101,43 @@ def main():
 
                     # Security check
                     if chat_id not in allowed_users:
+                        continue
+
+                    # ── Handle State: WAITING_ARGS ─────────────────────────────────
+                    if text == "/cancel":
+                        if chat_id in _user_states:
+                            del _user_states[chat_id]
+                            send_message("✅ 已取消當前操作。", chat_id)
+                        else:
+                            send_message("沒有正在進行的操作。", chat_id)
+                        continue
+
+                    if (
+                        chat_id in _user_states
+                        and _user_states[chat_id].get("step") == "WAITING_ARGS"
+                    ):
+                        stage_name = _user_states[chat_id]["stage"]
+                        del _user_states[chat_id]
+
+                        args = []
+                        if text.lower() not in ["none", "skip", ""]:
+                            import shlex
+
+                            try:
+                                args = shlex.split(text)
+                            except Exception:
+                                args = text.split()
+
+                        send_message(f"⚙️ 正在背景啟動 {stage_name}...", chat_id)
+                        run_script = os.path.join(
+                            _workspace_root, "skills", stage_name, "scripts", "run_all.py"
+                        )
+                        cmd = ["uv", "run", run_script, *args]
+                        subprocess.Popen(cmd)
+                        send_message(
+                            f"✅ {stage_name} 已加入執行列。參數: {' '.join(args) if args else '無'}",
+                            chat_id,
+                        )
                         continue
 
                     # ── P1-5: Multimodal routing ───────────────────────────────────
@@ -215,9 +253,48 @@ def main():
                         status_text = run_status_check()
                         send_message(f"📊 【系統狀態】\n\n{status_text}", chat_id)
 
+                    elif text.startswith("/run_stage"):
+                        parts = text.split(maxsplit=1)
+                        if len(parts) == 1:
+                            # List available stages
+                            skills_dir = os.path.join(_workspace_root, "skills")
+                            stages = []
+                            if os.path.isdir(skills_dir):
+                                for d in os.listdir(skills_dir):
+                                    if os.path.isfile(
+                                        os.path.join(skills_dir, d, "scripts", "run_all.py")
+                                    ):
+                                        stages.append(d)
+                            if stages:
+                                msg = (
+                                    "請使用 `/run_stage <stage_name>`。目前可用的階段有：\n- "
+                                    + "\n- ".join(stages)
+                                )
+                            else:
+                                msg = "找不到任何可用的管線階段。"
+                            send_message(msg, chat_id)
+                        else:
+                            stage_name = parts[1].strip()
+                            script_path = os.path.join(
+                                _workspace_root, "skills", stage_name, "scripts", "run_all.py"
+                            )
+                            if not os.path.isfile(script_path):
+                                send_message(f"❌ 找不到階段 {stage_name} 的執行腳本。", chat_id)
+                            else:
+                                _user_states[chat_id] = {
+                                    "step": "WAITING_ARGS",
+                                    "stage": stage_name,
+                                }
+                                send_message(
+                                    f"👉 準備啟動 {stage_name}。\n請輸入要附加的 CLI 參數（例如 `--skip`）。\n如果不需要附加參數，請回覆 `none` 或 `skip`。\n輸入 `/cancel` 可取消。",
+                                    chat_id,
+                                )
+
                     elif text == "/run" or text == "/resume":
                         send_message("⚙️ 正在背景啟動管線處理任務...", chat_id)
-                        run_script = os.path.join(_workspace_root, "core", "run_all_pipelines.py")
+                        run_script = os.path.join(
+                            _workspace_root, "core", "orchestration", "run_all_pipelines.py"
+                        )
                         subprocess.Popen([sys.executable, run_script])
                         send_message("✅ 任務已加入執行列，使用 /status 隨時查詢進度。", chat_id)
 
@@ -225,7 +302,8 @@ def main():
                         send_message("⏸️ 正在暫停管線並釋放記憶體...", chat_id)
                         # 發送 SIGTERM (15) 給所有相關行程，觸發優雅暫停與斷點存檔
                         subprocess.run(
-                            ["pkill", "-15", "-f", "core/run_all_pipelines.py"], check=False
+                            ["pkill", "-15", "-f", "core/orchestration/run_all_pipelines.py"],
+                            check=False,
                         )
                         subprocess.run(
                             ["pkill", "-15", "-f", "doc_parser/scripts/run_all.py"], check=False

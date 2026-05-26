@@ -46,6 +46,13 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-25: **V9.20 Proofreader Optimization & Auto-Checklist Logging**
+  - Optimized `proofreader` to unload LLM models per phase instead of per file, significantly boosting batch performance.
+  - Tracked reference documents used in `proofreader` and automatically injected them into the state manager's `note_tag`.
+  - Refactored `PipelineBase` to automatically catch `HITLPendingInterrupt` and log trace ID/reasons into `note_tag`.
+  - Updated `inbox_daemon.py` usage instructions for pure scan-only distribution.
+
+
 - [x] 2026-05-24: **V9.19 VAD Safety Limits & Global Clear Flag**
   - Configured `vad_max_removal_ratio` (10%) safety valve in `audio_transcriber`.
   - Added Dynamic Silence Removal Ratio Logging (`note_tag`) to state manager checklist.

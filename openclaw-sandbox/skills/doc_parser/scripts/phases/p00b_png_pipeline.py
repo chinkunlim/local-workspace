@@ -56,14 +56,17 @@ class Phase0bPNGPipeline(PipelineBase):
         """
         Execute PNG extraction pipeline across all pending tasks horizontally.
         """
-        self.process_tasks(
-            self._process_file,
-            force=force,
-            subject_filter=subject,
-            file_filter=file_filter,
-            single_mode=single_mode,
-            resume_from=resume_from,
-        )
+        try:
+            self.process_tasks(
+                self._process_file,
+                force=force,
+                subject_filter=subject,
+                file_filter=file_filter,
+                single_mode=single_mode,
+                resume_from=resume_from,
+            )
+        finally:
+            self.llm.unload_model(self.vlm_model)
 
     def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
         subject = task["subject"]
@@ -230,7 +233,6 @@ class Phase0bPNGPipeline(PipelineBase):
             result = self.llm.generate(
                 model=self.vlm_model, prompt=prompt, images=[b64_img], options={"temperature": 0.0}
             )
-            self.llm.unload_model(self.vlm_model)
             return result
         except Exception as e:
             self.error(f"VLM 執行錯誤: {e}")

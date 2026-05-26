@@ -73,10 +73,14 @@ class Phase3DocCompleteness(PipelineBase):
 
         ref_parts: list[str] = []
         fig_parts: list[str] = []
+        ref_files = []
 
         for p in paths:
             if not os.path.exists(p):
                 continue
+
+            ref_files.append(os.path.basename(p))
+
             try:
                 with open(p, encoding="utf-8") as f:
                     ref_parts.append(f.read()[:6000])
@@ -91,6 +95,7 @@ class Phase3DocCompleteness(PipelineBase):
                 except Exception:
                     pass
 
+        self._current_ref_files = ref_files
         ref_text = ("\n\n---\n\n".join(ref_parts))[:20000]
         figure_list_text = "\n\n".join(fig_parts)
         return ref_text, figure_list_text
@@ -109,6 +114,11 @@ class Phase3DocCompleteness(PipelineBase):
             single_mode=single_mode,
             resume_from=resume_from,
         )
+
+        # Unload any models used during this phase
+        if hasattr(self, "_used_models"):
+            for m in self._used_models:
+                self.llm.unload_model(m, logger=self)
 
     def _process_file(self, idx: int, task: dict, total: int):
         subj = task["subject"]
@@ -183,7 +193,10 @@ class Phase3DocCompleteness(PipelineBase):
                 full_corrected.append(chunk)
 
         self.finish_spinner(pbar, stop_tick, t)
-        self.llm.unload_model(model_name, logger=self)
+
+        if not hasattr(self, "_used_models"):
+            self._used_models = set()
+        self._used_models.add(model_name)
 
         final_doc = "\n".join(full_corrected)
 
@@ -201,7 +214,15 @@ class Phase3DocCompleteness(PipelineBase):
             f.write(log_content)
 
         out_hash = self.state_manager.get_file_hash(out_path)
-        self.state_manager.update_task(subj, fname, "p3", "✅", output_hash=out_hash)
+
+        note_tag = (
+            f"📚 參考: {', '.join(getattr(self, '_current_ref_files', []))}"
+            if getattr(self, "_current_ref_files", [])
+            else "無參考講義"
+        )
+        self.state_manager.update_task(
+            subj, fname, "p3", "✅", output_hash=out_hash, note_tag=note_tag
+        )
         self.log(f"✅ [{idx}/{total}] 完整性檢查完成：{fname}")
 
         # --- Per-file EventBus Handoff ---

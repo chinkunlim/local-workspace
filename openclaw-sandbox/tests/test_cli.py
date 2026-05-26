@@ -51,7 +51,7 @@ def test_build_skill_parser_all_flags():
     assert args.resume is True
     assert args.interactive is True
     assert args.subject == "Math"
-    assert args.file == "test.pdf"
+    assert args.file == ["test.pdf"]
     assert args.single is True
     assert args.start_phase == 3
     assert args.process_all is True

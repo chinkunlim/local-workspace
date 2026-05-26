@@ -12,8 +12,8 @@
 # ------------------------------------------------------------------------------
 hardware:
   ram:
-    warning_mb: 500         # Pause processing if free RAM drops below this
-    critical_mb: 200        # Emergency stop if free RAM drops below this
+    warning_mb: 150         # Pause processing if free RAM drops below this
+    critical_mb: 50         # Emergency stop if free RAM drops below this
   temperature:
     warning_celsius: 85     # Log warning at this CPU temperature
     critical_celsius: 95    # Emergency stop at this CPU temperature

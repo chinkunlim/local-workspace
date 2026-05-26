@@ -418,22 +418,59 @@ class OllamaClient:
 
         async with aiohttp.ClientSession() as session:
             try:
+                # For Ollama endpoints: use stream=True so tokens are delivered
+                # incrementally. sock_read then applies per-token, preventing
+                # the 10-minute+ wait on long VLM inference from hitting the
+                # total socket timeout. OpenAI-compat endpoints keep stream=False.
+                use_stream = not is_openai
+                if use_stream:
+                    payload["stream"] = True
+
                 async with session.post(
                     self.api_url,
                     json=payload,
-                    timeout=aiohttp.ClientTimeout(total=float(timeout_val)),
+                    timeout=aiohttp.ClientTimeout(
+                        connect=30,
+                        sock_read=float(timeout_val),
+                    ),
                 ) as res:
                     res.raise_for_status()
-                    _resp_json = await res.json()
 
                     if is_openai:
+                        # OpenAI: single JSON response (stream=False)
+                        _resp_json = await res.json()
                         response_text = (
                             _resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
                         )
                         _token_count = _resp_json.get("usage", {}).get("completion_tokens", 0)
                     else:
-                        response_text = _resp_json.get("response", "")
-                        _token_count = _resp_json.get("eval_count", 0)
+                        # Ollama: NDJSON streaming — read line by line.
+                        # IMPORTANT: use readline() not `async for res.content`
+                        # because the latter yields raw chunks (possibly multiple
+                        # JSON lines in one chunk), causing silent json.loads
+                        # failures and an infinite hang.
+                        import json as _json
+
+                        response_parts = []
+                        _token_count = 0
+                        while True:
+                            raw_line = await res.content.readline()
+                            if not raw_line:
+                                break  # connection closed
+                            line = raw_line.strip()
+                            if not line:
+                                continue
+                            try:
+                                chunk = _json.loads(line)
+                            except Exception:
+                                continue
+                            token = chunk.get("response", "")
+                            if token:
+                                response_parts.append(token)
+                            if chunk.get("done"):
+                                _token_count = chunk.get("eval_count", 0)
+                                break
+                        response_text = "".join(response_parts)
 
                     if not response_text or not response_text.strip():
                         raise ValueError("API 回傳空內容")

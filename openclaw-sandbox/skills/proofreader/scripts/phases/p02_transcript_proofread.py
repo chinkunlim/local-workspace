@@ -73,10 +73,15 @@ class Phase2TranscriptProofread(PipelineBase):
 
         ref_parts: list[str] = []
         fig_parts: list[str] = []
+        ref_files = []
 
         for p in paths:
             if not os.path.exists(p):
                 continue
+
+            # Record the filename used as reference
+            ref_files.append(os.path.basename(p))
+
             try:
                 with open(p, encoding="utf-8") as f:
                     ref_parts.append(f.read()[:6000])
@@ -91,6 +96,7 @@ class Phase2TranscriptProofread(PipelineBase):
                 except Exception:
                     pass
 
+        self._current_ref_files = ref_files
         ref_text = ("\n\n---\n\n".join(ref_parts))[:20000]
         figure_list_text = "\n\n".join(fig_parts)
         return ref_text, figure_list_text
@@ -110,6 +116,11 @@ class Phase2TranscriptProofread(PipelineBase):
             single_mode=single_mode,
             resume_from=resume_from,
         )
+
+        # Unload any models used during this phase
+        if hasattr(self, "_used_models"):
+            for m in self._used_models:
+                self.llm.unload_model(m, logger=self)
 
     def _process_file(self, idx: int, task: dict, total: int):
         subj = task["subject"]
@@ -185,7 +196,11 @@ class Phase2TranscriptProofread(PipelineBase):
                 full_corrected.append(choice_xml)
 
         self.finish_spinner(pbar, stop_tick, t)
-        self.llm.unload_model(model_name, logger=self)
+
+        # Track model for unloading at the end of the phase
+        if not hasattr(self, "_used_models"):
+            self._used_models = set()
+        self._used_models.add(model_name)
 
         final_doc = "\n".join(full_corrected)
 
@@ -208,7 +223,16 @@ class Phase2TranscriptProofread(PipelineBase):
             f.write(log_content)
 
         out_hash = self.state_manager.get_file_hash(out_path)
-        self.state_manager.update_task(subj, fname, "p2", "✅", output_hash=out_hash)
+
+        # Add reference docs to note_tag
+        note_tag = (
+            f"📚 參考: {', '.join(getattr(self, '_current_ref_files', []))}"
+            if getattr(self, "_current_ref_files", [])
+            else "無參考講義"
+        )
+        self.state_manager.update_task(
+            subj, fname, "p2", "✅", output_hash=out_hash, note_tag=note_tag
+        )
 
         from core.orchestration.session_manifest import update_session_manifest
 

@@ -1,11 +1,32 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-24
-> **System Status:** 🟢 Stable / Production-Ready (V9.19 — VAD Safety Limits & Global Clear Flag)
+> **Last Updated:** 2026-05-26
+> **System Status:** 🟢 Stable / Production-Ready (V9.20 — Proofreader Optimization & Auto-Checklist Logging)
 
 ---
 
-## Current Session (2026-05-24 — V9.19 VAD Safety Limits & Global Clear Flag)
+## Current Session (2026-05-26 — Architecture Workflow Consultation)
+
+**Date:** 2026-05-26
+
+- [x] **HITL Workflow Mechanics**: Confirmed and documented that manual file placement in `04_final_verified` acts as an automated HITL-bypass trigger. `inbox_daemon.py` detects this and automatically resumes the paused pipeline (via `pending_chains.json`) emitting `PipelineCompleted` without needing manual CLI execution.
+- [x] **Race Condition Warning**: Clarified the dual-execution race condition risk when manually running CLI commands against the automated daemon pipeline.
+
+---
+
+## Previous Session (2026-05-25 — V9.20 Proofreader Optimization & Auto-Checklist Logging)
+
+**Date:** 2026-05-25
+
+- [x] **Proofreader Model Unloading Optimization**: Refactored `p01_doc_proofread.py`, `p02_transcript_proofread.py`, and `p03_doc_completeness.py` to track loaded models and unload them at the end of the phase instead of per-file, significantly reducing I/O overhead for batch operations.
+- [x] **Proofreader Reference Tracking**: Updated reference data fetching logic in `proofreader` to track actual reference filenames used and inject them into `note_tag` (e.g., `📚 參考: L03_raw_extracted.md`).
+- [x] **Automated HITL Log Extraction**: Enhanced `PipelineBase.process_tasks()` to automatically intercept `HITLPendingInterrupt` exceptions and seamlessly write the Trace ID and pause reason into the task's `note_tag`. No manual per-skill log parsing is needed anymore.
+- [x] **Legacy State Migration**: Created `update_state_from_logs.py` to extract historical `audio_transcriber` VAD/language warnings and `doc_parser` HITL traces into their `.pipeline_state.json` respectively.
+- [x] **Inbox Daemon Clarification**: Updated `inbox_daemon.py` operation guidelines to clarify using `--scan-only` for direct execution without leaving a persistent background listener.
+
+---
+
+## Previous Session (2026-05-24 — V9.19 VAD Safety Limits & Global Clear Flag)
 
 **Date:** 2026-05-24
 

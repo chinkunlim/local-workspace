@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.20] — 2026-05-25: Proofreader Optimization & Auto-Checklist Logging
+
+### Added
+- **Automated HITL Trace Logging**: `PipelineBase.process_tasks()` now catches `HITLPendingInterrupt` automatically and stores the exception reason (which contains the trace ID and context) into the `StateManager`'s `note_tag`. Skills no longer need manual state update calls before triggering HITL.
+- **Reference Doc Tracking**: `proofreader` now tracks the exact reference document filenames used during validation and saves them to `note_tag` (e.g. `📚 參考: L03_raw_extracted.md`).
+
+### Changed
+- **Proofreader Model Unloading**: Optimized `proofreader` LLM handling. It now tracks models loaded during execution (`self._used_models`) and explicitly calls `unload_model()` only at the end of the phase (`run()`) rather than unloading after every individual file. This drastically improves batch processing speed.
+- **Inbox Daemon Guidelines**: Clarified `--scan-only` behavior for `inbox_daemon.py` which executes distribution and immediately exits without leaving background monitoring threads running.
+
+---
+
 ## [V9.19] — 2026-05-24: VAD Safety Limits & Global Clear Flag
 
 ### Added

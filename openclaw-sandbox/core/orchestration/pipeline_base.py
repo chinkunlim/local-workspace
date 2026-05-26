@@ -308,12 +308,26 @@ class PipelineBase:
         if available_ram < warning_mb or (not power_plugged and bat_percent < low_battery_percent):
             if not self.stop_requested:
                 reason = "RAM 偏低" if available_ram < warning_mb else "電力不足"
-                self.log(f"🚨 [資源預警] {reason}，啟動暫停 (Pause) 儲存進度...", "warn")
+                msg = f"🚨 [資源預警] {reason}，啟動暫停 (Pause) 儲存進度..."
+                self.log(msg, "warn")
+                try:
+                    from core.services.telegram_bot import send_message
+
+                    send_message(msg)
+                except Exception:
+                    pass
                 self.stop_requested = True
                 self.pause_requested = True
         elif current_temp and current_temp >= warning_temp:
             if not self.stop_requested:
-                self.log(f"🌡️ [高溫預警] 溫度 {current_temp}°C，暫停 (Pause) 儲存進度...", "warn")
+                msg = f"🌡️ [高溫預警] 溫度 {current_temp}°C，暫停 (Pause) 儲存進度..."
+                self.log(msg, "warn")
+                try:
+                    from core.services.telegram_bot import send_message
+
+                    send_message(msg)
+                except Exception:
+                    pass
                 self.stop_requested = True
                 self.pause_requested = True
 
@@ -399,7 +413,12 @@ class PipelineBase:
         done_tasks.sort(key=lambda t: (t["subject"], t["filename"]))
 
         if done_tasks:
-            reprocess_set = self._batch_select_reprocess(done_tasks)
+            import sys
+
+            if "--process-all" in sys.argv:
+                reprocess_set = {}
+            else:
+                reprocess_set = self._batch_select_reprocess(done_tasks)
             skipped = len(done_tasks) - len(reprocess_set)
             if skipped > 0:
                 self.log(f"⏭️  共 {skipped} 個已完成檔案被跳過。")
@@ -451,6 +470,9 @@ class PipelineBase:
         Generic task iteration loop with built-in health checks and checkpoints.
         process_callback should accept: (idx, task, total_tasks) and return True on success.
         """
+        import sys
+
+        process_all = "--process-all" in sys.argv
         tasks = self.get_tasks(**kwargs)
         if not tasks:
             self.log(f"📋 {self.phase_name} 沒有待處理的檔案。")
@@ -466,13 +488,26 @@ class PipelineBase:
                 process_callback(idx, task, len(tasks))
             except HITLPendingInterrupt as hitl_exc:
                 self.log(f"⏸️ 任務被暫停以等待人工介入 (Trace ID: {hitl_exc.trace_id})", "warn")
+                # Automatically save the trace_id and reason to the state note_tag
+                note_msg = f"⚠️ [Trace: {hitl_exc.trace_id[:8]}] {hitl_exc}"
+                self.state_manager.update_task(
+                    task["subject"], task["filename"], self.phase_key, "⏸️", note_tag=note_msg
+                )
+
                 # When paused by HITL, we save the checkpoint to the CURRENT task so it resumes here.
                 self.save_checkpoint(task["subject"], task["filename"])
-                self._write_session_state(SessionState.PAUSED)
-                break
+
+                if process_all:
+                    self.log("▶️ [非互動模式] 略過中斷，繼續處理下一個檔案。")
+                    continue
+                else:
+                    self._write_session_state(SessionState.PAUSED)
+                    break
             except Exception as e:
                 self.log(f"❌ 任務執行失敗: {e}", "error")
-                # On error, optionally halt or continue; here we halt.
+                # On error, optionally halt or continue; here we halt unless process_all.
+                if process_all:
+                    continue
                 break
 
             if self.stop_requested:
@@ -554,7 +589,7 @@ class PipelineBase:
         if not cp:
             return None
 
-        if not sys.stdin.isatty():
+        if not sys.stdin.isatty() or "--process-all" in sys.argv:
             print("➩️  [非互動模式] 自動從斷點繼續。")
             return cp
 

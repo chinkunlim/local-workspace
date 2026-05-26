@@ -101,6 +101,10 @@ class Phase1DocProofread(PipelineBase):
             resume_from=resume_from,
         )
 
+        if hasattr(self, "_used_models"):
+            for m in self._used_models:
+                self.llm.unload_model(m, logger=self)
+
     def _process_file(self, idx: int, task: dict, total: int):
         subj = task["subject"]
         md_name = task["filename"]
@@ -168,7 +172,10 @@ class Phase1DocProofread(PipelineBase):
                 full_corrected.append(chunk)
 
         self.finish_spinner(pbar, stop_tick, t)
-        self.llm.unload_model(model_name, logger=self)
+
+        if not hasattr(self, "_used_models"):
+            self._used_models = set()
+        self._used_models.add(model_name)
 
         final_doc = "\n".join(full_corrected)
 

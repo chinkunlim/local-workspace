@@ -99,7 +99,7 @@ phase1d:
     default:
       model: llama3.2-vision
       options:
-        num_ctx: 16384
+        num_ctx: 2048   # 圖片描述不需要長 context，16384 → 2048 大幅提速
         temperature: 0
 
 

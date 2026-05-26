@@ -115,14 +115,22 @@ class Phase0aDiagnostic(PipelineBase):
         """
         Execute all six diagnostic checks across all pending PDFs horizontally.
         """
-        self.process_tasks(
-            self._process_file,
-            force=force,
-            subject_filter=subject,
-            file_filter=file_filter,
-            single_mode=single_mode,
-            resume_from=resume_from,
-        )
+        try:
+            self.process_tasks(
+                self._process_file,
+                force=force,
+                subject_filter=subject,
+                file_filter=file_filter,
+                single_mode=single_mode,
+                resume_from=resume_from,
+            )
+        finally:
+            model_name = (
+                self.config_manager.get_nested("models", "diagnostic_classifier")
+                or self.config_manager.get_nested("models", "default")
+                or "qwen3:8b"
+            )
+            self.llm.unload_model(model_name, logger=self)
 
     def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
         subject = task["subject"]
@@ -399,8 +407,6 @@ class Phase0aDiagnostic(PipelineBase):
             self.warning(f"⚠️ [Diagnose] 意圖識別 LLM 呼叫失敗: {e}，使用 default 路由")
             report.document_class = "other"
             report.vlm_prompt_route = "default"
-        finally:
-            self.llm.unload_model(model_name, logger=self)
 
     # ------------------------------------------------------------------ #
     #  Output                                                              #
@@ -443,15 +449,19 @@ class Phase0aDiagnostic(PipelineBase):
 
     @staticmethod
     def _run_tool(cmd: List[str]) -> Optional[str]:
-        """Run a CLI tool and return stdout, or None on failure."""
+        """Run a CLI tool and return stdout, or None on failure.
+
+        Uses bytes mode + errors='replace' to safely handle PDFs that contain
+        non-UTF-8 characters (e.g. Big5-encoded text from pdftotext).
+        """
         try:
             result = subprocess.run(
                 cmd,
                 capture_output=True,
-                text=True,
+                text=False,  # read as bytes; avoids UnicodeDecodeError on Big5/GB2312 PDFs
                 timeout=30,
             )
-            return result.stdout
+            return result.stdout.decode("utf-8", errors="replace")
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             return None
 

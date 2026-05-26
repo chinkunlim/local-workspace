@@ -339,6 +339,7 @@ class StateManager:
         char_count: int = None,
         output_hash: str = None,
         note_tag: str = None,
+        lang: str = None,
     ):
         with self._lock:
             if subject not in self.state or filename not in self.state[subject]:
@@ -355,6 +356,9 @@ class StateManager:
 
             if note_tag is not None:
                 record["note"] = note_tag
+
+            if lang is not None:
+                record["lang"] = lang
 
             self._save_state()
 
@@ -613,8 +617,15 @@ class StateManager:
         phase_keys = self.PHASES
         phase_labels = self._phase_labels
 
+        # audio_transcriber 額外顯示語言欄位
+        show_lang = self.skill_name == "audio_transcriber"
+
         header_cols = " | ".join(phase_labels.get(p, p.upper()) for p in phase_keys)
         sep_cols = " | ".join(":---:" for _ in phase_keys)
+
+        if show_lang:
+            header_cols += " | 語言"
+            sep_cols += " | :---:"
 
         lines: List[str] = []
         skill_display = {
@@ -628,9 +639,7 @@ class StateManager:
 
         lines.append(f"# {skill_display} (總表)\n")
         lines.append("> 🚨 本檔案由系統 `.pipeline_state.json` 自動映射生成，請勿手動修改。")
-        lines.append(
-            "> 更改輸出目錄下的 `.md` 檔案將被系統偵測並觸發自動重新運算 (DAG Cascade)。\n"
-        )
+        lines.append("> 更改輸出目錄下的 `.md` 檔案將被系統偵測並觸發自動重新運算 (DAG Cascade).\n")
 
         for subj in sorted(self.state.keys()):
             lines.append(f"## {subj}\n")
@@ -640,6 +649,10 @@ class StateManager:
             for fname in sorted(self.state[subj].keys()):
                 v = self.state[subj][fname]
                 cells = " | ".join(v.get(p, "⏳") for p in phase_keys)
+
+                if show_lang:
+                    lang_val = v.get("lang", "—")
+                    cells += f" | {lang_val}"
 
                 parts = []
                 if "note" in v and v["note"] and v["note"] != "更新/新增":

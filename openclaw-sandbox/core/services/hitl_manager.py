@@ -129,7 +129,7 @@ class HITLManager:
         except Exception as _telegram_exc:
             logger.debug(f"⚠️ [HITL] 無法發送 Telegram 推播: {_telegram_exc}")
 
-        raise HITLPendingInterrupt(event.trace_id, f"HITL event triggered: {event.trace_id}")
+        raise HITLPendingInterrupt(event.trace_id, event.reason)
 
     def resolve(self, trace_id: str, resolution: str) -> Optional[Dict]:
         """Mark a pending event as resolved and return the session snapshot.

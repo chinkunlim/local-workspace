@@ -75,14 +75,17 @@ class Phase1dVLMVision(PipelineBase):
         """
         Execute VLM Vision analysis horizontally.
         """
-        self.process_tasks(
-            self._process_file,
-            force=force,
-            subject_filter=subject,
-            file_filter=file_filter,
-            single_mode=single_mode,
-            resume_from=resume_from,
-        )
+        try:
+            self.process_tasks(
+                self._process_file,
+                force=force,
+                subject_filter=subject,
+                file_filter=file_filter,
+                single_mode=single_mode,
+                resume_from=resume_from,
+            )
+        finally:
+            self.llm.unload_model(str(self.vlm_model) if self.vlm_model else "", logger=self)
 
     def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
         subject = task["subject"]
@@ -227,8 +230,10 @@ class Phase1dVLMVision(PipelineBase):
                 )
             )
             return True
-        finally:
-            self.llm.unload_model(str(self.vlm_model) if self.vlm_model else "", logger=self)
+        except Exception as e:
+            self.error(f"❌ [Phase 1d] 處理失敗: {e}")
+            self.state_manager.update_task(subject, filename, self.phase_key, "❌", note_tag=str(e))
+            return False
 
 
 if __name__ == "__main__":

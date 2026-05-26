@@ -387,9 +387,25 @@ def detect_audio_language(
             return None
 
         winner, count = Counter(votes).most_common(1)[0]
-        _log(
-            f"🌐 語言偵測結果：[{winner}]（{count}/{len(votes)} 片段同意）— 將鎖定此語言進行轉錄。"
-        )
+        if winner not in ("zh", "en"):
+            # 勝出語言不是中/英文 — 從所有投票中挑選最合理的語言
+            # 優先選 zh（中文優先），其次 en，最後才 fallback 到 en
+            if "zh" in votes:
+                fallback = "zh"
+            elif "en" in votes:
+                fallback = "en"
+            else:
+                fallback = "en"
+            _log(
+                f"⚠️ 語言偵測結果：[{winner}]（{count}/{len(votes)} 片段同意），"
+                f"非中英文語言，從投票中回退選擇 [{fallback}]。"
+                f"（投票：{dict(Counter(votes))}）"
+            )
+            winner = fallback
+        else:
+            _log(
+                f"🌐 語言偵測結果：[{winner}]（{count}/{len(votes)} 片段同意）— 將鎖定此語言進行轉錄。"
+            )
         return winner
 
     finally:
@@ -523,6 +539,16 @@ class Phase1Transcribe(PipelineBase):
                     self.log(f"🧠 備妥 Whisper ({engine}) {model_name}...")
 
             try:
+                local_warnings: list[str] = []
+
+                def intercept_log(
+                    msg: str, level: str = "info", local_warnings: list[str] = local_warnings
+                ) -> None:
+                    self.log(msg, level)
+                    if "⚠️" in msg:
+                        # Keep only the message part without the warning icon for brevity if desired, but here we just append it
+                        local_warnings.append(msg.strip())
+
                 # ── 語言偵測（在 VAD 前對原始音檔執行） ────────────────────
                 detected_lang = force_language
                 if not detected_lang and lang_detect_enabled:
@@ -533,7 +559,7 @@ class Phase1Transcribe(PipelineBase):
                         model=model,
                         model_name=model_name,
                         clip_duration_sec=lang_detect_clip_sec,
-                        log_fn=self.log,
+                        log_fn=intercept_log,
                     )
 
                 # ── Layer 1: VAD 前處理 ──────────────────────────────────
@@ -550,7 +576,7 @@ class Phase1Transcribe(PipelineBase):
                         silence_thresh_dbfs=vad_silence_dbfs,
                         padding_ms=vad_padding_ms,
                         max_removal_ratio=vad_max_removal_ratio,
-                        log_fn=self.log,
+                        log_fn=intercept_log,
                     )
 
                 # #7 ── Time-based Chunk Fallback ──────────────────────────
@@ -780,9 +806,24 @@ class Phase1Transcribe(PipelineBase):
 
                 # DAG 追蹤
                 out_hash = self.state_manager.get_file_hash(pure_out_path)
-                note_tag = f"VAD 移除靜音 {silence_ratio:.1%}" if silence_ratio > 0.0 else None
+
+                # Collect accumulated warnings
+                notes = []
+                if silence_ratio > 0.0:
+                    notes.append(f"VAD 移除靜音 {silence_ratio:.1%}")
+                if local_warnings:
+                    notes.extend(local_warnings)
+
+                note_tag = " | ".join(notes) if notes else None
+
                 self.state_manager.update_task(
-                    subj, fname, "p1", status="✅", output_hash=out_hash, note_tag=note_tag
+                    subj,
+                    fname,
+                    "p1",
+                    status="✅",
+                    output_hash=out_hash,
+                    note_tag=note_tag,
+                    lang=detected_lang,
                 )
 
                 self.log(f"✅ [{idx}/{len(tasks)}] 轉錄完成：{fname}")
