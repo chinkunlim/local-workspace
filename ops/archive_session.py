@@ -13,7 +13,7 @@ def archive_current_session():
     latest_time = 0
     for d in glob.glob(os.path.join(brain_dir, "*")):
         if os.path.isdir(d):
-            overview_path = os.path.join(d, ".system_generated/logs/overview.txt")
+            overview_path = os.path.join(d, ".system_generated/logs/transcript.jsonl")
             if os.path.exists(overview_path):
                 mtime = os.path.getmtime(overview_path)
                 if mtime > latest_time:
@@ -30,7 +30,7 @@ def archive_current_session():
     plan_file = os.path.join(latest_dir, "implementation_plan.md")
     walk_file = os.path.join(latest_dir, "walkthrough.md")
     task_file = os.path.join(latest_dir, "task.md")
-    overview_file = os.path.join(latest_dir, ".system_generated/logs/overview.txt")
+    overview_file = os.path.join(latest_dir, ".system_generated/logs/transcript.jsonl")
     
     plan_content = Path(plan_file).read_text() if os.path.exists(plan_file) else "*(No Implementation Plan)*"
     walk_content = Path(walk_file).read_text() if os.path.exists(walk_file) else "*(No Walkthrough)*"
