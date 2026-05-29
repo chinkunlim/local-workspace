@@ -52,3 +52,4 @@
 - **[2026-05-13] [[Archived] Session 4ea54372](sessions/2026-05-13_4ea54372.md)** (ID: `4ea54372`)
 - **[2026-05-13] [[Archived] MarkItDown 整合計畫 — OpenClaw doc_parser 擴展](sessions/2026-05-13_db4c8fb5.md)** (ID: `db4c8fb5`)
 - **[2026-05-15] [[Archived] Pipeline Integrity & Stability Fixes](sessions/2026-05-15_bddec571.md)** (ID: `bddec571`)
+- **[2026-05-30] [[Archived] 修復管線重複執行與狀態管理異常 (Pipeline State & Router Fix)](sessions/2026-05-30_32729395.md)** (ID: `32729395`)
