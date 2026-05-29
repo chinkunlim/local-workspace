@@ -198,6 +198,7 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-30 | Telegram Bot UX & System Cleanup | Fixed AppleScript AppleEvent hijacking for `/resume` via native Terminal tab instantiation; purged `TestSubject` & `Default` test assets globally; cleaned residual dummy states from all `.pipeline_state.json` caches. |
 | 2026-05-29 | Data Restoration & Pipeline Clean Reset | Restored `audio_transcriber` `03_merged` files from `<Original>` blocks; purged polluted downstream `proofreader` and `smart_highlighter` inputs. |
 | 2026-05-29 | V9.23 Eager Execution & HITL Verification Fixes | Fixed RouterAgent eager chain index; patched InboxDaemon `resume_chain` to retain proofreader context; updated `check_status.py` to order and expose empty states (0/0) for pipeline clarity. |
 | 2026-05-29 | V9.22 Orchestration Hardening & Telegram GUI | AppleScript terminal reuse for `/resume`, callback queries fixed, timeout removed, and dynamic `/status` hiding implemented. |

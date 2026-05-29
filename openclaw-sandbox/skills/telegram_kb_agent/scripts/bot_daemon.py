@@ -306,24 +306,12 @@ def main():
                         import platform
 
                         if platform.system() == "Darwin":
-                            # Open in a new Terminal window on Mac, or reuse an existing one named OpenClaw
+                            # 為了避免在運行 bot_daemon 的 active tab 注入指令導致卡住，直接開啟新終端機視窗
                             apple_script = f"""
                             tell application "Terminal"
                                 activate
-                                set targetWindow to missing value
-                                repeat with w in windows
-                                    if name of w contains "OpenClaw" then
-                                        set targetWindow to w
-                                        exit repeat
-                                    end if
-                                end repeat
-
-                                if targetWindow is missing value then
-                                    set newTab to do script "cd '{_workspace_root}' && uv run '{run_script}'"
-                                    set custom title of newTab to "OpenClaw"
-                                else
-                                    do script "cd '{_workspace_root}' && uv run '{run_script}'" in targetWindow
-                                end if
+                                set newTab to do script "cd '{_workspace_root}' && uv run '{run_script}'"
+                                set custom title of newTab to "OpenClaw Pipeline"
                             end tell
                             """
                             subprocess.Popen(["osascript", "-e", apple_script])

@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.24] — 2026-05-30: Telegram UX Fixes & Global Asset Cleanup
+
+### Fixed
+- **Telegram Bot `/resume` Execution**: Rewrote the AppleScript execution logic in `bot_daemon.py` to use a robust Tab instantiation mechanism (`do script... in front window`) instead of relying on GUI scripting (`System Events` keystrokes), fixing an issue where execution commands were silently swallowed by macOS AppleEvents when terminal lacked focus.
+- **Data Pollution & Dummy State Cleanup**: Purged residual test assets (e.g., `TestSubject`, `Default`) globally across `data/` and wrote a script to systematically erase them from all `.pipeline_state.json` cache structures, resolving inaccurate file count aggregations in `/status` reports.
+
 ## [V9.23] — 2026-05-29: Eager Execution & HITL Verification Fixes
 
 ### Added

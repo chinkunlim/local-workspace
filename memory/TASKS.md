@@ -218,6 +218,11 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-30: Telegram Bot UX & System Cleanup
+  - Fixed AppleScript AppleEvent hijacking for `/resume` via native Terminal tab instantiation.
+  - Purged `TestSubject` & `Default` test assets globally to avoid pipeline status pollution.
+  - Cleaned residual dummy states from all `.pipeline_state.json` caches.
+
 - [x] 2026-05-29: Eager Execution & HITL Verification Hardening
   - Fixed RouterAgent eager chain index routing to ensure pre-HITL versions safely copy to smart_highlighter.
   - Prepended `proofreader` to InboxDaemon resume chain to guarantee proper DAG resolution.
