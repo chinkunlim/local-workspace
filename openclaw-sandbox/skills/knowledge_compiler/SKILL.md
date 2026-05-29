@@ -1,23 +1,23 @@
 ---
 name: knowledge_compiler
-description: "Knowledge Base Compiler. Analyzes and links all markdown outputs to generate bidirectional wiki notes."
+description: Knowledge Base Compiler. Analyzes and links all markdown outputs to generate
+  bidirectional wiki notes.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🧠"
-      }
-  }
+  openclaw:
+    emoji: 🧠
+    display_name: 知識庫編譯
 state_tracking:
-  phases: ["p01_compile", "p02_extract_graph"]
+  phases:
+  - p01_compile
+  - p02_extract_graph
   labels:
-    p01_compile: "P1 (Compile)"
-    p02_extract_graph: "P2 (Graph Extract)"
+    p01_compile: P1 (Compile)
+    p02_extract_graph: P2 (Graph Extract)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
 # Knowledge Compiler

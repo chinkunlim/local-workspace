@@ -3,15 +3,12 @@ Phase 2: Document Completeness
 Compares proofread transcript against doc_parser reference, embeds images, and flags missing concepts.
 """
 
-import json
 import os
-import sys
 
 from phases.base_proofread import BaseProofreadPhase
 
 # Internal Core Bootstrap
 from core import AtomicWriter
-from core.state.global_registry import GlobalRegistry
 from core.utils.text_utils import smart_split
 
 

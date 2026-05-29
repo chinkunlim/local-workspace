@@ -1,23 +1,23 @@
 ---
 name: telegram_kb_agent
-description: "Telegram Knowledge Base Agent. RAG-based query system using ChromaDB to answer questions via Telegram."
+description: Telegram Knowledge Base Agent. RAG-based query system using ChromaDB
+  to answer questions via Telegram.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "📱"
-      }
-  }
+  openclaw:
+    emoji: 📱
+    display_name: Telegram 知識庫
 state_tracking:
-  phases: ["p1_index", "p2_bot"]
+  phases:
+  - p1_index
+  - p2_bot
   labels:
-    p1_index: "P1 (Index)"
-    p2_bot: "P2 (Bot)"
+    p1_index: P1 (Index)
+    p2_bot: P2 (Bot)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
 # Telegram Knowledge Base Agent

@@ -1,6 +1,3 @@
-import os
-import sys
-
 from core.orchestration.pipeline_base import PipelineBase
 from skills.video_ingester.scripts.phases.p01_extract_keyframes import Phase1ExtractKeyframes
 from skills.video_ingester.scripts.phases.p02_transcribe_video import Phase2TranscribeVideo

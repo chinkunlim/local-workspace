@@ -1,6 +1,3 @@
-import os
-import sys
-
 from phases.p01_search_literature import Phase1SearchLiterature
 
 from core import PipelineBase, build_skill_parser

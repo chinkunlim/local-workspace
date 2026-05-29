@@ -249,7 +249,7 @@ if __name__ == "__main__":
     engine = Phase0bPNGPipeline()
     result = engine.run(args.subject, os.path.basename(args.image))
     if result:
-        print("\n✅ 提取完成")
+        print("✅ 提取完成")
     else:
-        print("\n❌ 提取失敗")
+        print("❌ 提取失敗")
         sys.exit(1)

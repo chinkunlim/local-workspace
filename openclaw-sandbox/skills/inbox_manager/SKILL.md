@@ -1,22 +1,21 @@
 ---
 name: inbox_manager
-description: Manages the Inbox routing rules for the Open Claw ecosystem. Use this to list, add, or remove PDF routing suffixes without editing files manually.
+description: Manages the Inbox routing rules for the Open Claw ecosystem. Use this
+  to list, add, or remove PDF routing suffixes without editing files manually.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "📬"
-      }
-  }
+  openclaw:
+    emoji: 📬
+    display_name: 收件匣管理
 state_tracking:
-  phases: ["p1"]
+  phases:
+  - p1
   labels:
-    p1: "P1"
+    p1: P1
 io_contracts:
   consumes:
-    - "application/json"
+  - application/json
   produces:
-    - "application/json"
+  - application/json
 ---
 
 # Inbox Manager

@@ -5,7 +5,6 @@ core/check_status.py — 全系統狀態報告產生器
 """
 
 import os
-import sys
 
 # from core.utils.log_manager import build_logger
 # logger = build_logger(__name__, console=True)
@@ -21,21 +20,47 @@ def get_full_status_report() -> str:
     """產生包含多個 Skill 的聯合儀表板報告。"""
     report_lines = []
 
+    # 定義使用者偏好的管線顯示順序
+    preferred_order = [
+        "audio_transcriber",
+        "doc_parser",
+        "proofreader",
+        "smart_highlighter",
+        "note_generator",
+        "knowledge_compiler",
+        "researcher_agent",
+    ]
+
     # 動態掃描所有有狀態的 Skill
     data_dir = os.path.join(_workspace_root, "data")
-    skills_to_check = []
+    found_skills = set()
     if os.path.isdir(data_dir):
-        for d in sorted(os.listdir(data_dir)):
-            # Ignore global state
+        for d in os.listdir(data_dir):
             if d == "_global_":
                 continue
             state_file = os.path.join(data_dir, d, "state", ".pipeline_state.json")
             if os.path.isfile(state_file):
-                skills_to_check.append(d)
+                found_skills.add(d)
 
-    # 確保基本順序或預設值
+    # 確保基本順序，根據 preferred_order 排序
+    skills_to_check = []
+    for skill in preferred_order:
+        if skill in found_skills:
+            skills_to_check.append(skill)
+            found_skills.remove(skill)
+
+    # 如果還有其他的，就按字母順序加在後面
+    skills_to_check.extend(sorted(found_skills))
+
+    # 如果還是空的，就放預設的
     if not skills_to_check:
-        skills_to_check = ["doc_parser", "audio_transcriber"]
+        skills_to_check = [
+            "audio_transcriber",
+            "doc_parser",
+            "proofreader",
+            "smart_highlighter",
+            "note_generator",
+        ]
 
     for skill in skills_to_check:
         try:

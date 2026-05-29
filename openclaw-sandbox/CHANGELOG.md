@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.23] — 2026-05-29: Eager Execution & HITL Verification Fixes
+
+### Added
+- **Dynamic Module Visibility in `/status`**: Reverted the module hiding logic in `bot_daemon.py` and `check_status.py` to always display the complete DAG order (including `smart_highlighter` and empty `0/0` states as `⏳`) to accurately reflect the user's mental model of the pipeline.
+
+### Changed
+- **Eager Execution Index Fix**: Fixed a bug in `RouterAgent._on_pipeline_completed` where it incorrectly extracted `remaining_chain[1]` instead of `remaining_chain[0]`, causing pipeline crashes or misrouting when a paused HITL file was intended for early preview propagation.
+- **InboxDaemon HITL Resume Context**: Fixed `InboxDaemon.check_proofreader_resume` to prepend `["proofreader"]` back into the `resume_chain` when watching `04_final_verified`, ensuring `RouterAgent` accurately maps the unified handoff from `proofreader` to `smart_highlighter`.
+
 ## [V9.22] — 2026-05-29: Orchestration Hardening & Telegram GUI Integration
 
 ### Added

@@ -1,6 +1,3 @@
-import os
-import sys
-
 from phases.p00_semantic_router import Phase0SemanticRouter
 from phases.p01_claim_extraction import Phase1ClaimExtraction
 from phases.p02_synthesis import Phase2Synthesis

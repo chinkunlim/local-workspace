@@ -17,7 +17,6 @@ Design:
 
 from __future__ import annotations
 
-import collections
 from dataclasses import dataclass, field
 from datetime import datetime
 import difflib

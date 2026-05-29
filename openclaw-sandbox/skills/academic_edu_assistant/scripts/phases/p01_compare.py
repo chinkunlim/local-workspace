@@ -1,5 +1,4 @@
 import os
-import sys
 
 # P0-2: Guard against missing ChromaDB — skill should degrade gracefully
 try:

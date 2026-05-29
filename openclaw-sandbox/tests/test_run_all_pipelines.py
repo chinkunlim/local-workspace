@@ -10,6 +10,18 @@ from core.orchestration.run_all_pipelines import (
     run_pipelines,
 )
 
+# Count how many skills have a run_all.py (dynamic discovery)
+_SKILLS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "skills")
+_EXPECTED_SKILL_COUNT = (
+    sum(
+        1
+        for item in os.listdir(_SKILLS_DIR)
+        if os.path.isfile(os.path.join(_SKILLS_DIR, item, "scripts", "run_all.py"))
+    )
+    if os.path.isdir(_SKILLS_DIR)
+    else 0
+)
+
 
 @patch("core.orchestration.run_all_pipelines.subprocess.run")
 def test_run_pipelines_success(mock_run):
@@ -20,8 +32,8 @@ def test_run_pipelines_success(mock_run):
 
     run_pipelines()
 
-    # Assert two pipelines were run
-    assert mock_run.call_count == 2
+    # Assert all discovered skills were attempted
+    assert mock_run.call_count == _EXPECTED_SKILL_COUNT
 
     # Ensure lock was released
     assert not os.path.exists(_LOCK_FILE)
@@ -29,7 +41,7 @@ def test_run_pipelines_success(mock_run):
 
 @patch("core.orchestration.run_all_pipelines.subprocess.run")
 def test_run_pipelines_timeout_handling(mock_run):
-    # Simulate a timeout
+    # Simulate a timeout for every call
     mock_run.side_effect = subprocess.TimeoutExpired(cmd=["test"], timeout=7200)
 
     _release_lock()
@@ -37,10 +49,10 @@ def test_run_pipelines_timeout_handling(mock_run):
     with contextlib.suppress(SystemExit):
         run_pipelines()
 
-    # Should only be called once because it exits on the first timeout
-    assert mock_run.call_count == 1
+    # run_pipelines() logs errors but continues — all skills are attempted
+    assert mock_run.call_count == _EXPECTED_SKILL_COUNT
 
-    # Ensure lock was released in the finally block despite sys.exit
+    # Ensure lock was released in the finally block despite errors
     assert not os.path.exists(_LOCK_FILE)
 
 

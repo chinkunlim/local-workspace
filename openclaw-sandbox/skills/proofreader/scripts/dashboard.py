@@ -6,9 +6,7 @@ It scans `data/proofreader/output/` for AI-corrected files, and pairs them
 with the ground truth original files from `data/raw/`.
 """
 
-import json
 import os
-import sys
 
 # Internal Core Bootstrap
 from flask import Flask, jsonify, render_template_string, request, send_file

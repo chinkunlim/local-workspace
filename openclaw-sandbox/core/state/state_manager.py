@@ -7,8 +7,6 @@ import os
 import threading
 from typing import Any, Dict, List, Optional
 
-from rich import print
-
 from core.state.state_backend import get_state_backend
 from core.utils.atomic_writer import AtomicWriter
 
@@ -396,22 +394,19 @@ class StateManager:
                 has_pending = True
                 break
 
-        if not has_pending:
-            return None
-
         lines = []
-        skill_display = {
-            "audio_transcriber": "[Inbox Daemon 排程] 語音轉錄",
-            "doc_parser": "[Inbox Daemon 排程] 文件解析",
-            "academic_edu_assistant": "學術教育助手",
-            "inbox_manager": "收件匣管理",
-            "interactive_reader": "互動式閱讀",
-            "knowledge_compiler": "知識編譯",
-            "note_generator": "筆記生成",
-            "smart_highlighter": "智能高亮",
-            "telegram_kb_agent": "Telegram 知識庫代理",
-            "proofreader": "Proofreader",
-        }.get(self.skill_name, f"{self.skill_name}")
+
+        # Load dynamic display_name from registry
+        from core.orchestration.skill_registry import SkillRegistry
+
+        registry = SkillRegistry()
+        registry.discover()
+        manifest = registry.get(self.skill_name)
+        skill_display = (
+            manifest.display_name
+            if manifest and getattr(manifest, "display_name", None)
+            else self.skill_name
+        )
 
         lines.append(f"🔹 **{skill_display}**")
 
@@ -419,9 +414,10 @@ class StateManager:
             label = self._phase_labels.get(p, p.upper())
             done = counters[p]["done"]
             total = counters[p]["total"]
+
             if total == 0:
-                continue
-            if done == total:
+                icon = "⏳"  # 即使是 0/0 也顯示漏斗或暫停符號，讓管線看起來完整
+            elif done == total:
                 icon = "✅"
             elif done > 0:
                 icon = "⏳"
@@ -599,16 +595,20 @@ class StateManager:
             sep_cols += " | :---:"
 
         lines: List[str] = []
-        skill_display = {
-            "audio_transcriber": "學習進度",
-            "doc_parser": "知識庫處理進度",
-            "knowledge_compiler": "知識庫編譯進度",
-            "interactive_reader": "互動閱讀處理進度",
-            "telegram_kb_agent": "行動知識庫進度",
-            "academic_edu_assistant": "學術助手進度",
-        }.get(self.skill_name, "進度")
 
-        lines.append(f"# {skill_display} (總表)\n")
+        # Load dynamic display_name from registry
+        from core.orchestration.skill_registry import SkillRegistry
+
+        registry = SkillRegistry()
+        registry.discover()
+        manifest = registry.get(self.skill_name)
+        skill_display = (
+            manifest.display_name
+            if manifest and getattr(manifest, "display_name", None)
+            else self.skill_name
+        )
+
+        lines.append(f"# {skill_display} (進度總表)\n")
         lines.append("> 🚨 本檔案由系統 `.pipeline_state.json` 自動映射生成，請勿手動修改。")
         lines.append("> 更改輸出目錄下的 `.md` 檔案將被系統偵測並觸發自動重新運算 (DAG Cascade).\n")
 

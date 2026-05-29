@@ -21,3 +21,7 @@ rag:
 runtime:
   ollama:
     api_url: "http://127.0.0.1:11434/api"
+
+graph:
+  backend: "networkx"
+  persist_path: "state/graph.gpickle"

@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 import sys
 
 import chromadb
@@ -79,6 +80,10 @@ def main():
         with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
+        # Extract title (first H1)
+        title_match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
+        title = title_match.group(1).strip() if title_match else os.path.splitext(filename)[0]
+
         chunks = chunk_text(content, chunk_size, overlap)
 
         for i, chunk in enumerate(chunks):
@@ -90,7 +95,7 @@ def main():
                 doc_ids.append(doc_id)
                 embeddings.append(emb)
                 documents.append(chunk)
-                metadatas.append({"filename": filename, "chunk_index": i})
+                metadatas.append({"filename": filename, "title": title, "chunk_index": i})
 
                 print(f"  ✅ 已處理: {doc_id}")
             except Exception as e:

@@ -1,8 +1,5 @@
 """skills/smart_highlighter/manifest.py — SkillManifest (#17 / M1)"""
 
-import os
-import sys
-
 from core.orchestration.skill_registry import SkillManifest
 
 

@@ -1,25 +1,25 @@
 ---
-name: smart-highlighter
-description: Non-destructively annotate any Markdown text with bold, highlight, and code markup using an LLM, with an Anti-Tampering verbatim guard to prevent content loss.
+name: smart_highlighter
+description: Non-destructively annotate any Markdown text with bold, highlight, and
+  code markup using an LLM, with an Anti-Tampering verbatim guard to prevent content
+  loss.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🖊️"
-      }
-  }
+  openclaw:
+    emoji: 🖊️
+    display_name: 智能高亮
 state_tracking:
-  phases: ["p1"]
+  phases:
+  - p1
   labels:
-    p1: "P1 (Highlight)"
+    p1: P1 (Highlight)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
-# SKILL: smart-highlighter
+# SKILL: smart_highlighter
 
 ## Purpose
 

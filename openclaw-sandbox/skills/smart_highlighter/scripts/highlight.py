@@ -7,7 +7,6 @@ Stateless design: receives text, returns text.
 Anti-Tampering guard ensures the LLM does not delete content.
 """
 
-import os
 import sys
 
 # Core Bootstrap

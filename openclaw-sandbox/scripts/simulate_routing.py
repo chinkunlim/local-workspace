@@ -11,23 +11,24 @@ from core.orchestration.router_agent import RouterAgent, TaskManifest
 from core.orchestration.skill_registry import SkillRegistry
 from core.orchestration.task_queue import LocalTaskQueue
 
+dispatched_tasks = []
 
-class MockTaskQueue(LocalTaskQueue):
-    def _init(self):
-        self.dispatched_tasks = []
 
-    def enqueue(
-        self, name, cmd, cwd, filepath=None, skill=None, chain=None, subject="Default", env=None
-    ):
-        self.dispatched_tasks.append(
-            {"name": name, "cmd": cmd, "skill": skill, "chain": chain, "filepath": filepath}
-        )
-        print(f"✅ Enqueued Task: {name}")
-        print(f"  └─ Skill: {skill}")
-        print(f"  └─ Chain: {chain}")
-        print(f"  └─ Target File: {filepath}")
-        print(f"  └─ Command: {' '.join(cmd)}")
-        print()
+def mock_enqueue(
+    self, name, cmd, cwd, filepath=None, skill=None, chain=None, subject="Default", env=None
+):
+    dispatched_tasks.append(
+        {"name": name, "cmd": cmd, "skill": skill, "chain": chain, "filepath": filepath}
+    )
+    print(f"✅ Enqueued Task: {name}")
+    print(f"  └─ Skill: {skill}")
+    print(f"  └─ Chain: {chain}")
+    print(f"  └─ Target File: {filepath}")
+    print(f"  └─ Command: {' '.join(cmd)}")
+    print()
+
+
+LocalTaskQueue.enqueue = mock_enqueue
 
 
 def run_simulation():
@@ -36,8 +37,7 @@ def run_simulation():
     # 1. Setup mocks
     import core.orchestration.router_agent
 
-    mock_queue = MockTaskQueue()
-    core.orchestration.router_agent.task_queue = mock_queue
+    dispatched_tasks.clear()
 
     registry = SkillRegistry(os.path.join(workspace_root, "skills"))
     registry.discover()
@@ -62,7 +62,7 @@ def run_simulation():
     router.dispatch(manifest)
 
     print("\n=== 測試 2: 模擬 student_researcher 完成，測試泛用交棒 (Universal Handoff) ===")
-    mock_queue.dispatched_tasks.clear()
+    dispatched_tasks.clear()
     event = DomainEvent(
         name="PipelineCompleted",
         source_skill="student_researcher",

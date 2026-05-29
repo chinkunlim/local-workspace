@@ -22,11 +22,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
+import logging
 import os
 import sys
 from typing import Any, Callable, Dict, List, Optional
 
-from core.cli.cli_runner import SkillRunner
+logger = logging.getLogger("OpenClaw.RouterAgent")
+
 from core.orchestration.event_bus import DomainEvent, EventBus
 from core.orchestration.session_manifest import update_session_manifest
 from core.orchestration.task_queue import task_queue
@@ -190,9 +192,11 @@ class RouterAgent:
                         chain = [first_skill] if ext in _EXTRACT_ONLY_EXTS else full_chain
                         table[f"{ext}:auto"] = chain
             except Exception as exc:
-                print(f"⚠️  [RouterAgent] 讀取 inbox_config.json 失敗，路由表可能不完整: {exc}")
+                logger.info(
+                    f"⚠️  [RouterAgent] 讀取 inbox_config.json 失敗，路由表可能不完整: {exc}"
+                )
         else:
-            print(
+            logger.info(
                 f"⚠️  [RouterAgent] 未找到 inbox_config.json，路由表為空。 (expected: {config_path})"
             )
 
@@ -227,7 +231,7 @@ class RouterAgent:
             valid_skills = self._registry.list_names()
             return [s for s in skills if s in valid_skills]
         except Exception as e:
-            print(f"⚠️ [RouterAgent] LLM 分解任務失敗: {e}")
+            logger.info(f"⚠️ [RouterAgent] LLM 分解任務失敗: {e}")
             return []
 
     def resolve(self, manifest: TaskManifest) -> List[str]:
@@ -299,7 +303,7 @@ class RouterAgent:
                             and a_data.get("proofread") == "pending"
                         ):
                             # We found an audio file waiting! Trigger proofreader/p01 for it.
-                            print(
+                            logger.info(
                                 f"🗺️  [RouterAgent] doc_parser 完成，喚醒等待中的校對任務: {a_file}"
                             )
                             cwd = os.path.join(workspace_root, "skills", "proofreader")
@@ -345,8 +349,8 @@ class RouterAgent:
                         with open(pending_path, encoding="utf-8") as f:
                             pending_data = json.load(f)
                         remaining_chain = pending_data.get("chain", [])
-                        if remaining_chain and len(remaining_chain) > 1:
-                            eager_next = remaining_chain[1]  # index 0 is proofreader itself
+                        if remaining_chain:
+                            eager_next = remaining_chain[0]  # The first element is the next skill
                             eager_target_dir = os.path.join(
                                 workspace_root, "data", eager_next, "input", subject
                             )
@@ -368,7 +372,7 @@ class RouterAgent:
                             eager_cmd = [sys.executable, eager_script, "--subject", subject]
                             eager_cwd = os.path.join(workspace_root, "skills", eager_next)
 
-                            print(
+                            logger.info(
                                 f"⏩ [RouterAgent] Eager Execution: 已提前啟動 {eager_next} (草稿模式，基於 pre-HITL 校對輸出)"
                             )
 
@@ -383,10 +387,10 @@ class RouterAgent:
                                 env=env,
                             )
                     except Exception as e:
-                        print(f"⚠️ [RouterAgent] 嘗試進行 Eager Execution 時失敗: {e}")
+                        logger.info(f"⚠️ [RouterAgent] 嘗試進行 Eager Execution 時失敗: {e}")
 
             msg = f"🏁 [RouterAgent] 整個路由計畫已完成: {event.source_skill}"
-            print(msg)
+            logger.info(msg)
             try:
                 from core.services.telegram_bot import send_message
 
@@ -401,21 +405,21 @@ class RouterAgent:
         remaining_chain = chain[1:]
         file_id = os.path.splitext(filename)[0]
 
-        print(f"🗺️  [RouterAgent] 接力觸發: {current_skill} -> {next_skill} (Model: {model})")
+        logger.info(f"🗺️  [RouterAgent] 接力觸發: {current_skill} -> {next_skill} (Model: {model})")
+
+        # Declarative HITL detection: consult SkillRegistry instead of hardcoded names.
+        # Any skill with `requires_hitl: true` in its SKILL.md triggers the pause path.
+        next_skill_manifest = self._registry.get(next_skill) if self._registry else None
+        next_skill_requires_hitl = getattr(next_skill_manifest, "requires_hitl", False)
 
         try:
-            # Auto-discover the output of current_skill to use as input for next_skill
-            # We assume next_skill is note-generator or knowledge_compiler
-            # In V8 architecture, SkillRunner provides standard resolution.
-            if next_skill == "proofreader":
-                # [NEW LOGIC] Pipeline Pause for Human-in-the-Loop Proofread
+            if next_skill_requires_hitl:
+                # Pipeline Pause for Human-in-the-Loop skills (e.g. proofreader)
                 pending_dir = os.path.join(
-                    workspace_root, "data", "proofreader", "pending_chains", subject
+                    workspace_root, "data", next_skill, "pending_chains", subject
                 )
                 os.makedirs(pending_dir, exist_ok=True)
 
-                # We save the remaining chain to be resumed when proofreader dashboard saves the file.
-                # The key is the file prefix to match whatever output proofreader generates.
                 from core.utils.atomic_writer import AtomicWriter
 
                 pending_path = os.path.join(pending_dir, f"{file_id}.json")
@@ -423,8 +427,8 @@ class RouterAgent:
                     pending_path, {"chain": remaining_chain, "subject": subject, "env": env}
                 )
 
-                msg = f"⏸️ [RouterAgent] 管線暫停等候人工校對: {filename}\n👉 請開啟 Dashboard 點擊 Save 或 Skip 繼續。"
-                print(msg)
+                msg = f"⏸️ [RouterAgent] 管線暫停等候人工校對 ({next_skill}): {filename}\n👉 請開啟 Dashboard 點擊 Save 或 Skip 繼續。"
+                logger.info(msg)
                 try:
                     from core.services.telegram_bot import send_message
 
@@ -432,24 +436,29 @@ class RouterAgent:
                 except ImportError:
                     pass
 
-                # Eager Execution moved to when proofreader emits completed event (pre-HITL)
+                # Eager Execution is handled when the HITL skill emits its completed event
                 return
 
-            # ALL OTHER SKILLS: Unified Handoff
-            # Move the file to the next skill's input directory
+            # ALL OTHER SKILLS: Unified Handoff via io_contracts
+            # Move the file to the next skill's standard input directory
             target_dir = os.path.join(workspace_root, "data", next_skill, "input", subject)
             os.makedirs(target_dir, exist_ok=True)
             target_path = os.path.join(target_dir, os.path.basename(filepath))
             if os.path.exists(filepath) and filepath != target_path:
-                os.rename(filepath, target_path)
+                if os.path.exists(target_path):
+                    os.remove(target_path)
+                try:
+                    os.link(filepath, target_path)
+                except OSError:
+                    import shutil
+
+                    shutil.copy2(filepath, target_path)
                 filepath = target_path
 
-            # Look up entry script from SkillRegistry
+            # Look up entry script from SkillRegistry (declarative cli_entry)
             script_path = "scripts/run_all.py"
-            if self._registry:
-                skill_manifest = self._registry.get(next_skill)
-                if skill_manifest and skill_manifest.cli_entry:
-                    script_path = skill_manifest.cli_entry
+            if next_skill_manifest and next_skill_manifest.cli_entry:
+                script_path = next_skill_manifest.cli_entry
 
             cmd = [sys.executable, script_path, "--subject", subject]
             cwd = os.path.join(
@@ -469,14 +478,14 @@ class RouterAgent:
             )
 
         except Exception as e:
-            print(f"❌ [RouterAgent] 接力失敗: {e}")
+            logger.error(f"❌ [RouterAgent] 接力失敗: {e}")
 
     def dispatch(self, manifest: TaskManifest, dry_run: bool = False) -> Dict:
         """Dispatch a TaskManifest through the resolved skill chain."""
         chain = self.resolve(manifest)
         results = []
 
-        print(f"🗺️  [RouterAgent] 路由計畫: {' → '.join(chain) or '(無匹配路由)'}")
+        logger.info(f"🗺️  [RouterAgent] 路由計畫: {' → '.join(chain) or '(無匹配路由)'}")
 
         if dry_run or not chain:
             return {"plan": chain, "results": []}
@@ -506,9 +515,16 @@ class RouterAgent:
             os.makedirs(target_dir, exist_ok=True)
             target_path = os.path.join(target_dir, os.path.basename(manifest.source_path))
 
-            # Move file if it's not already there
+            # Link file if it's not already there (with fallback to copy)
             if manifest.source_path != target_path:
-                os.rename(manifest.source_path, target_path)
+                if os.path.exists(target_path):
+                    os.remove(target_path)
+                try:
+                    os.link(manifest.source_path, target_path)
+                except OSError:
+                    import shutil
+
+                    shutil.copy2(manifest.source_path, target_path)
 
             cwd = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -552,6 +568,6 @@ class RouterAgent:
             results.append({"skill": first_skill, "status": "enqueued"})
         except Exception as exc:
             results.append({"skill": first_skill, "status": "error", "error": str(exc)})
-            print(f"❌ [RouterAgent] {first_skill} 分發失敗: {exc}")
+            logger.info(f"❌ [RouterAgent] {first_skill} 分發失敗: {exc}")
 
         return {"plan": chain, "results": results}

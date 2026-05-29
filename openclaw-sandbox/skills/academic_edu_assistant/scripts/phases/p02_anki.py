@@ -1,11 +1,9 @@
 import os
-import sys
 
 # Core Bootstrap
-from core import AtomicWriter, PipelineBase
+from core import PipelineBase
 from core.orchestration.human_gate import VerificationGate
 from core.services.sm2 import SM2Engine
-from core.utils.file_utils import write_csv_safe  # #10 Shared CSV utility
 
 
 class Phase2Anki(PipelineBase):

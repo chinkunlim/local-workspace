@@ -2,23 +2,23 @@
 name: student_researcher
 description: Synthesizes final notes and applies APA format and Obsidian metadata.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🎓"
-      }
-  }
+  openclaw:
+    emoji: 🎓
+    display_name: 研究員助手
 state_tracking:
-  phases: ["p00_semantic_router", "p01_claim_extraction", "p02_synthesis"]
+  phases:
+  - p00_semantic_router
+  - p01_claim_extraction
+  - p02_synthesis
   labels:
-    p00_semantic_router: "P0 (Route)"
-    p01_claim_extraction: "P1 (Extract)"
-    p02_synthesis: "P2 (Synthesis)"
+    p00_semantic_router: P0 (Route)
+    p01_claim_extraction: P1 (Extract)
+    p02_synthesis: P2 (Synthesis)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
 # Student Researcher

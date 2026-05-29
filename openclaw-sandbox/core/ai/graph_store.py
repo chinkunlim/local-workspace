@@ -108,8 +108,6 @@ class NetworkXGraphStore:
         if not self._persist_path:
             return
         try:
-            import json
-
             from networkx.readwrite import json_graph
 
             from core.utils.atomic_writer import AtomicWriter

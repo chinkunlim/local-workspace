@@ -4,7 +4,6 @@ knowledge_compiler — Open Claw Skill
 Transforms raw markdown into structured wiki entries with bidirectional links.
 """
 
-import os
 import sys
 
 # Core Bootstrap
@@ -94,8 +93,20 @@ class CompilerOrchestrator(PipelineBase):
                 self._write_session_state(SessionState.PAUSED)
             else:
                 self._write_session_state(SessionState.STOPPED)
-        else:
+            return
+
+        print("\n" + "=" * 50)
+        print("🚀 開始執行知識圖譜抽取 (Phase P2)...")
+        print("=" * 50)
+        try:
+            from phases.p02_extract_graph import Phase2ExtractGraph
+
+            p2 = Phase2ExtractGraph()
+            p2.run(force=args.force, subject=args.subject)
             self._write_session_state(SessionState.COMPLETED)
+        except Exception as e:
+            self._write_session_state(SessionState.FAILED, context={"error": str(e)})
+            print(f"💥 圖譜抽取失敗: {e}")
 
         print("🏁 Knowledge Compiler 執行完畢。")
 

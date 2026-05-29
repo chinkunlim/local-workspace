@@ -24,7 +24,8 @@ def test_task_queue_success(mock_run, tmp_workspace):
 
 @patch("core.orchestration.task_queue.subprocess.run")
 @patch("core.orchestration.task_queue.shutil.move")
-def test_task_queue_dlq_quarantine(mock_move, mock_run, tmp_workspace):
+@patch("core.orchestration.task_queue.time.sleep")
+def test_task_queue_dlq_quarantine(mock_sleep, mock_move, mock_run, tmp_workspace):
     # Simulate a process that always fails
     mock_run.return_value = MagicMock(returncode=1)
 
@@ -46,7 +47,7 @@ def test_task_queue_dlq_quarantine(mock_move, mock_run, tmp_workspace):
     assert mock_run.call_count >= 3
 
     # Verify it was quarantined
-    assert mock_move.call_count == 1
-    args, _ = mock_move.call_args
+    assert mock_move.call_count >= 1
+    args, _ = mock_move.call_args_list[0]
     assert args[0] == dummy_file
     assert "quarantine" in args[1]

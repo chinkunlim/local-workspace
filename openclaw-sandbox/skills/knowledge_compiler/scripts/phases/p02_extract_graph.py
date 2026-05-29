@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import os
 import re
-import sys
 
 from core import PipelineBase
 from core.ai.graph_store import get_graph_store
@@ -49,10 +48,10 @@ class Phase2ExtractGraph(PipelineBase):
             phase_name="知識圖譜抽取",
             skill_name="knowledge_compiler",
         )
-        # wiki_dir from p01 config
         output_cfg = self.config_manager.get_section("output") or {}
         default_wiki = os.path.abspath(os.path.join(self.base_dir, "..", "wiki"))
-        self.wiki_dir = os.path.realpath(output_cfg.get("wiki_dir", default_wiki))
+        wiki_dir_cfg = output_cfg.get("wiki_dir")
+        self.wiki_dir = os.path.realpath(wiki_dir_cfg) if wiki_dir_cfg else default_wiki
         self.graph = get_graph_store(self.workspace_root, skill_name="knowledge_compiler")
         self.model_name = self.config_manager.get_nested("models", "default") or "qwen3:8b"
 

@@ -235,4 +235,4 @@ if __name__ == "__main__":
     filename = os.path.basename(args.pdf)
     phase = Phase1dVLMVision()
     success = phase.run(subject="Default", file_filter=filename)
-    print(f"Success: {success}")
+    phase.info(f"Success: {success}")

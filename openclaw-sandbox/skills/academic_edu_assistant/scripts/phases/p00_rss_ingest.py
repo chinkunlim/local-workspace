@@ -34,7 +34,6 @@ import argparse
 import hashlib
 import json
 import os
-import sys
 import time
 
 # Core Bootstrap

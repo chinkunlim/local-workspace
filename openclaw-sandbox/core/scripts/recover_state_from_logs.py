@@ -10,10 +10,8 @@ recover_state_from_logs.py
 """
 
 import argparse
-import json
 import os
 import re
-import sys
 
 from core.utils.bootstrap import ensure_core_path
 

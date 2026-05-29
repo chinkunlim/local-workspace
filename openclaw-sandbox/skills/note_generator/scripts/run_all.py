@@ -30,7 +30,6 @@ from core import (
     StateManager,
     build_skill_parser,
 )
-from core.orchestration.event_bus import DomainEvent, EventBus
 from core.utils.atomic_writer import AtomicWriter
 from core.utils.text_utils import smart_split
 
@@ -93,7 +92,7 @@ class PhaseNoteGenerator(PipelineBase):
         self.profile_override = profile
 
         # Route inbox to our skill's input, and processed to our output
-        workspace_root = os.path.abspath(os.path.join(self.base_dir, "..", "..", ".."))
+        workspace_root = self.workspace_root
         self.dirs["inbox"] = os.path.join(workspace_root, "data", "note_generator", "input")
         self.dirs["processed"] = os.path.join(workspace_root, "data", "note_generator", "output")
         self.dirs["error"] = os.path.join(workspace_root, "data", "note_generator", "error")
@@ -163,7 +162,7 @@ class PhaseNoteGenerator(PipelineBase):
         )
 
         # 檢查是否已通過 HITL 驗證 (04_final_verified 存在同名檔案)
-        workspace_root = os.path.abspath(os.path.join(self.base_dir, "..", "..", ".."))
+        workspace_root = self.workspace_root
         original_fname = filename.replace("_highlighted.md", ".md")
         verified_path = os.path.join(
             workspace_root,

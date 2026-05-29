@@ -8,12 +8,13 @@ generation (RAG).
 """
 
 import json
+import logging
 import os
 import sys
 import urllib.error
 import urllib.request
 
-from rich import print
+logger = logging.getLogger("OpenClaw.KnowledgePusher")
 
 from core.utils.workspace import get_workspace_root
 
@@ -33,11 +34,11 @@ class KnowledgePusher:
         Pushes a Markdown file to the Open WebUI Knowledge API.
         """
         if not os.path.exists(filepath):
-            print(f"❌ [Pusher] 檔案不存在: {filepath}")
+            logger.info(f"❌ [Pusher] 檔案不存在: {filepath}")
             return False
 
         if not self.api_key:
-            print("⚠️ [Pusher] 未設定 WEBUI_API_KEY，跳過知識庫推送。")
+            logger.info("⚠️ [Pusher] 未設定 WEBUI_API_KEY，跳過知識庫推送。")
             return False
 
         try:
@@ -63,22 +64,22 @@ class KnowledgePusher:
 
             with urllib.request.urlopen(req, timeout=10) as resp:
                 if resp.status in (200, 201):
-                    print(
+                    logger.info(
                         f"✅ [Pusher] 成功將 {title} 推送至 Open WebUI 知識庫 ({collection_name})"
                     )
                     return True
                 else:
-                    print(f"⚠️ [Pusher] 推送失敗，狀態碼: {resp.status}")
+                    logger.info(f"⚠️ [Pusher] 推送失敗，狀態碼: {resp.status}")
                     return False
 
         except Exception as e:
-            print(f"❌ [Pusher] 推送過程中發生錯誤: {e}")
+            logger.info(f"❌ [Pusher] 推送過程中發生錯誤: {e}")
             return False
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python3 knowledge_pusher.py <markdown_file_path> [collection_name]")
+        logger.info("Usage: python3 knowledge_pusher.py <markdown_file_path> [collection_name]")
         sys.exit(1)
 
     filepath = sys.argv[1]

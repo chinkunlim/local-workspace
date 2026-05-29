@@ -1,25 +1,28 @@
 ---
 name: proofreader
-description: Centralized module ensuring accuracy and completeness of generated transcripts against reference materials via HITL.
+description: Centralized module ensuring accuracy and completeness of generated transcripts
+  against reference materials via HITL.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🔎"
-      }
-  }
+  openclaw:
+    emoji: 🔎
+    display_name: 校對與驗證
+requires_hitl: true
 state_tracking:
-  phases: ["p1", "p2", "p3"]
+  phases:
+  - p1
+  - p2
+  - p3
   labels:
-    p1: "P1 (文件校對)"
-    p2: "P2 (逐字稿校對)"
-    p3: "P3 (圖表完整性)"
+    p1: P1 (文件校對)
+    p2: P2 (逐字稿校對)
+    p3: P3 (圖表完整性)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
+
 
 # Proofreader Skill
 

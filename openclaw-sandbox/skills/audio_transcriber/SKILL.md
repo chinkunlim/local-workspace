@@ -1,26 +1,27 @@
 ---
 name: audio_transcriber
-description: End-to-end voice processing pipeline. Converts .m4a audio into polished, MLX-Whisper transcribed Obsidian-ready study notes.
+description: End-to-end voice processing pipeline. Converts .m4a audio into polished,
+  MLX-Whisper transcribed Obsidian-ready study notes.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🎙️"
-      }
-  }
+  openclaw:
+    emoji: 🎙️
+    display_name: 語音轉錄
 state_tracking:
-  phases: ["p1", "p2", "p3"]
+  phases:
+  - p1
+  - p2
+  - p3
   labels:
-    p1: "P1 (轉錄)"
-    p2: "P2 (校對)"
-    p3: "P3 (合併)"
+    p1: P1 (轉錄)
+    p2: P2 (校對)
+    p3: P3 (合併)
 io_contracts:
   consumes:
-    - "audio/mp4"
-    - "audio/mpeg"
-    - "audio/wav"
+  - audio/mp4
+  - audio/mpeg
+  - audio/wav
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
 # Audio Transcriber Skill

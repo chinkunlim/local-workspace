@@ -644,7 +644,7 @@ if __name__ == "__main__":
     result = engine.run(subject="default_subject", file_filter=os.path.basename(args.pdf))
 
     if result:
-        print(f"\n✅ 提取完成: {result}")
+        engine.info(f"✅ 提取完成: {result}")
     else:
-        print("\n❌ 提取失敗（查看 Error/ 目錄）")
+        engine.error("❌ 提取失敗（查看 Error/ 目錄）")
         sys.exit(1)

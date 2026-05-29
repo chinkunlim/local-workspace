@@ -1,5 +1,4 @@
 import os
-import sys
 
 import mlx_whisper
 

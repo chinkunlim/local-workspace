@@ -1,9 +1,7 @@
 import json
 import os
-import sys
 
 # Core Bootstrap
-from core.orchestration.event_bus import DomainEvent, EventBus
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.atomic_writer import AtomicWriter
 from skills.note_generator.scripts.run_all import strip_think_tags
@@ -18,7 +16,9 @@ class Phase2Synthesis(PhaseBase):
         )
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.dirs["inbox"]
+        input_dir = self.path_builder.canonical_dirs.get(
+            "input", os.path.join(self.base_dir, "input")
+        )
         semantic_ctx_path = os.path.join(self.base_dir, "state", "semantic_context.json")
         semantic_ctx = {}
         if os.path.exists(semantic_ctx_path):
@@ -57,14 +57,6 @@ class Phase2Synthesis(PhaseBase):
                         with open(archive_path, encoding="utf-8") as f:
                             debate_texts.append(f"【討論紀錄 {idx + 1}】\n" + f.read())
 
-                if not debate_texts:
-                    self.warning("⚠️ 沒有查證到任何有效討論紀錄，直接輸出原檔案。")
-                    out_path = os.path.splitext(filepath)[0] + "_research.md"
-                    AtomicWriter.write_text(out_path, original_note)
-                    continue
-
-                all_debates = "\n\n".join(debate_texts)
-
                 parts = os.path.normpath(source_md_path).split(os.sep)
                 subj = parts[-2] if len(parts) >= 2 else "Default"
                 fname = parts[-1] if len(parts) >= 1 else os.path.basename(source_md_path)
@@ -73,6 +65,18 @@ class Phase2Synthesis(PhaseBase):
                 related_files = ctx.get("related_files", [])
                 new_tags = ctx.get("new_tags", [])
                 is_orphan = ctx.get("is_orphan", False)
+
+                if not debate_texts:
+                    self.warning("⚠️ 沒有查證到任何有效討論紀錄，直接輸出原檔案。")
+                    out_path = os.path.splitext(filepath)[0] + "_research.md"
+                    AtomicWriter.write_text(out_path, original_note)
+                    target_subj = "Incubator" if is_orphan else kwargs.get("subject", subj)
+                    self.emit_completed(
+                        out_path, target_subj, chain=["student_researcher", "knowledge_compiler"]
+                    )
+                    continue
+
+                all_debates = "\n\n".join(debate_texts)
 
                 semantic_instructions = ""
                 if is_orphan and new_tags:

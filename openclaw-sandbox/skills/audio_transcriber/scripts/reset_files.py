@@ -9,7 +9,6 @@ import os
 import sys
 
 from core.state.state_manager import StateManager
-from core.utils.atomic_writer import AtomicWriter
 
 DATA_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "audio_transcriber")

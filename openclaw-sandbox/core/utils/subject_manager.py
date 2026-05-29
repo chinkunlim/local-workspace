@@ -8,9 +8,10 @@ principles across the entire Open Claw architecture.
 
 from __future__ import annotations
 
+import logging
 import os
 
-from rich import print
+logger = logging.getLogger("OpenClaw.subject_manager")
 
 
 def ask_reprocess(subject: str, item_id: str, phase_label: str) -> bool:

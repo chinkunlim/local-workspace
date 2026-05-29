@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 
 # Core Bootstrap
 from core import AtomicWriter, PipelineBase

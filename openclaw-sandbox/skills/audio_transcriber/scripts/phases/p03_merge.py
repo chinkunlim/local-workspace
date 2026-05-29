@@ -5,11 +5,9 @@ Refactored to purely merge transcript segments without LLM restructuring.
 
 import os
 import re
-import sys
 
 # Internal Core Bootstrap
 from core import AtomicWriter, PipelineBase
-from core.orchestration.event_bus import DomainEvent, EventBus
 from core.state.global_registry import GlobalRegistry
 
 

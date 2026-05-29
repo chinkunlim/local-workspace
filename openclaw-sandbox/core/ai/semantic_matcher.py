@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from core.ai.llm_client import OllamaClient
 from core.utils.config_manager import config_manager

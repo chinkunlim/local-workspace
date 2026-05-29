@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 state_file = Path("data/doc_parser/state/.pipeline_state.json")

@@ -22,7 +22,6 @@ Phase 0c: MarkItDown 前置轉換
 
 import os
 import re
-import sys
 
 # Internal Core Bootstrap
 from core import AtomicWriter, PipelineBase

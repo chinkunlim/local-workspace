@@ -3,10 +3,8 @@
 backfill_lang.py — 從 system.log 回填語言偵測結果到 .pipeline_state.json，並重新渲染 checklist.md
 """
 
-import json
 import os
 import re
-import sys
 
 # 確保可以 import core
 from core.state.state_manager import StateManager

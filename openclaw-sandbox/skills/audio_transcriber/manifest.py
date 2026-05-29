@@ -10,9 +10,6 @@ To add a new Skill:
   3. Restart the system — SkillRegistry.discover() will auto-register it
 """
 
-import os
-import sys
-
 # Ensure core is importable from the manifest context
 from core.orchestration.skill_registry import SkillManifest
 

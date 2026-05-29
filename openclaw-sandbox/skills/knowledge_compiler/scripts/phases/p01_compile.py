@@ -1,7 +1,6 @@
 import datetime
 import os
 import re
-import sys
 
 # Core Bootstrap
 from core import AtomicWriter, PipelineBase
@@ -18,8 +17,9 @@ class Phase1Compile(PipelineBase):
         )
         # P1-6: Resolve wiki_dir from config.yaml (output.wiki_dir) instead of hardcoded ../wiki
         output_cfg = self.config_manager.get_section("output") or {}
-        default_wiki = os.path.abspath(os.path.join(self.base_dir, "..", "wiki"))
-        self.wiki_dir = os.path.realpath(output_cfg.get("wiki_dir", default_wiki))
+        default_wiki = os.path.abspath(os.path.join(self.workspace_root, "data", "wiki"))
+        wiki_dir_cfg = output_cfg.get("wiki_dir")
+        self.wiki_dir = os.path.realpath(wiki_dir_cfg) if wiki_dir_cfg else default_wiki
         os.makedirs(self.wiki_dir, exist_ok=True)
 
         self.model_name = self.config_manager.get_nested("models", "default") or "qwen3:8b"

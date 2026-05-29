@@ -27,8 +27,7 @@ import logging
 import os
 import signal
 import sys
-import threading
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, List, Optional
 import uuid
 
 import psutil
@@ -120,6 +119,15 @@ class PipelineBase:
     #  Logging                                                             #
     # ------------------------------------------------------------------ #
 
+    @contextlib.contextmanager
+    def llm_session(self, model: str):
+        """Context manager to ensure the LLM model is gracefully unloaded after use (ADR-018)."""
+        try:
+            yield
+        finally:
+            if getattr(self, "llm", None) and hasattr(self.llm, "unload_model"):
+                self.llm.unload_model(model, logger=self)
+
     def _setup_logging(self) -> None:
         self.logger = self.logger or build_logger(
             f"OpenClaw.{self.skill_name}",
@@ -128,15 +136,29 @@ class PipelineBase:
             console=False,  # Console output handled by self.log()
         )
 
-    def log(self, msg: str, level: str = "info") -> None:
-        if level != "debug":
-            if "tqdm" in sys.modules:
+    def log(self, msg: str, level: str = "info", console: bool = True) -> None:
+        """Log a message to the file and optionally to the terminal console.
+
+        Args:
+            msg:     Message text.
+            level:   Severity — 'debug', 'info', 'warn', 'error'.
+            console: If False, write to log file only (no terminal output).
+                     'debug' level always suppresses console output.
+        """
+        # Terminal output — skip for debug or if console=False
+        if level != "debug" and console:
+            _progress_console = getattr(self, "_rich_progress_console", None)
+            if _progress_console is not None:
+                # Write through rich's console so the progress bar isn't broken
+                _progress_console.print(msg)
+            elif "tqdm" in sys.modules:
                 import tqdm
 
                 tqdm.tqdm.write(msg)
             else:
                 print(msg)
 
+        # File logging — always write (debug goes here only)
         if self.logger:
             if level == "info":
                 self.logger.info(msg)
@@ -149,6 +171,7 @@ class PipelineBase:
                 self.logger.debug(msg)
 
     def debug(self, msg: str) -> None:
+        """Write a debug-level message to the log file only (never to terminal)."""
         self.log(msg, level="debug")
 
     def info(self, msg: str) -> None:
@@ -468,7 +491,9 @@ class PipelineBase:
 
     def process_tasks(self, process_callback, **kwargs):
         """
-        Generic task iteration loop with built-in health checks and checkpoints.
+        Generic task iteration loop with built-in health checks, checkpoints,
+        and a rich.progress bar showing item count and ETA.
+
         process_callback should accept: (idx, task, total_tasks) and return True on success.
         """
         import sys
@@ -476,46 +501,108 @@ class PipelineBase:
         process_all = "--process-all" in sys.argv
         tasks = self.get_tasks(**kwargs)
         if not tasks:
-            self.log(f"📋 {self.phase_name} 沒有待處理的檔案。")
+            self.log(f"📋 [{self.phase_name}] 沒有待處理的檔案。")
             return
 
-        self.log(f"📋 {self.phase_name} 共有 {len(tasks)} 個檔案待處理。")
+        total = len(tasks)
 
-        for idx, task in enumerate(tasks, 1):
-            if self.check_system_health():
-                break
+        # ── Rich progress bar setup ──────────────────────────────────────────
+        try:
+            from rich.console import Console
+            from rich.progress import (
+                BarColumn,
+                MofNCompleteColumn,
+                Progress,
+                SpinnerColumn,
+                TextColumn,
+                TimeElapsedColumn,
+                TimeRemainingColumn,
+            )
 
-            try:
-                process_callback(idx, task, len(tasks))
-            except HITLPendingInterrupt as hitl_exc:
-                self.log(f"⏸️ 任務被暫停以等待人工介入 (Trace ID: {hitl_exc.trace_id})", "warn")
-                # Automatically save the trace_id and reason to the state note_tag
-                note_msg = f"⚠️ [Trace: {hitl_exc.trace_id[:8]}] {hitl_exc}"
-                self.state_manager.update_task(
-                    task["subject"], task["filename"], self.phase_key, "⏸️", note_tag=note_msg
-                )
+            progress = Progress(
+                SpinnerColumn(),
+                TextColumn("[bold cyan]{task.description}"),
+                BarColumn(bar_width=30),
+                MofNCompleteColumn(),
+                TimeElapsedColumn(),
+                TextColumn("剩餘"),
+                TimeRemainingColumn(),
+                refresh_per_second=4,
+            )
+            _progress_task = progress.add_task(
+                description=f"[{self.phase_name}]",
+                total=total,
+            )
+            # Expose console reference so self.log() can print through it
+            self._rich_progress_console = progress.console
+            use_rich = True
+        except ImportError:
+            progress = None
+            _progress_task = None
+            use_rich = False
+            self._rich_progress_console = None
+            self.log(f"📋 [{self.phase_name}] 共 {total} 個檔案待處理。")
+        # ────────────────────────────────────────────────────────────────────
 
-                # When paused by HITL, we save the checkpoint to the CURRENT task so it resumes here.
-                self.save_checkpoint(task["subject"], task["filename"])
+        stopped = False
+        ctx = progress if use_rich else None
 
-                if process_all:
-                    self.log("▶️ [非互動模式] 略過中斷，繼續處理下一個檔案。")
-                    continue
-                else:
-                    self._write_session_state(SessionState.PAUSED)
+        with ctx if ctx is not None else contextlib.nullcontext():
+            for idx, task in enumerate(tasks, 1):
+                fname = task.get("filename", "")
+                subj = task.get("subject", "")
+
+                if use_rich:
+                    label = f"{fname}" if not subj else f"[{subj}] {fname}"
+                    progress.update(
+                        _progress_task,
+                        description=f"[{self.phase_name}] {label}",
+                    )
+
+                if self.check_system_health():
+                    stopped = True
                     break
-            except Exception as e:
-                self.log(f"❌ 任務執行失敗: {e}", "error")
-                # On error, optionally halt or continue; here we halt unless process_all.
-                if process_all:
-                    continue
-                break
 
-            if self.stop_requested:
-                if self.pause_requested and idx < len(tasks):
-                    next_task = tasks[idx]
-                    self.save_checkpoint(next_task["subject"], next_task["filename"])
-                break
+                try:
+                    process_callback(idx, task, total)
+                except HITLPendingInterrupt as hitl_exc:
+                    self.log(f"⏸️ 任務被暫停以等待人工介入 (Trace ID: {hitl_exc.trace_id})", "warn")
+                    note_msg = f"⚠️ [Trace: {hitl_exc.trace_id[:8]}] {hitl_exc}"
+                    self.state_manager.update_task(
+                        task["subject"],
+                        task["filename"],
+                        self.phase_key,
+                        "⏸️",
+                        note_tag=note_msg,
+                    )
+                    self.save_checkpoint(task["subject"], task["filename"])
+                    if process_all:
+                        self.log("▶️ [非互動模式] 略過中斷，繼續處理下一個檔案。")
+                    else:
+                        self._write_session_state(SessionState.PAUSED)
+                        stopped = True
+                        break
+                except Exception as e:
+                    self.log(f"❌ [{idx}/{total}] 任務執行失敗: {e}", "error")
+                    if not process_all:
+                        stopped = True
+                        break
+                else:
+                    if use_rich:
+                        progress.advance(_progress_task)
+
+                if self.stop_requested:
+                    if self.pause_requested and idx < total:
+                        next_task = tasks[idx]
+                        self.save_checkpoint(next_task["subject"], next_task["filename"])
+                    stopped = True
+                    break
+
+        # Cleanup progress console reference
+        self._rich_progress_console = None
+
+        if not stopped:
+            self.log(f"✅ [{self.phase_name}] 全部 {total} 個檔案處理完成。")
 
     def _batch_select_reprocess(self, done_tasks: List[Dict]) -> Dict[int, Dict]:
         """互動式批量選擇已完成任務是否重跑。"""

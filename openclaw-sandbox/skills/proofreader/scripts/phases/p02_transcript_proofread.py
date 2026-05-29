@@ -7,8 +7,6 @@ If reference docs are still pending, it aborts (waiting for doc_parser to trigge
 
 import json
 import os
-import re
-import sys
 
 from phases.base_proofread import BaseProofreadPhase
 

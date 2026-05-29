@@ -12,7 +12,7 @@ import hashlib
 import os
 import sqlite3
 import time
-from typing import Any, Dict, NamedTuple, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import aiohttp
 import requests

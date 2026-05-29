@@ -54,7 +54,7 @@ synthesize:
 
     # qwen3_reasoning — PRIMARY: best synthesis quality (quality-first)
     qwen3_reasoning:
-      model: qwen3:14b
+      model: qwen3:8b
       chunk_threshold: 6000
       map_chunk_size: 5000
       mermaid_retry_max: 3

@@ -20,7 +20,7 @@ import re
 import sys
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 # Path Resolution MUST happen before importing internal packages
 _core_dir = os.path.dirname(os.path.abspath(__file__))
@@ -34,8 +34,6 @@ from core.orchestration.session_manifest import update_session_manifest
 from core.orchestration.skill_registry import SkillRegistry
 from core.utils.atomic_writer import AtomicWriter
 from core.utils.file_stability import FileStabilityPoller
-from core.utils.log_manager import build_logger
-from core.utils.path_builder import PathBuilder
 
 _logger = logging.getLogger("OpenClaw.InboxDaemon")
 if not _logger.handlers:
@@ -330,13 +328,16 @@ class SystemInboxDaemon:
             # Publish EventBus message so RouterAgent picks it up
             from core.orchestration.event_bus import DomainEvent, EventBus
 
+            # Include proofreader as current_skill so RouterAgent maps to the next_skill properly
+            resume_chain = ["proofreader", *remaining_chain]
+
             EventBus.publish(
                 DomainEvent(
                     name="PipelineCompleted",
                     source_skill="proofreader",
                     payload={
                         "filepath": filepath,
-                        "chain": remaining_chain,
+                        "chain": resume_chain,
                         "subject": subject,
                         "model": env.get("OPENCLAW_ROUTER_MODEL") if env else None,
                     },

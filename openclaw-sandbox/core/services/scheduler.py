@@ -8,7 +8,6 @@ Usage:
     python -m core.services.scheduler
 """
 
-import logging
 import os
 import sys
 

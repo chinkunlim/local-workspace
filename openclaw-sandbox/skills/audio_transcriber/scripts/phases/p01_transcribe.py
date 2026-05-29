@@ -13,7 +13,6 @@ V8.1 Changes (vs V7.0):
 
 # Group 1 — stdlib
 import os
-import sys
 import zlib
 
 # Group 2 — Internal Core Bootstrap

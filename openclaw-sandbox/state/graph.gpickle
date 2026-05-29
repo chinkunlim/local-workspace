@@ -1,0 +1,722 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "file": "AGENTS.md",
+      "labels": [
+        "Document",
+        "Note"
+      ],
+      "id": "AGENTS.md — Internal Agent Registry"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "WikiLinks"
+    },
+    {
+      "labels": [
+        "Domain",
+        "Tag"
+      ],
+      "id": "tags"
+    },
+    {
+      "labels": [
+        "Domain",
+        "Tag"
+      ],
+      "id": "incubating"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "RouterAgent"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "qwen3:14b"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "inbox_daemon"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "04_final_verified/"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "smart_highlighter"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "note_generator"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "academic_edu_assistant"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Anki flashcards"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "student_researcher"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Manual activation"
+    },
+    {
+      "file": "CHANGELOG.md",
+      "labels": [
+        "Document",
+        "Note"
+      ],
+      "id": "CHANGELOG.md — Open Claw Sandbox"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Link"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Telegram Bot"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Dynamic Module Hiding"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Inline Callback Buttons"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "run_all_pipelines.py"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "End-to-End Orchestration Sweep"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "PipelineBase"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Strict Pipeline Argument Passing"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "CODING_GUIDELINES.md"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "v4.3.0"
+    },
+    {
+      "file": "Dummy Test 非功能性流程模擬.md",
+      "labels": [
+        "Document",
+        "Note"
+      ],
+      "id": "Dummy Test: 非功能性流程模擬"
+    },
+    {
+      "labels": [
+        "Domain",
+        "Tag"
+      ],
+      "id": "非功能性測試"
+    },
+    {
+      "labels": [
+        "Domain",
+        "Tag"
+      ],
+      "id": "學術失敗"
+    },
+    {
+      "labels": [
+        "Domain",
+        "Tag"
+      ],
+      "id": "技術流程錯誤"
+    },
+    {
+      "labels": [
+        "Domain",
+        "Tag"
+      ],
+      "id": "無效案例"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Dummy Test"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Pipeline Simulation"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Non-Functional Test Case"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Academic Content"
+    },
+    {
+      "file": "HEARTBEAT.md",
+      "labels": [
+        "Document",
+        "Note"
+      ],
+      "id": "HEARTBEAT.md"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "data/audio_transcriber/logs/system.log"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "audio_transcriber"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "data/doc_parser/state/.pipeline_state.json"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "doc_parser"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "data/student_researcher/input/"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "memory/TASKS.md"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "TASK_STATUS"
+    },
+    {
+      "file": "IDENTITY.md",
+      "labels": [
+        "Document",
+        "Note"
+      ],
+      "id": "IDENTITY.md — Runtime Agent Persona"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Senior Local AI Systems Engineer"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Agent Identity Contract"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Open Claw Sandbox"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "core.orchestration.pipeline_base.PipelineBase"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "rich"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Terminal UI"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "core/cli/"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "CLI"
+    },
+    {
+      "file": "SOUL.md",
+      "labels": [
+        "Document",
+        "Note"
+      ],
+      "id": "SOUL.md — System Ethics & Operational Core"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "SOUL.md"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "SYSTEM_ETHICS_AND_OPERATIONAL_CORE"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "PRECISION"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "SYSTEM_ETHICS_PRINCIPLE"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "SAFETY"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "DETERMINISM"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "MAINTAINABILITY"
+    },
+    {
+      "file": "TOOLS.md",
+      "labels": [
+        "Document",
+        "Note"
+      ],
+      "id": "TOOLS.md"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Ollama API"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "infra/scripts/start.sh"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Ollama"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "skill-runtime"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "WORKSPACE_DIR"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "HF_HOME"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "models/"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Workspace root"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "openclaw-sandbox/"
+    },
+    {
+      "file": "USER.md",
+      "labels": [
+        "Document",
+        "Note"
+      ],
+      "id": "USER.md — Operator Profile for Open Claw"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "User"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Asia/Taipei"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "Traditional Chinese"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "FILE_DELETION"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "USER"
+    },
+    {
+      "labels": [
+        "Concept"
+      ],
+      "id": "NETWORK_ACTION"
+    }
+  ],
+  "edges": [
+    {
+      "rel": "RELATED_TO",
+      "source": "AGENTS.md — Internal Agent Registry",
+      "target": "WikiLinks"
+    },
+    {
+      "rel": "IS_A",
+      "source": "AGENTS.md — Internal Agent Registry",
+      "target": "tags"
+    },
+    {
+      "rel": "IS_A",
+      "source": "AGENTS.md — Internal Agent Registry",
+      "target": "incubating"
+    },
+    {
+      "rel": "DEPENDS_ON",
+      "source": "RouterAgent",
+      "target": "qwen3:14b"
+    },
+    {
+      "rel": "MONITORS",
+      "source": "inbox_daemon",
+      "target": "04_final_verified/"
+    },
+    {
+      "rel": "SEQUENTIAL_CHAIN",
+      "source": "smart_highlighter",
+      "target": "note_generator"
+    },
+    {
+      "rel": "GENERATES",
+      "source": "academic_edu_assistant",
+      "target": "Anki flashcards"
+    },
+    {
+      "rel": "TRIGGERED_BY",
+      "source": "student_researcher",
+      "target": "Manual activation"
+    },
+    {
+      "rel": "RELATED_TO",
+      "source": "CHANGELOG.md — Open Claw Sandbox",
+      "target": "Link"
+    },
+    {
+      "rel": "IS_A",
+      "source": "CHANGELOG.md — Open Claw Sandbox",
+      "target": "tags"
+    },
+    {
+      "rel": "IMPLEMENTED",
+      "source": "Telegram Bot",
+      "target": "Dynamic Module Hiding"
+    },
+    {
+      "rel": "ADDED_FEATURE",
+      "source": "Telegram Bot",
+      "target": "Inline Callback Buttons"
+    },
+    {
+      "rel": "ADDED_FEATURE",
+      "source": "run_all_pipelines.py",
+      "target": "End-to-End Orchestration Sweep"
+    },
+    {
+      "rel": "UPDATED",
+      "source": "PipelineBase",
+      "target": "Strict Pipeline Argument Passing"
+    },
+    {
+      "rel": "UPDATED_TO",
+      "source": "CODING_GUIDELINES.md",
+      "target": "v4.3.0"
+    },
+    {
+      "rel": "IS_A",
+      "source": "Dummy Test: 非功能性流程模擬",
+      "target": "非功能性測試"
+    },
+    {
+      "rel": "IS_A",
+      "source": "Dummy Test: 非功能性流程模擬",
+      "target": "學術失敗"
+    },
+    {
+      "rel": "IS_A",
+      "source": "Dummy Test: 非功能性流程模擬",
+      "target": "技術流程錯誤"
+    },
+    {
+      "rel": "IS_A",
+      "source": "Dummy Test: 非功能性流程模擬",
+      "target": "無效案例"
+    },
+    {
+      "rel": "RELATED_TO",
+      "source": "Dummy Test",
+      "target": "Pipeline Simulation"
+    },
+    {
+      "rel": "LACKS_ACADEMIC_VALUE",
+      "source": "Dummy Test",
+      "target": "Academic Content"
+    },
+    {
+      "rel": "LACKS_DATA",
+      "source": "Pipeline Simulation",
+      "target": "Academic Content"
+    },
+    {
+      "rel": "LACKS_TEACHING_VALUE",
+      "source": "Non-Functional Test Case",
+      "target": "Academic Content"
+    },
+    {
+      "rel": "RELATED_TO",
+      "source": "Non-Functional Test Case",
+      "target": "Pipeline Simulation"
+    },
+    {
+      "rel": "CHECKS_LOG",
+      "source": "data/audio_transcriber/logs/system.log",
+      "target": "audio_transcriber"
+    },
+    {
+      "rel": "CHECKS_STATE",
+      "source": "data/doc_parser/state/.pipeline_state.json",
+      "target": "doc_parser"
+    },
+    {
+      "rel": "CHECKS_STAGING",
+      "source": "data/student_researcher/input/",
+      "target": "student_researcher"
+    },
+    {
+      "rel": "CHECKS_TASK_STATUS",
+      "source": "memory/TASKS.md",
+      "target": "TASK_STATUS"
+    },
+    {
+      "rel": "IS_A",
+      "source": "Senior Local AI Systems Engineer",
+      "target": "Agent Identity Contract"
+    },
+    {
+      "rel": "DOMAIN",
+      "source": "Open Claw Sandbox",
+      "target": "Senior Local AI Systems Engineer"
+    },
+    {
+      "rel": "IS_A",
+      "source": "core.orchestration.pipeline_base.PipelineBase",
+      "target": "PipelineBase"
+    },
+    {
+      "rel": "USED_IN",
+      "source": "rich",
+      "target": "Terminal UI"
+    },
+    {
+      "rel": "PART_OF",
+      "source": "core/cli/",
+      "target": "CLI"
+    },
+    {
+      "rel": "ESTABLISHES",
+      "source": "SOUL.md",
+      "target": "SYSTEM_ETHICS_AND_OPERATIONAL_CORE"
+    },
+    {
+      "rel": "IS_A",
+      "source": "PRECISION",
+      "target": "SYSTEM_ETHICS_PRINCIPLE"
+    },
+    {
+      "rel": "IS_A",
+      "source": "SAFETY",
+      "target": "SYSTEM_ETHICS_PRINCIPLE"
+    },
+    {
+      "rel": "IS_A",
+      "source": "DETERMINISM",
+      "target": "SYSTEM_ETHICS_PRINCIPLE"
+    },
+    {
+      "rel": "IS_A",
+      "source": "MAINTAINABILITY",
+      "target": "SYSTEM_ETHICS_PRINCIPLE"
+    },
+    {
+      "rel": "MANAGED_BY",
+      "source": "Ollama API",
+      "target": "infra/scripts/start.sh"
+    },
+    {
+      "rel": "IS_A",
+      "source": "Ollama",
+      "target": "skill-runtime"
+    },
+    {
+      "rel": "SET_BY",
+      "source": "WORKSPACE_DIR",
+      "target": "infra/scripts/start.sh"
+    },
+    {
+      "rel": "DEFAULT_TO",
+      "source": "HF_HOME",
+      "target": "models/"
+    },
+    {
+      "rel": "PART_OF",
+      "source": "Workspace root",
+      "target": "openclaw-sandbox/"
+    },
+    {
+      "rel": "HAS_TIMEZONE",
+      "source": "User",
+      "target": "Asia/Taipei"
+    },
+    {
+      "rel": "PRIMARY_LANGUAGE",
+      "source": "User",
+      "target": "Traditional Chinese"
+    },
+    {
+      "rel": "REQUIRES_APPROVAL",
+      "source": "FILE_DELETION",
+      "target": "USER"
+    },
+    {
+      "rel": "REQUIRES_APPROVAL",
+      "source": "NETWORK_ACTION",
+      "target": "USER"
+    }
+  ]
+}

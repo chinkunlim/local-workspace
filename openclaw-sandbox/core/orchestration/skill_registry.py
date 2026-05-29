@@ -16,7 +16,7 @@ Usage:
     registry.discover()
 
     for name, manifest in registry.all().items():
-        print(f"{name}: {manifest.description}")
+        logger.info(f"{name}: {manifest.description}")
 
     run_fn = registry.get_run_fn("audio_transcriber")
     run_fn(subject="math", force=False)
@@ -26,11 +26,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import importlib.util
+import logging
 import os
 import sys
 from typing import Callable, Dict, List, Optional
 
-from rich import print
+logger = logging.getLogger("OpenClaw.skill_registry")
 
 # ---------------------------------------------------------------------------
 # SkillManifest Protocol (#17)
@@ -60,6 +61,7 @@ class SkillManifest:
 
     skill_name: str
     description: str
+    display_name: str = ""
     phases: List[str] = field(default_factory=list)
     phase_labels: Dict[str, str] = field(default_factory=dict)
     cli_entry: str = ""
@@ -67,6 +69,7 @@ class SkillManifest:
     file_types: List[str] = field(default_factory=list)  # e.g. [".m4a", ".pdf"]
     tags: List[str] = field(default_factory=list)  # e.g. ["audio", "transcription"]
     io_contracts: Dict[str, List[str]] = field(default_factory=dict)
+    requires_hitl: bool = False  # If True, RouterAgent pauses chain for human verification
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +118,7 @@ class SkillRegistry:
                     self._registry[manifest.skill_name] = manifest
                     discovered += 1
             except Exception as exc:
-                print(f"⚠️ [SkillRegistry] 無法載入 {entry}/manifest.py: {exc}")
+                logger.warning(f"⚠️ [SkillRegistry] 無法載入 {entry}/manifest.py: {exc}")
 
         return discovered
 
@@ -135,6 +138,17 @@ class SkillRegistry:
                 if end_idx != -1:
                     yaml_content = content[3:end_idx]
                     data = yaml.safe_load(yaml_content) or {}
+
+                    # Extract UI Display Name & Emoji
+                    metadata = data.get("metadata", {}).get("openclaw", {})
+                    emoji = metadata.get("emoji", "")
+                    display_name = metadata.get("display_name", "")
+
+                    if display_name:
+                        manifest.display_name = f"{emoji} {display_name}".strip()
+                    else:
+                        manifest.display_name = f"{emoji} {manifest.skill_name}".strip()
+
                     if "state_tracking" in data:
                         manifest.phases = data["state_tracking"].get("phases", manifest.phases)
                         manifest.phase_labels = data["state_tracking"].get(
@@ -142,8 +156,10 @@ class SkillRegistry:
                         )
                     if "io_contracts" in data:
                         manifest.io_contracts = data.get("io_contracts", {})
+                    if "requires_hitl" in data:
+                        manifest.requires_hitl = bool(data.get("requires_hitl", False))
         except Exception as exc:
-            print(f"⚠️ [SkillRegistry] 無法讀取 {skill_md}: {exc}")
+            logger.warning(f"⚠️ [SkillRegistry] 無法讀取 {skill_md}: {exc}")
 
     def _load_manifest(self, skill_dir_name: str, manifest_path: str) -> Optional[SkillManifest]:
         """Dynamically import a manifest.py and extract the MANIFEST variable."""

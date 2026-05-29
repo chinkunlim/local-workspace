@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-29 (V9.22 — Orchestration Hardening & Telegram GUI Integration)
+> **Last Updated:** 2026-05-29 (V9.24 — Phase 1 & 2 Decoupling + Code Quality Gate Clearance)
 
 ---
 
@@ -11,10 +11,10 @@
 ---
 
 ## 1. 優先處理 (High Priority)
-- [ ] **Phase 1 (StateManager Decoupling)**: Shift `state_tracking: phases` and `labels` to the `SKILL.md` YAML Frontmatter for all skills, and refactor `StateManager.__init__` to load them dynamically via `SkillRegistry`.
-- [ ] **Phase 2 (RouterAgent Decoupling)**: Shift `io_contracts: consumes/produces` to `SKILL.md`, and refactor `RouterAgent._on_pipeline_completed` to use standard `resolve_paths()` handoffs instead of hardcoded skill names. Move LLM decomposition descriptions out of code.
-- [ ] **Verify Complete End-to-End Incubator Flow**: Drop a raw `.md` file with a `Gemini_` prefix into `data/raw/inbox/`. Verify that `inbox_daemon` routes it to `student_researcher` (Phase 0 -> Phase 1 -> Phase 2), assigns it to `Incubator` or an existing subject, moves it to `knowledge_compiler` via `RouterAgent`, and outputs it into the `wiki/Incubator/` folder in Obsidian.
-- [ ] **E2E Stability Test**: Run `.m4a` + `.pdf` + `.pptx` through the full pipeline (`audio_transcriber` → `doc_parser` → `proofreader` → `note_generator`) to ensure pipeline state remains clean and files do not get stuck in intermediate stages.
+- [x] **Phase 1 (StateManager Decoupling)**: `SKILL.md` YAML Frontmatter now drives `state_tracking: phases` and `labels` across all 15 skills. `SkillRegistry._load_metadata_from_md()` parses and injects them into `SkillManifest` at discovery time.
+- [x] **Phase 2 (RouterAgent Decoupling)**: Added `requires_hitl: true` to `proofreader/SKILL.md`; `SkillManifest.requires_hitl` field added; `RouterAgent._on_pipeline_completed` now queries `manifest.requires_hitl` instead of hardcoding `if next_skill == "proofreader"`. Also added `io_contracts` to all skills.
+- [x] **Verify Complete End-to-End Incubator Flow**: Drop a raw `.md` file with a `Gemini_` prefix into `data/raw/inbox/`. Verify that `inbox_daemon` routes it to `student_researcher` (Phase 0 -> Phase 1 -> Phase 2), assigns it to `Incubator` or an existing subject, moves it to `knowledge_compiler` via `RouterAgent`, and outputs it into the `wiki/Incubator/` folder in Obsidian.
+- [x] **E2E Stability Test**: Run `.m4a` + `.pdf` + `.pptx` through the full pipeline (`audio_transcriber` → `doc_parser` → `proofreader` → `note_generator`) to ensure pipeline state remains clean and files do not get stuck in intermediate stages.
 - [ ] Phase B (Memory & Graph RAG): ChromaDB + NetworkX deep integration
 - [x] **Fix stale `openclaw.json` workspace path**: Update `agents.defaults.workspace` from `/Users/limchinkun/Desktop/local-workspace/open-claw-sandbox` → `openclaw-sandbox/` (run `openclaw configure` or `openclaw config set agents.defaults.workspace /Users/limchinkun/Desktop/local-workspace/openclaw-sandbox`)
 - [x] **Migrate core/services & core/cli from rich.print to log_manager for stricter compliance**
@@ -214,6 +214,11 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-05-29: Eager Execution & HITL Verification Hardening
+  - Fixed RouterAgent eager chain index routing to ensure pre-HITL versions safely copy to smart_highlighter.
+  - Prepended `proofreader` to InboxDaemon resume chain to guarantee proper DAG resolution.
+  - Restored dynamic module visibility for `check_status.py` and telegram bot to accurately reflect pipeline logic.
 
 - [x] 2026-05-07: Multi-Format Parse & Asynchronous Verification Pipeline
   - `docling` core environment recovered (forced `docling-slim` and resolved module pathing in `p01a_engine.py`).

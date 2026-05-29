@@ -1,22 +1,21 @@
 ---
 name: interactive_reader
-description: "Interactive AI Reader. Allows users to write commands like `> [AI: ...]` inside Markdown files to get AI-generated inline context."
+description: 'Interactive AI Reader. Allows users to write commands like `> [AI: ...]`
+  inside Markdown files to get AI-generated inline context.'
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "📖"
-      }
-  }
+  openclaw:
+    emoji: 📖
+    display_name: 互動式閱讀
 state_tracking:
-  phases: ["p01_interactive"]
+  phases:
+  - p01_interactive
   labels:
-    p01_interactive: "P1 (Interactive)"
+    p01_interactive: P1 (Interactive)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
 # Interactive Reader

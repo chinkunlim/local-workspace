@@ -1,6 +1,3 @@
-import os
-import sys
-
 from phases.p01_feynman_debate import Phase1FeynmanDebate
 from phases.p02_debate_synthesis import Phase2DebateSynthesis
 

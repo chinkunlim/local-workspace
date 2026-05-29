@@ -8,16 +8,18 @@ import tempfile
 from typing import Any
 
 _core_dir = os.path.dirname(os.path.abspath(__file__))
-_workspace_root = os.environ.get(
-    "WORKSPACE_DIR", os.path.abspath(os.path.join(_core_dir, "..", ".."))
-)
+
+
+def _get_workspace_root() -> str:
+    """Resolve workspace root dynamically so tests can override WORKSPACE_DIR via env."""
+    return os.environ.get("WORKSPACE_DIR", os.path.abspath(os.path.join(_core_dir, "..", "..")))
 
 
 class AtomicWriter:
     @staticmethod
     def write_text(path: str, content: str, encoding: str = "utf-8") -> None:
         abs_path = os.path.realpath(os.path.expanduser(path))
-        safe_root = os.path.realpath(_workspace_root)
+        safe_root = os.path.realpath(_get_workspace_root())
         if not safe_root.endswith(os.sep):
             safe_root += os.sep
 

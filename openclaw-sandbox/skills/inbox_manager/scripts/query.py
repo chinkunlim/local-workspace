@@ -12,7 +12,6 @@ import argparse
 import json
 import os
 import sys
-import tempfile
 
 from core.utils.atomic_writer import AtomicWriter
 from core.utils.workspace import get_workspace_root

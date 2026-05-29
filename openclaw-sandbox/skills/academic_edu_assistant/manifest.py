@@ -1,8 +1,5 @@
 """skills/academic_edu_assistant/manifest.py — SkillManifest (#17 / M1)"""
 
-import os
-import sys
-
 from core.orchestration.skill_registry import SkillManifest
 
 

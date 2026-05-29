@@ -1,26 +1,27 @@
 ---
-name: note-generator
-description: Synthesize any Markdown input into structured study notes with a YAML header and Mermaid mindmap, using a Map-Reduce strategy for large texts and an agentic retry loop for self-healing Mermaid syntax.
+name: note_generator
+description: Synthesize any Markdown input into structured study notes with a YAML
+  header and Mermaid mindmap, using a Map-Reduce strategy for large texts and an agentic
+  retry loop for self-healing Mermaid syntax.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "📝"
-      }
-  }
+  openclaw:
+    emoji: 📝
+    display_name: 筆記生成
 state_tracking:
-  phases: ["p1", "p2"]
+  phases:
+  - p1
+  - p2
   labels:
-    p1: "P1 (Map-Reduce)"
-    p2: "P2 (Mermaid)"
+    p1: P1 (Map-Reduce)
+    p2: P2 (Mermaid)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
-# SKILL: note-generator
+# SKILL: note_generator
 
 ## Purpose
 

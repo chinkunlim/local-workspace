@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 
 # Core Bootstrap
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
@@ -17,7 +16,9 @@ class Phase1ClaimExtraction(PhaseBase):
         )
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.dirs["inbox"]
+        input_dir = self.path_builder.canonical_dirs.get(
+            "input", os.path.join(self.base_dir, "input")
+        )
 
         for root, _, files in os.walk(input_dir):
             for file in files:

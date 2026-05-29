@@ -6,7 +6,6 @@ Proofreads the extracted text for completeness and embeds images in their correc
 
 import json
 import os
-import sys
 
 from phases.base_proofread import BaseProofreadPhase
 

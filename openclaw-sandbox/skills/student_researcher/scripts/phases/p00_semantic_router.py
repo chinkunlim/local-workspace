@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import sys
 
 # Core Bootstrap
 from core import AtomicWriter, PipelineBase
@@ -14,7 +13,11 @@ class Phase0SemanticRouter(PipelineBase):
             phase_name="語意尋根與孵化分配 (Semantic Router)",
             skill_name="student_researcher",
         )
-        self.model_name = self.config_manager.get_nested("models", "default") or "qwen3:8b"
+        model_cfg = self.config_manager.get_nested("models", "default")
+        if isinstance(model_cfg, dict):
+            self.model_name = model_cfg.get("name", "qwen3:8b")
+        else:
+            self.model_name = model_cfg or "qwen3:8b"
         self.semantic_ctx_path = os.path.join(self.base_dir, "state", "semantic_context.json")
         self._context_cache = {}
         if os.path.exists(self.semantic_ctx_path):

@@ -15,7 +15,6 @@ from phases.p03_doc_completeness import Phase3DocCompleteness
 
 from core import (
     PipelineBase,
-    SessionState,
     StateManager,
     build_skill_parser,
 )

@@ -9,13 +9,14 @@ Zero external dependencies (uses standard library http.server).
 import html
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import logging
 import os
 import re
 import socket
 import threading
 from typing import Optional
 
-from rich import print
+logger = logging.getLogger("OpenClaw.human_gate")
 
 
 class _GatedHTTPServer(HTTPServer):

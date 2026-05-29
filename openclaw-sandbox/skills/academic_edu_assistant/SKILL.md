@@ -1,23 +1,23 @@
 ---
 name: academic_edu_assistant
-description: "Academic & Education Assistant. RAG-based cross-comparison engine and Anki flashcard generator."
+description: Academic & Education Assistant. RAG-based cross-comparison engine and
+  Anki flashcard generator.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🎓"
-      }
-  }
+  openclaw:
+    emoji: 🎓
+    display_name: 學術教育助手
 state_tracking:
-  phases: ["p01_compare", "p02_anki"]
+  phases:
+  - p01_compare
+  - p02_anki
   labels:
-    p01_compare: "P1 (Compare)"
-    p02_anki: "P2 (Anki)"
+    p01_compare: P1 (Compare)
+    p02_anki: P2 (Anki)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/csv"
+  - text/csv
 ---
 
 # Academic & Education Assistant

@@ -1,26 +1,26 @@
 ---
 name: video_ingester
-description: Ingests lecture videos, extracts keyframes with FFmpeg, transcribes audio, and outputs interleaved Markdown.
+description: Ingests lecture videos, extracts keyframes with FFmpeg, transcribes audio,
+  and outputs interleaved Markdown.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🎬"
-      }
-  }
+  openclaw:
+    emoji: 🎬
+    display_name: 影片處理
 state_tracking:
-  phases: ["p01_extract_keyframes", "p02_transcribe_video"]
+  phases:
+  - p01_extract_keyframes
+  - p02_transcribe_video
   labels:
-    p01_extract_keyframes: "P1 (Keyframes)"
-    p02_transcribe_video: "P2 (Transcribe)"
+    p01_extract_keyframes: P1 (Keyframes)
+    p02_transcribe_video: P2 (Transcribe)
 io_contracts:
   consumes:
-    - "video/mp4"
-    - "video/quicktime"
-    - "video/x-matroska"
-    - "video/webm"
+  - video/mp4
+  - video/quicktime
+  - video/x-matroska
+  - video/webm
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
 # Video Ingester

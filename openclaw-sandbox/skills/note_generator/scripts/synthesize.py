@@ -9,7 +9,6 @@ Mermaid retry loops for self-healing syntax generation.
 """
 
 import datetime
-import os
 import re
 import sys
 

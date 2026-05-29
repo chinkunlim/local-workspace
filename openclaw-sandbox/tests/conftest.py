@@ -24,6 +24,15 @@ def tmp_workspace(monkeypatch):
     except ImportError:
         pass
 
+    # Reset LocalTaskQueue singleton so each test gets a fresh instance.
+    # Without this, the singleton persists across tests and mock call counts leak.
+    try:
+        from core.orchestration import task_queue as tq_module
+
+        tq_module.LocalTaskQueue._instance = None
+    except Exception:
+        pass
+
     # Create expected subdirectories
     os.makedirs(os.path.join(tmp_dir, "logs"))
     os.makedirs(os.path.join(tmp_dir, "data"))

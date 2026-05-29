@@ -2,21 +2,19 @@
 name: academic_library_agent
 description: Crosses paywalls and uses institutional login to fetch high-quality literature.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "📚"
-      }
-  }
+  openclaw:
+    emoji: 📚
+    display_name: 學術文獻庫代理
 state_tracking:
-  phases: ["p1"]
+  phases:
+  - p1
   labels:
-    p1: "P1 (Fetch)"
+    p1: P1 (Fetch)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "application/pdf"
+  - application/pdf
 ---
 
 # Academic Library Agent

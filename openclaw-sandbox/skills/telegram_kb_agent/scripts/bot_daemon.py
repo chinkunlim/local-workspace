@@ -7,7 +7,7 @@ import time
 import requests
 
 from core.services.hitl_manager import HITLManager
-from core.services.telegram_bot import _get_bot_config, send_inline_keyboard, send_message
+from core.services.telegram_bot import _get_bot_config, send_message
 from core.utils.atomic_writer import AtomicWriter
 from core.utils.log_manager import build_logger
 from core.utils.workspace import get_workspace_root

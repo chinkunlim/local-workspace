@@ -51,7 +51,7 @@ class HybridRetriever:
         vec = cfg.get_section("vector_db") or {}
         self._vector_db_path: str = vec.get(
             "path",
-            os.path.join(workspace_root, "skills", "telegram_kb_agent", "state", "chroma_db"),
+            os.path.join(workspace_root, "data", "telegram_kb_agent", "state", "chroma_db"),
         )
         rt = (cfg.get_section("runtime") or {}).get("ollama", {})
         self._ollama_url: str = rt.get("api_url", "http://127.0.0.1:11434/api")
@@ -83,7 +83,17 @@ class HybridRetriever:
         if self._llm is None:
             from core.ai.llm_client import OllamaClient  # type: ignore[import]
 
-            self._llm = OllamaClient(api_url=self._ollama_url)
+            api_url = self._ollama_url
+            if api_url.endswith("/api"):
+                api_url = api_url + "/generate"
+            elif (
+                not api_url.endswith("/generate")
+                and not api_url.endswith("/chat/completions")
+                and "/v1" not in api_url
+            ):
+                api_url = api_url.rstrip("/") + "/api/generate"
+
+            self._llm = OllamaClient(api_url=api_url)
         return self._llm
 
     def _embed(self, text: str) -> List[float]:
@@ -135,6 +145,7 @@ class HybridRetriever:
                     {
                         "text": doc,
                         "source": meta.get("filename", "unknown"),
+                        "title": meta.get("title", ""),
                         "score": 1.0 / (1.0 + dist),
                         "origin": "vector",
                     }
@@ -147,7 +158,23 @@ class HybridRetriever:
         if not skip_graph:
             try:
                 graph = self._get_graph()
-                candidates = re.findall(r"[\u4e00-\u9fff]{2,10}|[A-Z][a-zA-Z]{2,}", question)
+
+                # Deep Integration: Vector-seeded candidates + Regex fallback
+                candidates = set(re.findall(r"[\u4e00-\u9fff]{2,10}|[A-Z][a-zA-Z]{2,}", question))
+                for p in passages:
+                    if p.get("origin") == "vector":
+                        doc_title = p.get("title")
+                        if doc_title:
+                            candidates.add(doc_title)
+
+                        fname = p.get("source", "")
+                        if fname.endswith(".md"):
+                            base_name = fname[:-3]
+                            candidates.add(base_name)
+                            candidates.update(
+                                re.findall(r"[\u4e00-\u9fff]{2,10}|[A-Z][a-zA-Z]{2,}", base_name)
+                            )
+
                 seen: set = set()
                 for entity in candidates:
                     if not graph.entity_exists(entity):

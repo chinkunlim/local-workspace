@@ -9,7 +9,11 @@
 1. **Summarise and distil**: Restructure the content into clean Markdown without distorting the original meaning.
 2. **Structure requirements**:
 
-   ```
+   ```markdown
+   ---
+   aliases: ["[Alias1]", "[Alias2]"]
+   tags: ["[Tag1]", "[Tag2]"]
+   ---
    # [Precise title derived from content]
    > [One-sentence core summary]
    ## Core Concepts
@@ -21,7 +25,7 @@
    - Wrap each with Obsidian bi-directional link format, e.g.: `[[Cognitive Psychology]]`, `[[Python]]`.
    - Only mark the **first occurrence** of each concept.
 
-4. **Domain tagging**: At the bottom of the article, add a `## Related Links` section listing domain hashtags (e.g., `#Psychology`, `#Programming`, `#AI`, `#Teaching`) and 2–3 strong bi-directional concept links.
+4. **Domain tagging**: Add appropriate tags in the YAML frontmatter. At the bottom of the article, add a `## Related Links` section listing 2–3 strong bi-directional concept links.
 
 **Format**: Output the restructured Markdown document directly. No preamble or explanation.
 

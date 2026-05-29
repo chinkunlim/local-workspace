@@ -24,7 +24,6 @@ import asyncio
 from datetime import datetime
 import os
 
-from core.ai.llm_client import OllamaClient
 from core.orchestration.pipeline_base import PipelineBase as PhaseBase
 from core.utils.atomic_writer import AtomicWriter
 from core.utils.playwright_utils import get_persistent_context
@@ -228,7 +227,6 @@ class Phase1FeynmanDebate(PhaseBase):
 
                     # Write a result pointer for Phase 2
                     out_path = os.path.join(output_dir, fname.replace(".md", "_debate.json"))
-                    import json
 
                     AtomicWriter.write_json(
                         out_path,

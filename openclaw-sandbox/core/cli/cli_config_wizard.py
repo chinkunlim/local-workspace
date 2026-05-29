@@ -46,8 +46,6 @@ def load_config(config_file):
 
 def save_config(config_file, config_data, format_type):
     if format_type == "yaml":
-        import yaml
-
         AtomicWriter.write_json(config_file, config_data)
     logger.info(f"✅ 設定已成功儲存至 {config_file}！")
 

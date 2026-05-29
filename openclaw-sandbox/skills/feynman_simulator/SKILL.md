@@ -1,23 +1,23 @@
 ---
 name: feynman_simulator
-description: Simulates the Feynman Technique by instantiating a multi-agent debate loop with Playwright.
+description: Simulates the Feynman Technique by instantiating a multi-agent debate
+  loop with Playwright.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🧑‍🏫"
-      }
-  }
+  openclaw:
+    emoji: 🧑‍🏫
+    display_name: 費曼學習法模擬
 state_tracking:
-  phases: ["p01_feynman_debate", "p02_debate_synthesis"]
+  phases:
+  - p01_feynman_debate
+  - p02_debate_synthesis
   labels:
-    p01_feynman_debate: "P1 (Debate)"
-    p02_debate_synthesis: "P2 (Synthesis)"
+    p01_feynman_debate: P1 (Debate)
+    p02_debate_synthesis: P2 (Synthesis)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
 # Feynman Simulator

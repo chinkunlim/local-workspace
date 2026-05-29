@@ -2,21 +2,19 @@
 name: gemini_verifier_agent
 description: Cross-verifies claims via simulated dialogue with Gemini over Playwright.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "♊️"
-      }
-  }
+  openclaw:
+    emoji: ♊️
+    display_name: 內容驗證代理
 state_tracking:
-  phases: ["p01_ai_debate"]
+  phases:
+  - p01_ai_debate
   labels:
-    p01_ai_debate: "P1 (Debate)"
+    p01_ai_debate: P1 (Debate)
 io_contracts:
   consumes:
-    - "text/markdown"
+  - text/markdown
   produces:
-    - "text/markdown"
+  - text/markdown
 ---
 
 # Gemini Verifier Agent
