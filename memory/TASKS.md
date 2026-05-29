@@ -104,6 +104,9 @@
   - Synced `USER_MANUAL.md` with HITL Dashboard workflow and Multi-Ingress Funnel.
 - [x] 2026-05-22: **V9.14 HITL Proofreader Pipeline Pause/Resume**
   - Integrated `proofreader` into `audio_transcriber` and `doc_parser` default chains.
+  - [x] **Verify Integrity of `audio_transcriber` and `doc_parser` Outputs (STATUS: DONE)**
+    - *Context:* RouterAgent pipeline moved files out of output directories due to missing copy operation.
+    - *Action:* Reconstructed `audio_transcriber` `03_merged` files from downstream `<Original>` tags. Cleared polluted `smart_highlighter` and `proofreader` inputs. `doc_parser` verified 100% intact.
   - Implemented `RouterAgent` pause logic via `pending_chains.json`.
   - Upgraded `inbox_daemon.py` with Watchdog on `04_final_verified` to resume chains.
   - Added Dashboard Force Skip endpoint and UI button.
