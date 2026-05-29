@@ -187,6 +187,8 @@ curl http://localhost:18789/health          # Open Claw API
 
 | Date | Focus | Outcome |
 | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-05-29 | V9.22 Orchestration Hardening & Telegram GUI | AppleScript terminal reuse for `/resume`, callback queries fixed, timeout removed, and dynamic `/status` hiding implemented. |
+| 2026-05-26 | V9.21 Phase 6 Architectural Standardization | Replaced polling with `FileStabilityPoller`, mandated editable installs, hardened LLM session unloading, added E2E routing tests. |
 | 2026-05-22 | V9.16 Dual-Track 5-Layer Architecture | Reorganized system workflows into a clean 5-layer design with Parallel Dual-Track data flows (L3->L5 bypass, and L3->L4->L5 research route). Connected TG Bot directly to Layer 4, moved note_generator to Layer 3, and updated docs/ARCHITECTURE.md and system_workflow_guide.md. |
 | 2026-05-22 | V9.15 Memory Hardening & SSoT Verification | Verified core VLM & HITL implementation, synced ADRs, resolved Coding Guidelines numbering, and hardened sequential VLM/HITL exceptions invariants. |
 | 2026-05-22 | V9.14 HITL Proofreader Pipeline Pause/Resume | Integrated `proofreader` via JSON state pause/resume, added Dashboard Force Skip button, added full watchdog resume loop. |

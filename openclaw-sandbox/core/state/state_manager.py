@@ -65,91 +65,32 @@ class MemoryPool:
 
 
 class StateManager:
-    # Default phases for audio_transcriber
-    PHASES_VOICE = ["p1", "p2", "p3"]
-    # Phase set for doc_parser
-    PHASES_PDF = ["p0c", "p0b", "p0a", "p1a", "p1b_s", "p1b", "p1c", "p1d"]
-    # Phase set for knowledge_compiler
-    PHASES_COMPILER = ["p1"]
-    # Phase set for interactive_reader
-    PHASES_READER = ["p1"]
-    # Phase set for telegram_kb_agent
-    PHASES_AGENT = ["p1"]
-    # Phase set for academic_edu_assistant
-    PHASES_ACADEMIC = ["p1", "p2"]
-    # Phase set for smart_highlighter
-    PHASES_HIGHLIGHT = ["highlight"]
-    # Phase set for note_generator
-    PHASES_NOTE = ["synthesize"]
-    # Phase set for proofreader
-    PHASES_PROOFREADER = ["p1", "p2", "p3"]
-
-    # Phase labels for checklist rendering
-    PHASE_LABELS_VOICE = {"p1": "P1 (轉錄)", "p2": "P2 (校對)", "p3": "P3 (合併)"}
-    PHASE_LABELS_PDF = {
-        "p0c": "P0c (MarkItDown 轉換)",
-        "p0b": "P0b (圖片提取)",
-        "p0a": "P0a (診斷)",
-        "p1a": "P1a (提取)",
-        "p1b_s": "P1b-S (文字淨化)",
-        "p1b": "P1b (向量圖)",
-        "p1c": "P1c (OCR評估)",
-        "p1d": "P1d (VLM視覺)",
-    }
-    PHASE_LABELS_COMPILER = {"p1": "P1 (編譯與雙向連結)"}
-    PHASE_LABELS_READER = {"p1": "P1 (互動標籤處理)"}
-    PHASE_LABELS_AGENT = {"p1": "P1 (向量庫服務)"}
-    PHASE_LABELS_ACADEMIC = {"p1": "P1 (RAG 交叉比對)", "p2": "P2 (Anki 生成)"}
-    PHASE_LABELS_HIGHLIGHT = {"highlight": "H1 (重點標記)"}
-    PHASE_LABELS_NOTE = {"synthesize": "N1 (知識合成)"}
-    PHASE_LABELS_PROOFREADER = {
-        "p1": "P1 (文件校對)",
-        "p2": "P2 (逐字稿校對)",
-        "p3": "P3 (圖表完整性)",
-    }
-
     def __init__(
         self, base_dir: str, skill_name: str = "audio_transcriber", raw_dir: str | None = None
     ):
         self.base_dir = base_dir
         self.skill_name = skill_name
-        self.file_ext: str | tuple[str, ...]  # set per-skill below
-        if skill_name == "doc_parser":
-            self.PHASES = self.PHASES_PDF
-            self._phase_labels = self.PHASE_LABELS_PDF
-            self.file_ext = ("*.pdf", "*.png", "*.jpg", "*.jpeg", "*.pptx", "*.docx", "*.xlsx")
-        elif skill_name == "knowledge_compiler":
-            self.PHASES = self.PHASES_COMPILER
-            self._phase_labels = self.PHASE_LABELS_COMPILER
-            self.file_ext = "*.md"
-        elif skill_name == "interactive_reader":
-            self.PHASES = self.PHASES_READER
-            self._phase_labels = self.PHASE_LABELS_READER
-            self.file_ext = "*.md"
-        elif skill_name == "telegram_kb_agent":
-            self.PHASES = self.PHASES_AGENT
-            self._phase_labels = self.PHASE_LABELS_AGENT
-            self.file_ext = "*.md"
-        elif skill_name == "academic_edu_assistant":
-            self.PHASES = self.PHASES_ACADEMIC
-            self._phase_labels = self.PHASE_LABELS_ACADEMIC
-            self.file_ext = "*.md"
-        elif skill_name == "smart_highlighter":
-            self.PHASES = self.PHASES_HIGHLIGHT
-            self._phase_labels = self.PHASE_LABELS_HIGHLIGHT
-            self.file_ext = "*.md"
-        elif skill_name == "note_generator":
-            self.PHASES = self.PHASES_NOTE
-            self._phase_labels = self.PHASE_LABELS_NOTE
-            self.file_ext = "*.md"
-        elif skill_name == "proofreader":
-            self.PHASES = self.PHASES_PROOFREADER
-            self._phase_labels = self.PHASE_LABELS_PROOFREADER
-            self.file_ext = "*.md"
-        else:
-            self.PHASES = self.PHASES_VOICE
-            self._phase_labels = self.PHASE_LABELS_VOICE
-            self.file_ext = "*.m4a"
+        self.file_ext: str | tuple[str, ...] = "*.md"
+        self.PHASES: List[str] = ["p1"]
+        self._phase_labels: Dict[str, str] = {"p1": "P1 (處理)"}
+
+        # Dynamically load configuration from SkillRegistry
+        from core.orchestration.skill_registry import SkillRegistry
+
+        registry = SkillRegistry()
+        registry.discover()
+        manifest = registry.get(skill_name)
+        if manifest:
+            self.PHASES = manifest.phases or ["p1"]
+            self._phase_labels = manifest.phase_labels or {p: p.upper() for p in self.PHASES}
+
+            # Map file extensions
+            if len(manifest.file_types) == 1:
+                self.file_ext = manifest.file_types[0]
+            elif len(manifest.file_types) > 1:
+                self.file_ext = tuple(manifest.file_types)
+            else:
+                self.file_ext = "*.md"
         canonical_state_dir = os.path.join(base_dir, "state")
         legacy_state_file = os.path.join(base_dir, ".pipeline_state.json")
         legacy_checklist_file = os.path.join(base_dir, "checklist.md")
@@ -180,6 +121,20 @@ class StateManager:
         self._lock = threading.RLock()
         self._checkpoint: Optional[Dict[str, Any]] = None
         self.state: Dict[str, Dict[str, Any]] = self._load_state()
+
+        # If manifest was not found or has no explicit phases, try to infer them from existing state
+        if not manifest or not getattr(manifest, "phases", None):
+            inferred_phases = set()
+            for subj, files in self.state.items():
+                if isinstance(files, dict):
+                    for fname, record in files.items():
+                        if isinstance(record, dict):
+                            for k in record:
+                                if k.startswith("p") and k[1:].isdigit():
+                                    inferred_phases.add(k)
+            if inferred_phases:
+                self.PHASES = sorted(inferred_phases)
+                self._phase_labels = {p: f"{p.upper()} (處理)" for p in self.PHASES}
 
     @staticmethod
     def _dir_has_files(path: str) -> bool:
@@ -416,7 +371,7 @@ class StateManager:
     #  Dashboard 儀表板                                                    #
     # ------------------------------------------------------------------ #
 
-    def get_dashboard_text(self) -> str:
+    def get_dashboard_text(self) -> Optional[str]:
         """根據當前狀態與 Phase 定義，產生對齊的進度追蹤儀表板字串。"""
         with self._lock:
             counters = {p: {"done": 0, "total": 0} for p in self.PHASES}
@@ -430,41 +385,53 @@ class StateManager:
                         if val == "✅":
                             counters[key]["done"] += 1
 
+        # Check if there are any pending tasks
+        has_pending = False
+        for p in self.PHASES:
+            if counters[p]["total"] > 0 and counters[p]["done"] < counters[p]["total"]:
+                has_pending = True
+                break
+
+        if not has_pending:
+            return None
+
         lines = []
         skill_display = {
-            "audio_transcriber": "語音轉錄狀態與 DAG 追蹤面板",
-            "doc_parser": "文件解析狀態與 DAG 追蹤面板",
-            "academic_edu_assistant": "學術教育助手狀態與 DAG 追蹤面板",
-            "inbox_manager": "收件匣管理狀態與 DAG 追蹤面板",
-            "interactive_reader": "互動式閱讀狀態與 DAG 追蹤面板",
-            "knowledge_compiler": "知識編譯狀態與 DAG 追蹤面板",
-            "note_generator": "筆記生成狀態與 DAG 追蹤面板",
-            "smart_highlighter": "智能高亮狀態與 DAG 追蹤面板",
-            "telegram_kb_agent": "Telegram 知識庫代理狀態與 DAG 追蹤面板",
-            "proofreader": "Proofreader 狀態與 DAG 追蹤面板",
-        }.get(self.skill_name, f"{self.skill_name} 狀態與 DAG 追蹤面板")
+            "audio_transcriber": "[Inbox Daemon 排程] 語音轉錄",
+            "doc_parser": "[Inbox Daemon 排程] 文件解析",
+            "academic_edu_assistant": "學術教育助手",
+            "inbox_manager": "收件匣管理",
+            "interactive_reader": "互動式閱讀",
+            "knowledge_compiler": "知識編譯",
+            "note_generator": "筆記生成",
+            "smart_highlighter": "智能高亮",
+            "telegram_kb_agent": "Telegram 知識庫代理",
+            "proofreader": "Proofreader",
+        }.get(self.skill_name, f"{self.skill_name}")
 
-        lines.append("=" * 36)
-        lines.append(f"     📊 {skill_display}")
-        lines.append("=" * 36)
+        lines.append(f"🔹 **{skill_display}**")
 
         for p in self.PHASES:
             label = self._phase_labels.get(p, p.upper())
             done = counters[p]["done"]
             total = counters[p]["total"]
-            if done == total and total > 0:
+            if total == 0:
+                continue
+            if done == total:
                 icon = "✅"
             elif done > 0:
                 icon = "⏳"
             else:
                 icon = "❌"
-            lines.append(f"  [{label}]: {icon} {done}/{total}")
-        lines.append("=" * 36 + "\n")
+            lines.append(f"   ├─ [{label}]: {icon} {done}/{total}")
+        lines.append("")
         return "\n".join(lines)
 
     def print_dashboard(self):
         """直接在終端機印出儀表板。"""
-        print("\n" + self.get_dashboard_text())
+        text = self.get_dashboard_text()
+        if text:
+            print("\n" + text)
 
     # ------------------------------------------------------------------ #
     #  Checkpoint 管理 — 斷點續傳                                          #

@@ -159,8 +159,10 @@ class RedisStateBackend:
 
     def get(self, key: str) -> Optional[Dict[str, Any]]:
         try:
+            import typing
+
             raw = self._redis.get(self._k(key))
-            return json.loads(raw) if raw else None
+            return json.loads(typing.cast(str, raw)) if raw else None
         except Exception as exc:
             _logger.warning("[RedisBackend] get(%s) failed: %s", key, exc)
             return None

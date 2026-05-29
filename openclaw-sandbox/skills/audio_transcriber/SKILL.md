@@ -8,6 +8,19 @@ metadata:
         "emoji": "🎙️"
       }
   }
+state_tracking:
+  phases: ["p1", "p2", "p3"]
+  labels:
+    p1: "P1 (轉錄)"
+    p2: "P2 (校對)"
+    p3: "P3 (合併)"
+io_contracts:
+  consumes:
+    - "audio/mp4"
+    - "audio/mpeg"
+    - "audio/wav"
+  produces:
+    - "text/markdown"
 ---
 
 # Audio Transcriber Skill

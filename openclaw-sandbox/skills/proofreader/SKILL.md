@@ -8,6 +8,17 @@ metadata:
         "emoji": "🔎"
       }
   }
+state_tracking:
+  phases: ["p1", "p2", "p3"]
+  labels:
+    p1: "P1 (文件校對)"
+    p2: "P2 (逐字稿校對)"
+    p3: "P3 (圖表完整性)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
 ---
 
 # Proofreader Skill

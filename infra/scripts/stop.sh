@@ -109,8 +109,12 @@ if nc -z localhost 11434 >/dev/null 2>&1 || pgrep -x "ollama" > /dev/null; then
 
     # 使用 Mac 原生方式優雅關閉 Ollama 應用，避免強殺導致的錯誤
     if osascript -e 'id of application "Ollama"' >/dev/null 2>&1; then
-        osascript -e 'quit app "Ollama"' >/dev/null 2>&1
-        echo -e "   ${GREEN}─── ✅ Ollama app quit gracefully${NC}"
+        if osascript -e 'quit app "Ollama"' >/dev/null 2>&1; then
+            echo -e "   ${GREEN}─── ✅ Ollama app quit gracefully${NC}"
+        else
+            pkill -f "ollama" 2>/dev/null || true
+            echo -e "   ${GREEN}─── ✅ Ollama processes killed (fallback)${NC}"
+        fi
     else
         pkill -f "ollama" 2>/dev/null || true
         echo -e "   ${GREEN}─── ✅ Ollama processes killed${NC}"
@@ -146,10 +150,44 @@ else
 fi
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
-# [測試功能] Telegram 關閉推播通知 (未來不需要可將此段註解)
+# 產生狀態報告
+REPORT="🛑 *Open Claw 生態系關閉報告* 🛑
+
+"
+
+check_port_tg() {
+    if nc -z localhost $1 >/dev/null 2>&1; then
+        REPORT+="❌ $2 (仍在運行)
+"
+    else
+        REPORT+="✅ $2 (已關閉)
+"
+    fi
+}
+
+check_port_tg 11434 "Ollama (11434)"
+check_port_tg 4000  "LiteLLM (4000)"
+check_port_tg 8080  "Open WebUI (8080)"
+check_port_tg 9099  "Pipelines (9099)"
+check_port_tg 18789 "Open Claw API (18789)"
+check_port_tg 8081  "Proofreader UI (8081)"
+
+if pgrep -f "core/services/inbox_daemon.py" >/dev/null 2>&1; then
+    REPORT+="❌ Inbox Daemon (仍在運行)
+"
+else
+    REPORT+="✅ Inbox Daemon (已關閉)
+"
+fi
+
+REPORT+="
+💤 系統已經安全休眠！"
+
+# [功能] Telegram 關閉推播詳細狀態通知
 (
     # Get workspace directory safely if WORKSPACE_DIR is not set
     _WORKSPACE="${WORKSPACE_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../openclaw-sandbox" && pwd)}"
     cd "$_WORKSPACE" || exit
-    python3 -c "import sys; sys.path.insert(0, '.'); from core.telegram_bot import send_message; send_message('🛑 [測試] Open Claw AI 生態系已安全關閉。')" > /dev/null 2>&1
+    export TG_REPORT="$REPORT"
+    uv run python3 -c "import sys, os; sys.path.insert(0, '.'); from core.services.telegram_bot import send_message; send_message(os.environ.get('TG_REPORT', ''))" > /dev/null 2>&1
 ) &

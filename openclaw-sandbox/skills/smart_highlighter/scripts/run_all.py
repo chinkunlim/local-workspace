@@ -64,14 +64,11 @@ class PhaseHighlight(PipelineBase):
         )
         self.profile_override = profile
 
-        # Route inbox to proofreader output, and processed to our output
-        workspace_root = os.path.abspath(os.path.join(self.base_dir, "..", "..", ".."))
-        self.dirs["inbox"] = os.path.join(
-            workspace_root, "data", "proofreader", "output", "04_final_verified"
-        )
+        # Route inbox to our skill's input, and processed to our output
+        workspace_root = self.path_builder.workspace_root
+        self.dirs["inbox"] = os.path.join(workspace_root, "data", "smart_highlighter", "input")
         self.dirs["processed"] = os.path.join(workspace_root, "data", "smart_highlighter", "output")
         self.dirs["error"] = os.path.join(workspace_root, "data", "smart_highlighter", "error")
-        # Ensure raw maps to the proofreader inbox for File matching
         self.dirs["raw"] = self.dirs["inbox"]
 
     def run(
@@ -229,9 +226,7 @@ class SmartHighlighterOrchestrator(PipelineBase):
             skill_name="smart_highlighter",
         )
         workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-        inbox_dir = os.path.join(
-            workspace_root, "data", "proofreader", "output", "04_final_verified"
-        )
+        inbox_dir = os.path.join(workspace_root, "data", "smart_highlighter", "input")
         self._state_manager = StateManager(
             self.base_dir, skill_name="smart_highlighter", raw_dir=inbox_dir
         )

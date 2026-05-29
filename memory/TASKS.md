@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-26 (V9.21 — Phase 6 Architectural Standardization & State Hardening)
+> **Last Updated:** 2026-05-29 (V9.22 — Orchestration Hardening & Telegram GUI Integration)
 
 ---
 
@@ -47,6 +47,16 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-05-29: **V9.22 Orchestration Hardening & Telegram GUI Integration**
+  - Upgraded Telegram `/status` to intelligently hide zero-task modules (e.g., `note_generator`).
+  - Implemented callback query handling for inline HITL buttons (removes buttons + loading spinner on click).
+  - macOS Terminal auto-launch via `osascript` on `/resume`, properly re-using the existing `OpenClaw` tab to avoid window spam.
+  - Removed 2-hour hardcoded timeout in `run_all_pipelines.py` to support massive LLM batch processing (Proofreader).
+  - Ensured `/pause` perfectly kills the global scheduler PID to release the lockfile.
+  - Orchestrator now checks for `PipelineBase` before passing `--process-all` to prevent crashes in older skills.
+  - Added `SystemInboxDaemon().scan_all()` to the start of `run_pipelines()` to seal the E2E flow.
+
 
 - [x] 2026-05-26: **V9.21 Phase 6 Architectural Standardization & State Hardening**
   - Implemented `FileStabilityPoller` replacing unsafe dictionaries and sleep loops.

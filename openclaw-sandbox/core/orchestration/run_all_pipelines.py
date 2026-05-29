@@ -53,50 +53,65 @@ def _release_lock() -> None:
         pass
 
 
-def _notify_timeout(pipeline_name: str) -> None:
-    """Try to send a Telegram notification for timeouts."""
-    try:
-        from core.services.telegram_bot import send_message
-
-        send_message(f"🚨 [Open Claw] {pipeline_name} 執行超時 (> 2 小時)，已強制中斷並釋放鎖。")
-    except ImportError:
-        pass
-
-
 def run_pipelines() -> None:
-    """Run doc_parser then audio_transcriber sequentially."""
+    """Run all skills sequentially, respecting a preferred order."""
     if not _acquire_lock():
         sys.exit(0)
 
     try:
         _logger.info("開始執行全域管線排程...")
 
-        doc_script = os.path.join(_workspace_root, "skills", "doc_parser", "scripts", "run_all.py")
-        audio_script = os.path.join(
-            _workspace_root, "skills", "audio_transcriber", "scripts", "run_all.py"
-        )
-
-        # 1. doc_parser (--process-all skips interactive menu)
-        _logger.info("啟動 doc_parser...")
         try:
-            result_doc = subprocess.run([sys.executable, doc_script, "--process-all"], timeout=7200)
-            if result_doc.returncode not in (0, 1):  # 1 = clean SIGTERM/sys.exit
-                _logger.warning("doc_parser 退出狀態: %s", result_doc.returncode)
-        except subprocess.TimeoutExpired:
-            _logger.error("🚨 doc_parser 執行超時 (> 2h)，強制中斷。")
-            _notify_timeout("doc_parser")
-            sys.exit(1)
+            from core.services.inbox_daemon import SystemInboxDaemon
 
-        # 2. audio_transcriber
-        _logger.info("啟動 audio_transcriber...")
-        try:
-            result_audio = subprocess.run([sys.executable, audio_script], timeout=7200)
-            if result_audio.returncode not in (0, 1):
-                _logger.warning("audio_transcriber 退出狀態: %s", result_audio.returncode)
-        except subprocess.TimeoutExpired:
-            _logger.error("🚨 audio_transcriber 執行超時 (> 2h)，強制中斷。")
-            _notify_timeout("audio_transcriber")
-            sys.exit(1)
+            _logger.info("掃描 Inbox 分發新檔案...")
+            SystemInboxDaemon().scan_all()
+        except Exception as e:
+            _logger.error(f"Inbox 掃描發生錯誤: {e}")
+
+        skills_dir = os.path.join(_workspace_root, "skills")
+
+        # 定義優先執行的順序
+        preferred_order = [
+            "doc_parser",
+            "audio_transcriber",
+            "proofreader",
+            "smart_highlighter",
+        ]
+
+        # 尋找所有包含 run_all.py 的 skill
+        available_skills = set()
+        if os.path.exists(skills_dir):
+            for item in os.listdir(skills_dir):
+                if os.path.isfile(os.path.join(skills_dir, item, "scripts", "run_all.py")):
+                    available_skills.add(item)
+
+        # 決定最終執行順序 (先跑 priority，再跑其他的)
+        execution_queue = []
+        for p_skill in preferred_order:
+            if p_skill in available_skills:
+                execution_queue.append(p_skill)
+                available_skills.remove(p_skill)
+
+        execution_queue.extend(sorted(available_skills))
+
+        for skill_name in execution_queue:
+            script_path = os.path.join(skills_dir, skill_name, "scripts", "run_all.py")
+            _logger.info(f"啟動 {skill_name}...")
+            try:
+                # 檢查該 script 是否支援 --process-all 或是否為 PipelineBase
+                with open(script_path, encoding="utf-8") as f:
+                    content = f.read()
+
+                cmd = [sys.executable, script_path]
+                if "PipelineBase" in content or "--process-all" in content:
+                    cmd.append("--process-all")
+
+                result = subprocess.run(cmd)
+                if result.returncode not in (0, 1):
+                    _logger.warning(f"{skill_name} 退出狀態: {result.returncode}")
+            except Exception as e:
+                _logger.error(f"執行 {skill_name} 發生錯誤: {e}")
 
         _logger.info("全域管線排程結束。")
 

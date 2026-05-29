@@ -137,7 +137,7 @@ if [[ -f "${INBOX_DAEMON_PID_FILE}" ]] && kill -0 "$(cat "${INBOX_DAEMON_PID_FIL
 else
     (
         cd "${WORKSPACE_DIR}" || exit
-        python3 core/services/inbox_daemon.py > "${LOG_DIR}/inbox_daemon.log" 2>&1 &
+        uv run python3 core/services/inbox_daemon.py > "${LOG_DIR}/inbox_daemon.log" 2>&1 &
         echo $! > "${INBOX_DAEMON_PID_FILE}"
     )
     sleep 1
@@ -180,8 +180,42 @@ if nc -z localhost 8081 >/dev/null 2>&1; then
     open http://localhost:8081
 fi
 
-# [測試功能] Telegram 啟動推播通知 (未來不需要可將此段註解)
+# 產生狀態報告
+REPORT="🚀 *Open Claw 生態系啟動報告* 🚀
+
+"
+
+check_port_tg() {
+    if nc -z localhost $1 >/dev/null 2>&1; then
+        REPORT+="✅ $2
+"
+    else
+        REPORT+="❌ $2 (啟動失敗)
+"
+    fi
+}
+
+check_port_tg 11434 "Ollama (11434)"
+check_port_tg 4000  "LiteLLM (4000)"
+check_port_tg 8080  "Open WebUI (8080)"
+check_port_tg 9099  "Pipelines (9099)"
+check_port_tg 18789 "Open Claw API (18789)"
+check_port_tg 8081  "Proofreader UI (8081)"
+
+if [[ -f "${INBOX_DAEMON_PID_FILE}" ]] && kill -0 "$(cat "${INBOX_DAEMON_PID_FILE}")" 2>/dev/null; then
+    REPORT+="✅ Inbox Daemon
+"
+else
+    REPORT+="❌ Inbox Daemon (啟動失敗)
+"
+fi
+
+REPORT+="
+🌐 系統已經準備就緒！"
+
+# [功能] Telegram 啟動推播詳細狀態通知
 (
     cd "${WORKSPACE_DIR}" || exit
-    python3 -c "import sys; sys.path.insert(0, '.'); from core.telegram_bot import send_message; send_message('🚀 [測試] Open Claw AI 生態系已啟動！')" > /dev/null 2>&1
+    export TG_REPORT="$REPORT"
+    uv run python3 -c "import sys, os; sys.path.insert(0, '.'); from core.services.telegram_bot import send_message; send_message(os.environ.get('TG_REPORT', ''))" > /dev/null 2>&1
 ) &

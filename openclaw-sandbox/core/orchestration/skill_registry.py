@@ -61,10 +61,12 @@ class SkillManifest:
     skill_name: str
     description: str
     phases: List[str] = field(default_factory=list)
+    phase_labels: Dict[str, str] = field(default_factory=dict)
     cli_entry: str = ""
     run_fn: Optional[Callable] = None
     file_types: List[str] = field(default_factory=list)  # e.g. [".m4a", ".pdf"]
     tags: List[str] = field(default_factory=list)  # e.g. ["audio", "transcription"]
+    io_contracts: Dict[str, List[str]] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -107,12 +109,39 @@ class SkillRegistry:
             try:
                 manifest = self._load_manifest(entry, manifest_path)
                 if manifest:
+                    self._load_metadata_from_md(skill_dir, manifest)
                     self._registry[manifest.skill_name] = manifest
                     discovered += 1
             except Exception as exc:
                 print(f"⚠️ [SkillRegistry] 無法載入 {entry}/manifest.py: {exc}")
 
         return discovered
+
+    def _load_metadata_from_md(self, skill_dir: str, manifest: SkillManifest) -> None:
+        """Parse SKILL.md YAML frontmatter to extract state_tracking and io_contracts."""
+        import yaml
+
+        skill_md = os.path.join(skill_dir, "SKILL.md")
+        if not os.path.exists(skill_md):
+            return
+
+        try:
+            with open(skill_md, encoding="utf-8") as f:
+                content = f.read()
+            if content.startswith("---"):
+                end_idx = content.find("---", 3)
+                if end_idx != -1:
+                    yaml_content = content[3:end_idx]
+                    data = yaml.safe_load(yaml_content) or {}
+                    if "state_tracking" in data:
+                        manifest.phases = data["state_tracking"].get("phases", manifest.phases)
+                        manifest.phase_labels = data["state_tracking"].get(
+                            "labels", manifest.phase_labels
+                        )
+                    if "io_contracts" in data:
+                        manifest.io_contracts = data.get("io_contracts", {})
+        except Exception as exc:
+            print(f"⚠️ [SkillRegistry] 無法讀取 {skill_md}: {exc}")
 
     def _load_manifest(self, skill_dir_name: str, manifest_path: str) -> Optional[SkillManifest]:
         """Dynamically import a manifest.py and extract the MANIFEST variable."""

@@ -5,6 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.22] — 2026-05-29: Orchestration Hardening & Telegram GUI Integration
+
+### Added
+- **Dynamic Module Hiding in `/status`**: Telegram bot now automatically hides any pipeline module that has zero pending tasks (progress 0/0 or X/X completed), keeping the dashboard extremely clean.
+- **Inline Callback Buttons**: Added `CallbackQueryHandler` support so `/hitl approve` and `/hitl skip` buttons visually update the Telegram message (removing buttons and loading spinner) upon click.
+- **Mac Terminal Auto-Launch**: Modified `bot_daemon.py` to use `osascript` to launch `/resume` within a visible macOS Terminal named "OpenClaw", reusing the same tab to avoid window spam.
+- **End-to-End Orchestration Sweep**: Added `SystemInboxDaemon().scan_all()` to the beginning of `run_all_pipelines.py` to ensure files placed in the raw inbox are correctly dispatched before parsing begins.
+
+### Changed
+- **Removed 2-Hour Orchestration Timeout**: Eliminated the hardcoded `timeout=7200` in the global `run_all_pipelines.py` scheduler, fully delegating resource/time governance to `system_guardian.py` (which monitors RAM/temp limits), thus allowing massive localized LLM batches to safely process overnight.
+- **Strict Pipeline Argument Passing**: Fixed a bug where `run_all_pipelines.py` appended `--process-all` to legacy agents lacking argparse support. It now reads script contents and strictly passes it only if `PipelineBase` or the argument is explicitly found.
+
+---
+
 ## [V9.21] — 2026-05-26: Phase 6 Architectural Standardization & State Hardening
 
 ### Added

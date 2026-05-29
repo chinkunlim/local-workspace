@@ -8,6 +8,25 @@ metadata:
         "emoji": "📄"
       }
   }
+state_tracking:
+  phases: ["p0c", "p0b", "p0a", "p1a", "p1b_s", "p1b", "p1c", "p1d"]
+  labels:
+    p0c: "P0c (MarkItDown 轉換)"
+    p0b: "P0b (圖片提取)"
+    p0a: "P0a (診斷)"
+    p1a: "P1a (提取)"
+    p1b_s: "P1b-S (文字淨化)"
+    p1b: "P1b (向量圖)"
+    p1c: "P1c (OCR評估)"
+    p1d: "P1d (VLM視覺)"
+io_contracts:
+  consumes: 
+    - "application/pdf"
+    - "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  produces: 
+    - "text/markdown"
 ---
 
 # Doc Parser Skill

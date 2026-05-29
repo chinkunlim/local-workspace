@@ -112,12 +112,10 @@ class NetworkXGraphStore:
 
             from networkx.readwrite import json_graph
 
-            os.makedirs(os.path.dirname(self._persist_path), exist_ok=True)
-            tmp = self._persist_path + ".tmp"
+            from core.utils.atomic_writer import AtomicWriter
+
             data = json_graph.node_link_data(self._G)
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(tmp, self._persist_path)
+            AtomicWriter.write_json(self._persist_path, data)
         except Exception as exc:
             _logger.warning("[GraphStore/NX] Failed to persist graph: %s", exc)
 

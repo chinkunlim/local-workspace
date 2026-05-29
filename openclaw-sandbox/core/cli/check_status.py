@@ -7,10 +7,8 @@ core/check_status.py — 全系統狀態報告產生器
 import os
 import sys
 
-from core.utils.log_manager import build_logger
-
-logger = build_logger(__name__, console=True)
-
+# from core.utils.log_manager import build_logger
+# logger = build_logger(__name__, console=True)
 from core.utils.workspace import get_workspace_root
 
 _workspace_root = get_workspace_root()
@@ -23,8 +21,21 @@ def get_full_status_report() -> str:
     """產生包含多個 Skill 的聯合儀表板報告。"""
     report_lines = []
 
-    # 定義要檢查的 Skill 列表
-    skills_to_check = ["doc_parser", "audio_transcriber"]
+    # 動態掃描所有有狀態的 Skill
+    data_dir = os.path.join(_workspace_root, "data")
+    skills_to_check = []
+    if os.path.isdir(data_dir):
+        for d in sorted(os.listdir(data_dir)):
+            # Ignore global state
+            if d == "_global_":
+                continue
+            state_file = os.path.join(data_dir, d, "state", ".pipeline_state.json")
+            if os.path.isfile(state_file):
+                skills_to_check.append(d)
+
+    # 確保基本順序或預設值
+    if not skills_to_check:
+        skills_to_check = ["doc_parser", "audio_transcriber"]
 
     for skill in skills_to_check:
         try:
@@ -33,12 +44,16 @@ def get_full_status_report() -> str:
 
             # 從 StateManager 獲取儀表板文字
             dashboard_text = sm.get_dashboard_text()
-            report_lines.append(dashboard_text)
+            if dashboard_text:
+                report_lines.append(dashboard_text)
         except Exception as e:
             report_lines.append(f"⚠️ 無法讀取 {skill} 狀態: {e}\n")
+
+    if not report_lines:
+        return "目前沒有任何排隊中的任務或已初始化的狀態。"
 
     return "\n".join(report_lines)
 
 
 if __name__ == "__main__":
-    logger.info(get_full_status_report())
+    print(get_full_status_report())

@@ -347,7 +347,14 @@ class RouterAgent:
                             )
 
         if len(chain) <= 1:
-            print(f"🏁 [RouterAgent] 整個路由計畫已完成: {event.source_skill}")
+            msg = f"🏁 [RouterAgent] 整個路由計畫已完成: {event.source_skill}"
+            print(msg)
+            try:
+                from core.services.telegram_bot import send_message
+
+                send_message(f"✅ **文件處理完畢**\n檔名: `{filename}`\n已可於 Obsidian 中檢視。")
+            except ImportError:
+                pass
             return
 
         # The chain has remaining skills. The next skill is at index 1.
@@ -371,9 +378,12 @@ class RouterAgent:
 
                 # We save the remaining chain to be resumed when proofreader dashboard saves the file.
                 # The key is the file prefix to match whatever output proofreader generates.
+                from core.utils.atomic_writer import AtomicWriter
+
                 pending_path = os.path.join(pending_dir, f"{file_id}.json")
-                with open(pending_path, "w", encoding="utf-8") as f:
-                    json.dump({"chain": remaining_chain, "subject": subject, "env": env}, f)
+                AtomicWriter.write_json(
+                    pending_path, {"chain": remaining_chain, "subject": subject, "env": env}
+                )
 
                 msg = f"⏸️ [RouterAgent] 管線暫停等候人工校對: {filename}\n👉 請開啟 Dashboard 點擊 Save 或 Skip 繼續。"
                 print(msg)
@@ -385,83 +395,38 @@ class RouterAgent:
                     pass
                 return
 
-            if next_skill == "note_generator":
-                input_path, output_path = SkillRunner.resolve_synthesize_paths(
-                    current_skill, subject, file_id
-                )
-                cmd = SkillRunner.run_note_generator(
-                    input_file=input_path, output_file=output_path, subject=subject
-                )
-                cwd = os.path.join(
-                    workspace_root,
-                    "skills",
-                    "note_generator",
-                )
-                task_queue.enqueue(
-                    name=f"Note Generator Pipeline ({subject})",
-                    cmd=cmd,
-                    cwd=cwd,
-                    filepath=input_path,
-                    skill="note_generator",
-                    chain=remaining_chain,
-                    subject=subject,
-                    env=env,
-                )
-            elif next_skill == "smart_highlighter":
-                input_path, output_path = SkillRunner.resolve_highlight_paths(
-                    current_skill, subject, file_id
-                )
-                cmd = SkillRunner.run_smart_highlighter(
-                    input_file=input_path, output_file=output_path, subject=subject
-                )
-                cwd = os.path.join(
-                    workspace_root,
-                    "skills",
-                    "smart_highlighter",
-                )
-                task_queue.enqueue(
-                    name=f"Smart Highlighter ({subject})",
-                    cmd=cmd,
-                    cwd=cwd,
-                    filepath=input_path,
-                    skill="smart_highlighter",
-                    chain=remaining_chain,
-                    subject=subject,
-                    env=env,
-                )
-            else:
-                # ALL OTHER SKILLS: Unified Handoff
-                # Move the file to the next skill's input directory
-                target_dir = os.path.join(workspace_root, "data", next_skill, "input", subject)
-                os.makedirs(target_dir, exist_ok=True)
-                target_path = os.path.join(target_dir, os.path.basename(filepath))
-                if os.path.exists(filepath) and filepath != target_path:
-                    os.rename(filepath, target_path)
-                    filepath = target_path
+            # ALL OTHER SKILLS: Unified Handoff
+            # Move the file to the next skill's input directory
+            target_dir = os.path.join(workspace_root, "data", next_skill, "input", subject)
+            os.makedirs(target_dir, exist_ok=True)
+            target_path = os.path.join(target_dir, os.path.basename(filepath))
+            if os.path.exists(filepath) and filepath != target_path:
+                os.rename(filepath, target_path)
+                filepath = target_path
 
-                # Look up entry script from SkillRegistry
-                script_path = "scripts/run_all.py"
-                if self._registry:
-                    skill_manifest = self._registry.get(next_skill)
-                    if skill_manifest and skill_manifest.cli_entry:
-                        script_path = skill_manifest.cli_entry
+            # Look up entry script from SkillRegistry
+            script_path = "scripts/run_all.py"
+            if self._registry:
+                skill_manifest = self._registry.get(next_skill)
+                if skill_manifest and skill_manifest.cli_entry:
+                    script_path = skill_manifest.cli_entry
 
-                cmd = [sys.executable, script_path, "--subject", subject]
-                cwd = os.path.join(
-                    workspace_root,
-                    "skills",
-                    next_skill,
-                )
-                task_queue.enqueue(
-                    name=f"{next_skill} ({subject})",
-                    cmd=cmd,
-                    cwd=cwd,
-                    filepath=filepath,
-                    skill=next_skill,
-                    chain=remaining_chain,
-                    subject=subject,
-                    env=env,
-                )
+            cmd = [sys.executable, script_path, "--subject", subject]
+            cwd = os.path.join(
+                workspace_root,
+                "skills",
+                next_skill,
+            )
+            task_queue.enqueue(
+                name=f"{next_skill} ({subject})",
+                cmd=cmd,
+                cwd=cwd,
+                filepath=filepath,
+                skill=next_skill,
+                chain=remaining_chain,
+                subject=subject,
+                env=env,
+            )
 
         except Exception as e:
             print(f"❌ [RouterAgent] 接力失敗: {e}")

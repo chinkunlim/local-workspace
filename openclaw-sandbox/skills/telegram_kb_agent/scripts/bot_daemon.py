@@ -87,11 +87,25 @@ def main():
                 data = resp.json()
                 for update in data.get("result", []):
                     offset = update["update_id"] + 1
-                    msg = update.get("message", {})
-                    chat_id = str(msg.get("chat", {}).get("id", ""))
+                    callback_query = update.get("callback_query")
+                    if callback_query:
+                        msg = callback_query.get("message", {})
+                        chat_id = str(msg.get("chat", {}).get("id", ""))
+                        text = callback_query.get("data", "").strip()
+                        query_id = callback_query.get("id")
+                        # 停止載入轉圈圈
+                        requests.post(
+                            f"https://api.telegram.org/bot{token}/answerCallbackQuery",
+                            json={"callback_query_id": query_id},
+                        )
+                    else:
+                        msg = update.get("message", {})
+                        chat_id = str(msg.get("chat", {}).get("id", ""))
+                        text = msg.get("text", "").strip()
+
                     from core.services.security_manager import SecurityManager
 
-                    text = SecurityManager.sanitize_user_input(msg.get("text", "").strip())
+                    text = SecurityManager.sanitize_user_input(text)
 
                     # Security check
                     if chat_id not in allowed_users:
@@ -285,12 +299,39 @@ def main():
                                 )
 
                     elif text == "/run" or text == "/resume":
-                        send_message("⚙️ 正在背景啟動管線處理任務...", chat_id)
+                        send_message("⚙️ 正在啟動管線處理任務 (將在終端機中顯示)...", chat_id)
                         run_script = os.path.join(
                             _workspace_root, "core", "orchestration", "run_all_pipelines.py"
                         )
-                        subprocess.Popen([sys.executable, run_script])
-                        send_message("✅ 任務已加入執行列，使用 /status 隨時查詢進度。", chat_id)
+                        import platform
+
+                        if platform.system() == "Darwin":
+                            # Open in a new Terminal window on Mac, or reuse an existing one named OpenClaw
+                            apple_script = f"""
+                            tell application "Terminal"
+                                activate
+                                set targetWindow to missing value
+                                repeat with w in windows
+                                    if name of w contains "OpenClaw" then
+                                        set targetWindow to w
+                                        exit repeat
+                                    end if
+                                end repeat
+
+                                if targetWindow is missing value then
+                                    set newTab to do script "cd '{_workspace_root}' && uv run '{run_script}'"
+                                    set custom title of newTab to "OpenClaw"
+                                else
+                                    do script "cd '{_workspace_root}' && uv run '{run_script}'" in targetWindow
+                                end if
+                            end tell
+                            """
+                            subprocess.Popen(["osascript", "-e", apple_script])
+                        else:
+                            subprocess.Popen([sys.executable, run_script])
+                        send_message(
+                            "✅ 任務已在終端機彈出執行，使用 /status 可隨時查詢進度。", chat_id
+                        )
 
                     elif text == "/pause":
                         send_message("⏸️ 正在暫停管線並釋放記憶體...", chat_id)
@@ -299,21 +340,15 @@ def main():
                             ["pkill", "-15", "-f", "core/orchestration/run_all_pipelines.py"],
                             check=False,
                         )
-                        subprocess.run(
-                            ["pkill", "-15", "-f", "doc_parser/scripts/run_all.py"], check=False
-                        )
-                        subprocess.run(
-                            ["pkill", "-15", "-f", "audio_transcriber/scripts/run_all.py"],
-                            check=False,
-                        )
+                        subprocess.run(["pkill", "-15", "-f", "scripts/run_all.py"], check=False)
                         send_message(
                             "✅ 系統已發送暫停訊號！任務將在建立斷點後結束，記憶體隨即釋放。",
                             chat_id,
                         )
 
-                    elif text == "/start_system":
+                    elif text in ["/start_system", "/wakeup"]:
                         send_message(
-                            "\U0001f680 \u6b63\u5728\u555f\u52d5 Open Claw \u6838\u5fc3\u751f\u614b\u7cfb...",
+                            "🚀 正在啟動 Open Claw 核心生態系 (包含 start.sh 與 inbox_daemon)...",
                             chat_id,
                         )
                         start_script = os.path.realpath(
@@ -332,10 +367,6 @@ def main():
                             )
                         else:
                             subprocess.Popen(["bash", start_script])
-                            send_message(
-                                "\u2705 \u7cfb\u7d71\u555f\u52d5\u7a0b\u5e8f\u5df2\u5728\u80cc\u666f\u57f7\u884c\u3002",
-                                chat_id,
-                            )
 
                     elif text == "/stop_system":
                         send_message(
@@ -358,10 +389,6 @@ def main():
                             )
                         else:
                             subprocess.Popen(["bash", stop_script])
-                            send_message(
-                                "\u2705 \u7cfb\u7d71\u95dc\u9589\u7a0b\u5e8f\u5df2\u5728\u80cc\u666f\u57f7\u884c\uff0cOllama \u8207\u5176\u4ed6\u670d\u52d9\u5c07\u88ab\u505c\u6b62\u3002",
-                                chat_id,
-                            )
 
                     elif text.startswith("/query "):
                         q = text[7:].strip()
@@ -492,7 +519,7 @@ def main():
                             "/run 或 /resume - 依序執行待辦任務\n"
                             "/pause - 暫停執行並釋放所有記憶體\n\n"
                             "[系統管理]\n"
-                            "/start_system - 開啟整個生態系專案\n"
+                            "/wakeup 或 /start_system - 開啟整個生態系專案 (含 inbox_daemon)\n"
                             "/stop_system - 關閉整個生態系專案 (不含 Bot)\n\n"
                             "[知識問答]\n"
                             "/query <問題> - 在知識庫中發問\n\n"

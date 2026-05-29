@@ -13,6 +13,7 @@ class Phase1dVLMVision(PipelineBase):
         config = self.get_config("phase1d")
         self.vlm_model = config.get("model")
         self.vlm_options = config.get("options", {})
+        self.vlm_concurrency = int(config.get("vlm_concurrency", 1))
         if not self.vlm_model:
             raise RuntimeError("Missing model in phase1d config profile")
 
@@ -190,8 +191,8 @@ class Phase1dVLMVision(PipelineBase):
 
                 async def _run_all():
                     semaphore = asyncio.Semaphore(
-                        1
-                    )  # Max 1 concurrent VLM request to avoid 16GB VRAM OOM
+                        self.vlm_concurrency
+                    )  # Configurable concurrent VLM requests
 
                     async def _bounded_process(*args):
                         async with semaphore:
