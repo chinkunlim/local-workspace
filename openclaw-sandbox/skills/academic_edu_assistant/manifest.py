@@ -15,7 +15,6 @@ def _run(**kw):
 MANIFEST = SkillManifest(
     skill_name="academic_edu_assistant",
     description="RAG cross-comparison of lecture notes vs reference materials, then auto-generates Anki flashcards with optional AnkiConnect push.",
-    phases=["p1_compare", "p2_anki"],
     cli_entry="scripts/run_all.py",
     run_fn=_run,
     file_types=[".md", ".pdf"],

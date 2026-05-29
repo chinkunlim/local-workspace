@@ -5,7 +5,18 @@
 
 ---
 
-## Current Session (2026-05-26 — Phase 7: Architecture Decoupling & Inversion of Control)
+## Current Session (2026-05-29 — Log Recovery & Pipeline State Stabilization)
+
+**Date:** 2026-05-29
+
+- [x] **Pipeline Eager Execution**: Formalized Eager Execution and Draft Overwriting logic across `smart_highlighter` and `note_generator` downstream from `proofreader` HITL workflows.
+- [x] **Log State Recovery Tool**: Created `core/scripts/recover_state_from_logs.py` to reliably scan logs and inject missing states back into `.pipeline_state.json`, avoiding manual modification of the auto-generated `checklist.md`.
+- [x] **HITL Phase Skips**: Fixed bugs where `smart_highlighter` and `proofreader` dashboards mistakenly aggregated files in `⏸️` status or double-counted them. Added checks to `doc_parser` OCR gate to skip HITL-pending tasks.
+- [x] **Global SKILL.md Sync**: Synchronized all `SKILL.md` to precisely reflect Phase configurations, Telegram HITL behavior, and the new Eager Copy mechanic.
+
+---
+
+## Previous Session (2026-05-26 — Phase 7: Architecture Decoupling & Inversion of Control)
 
 **Date:** 2026-05-26
 

@@ -8,6 +8,16 @@ metadata:
         "emoji": "🧠"
       }
   }
+state_tracking:
+  phases: ["p01_compile", "p02_extract_graph"]
+  labels:
+    p01_compile: "P1 (Compile)"
+    p02_extract_graph: "P2 (Graph Extract)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
 ---
 
 # Knowledge Compiler

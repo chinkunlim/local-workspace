@@ -254,6 +254,64 @@ class SmartHighlighterOrchestrator(PipelineBase):
 
         if fail:
             return False
+
+        # [Eager Execution for run_all_pipelines.py batch mode]
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        proofreader_out_03 = os.path.join(
+            workspace_root, "data", "proofreader", "output", "03_doc_completeness"
+        )
+        proofreader_out_04 = os.path.join(
+            workspace_root, "data", "proofreader", "output", "04_final_verified"
+        )
+        inbox_dir = os.path.join(workspace_root, "data", "smart_highlighter", "input")
+
+        # 1. Optimistically pull FINAL VERIFIED outputs (Overwrite pre-HITL drafts if newer)
+        if os.path.exists(proofreader_out_04):
+            import shutil
+
+            for subj in os.listdir(proofreader_out_04):
+                subj_dir = os.path.join(proofreader_out_04, subj)
+                if not os.path.isdir(subj_dir):
+                    continue
+                for fname in os.listdir(subj_dir):
+                    if not fname.endswith(".md"):
+                        continue
+                    src_path = os.path.join(subj_dir, fname)
+                    target_dir = os.path.join(inbox_dir, subj)
+                    os.makedirs(target_dir, exist_ok=True)
+                    dst_path = os.path.join(target_dir, fname)
+
+                    if not os.path.exists(dst_path) or os.path.getmtime(
+                        src_path
+                    ) > os.path.getmtime(dst_path):
+                        shutil.copy2(src_path, dst_path)
+                        print(f"⏩ [Verified Copy] 提取已核對檔案並更新覆蓋: {subj}/{fname}")
+
+        # 2. Optimistically pull PRE-HITL drafts (Only if not already copied)
+        if os.path.exists(proofreader_out_03):
+            import shutil
+
+            for subj in os.listdir(proofreader_out_03):
+                subj_dir = os.path.join(proofreader_out_03, subj)
+                if not os.path.isdir(subj_dir):
+                    continue
+                for fname in os.listdir(subj_dir):
+                    if not fname.endswith(".md") or fname == "correction_log.md":
+                        continue
+
+                    verified_src = os.path.join(proofreader_out_04, subj, fname)
+                    if os.path.exists(verified_src):
+                        continue
+
+                    src_path = os.path.join(subj_dir, fname)
+                    target_dir = os.path.join(inbox_dir, subj)
+                    os.makedirs(target_dir, exist_ok=True)
+                    dst_path = os.path.join(target_dir, fname)
+
+                    if not os.path.exists(dst_path):
+                        shutil.copy2(src_path, dst_path)
+                        print(f"⏩ [Eager Copy] 提取草稿: {subj}/{fname}")
+
         print("✅ 前置檢查通過。")
         return True
 

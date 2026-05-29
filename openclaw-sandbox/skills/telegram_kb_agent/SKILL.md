@@ -8,6 +8,16 @@ metadata:
         "emoji": "📱"
       }
   }
+state_tracking:
+  phases: ["p1_index", "p2_bot"]
+  labels:
+    p1_index: "P1 (Index)"
+    p2_bot: "P2 (Bot)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
 ---
 
 # Telegram Knowledge Base Agent

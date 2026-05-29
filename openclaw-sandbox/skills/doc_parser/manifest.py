@@ -15,7 +15,6 @@ def _run(**kw):
 MANIFEST = SkillManifest(
     skill_name="doc_parser",
     description="Parses PDF documents via Docling + OCR quality gate + VLM vision with adaptive intent-based prompt routing.",
-    phases=["p0a_diagnostic", "p1a_engine", "p1b_vector_charts", "p1c_ocr_gate", "p1d_vlm_vision"],
     cli_entry="scripts/run_all.py",
     run_fn=_run,
     file_types=[".pdf"],

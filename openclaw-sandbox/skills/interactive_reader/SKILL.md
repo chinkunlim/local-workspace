@@ -8,6 +8,15 @@ metadata:
         "emoji": "📖"
       }
   }
+state_tracking:
+  phases: ["p01_interactive"]
+  labels:
+    p01_interactive: "P1 (Interactive)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
 ---
 
 # Interactive Reader

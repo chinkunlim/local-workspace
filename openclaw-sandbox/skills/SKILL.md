@@ -106,3 +106,4 @@ To test routing: `uv run skills/inbox_manager/scripts/run_all.py --list`
 - All file writes **must** use `core.utils.atomic_writer.AtomicWriter` to prevent partial-write corruption.
 - After each phase completes, call: `self.state_manager.update_task(subject, filename, phase_key, "✅")`
 - Use `core.utils.log_manager.build_logger()` — never use bare `print()` in production code.
+- **Eager Execution (Optimistic Pipeline)**: Skills down the pipeline (e.g. `smart_highlighter`, `note_generator`) should be designed to pull from upstream intermediate outputs (`eager copy`) and run as drafts. They must automatically re-run and overwrite the drafts when a verified `04_final_verified` output arrives from `proofreader`.

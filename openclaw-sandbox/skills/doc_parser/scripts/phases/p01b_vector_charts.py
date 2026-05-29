@@ -250,15 +250,21 @@ if __name__ == "__main__":
     if args.from_report:
         report_path = os.path.join(extractor.dirs["processed"], pdf_id, "scan_report.json")
         if os.path.exists(report_path):
-            with open(report_path) as f:
+            with open(report_path, encoding="utf-8") as f:
                 data = json.load(f)
             page_nums = data.get("vector_chart_pages", [])
-            print(f"📋 從 scan_report.json 讀取向量圖表頁面: {page_nums}")
+            import logging
+
+            logging.info("📋 從 scan_report.json 讀取向量圖表頁面: %s", page_nums)
         else:
-            print(f"❌ scan_report.json 不存在: {report_path}")
+            import logging
+
+            logging.error("❌ scan_report.json 不存在: %s", report_path)
             sys.exit(1)
 
     filename = os.path.basename(args.pdf)
     extractor.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
     success = extractor.run(subject="Default", file_filter=filename)
-    print(f"\n{'✅' if success else '❌'} 完成")
+    import logging
+
+    logging.info("\n%s 完成", "✅" if success else "❌")

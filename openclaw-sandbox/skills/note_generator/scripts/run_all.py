@@ -92,14 +92,12 @@ class PhaseNoteGenerator(PipelineBase):
         )
         self.profile_override = profile
 
-        # Route inbox to proofreader output, and processed to our output
+        # Route inbox to our skill's input, and processed to our output
         workspace_root = os.path.abspath(os.path.join(self.base_dir, "..", "..", ".."))
-        self.dirs["inbox"] = os.path.join(
-            workspace_root, "data", "proofreader", "output", "04_final_verified"
-        )
+        self.dirs["inbox"] = os.path.join(workspace_root, "data", "note_generator", "input")
         self.dirs["processed"] = os.path.join(workspace_root, "data", "note_generator", "output")
         self.dirs["error"] = os.path.join(workspace_root, "data", "note_generator", "error")
-        # Ensure raw maps to the proofreader inbox for File matching
+        # Ensure raw maps to the input dir for File matching
         self.dirs["raw"] = self.dirs["inbox"]
 
     def run(
@@ -164,7 +162,25 @@ class PhaseNoteGenerator(PipelineBase):
             char_count=len(result),
         )
 
-        self.emit_completed(output_path, subject, chain=[])
+        # 檢查是否已通過 HITL 驗證 (04_final_verified 存在同名檔案)
+        workspace_root = os.path.abspath(os.path.join(self.base_dir, "..", "..", ".."))
+        original_fname = filename.replace("_highlighted.md", ".md")
+        verified_path = os.path.join(
+            workspace_root,
+            "data",
+            "proofreader",
+            "output",
+            "04_final_verified",
+            subject,
+            original_fname,
+        )
+
+        if os.path.exists(verified_path):
+            self.log(f"✅ [{filename}] 已通過 HITL 驗證，觸發下游 AI 研究流程。")
+            self.emit_completed(output_path, subject, chain=[])
+        else:
+            self.log(f"⏭️ [{filename}] 尚未完成 HITL，僅產生預覽筆記，不觸發下游 AI 研究流程。")
+
         return True
 
     # -- Mermaid validator -- #
@@ -423,9 +439,7 @@ class NoteGeneratorOrchestrator(PipelineBase):
             skill_name="note_generator",
         )
         workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-        inbox_dir = os.path.join(
-            workspace_root, "data", "proofreader", "output", "04_final_verified"
-        )
+        inbox_dir = os.path.join(workspace_root, "data", "note_generator", "input")
         self._state_manager = StateManager(
             self.base_dir, skill_name="note_generator", raw_dir=inbox_dir
         )
@@ -452,6 +466,33 @@ class NoteGeneratorOrchestrator(PipelineBase):
 
         if fail:
             return False
+
+        # [Eager Execution for run_all_pipelines.py batch mode]
+        # Optimistically pull outputs from smart_highlighter
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        smart_highlighter_out = os.path.join(workspace_root, "data", "smart_highlighter", "output")
+        inbox_dir = os.path.join(workspace_root, "data", "note_generator", "input")
+        if os.path.exists(smart_highlighter_out):
+            import shutil
+
+            for subj in os.listdir(smart_highlighter_out):
+                subj_dir = os.path.join(smart_highlighter_out, subj)
+                if not os.path.isdir(subj_dir):
+                    continue
+                for fname in os.listdir(subj_dir):
+                    if not fname.endswith(".md") or fname == "correction_log.md":
+                        continue
+                    src_path = os.path.join(subj_dir, fname)
+                    target_dir = os.path.join(inbox_dir, subj)
+                    os.makedirs(target_dir, exist_ok=True)
+                    dst_path = os.path.join(target_dir, fname)
+                    # Eager copy if missing or newer
+                    if not os.path.exists(dst_path) or os.path.getmtime(
+                        src_path
+                    ) > os.path.getmtime(dst_path):
+                        shutil.copy2(src_path, dst_path)
+                        print(f"⏩ [Eager Copy] 提取最新高亮稿: {subj}/{fname}")
+
         print("✅ 前置檢查通過。")
         return True
 

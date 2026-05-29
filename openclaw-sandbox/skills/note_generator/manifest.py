@@ -16,7 +16,6 @@ def _run(**kw):
 MANIFEST = SkillManifest(
     skill_name="note_generator",
     description="Synthesizes Markdown text into structured study notes with YAML frontmatter and Mermaid mindmaps using Map-Reduce chunking.",
-    phases=["synthesize"],
     cli_entry="scripts/run_all.py",
     run_fn=_run,
     file_types=[".md"],

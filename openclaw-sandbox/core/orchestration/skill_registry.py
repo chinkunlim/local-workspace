@@ -87,7 +87,9 @@ class SkillRegistry:
     def __init__(self, skills_root: Optional[str] = None):
         # Default to openclaw-sandbox/skills/ relative to this file
         if skills_root is None:
-            skills_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "skills"))
+            skills_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..", "skills")
+            )
         self.skills_root = skills_root
         self._registry: Dict[str, SkillManifest] = {}
 

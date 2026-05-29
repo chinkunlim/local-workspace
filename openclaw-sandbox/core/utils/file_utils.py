@@ -109,14 +109,17 @@ def write_csv_safe(
         True on success, False on failure.
     """
     import csv as _csv
+    import io
+
+    from core.utils.atomic_writer import AtomicWriter
 
     try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", newline="", encoding="utf-8") as f:
-            writer = _csv.writer(f, quoting=_csv.QUOTE_MINIMAL)
-            writer.writerows(rows)
+        output = io.StringIO()
+        writer = _csv.writer(output, quoting=_csv.QUOTE_MINIMAL)
+        writer.writerows(rows)
+        AtomicWriter.write_text(path, output.getvalue(), encoding="utf-8")
         return True
-    except OSError as exc:
+    except Exception as exc:
         if logger:
             _log = getattr(logger, "error", None)
             if callable(_log):

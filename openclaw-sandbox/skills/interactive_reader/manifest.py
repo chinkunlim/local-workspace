@@ -15,7 +15,6 @@ def _run(**kw):
 MANIFEST = SkillManifest(
     skill_name="interactive_reader",
     description="Processes Obsidian wiki notes with interactive tag highlighting and annotation pipelines.",
-    phases=["p1_reader"],
     cli_entry="scripts/run_all.py",
     run_fn=_run,
     file_types=[".md"],

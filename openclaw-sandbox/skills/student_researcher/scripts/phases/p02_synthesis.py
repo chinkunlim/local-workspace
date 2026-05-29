@@ -18,7 +18,7 @@ class Phase2Synthesis(PhaseBase):
         )
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.dirs["input"]
+        input_dir = self.dirs["inbox"]
         semantic_ctx_path = os.path.join(self.base_dir, "state", "semantic_context.json")
         semantic_ctx = {}
         if os.path.exists(semantic_ctx_path):

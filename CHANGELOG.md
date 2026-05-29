@@ -8,6 +8,22 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [9.23.0] — 2026-05-29: Pipeline State Recovery & Eager Copy Stabilization
+
+### Added
+- **Log State Recovery Tool**: Created `core/scripts/recover_state_from_logs.py` to securely scan pipeline logs and inject missing state checkpoints into `.pipeline_state.json`.
+- **Eager Execution Architecture**: Formalized the Eager Copy mechanic where downstream skills (`smart_highlighter`, `note_generator`) preview drafts and automatically overwrite them upon upstream HITL completion (`04_final_verified`).
+
+### Fixed
+- **Dashboard Counting Bug**: Fixed issue in `smart_highlighter` and `proofreader` where output folders caused duplicate pending counts across phases.
+- **OCR HITL Loop**: Added state checks in `doc_parser/scripts/phases/p01c_ocr_gate.py` to skip tasks already in `⏸️` (Pending HITL) state, preventing infinite Telegram notification loops.
+
+### Documentation
+- Synchronized all `SKILL.md` files with the latest phase conventions, Telegram HITL annotations, and Eager Execution mechanisms.
+- Added `Checklist State Recovery` rule to `CODING_GUIDELINES.md` strictly prohibiting manual edits to `checklist.md`.
+
+---
+
 ## [9.17.0] — 2026-05-23: Coding Guidelines Full Compliance Audit
 
 ### Fixed

@@ -102,7 +102,11 @@ class CompilerOrchestrator(PipelineBase):
 
 def main():
     parser = build_skill_parser(
-        "Knowledge Compiler", include_subject=True, include_force=True, include_clear=True
+        "Knowledge Compiler",
+        include_subject=True,
+        include_force=True,
+        include_process_all=True,
+        include_clear=True,
     )
     args = parser.parse_args()
     CompilerOrchestrator().run(args)

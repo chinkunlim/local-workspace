@@ -32,12 +32,6 @@ MANIFEST = SkillManifest(
         "triple-layer anti-hallucination defence. Includes glossary "
         "generation, proofreading with feedback loop, and multi-file merge."
     ),
-    phases=[
-        "p0_glossary",
-        "p1_transcribe",
-        "p2_proofread",
-        "p3_merge",
-    ],
     cli_entry="scripts/run_all.py",
     run_fn=_run,
     file_types=[".m4a", ".mp3", ".wav"],

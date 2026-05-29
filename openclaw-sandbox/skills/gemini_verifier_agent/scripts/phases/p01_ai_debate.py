@@ -91,10 +91,53 @@ class Phase1AIDebate(PhaseBase):
                 AtomicWriter.write_text(archive_path, debate_text)
 
                 self.log(f"✅ AI 辯證階段完成，輸出至: {archive_path}")
+                return archive_path
 
             except Exception as exc:
                 self.warning(f"⚠️  Playwright 流程失敗: {exc}")
 
         return None
+
+    def run(self, force: bool = False, **kwargs) -> None:
+        input_dir = self.dirs["inbox"]
+        output_dir = self.dirs["processed"]
+        os.makedirs(output_dir, exist_ok=True)
+
+        for root, _, files in os.walk(input_dir):
+            for file in files:
+                if not file.endswith(".json"):
+                    continue
+
+                filepath = os.path.join(root, file)
+                self.info(f"📂 處理查證任務檔案: {file}")
+
+                with open(filepath, encoding="utf-8") as f:
+                    try:
+                        data = json.load(f)
+                    except json.JSONDecodeError:
+                        self.error(f"❌ JSON 格式錯誤: {file}")
+                        continue
+
+                claims = data.get("claims", [])
+                debated_claims = []
+
+                for claim_data in claims:
+                    claim_text = claim_data.get("claim", "")
+                    # Simulate finding evidence text
+                    evidence_text = "No direct evidence found."
+
+                    try:
+                        archive_path = asyncio.run(self._debate_gemini(claim_text, evidence_text))
+                        if archive_path:
+                            claim_data["debate_archive"] = archive_path
+                    except Exception as e:
+                        self.error(f"❌ 查證辯證失敗: {e}")
+
+                    debated_claims.append(claim_data)
+
+                data["debated_claims"] = debated_claims
+                out_path = os.path.join(output_dir, file)
+                AtomicWriter.write_json(out_path, data)
+                self.info(f"✅ 查證任務完成，輸出至: {out_path}")
 
         self.state_manager.sync_physical_files()

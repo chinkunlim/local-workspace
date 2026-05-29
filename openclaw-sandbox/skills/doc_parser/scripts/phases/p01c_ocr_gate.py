@@ -81,6 +81,12 @@ class Phase1cOCRQualityGate(PipelineBase):
     def _process_file(self, idx: int, task: dict, total: int) -> Optional[bool]:
         subject = task["subject"]
         filename = task["filename"]
+
+        status = self.state_manager.state.get(subject, {}).get(filename, {}).get(self.phase_key)
+        if status == "⏸️":
+            self.info(f"⏸️ [OCR] {filename} 已暫停並等待人工確認，跳過重複評估。")
+            return True
+
         pdf_path = os.path.join(self.dirs.get("inbox", ""), subject, filename)
         pdf_id = os.path.splitext(filename)[0]
 
@@ -248,7 +254,7 @@ class Phase1cOCRQualityGate(PipelineBase):
         if not os.path.exists(report_path):
             return []
         try:
-            with open(report_path) as f:
+            with open(report_path, encoding="utf-8") as f:
                 data = json.load(f)
             # If the whole doc is scanned, assess all pages; otherwise check specific pages
             if data.get("is_scanned", False):
@@ -270,7 +276,7 @@ class Phase1cOCRQualityGate(PipelineBase):
         try:
             data = {}
             if os.path.exists(report_path):
-                with open(report_path) as f:
+                with open(report_path, encoding="utf-8") as f:
                     data = json.load(f)
 
             data["low_confidence_pages"] = low_confidence_pages
@@ -322,6 +328,10 @@ if __name__ == "__main__":
     gate.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
     success = gate.run(subject="Default", file_filter=filename)
 
-    print(f"\n{'=' * 40}")
-    print(f"OCR Quality Assessment Success: {success}")
-    print(f"{'=' * 40}")
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger("Phase1c")
+    logger.info("\n" + "=" * 40)
+    logger.info("OCR Quality Assessment Success: %s", success)
+    logger.info("=" * 40)

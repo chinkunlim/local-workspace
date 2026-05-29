@@ -28,15 +28,15 @@ The `proofreader` skill is a centralized module responsible for ensuring the acc
 
 ## Phases
 
-### `p00_doc_proofread.py` (Phase 0)
+### `p01_doc_proofread.py` (Phase 1)
 Designed specifically for `doc_parser` output. Corrects OCR errors and mathematically embeds extracted images/diagrams exactly where they logically belong in the Markdown text.
 
-### `p01_transcript_proofread.py` (Phase 1)
+### `p02_transcript_proofread.py` (Phase 2)
 Reads the merged transcript from the `audio_transcriber` and checks the `.session_manifest.json` for reference materials.
 - **with_reference mode**: Uses parsed documents to correct specialized terminology and spelling.
 - **semantic_only mode**: Corrects spelling based purely on context.
 
-### `p02_doc_completeness.py` (Phase 2)
+### `p03_doc_completeness.py` (Phase 3)
 Validates that all key topics and visual charts from the reference material are mentioned in the transcript.
 - Embeds images into the transcript where appropriate.
 - Adds `> [!NOTE]` blocks for any critical information from the reference that was omitted by the speaker.

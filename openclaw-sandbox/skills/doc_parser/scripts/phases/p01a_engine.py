@@ -567,7 +567,7 @@ class Phase1aPDFEngine(PipelineBase):
         if not os.path.exists(path):
             return None
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return None
@@ -578,7 +578,7 @@ class Phase1aPDFEngine(PipelineBase):
         data = {}
         if os.path.exists(path):
             try:
-                with open(path) as f:
+                with open(path, encoding="utf-8") as f:
                     data = json.load(f)
             except Exception:
                 pass

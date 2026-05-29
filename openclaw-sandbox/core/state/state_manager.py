@@ -232,9 +232,13 @@ class StateManager:
                 physical_files = []
                 if isinstance(self.file_ext, (tuple, list)):
                     for ext in self.file_ext:
-                        physical_files.extend(glob.glob(os.path.join(subj_path, ext)))
+                        glob_ext = f"*{ext}" if ext.startswith(".") else ext
+                        physical_files.extend(glob.glob(os.path.join(subj_path, glob_ext)))
                 else:
-                    physical_files = glob.glob(os.path.join(subj_path, self.file_ext))
+                    glob_ext = (
+                        f"*{self.file_ext}" if self.file_ext.startswith(".") else self.file_ext
+                    )
+                    physical_files = glob.glob(os.path.join(subj_path, glob_ext))
 
                 for pf in physical_files:
                     fname = os.path.basename(pf)

@@ -8,6 +8,15 @@ metadata:
         "emoji": "♊️"
       }
   }
+state_tracking:
+  phases: ["p01_ai_debate"]
+  labels:
+    p01_ai_debate: "P1 (Debate)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
 ---
 
 # Gemini Verifier Agent

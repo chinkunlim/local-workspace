@@ -8,6 +8,16 @@ metadata:
         "emoji": "🧑‍🏫"
       }
   }
+state_tracking:
+  phases: ["p01_feynman_debate", "p02_debate_synthesis"]
+  labels:
+    p01_feynman_debate: "P1 (Debate)"
+    p02_debate_synthesis: "P2 (Synthesis)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
 ---
 
 # Feynman Simulator

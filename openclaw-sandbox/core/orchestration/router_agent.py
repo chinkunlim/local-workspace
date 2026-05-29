@@ -202,22 +202,19 @@ class RouterAgent:
 
     def _llm_decompose(self, intent: str, ext: str) -> List[str]:
         """Use LLM to decompose a natural language request into a skill pipeline."""
-        if not self._llm:
+        if not self._llm or not self._registry:
             return []
+
+        skill_descriptions = []
+        for name, manifest in self._registry.all().items():
+            skill_descriptions.append(f"- {name}: {manifest.description}")
+        skills_text = "\n".join(skill_descriptions)
+
         prompt = (
             f"使用者意圖: {intent}\n"
             f"檔案類型: {ext}\n\n"
             "我們有以下技能：\n"
-            "- audio_transcriber: 將語音轉為文字\n"
-            "- doc_parser: 將 PDF 解析為文字\n"
-            "- note_generator: 根據文字產生摘要與筆記\n"
-            "- student_researcher: 萃取需要學術查證的論點\n"
-            "- academic_library_agent: 操作 Playwright 抓取 Elsevier/ScienceDirect 文獻\n"
-            "- gemini_verifier_agent: 與 Gemini 進行 AI-to-AI 辯證與查證\n"
-            "- feynman_simulator: 模擬費曼學習法，進行師生 AI 辯證\n"
-            "- knowledge_compiler: 將筆記編譯進知識庫並做雙向連結\n"
-            "- telegram_kb_agent: 提供知識庫問答\n"
-            "- video_ingester: 擷取影片關鍵影格並將語音轉為文字\n\n"
+            f"{skills_text}\n\n"
             "請將任務拆解為執行順序清單，只輸出技能名稱，以逗號分隔，例如：\n"
             "audio_transcriber,note_generator,knowledge_compiler"
         )
@@ -227,23 +224,8 @@ class RouterAgent:
             routing_model = os.environ.get("OPENCLAW_ROUTER_MODEL", "qwen3:8b")
             raw = self._llm.generate(model=routing_model, prompt=prompt)
             skills = [s.strip() for s in raw.split(",") if s.strip()]
-            return [
-                s
-                for s in skills
-                if s
-                in [
-                    "audio_transcriber",
-                    "doc_parser",
-                    "note_generator",
-                    "knowledge_compiler",
-                    "telegram_kb_agent",
-                    "academic_edu_assistant",
-                    "student_researcher",
-                    "academic_library_agent",
-                    "gemini_verifier_agent",
-                    "feynman_simulator",
-                ]
-            ]
+            valid_skills = self._registry.list_names()
+            return [s for s in skills if s in valid_skills]
         except Exception as e:
             print(f"⚠️ [RouterAgent] LLM 分解任務失敗: {e}")
             return []
@@ -347,6 +329,62 @@ class RouterAgent:
                             )
 
         if len(chain) <= 1:
+            if event.source_skill == "proofreader":
+                # Check for pending chains to run Eager Execution on pre-HITL automated output
+                file_id = os.path.splitext(filename)[0]
+                pending_path = os.path.join(
+                    workspace_root,
+                    "data",
+                    "proofreader",
+                    "pending_chains",
+                    subject,
+                    f"{file_id}.json",
+                )
+                if os.path.exists(pending_path):
+                    try:
+                        with open(pending_path, encoding="utf-8") as f:
+                            pending_data = json.load(f)
+                        remaining_chain = pending_data.get("chain", [])
+                        if remaining_chain and len(remaining_chain) > 1:
+                            eager_next = remaining_chain[1]  # index 0 is proofreader itself
+                            eager_target_dir = os.path.join(
+                                workspace_root, "data", eager_next, "input", subject
+                            )
+                            os.makedirs(eager_target_dir, exist_ok=True)
+                            import shutil
+
+                            eager_target_path = os.path.join(
+                                eager_target_dir, os.path.basename(filepath)
+                            )
+                            if os.path.exists(filepath) and filepath != eager_target_path:
+                                shutil.copy2(filepath, eager_target_path)
+
+                            eager_script = "scripts/run_all.py"
+                            if self._registry:
+                                mf = self._registry.get(eager_next)
+                                if mf and mf.cli_entry:
+                                    eager_script = mf.cli_entry
+
+                            eager_cmd = [sys.executable, eager_script, "--subject", subject]
+                            eager_cwd = os.path.join(workspace_root, "skills", eager_next)
+
+                            print(
+                                f"⏩ [RouterAgent] Eager Execution: 已提前啟動 {eager_next} (草稿模式，基於 pre-HITL 校對輸出)"
+                            )
+
+                            task_queue.enqueue(
+                                name=f"EAGER: {eager_next} ({subject})",
+                                cmd=eager_cmd,
+                                cwd=eager_cwd,
+                                filepath=eager_target_path,
+                                skill=eager_next,
+                                chain=remaining_chain[1:],
+                                subject=subject,
+                                env=env,
+                            )
+                    except Exception as e:
+                        print(f"⚠️ [RouterAgent] 嘗試進行 Eager Execution 時失敗: {e}")
+
             msg = f"🏁 [RouterAgent] 整個路由計畫已完成: {event.source_skill}"
             print(msg)
             try:
@@ -393,6 +431,8 @@ class RouterAgent:
                     send_message(msg)
                 except ImportError:
                     pass
+
+                # Eager Execution moved to when proofreader emits completed event (pre-HITL)
                 return
 
             # ALL OTHER SKILLS: Unified Handoff

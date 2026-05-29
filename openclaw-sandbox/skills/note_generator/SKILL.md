@@ -8,6 +8,16 @@ metadata:
         "emoji": "📝"
       }
   }
+state_tracking:
+  phases: ["p1", "p2"]
+  labels:
+    p1: "P1 (Map-Reduce)"
+    p2: "P2 (Mermaid)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
 ---
 
 # SKILL: note-generator
@@ -35,6 +45,10 @@ subject       : str   — optional subject label
 label         : str   — optional document label (e.g., lecture name)
 figure_list   : str   — optional list of figures/images for injection
 ```
+
+**Eager Copy 機制 (樂觀執行) & 觸發控制**:
+`note_generator` 會自動將 `smart_highlighter` 輸出的草稿預先拷貝至其 `inbox/` 產生預覽筆記。
+然而，為了避免不必要的運算浪費，只有當 `04_final_verified` (經過 HITL 人工校對的最終文件) 存在時，它才會透過 EventBus 發送事件觸發下游的 `student_researcher` 與 `gemini_verifier_agent`。
 
 ## Output
 

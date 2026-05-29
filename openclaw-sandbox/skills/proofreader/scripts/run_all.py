@@ -176,16 +176,13 @@ class ProofreaderOrchestrator(PipelineBase):
     def _check_dashboard_pending(self):
         workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
         out_dir = os.path.join(workspace_root, "data", "proofreader", "output")
+        hitl_dir = os.path.join(out_dir, "03_doc_completeness")
         verified_dir = os.path.join(out_dir, "04_final_verified")
 
         pending_count = 0
-        phases = ["01_doc_proofread", "02_transcript_proofread", "03_doc_completeness"]
-        for phase in phases:
-            phase_dir = os.path.join(out_dir, phase)
-            if not os.path.exists(phase_dir):
-                continue
-            for subj in os.listdir(phase_dir):
-                subj_dir = os.path.join(phase_dir, subj)
+        if os.path.exists(hitl_dir):
+            for subj in os.listdir(hitl_dir):
+                subj_dir = os.path.join(hitl_dir, subj)
                 if not os.path.isdir(subj_dir):
                     continue
                 for fname in os.listdir(subj_dir):

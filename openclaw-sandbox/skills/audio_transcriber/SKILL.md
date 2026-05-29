@@ -45,7 +45,7 @@ cat data/audio_transcriber/state/checklist.md
 | Phase | Script | Function |
 |:---:|:---|:---|
 | P0 | `p00_glossary.py` | Glossary initialisation — prevents LLM from fabricating domain-specific terms |
-| P1 | `p01_transcribe.py` | High-fidelity transcription via MLX-Whisper. **VAD silence-trimming guard**: uses `pydub.silence` to pre-strip noise. If `silence_ratio > max_removal_ratio` (default: 0.90), automatically falls back to the raw audio to prevent over-trimming. Includes multi-clip majority-vote language detection. |
+| P1 | `p01_transcribe.py` | High-fidelity transcription via MLX-Whisper. **VAD silence-trimming guard**: uses `pydub.silence` to pre-strip noise (Requires `ffmpeg` installed on system to decode audio files). If `silence_ratio > max_removal_ratio` (default: 0.90) or ffmpeg decoding fails, automatically falls back to the raw audio to prevent over-trimming. Includes multi-clip majority-vote language detection. |
 | P2 | `p02_glossary_apply.py` | Automatically applies glossary constraints to the raw transcript to ensure terminology accuracy before proofreading. |
 | P3 | `p03_merge.py` | Cross-segment consolidation and refinement. |
 | Handoff | (Autonomous) | The RouterAgent automatically forwards the merged transcript to the `proofreader` skill for AI verification against reference material and dashboard review. |

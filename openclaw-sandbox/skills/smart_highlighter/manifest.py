@@ -16,7 +16,6 @@ def _run(**kw):
 MANIFEST = SkillManifest(
     skill_name="smart_highlighter",
     description="Applies Markdown bold/highlight annotations to text with anti-tampering verbatim guard. Stateless design.",
-    phases=["highlight"],
     cli_entry="scripts/run_all.py",
     run_fn=_run,
     file_types=[".md"],

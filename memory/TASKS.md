@@ -48,6 +48,13 @@
 
 ## ✅ Completed
 
+- [x] 2026-05-29: **V9.23 Pipeline State Recovery & Eager Copy Stabilization**
+  - Formalized Eager Execution and Draft Overwriting logic across `smart_highlighter` and `note_generator`.
+  - Created `core/scripts/recover_state_from_logs.py` to reliably scan logs and inject missing states back into `.pipeline_state.json`.
+  - Fixed bugs where `smart_highlighter` and `proofreader` dashboards mistakenly aggregated files in `⏸️` status or double-counted them.
+  - Added checks to `doc_parser` OCR gate to skip HITL-pending tasks to prevent infinite Telegram loops.
+  - Synchronized all `SKILL.md` to precisely reflect Phase configurations, Telegram HITL behavior, and the new Eager Copy mechanic.
+
 - [x] 2026-05-29: **V9.22 Orchestration Hardening & Telegram GUI Integration**
   - Upgraded Telegram `/status` to intelligently hide zero-task modules (e.g., `note_generator`).
   - Implemented callback query handling for inline HITL buttons (removes buttons + loading spinner on click).

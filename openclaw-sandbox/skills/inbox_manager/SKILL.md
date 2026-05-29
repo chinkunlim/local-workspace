@@ -8,6 +8,15 @@ metadata:
         "emoji": "📬"
       }
   }
+state_tracking:
+  phases: ["p1"]
+  labels:
+    p1: "P1"
+io_contracts:
+  consumes:
+    - "application/json"
+  produces:
+    - "application/json"
 ---
 
 # Inbox Manager

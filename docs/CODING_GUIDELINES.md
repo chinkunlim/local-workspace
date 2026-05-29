@@ -251,6 +251,7 @@ The three-layer anti-hallucination defence must not be weakened:
 - **`sync_physical_files()`**: Use ONLY for single-source pipelines (e.g. `audio_transcriber`) where every file belongs to all phases. It blindly recalculates hashes and overwrites existing state flags to `⏳` if changes are detected.
 - **Manual State Injection**: Use for multi-source converging pipelines (e.g. `proofreader`). Iterate directories manually and conditionally inject default state ONLY IF the file is not already in the state dictionary. This prevents wiping out orchestrator masks (e.g. `⏭️`).
 - **Log File Filter Invariant**: All state population loops (Manual State Injection and `sync_physical_files` helpers) **MUST** skip pipeline-generated log files. At minimum, filter `correction_log.md`: `if fname == "correction_log.md": continue`. Log files are side effects of phase execution and must never appear as processable state entries.
+- **Checklist State Recovery**: `checklist.md` is an auto-generated read-only view. Never modify it manually. To recover lost progress, use `core/scripts/recover_state_from_logs.py` to parse logs and inject the state back into `.pipeline_state.json`.
 
 ### 5.5 Pipeline Pause & Resume (Human-in-the-Loop)
 
@@ -371,6 +372,26 @@ self.llm.generate(model="qwen3:8b", keep_alive=-1)
 ### 5.15 Structured State Invariant
 
 Never use raw dictionaries to pass state between pipeline phases or routing nodes. Always use strongly typed structured data models (e.g., Pydantic or Dataclass schemas like `PipelineStateSnapshot`) to prevent subtle KeyError bugs and enforce data contracts.
+
+### 5.16 Decoupled State and Routing Manifests
+
+Skill configuration (such as pipeline phases, state tracking labels, and I/O routing contracts) MUST be declared declaratively in the `SKILL.md` YAML frontmatter, never hardcoded in Python dictionaries.
+
+```yaml
+# ✅ Correct SKILL.md Frontmatter
+state_tracking:
+  phases: ["p1", "p2"]
+  labels:
+    p1: "P1 (Map-Reduce)"
+    p2: "P2 (Mermaid)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
+```
+
+The orchestrators (`StateManager` and `RouterAgent`) dynamically read these parameters using `SkillRegistry`, allowing any agent to adapt without changing core framework logic.
 
 ---
 

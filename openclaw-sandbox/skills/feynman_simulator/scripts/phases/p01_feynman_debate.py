@@ -198,7 +198,7 @@ class Phase1FeynmanDebate(PhaseBase):
     # ------------------------------------------------------------------ #
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.dirs["input"]
+        input_dir = self.dirs["inbox"]
         output_dir = self.dirs["output"]
         os.makedirs(output_dir, exist_ok=True)
 

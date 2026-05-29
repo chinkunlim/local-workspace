@@ -8,6 +8,19 @@ metadata:
         "emoji": "🎬"
       }
   }
+state_tracking:
+  phases: ["p01_extract_keyframes", "p02_transcribe_video"]
+  labels:
+    p01_extract_keyframes: "P1 (Keyframes)"
+    p02_transcribe_video: "P2 (Transcribe)"
+io_contracts:
+  consumes:
+    - "video/mp4"
+    - "video/quicktime"
+    - "video/x-matroska"
+    - "video/webm"
+  produces:
+    - "text/markdown"
 ---
 
 # Video Ingester

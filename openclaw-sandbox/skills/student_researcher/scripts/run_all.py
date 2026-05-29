@@ -15,7 +15,8 @@ def main() -> None:
         include_force=True,
         include_resume=False,
         include_interactive=False,
-        include_start_phase=True,
+        include_start_phase=False,
+        include_process_all=True,
         include_clear=True,
     )
     args = parser.parse_args()

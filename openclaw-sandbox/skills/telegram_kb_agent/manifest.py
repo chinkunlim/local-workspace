@@ -15,7 +15,6 @@ def _run(**kw):
 MANIFEST = SkillManifest(
     skill_name="telegram_kb_agent",
     description="Telegram bot providing remote control of Open Claw pipelines, knowledge base queries, HITL callbacks, and runtime model switching.",
-    phases=["bot_daemon"],
     cli_entry="scripts/bot_daemon.py",
     run_fn=_run,
     file_types=[],

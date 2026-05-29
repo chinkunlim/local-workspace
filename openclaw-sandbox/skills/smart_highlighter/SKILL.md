@@ -8,6 +8,15 @@ metadata:
         "emoji": "🖊️"
       }
   }
+state_tracking:
+  phases: ["p1"]
+  labels:
+    p1: "P1 (Highlight)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
 ---
 
 # SKILL: smart-highlighter
@@ -32,6 +41,9 @@ uv run skills/smart_highlighter/scripts/run_all.py --process-all
 markdown_text : str   — raw Markdown string (any length)
 subject       : str   — optional subject label for config profile selection
 ```
+
+**Eager Copy 機制 (樂觀執行)**:
+`smart_highlighter` 會自動將 `proofreader` 輸出的 `03_doc_completeness` 草稿預先拷貝至其 `inbox/` 執行高亮。當 `proofreader` 完成 HITL 並產生 `04_final_verified` 時，它會自動將草稿覆寫並重新產生最終的螢光筆版本。
 
 ## Output
 

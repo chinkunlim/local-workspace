@@ -96,7 +96,11 @@ class ReaderOrchestrator(PipelineBase):
 
 def main():
     parser = build_skill_parser(
-        "Interactive Reader", include_subject=True, include_force=True, include_clear=True
+        "Interactive Reader",
+        include_subject=True,
+        include_force=True,
+        include_clear=True,
+        include_process_all=True,
     )
     args = parser.parse_args()
     ReaderOrchestrator().run(args)

@@ -99,6 +99,9 @@ core/
 │   ├── graph_store.py        ← Knowledge graph interactions
 │   └── knowledge_pusher.py   ← Helper to push final outputs to Obsidian/Wiki layout
 │
+├── scripts/                  ← Maintenance and utility scripts
+│   └── recover_state_from_logs.py ← Scans pipeline logs to recover missing state into .pipeline_state.json
+│
 └── utils/                    ← Stateless shared helpers
     ├── file_utils.py         ← safe_read_json, managed_tmp_dir, ensure_dir
     ├── text_utils.py         ← context-aware text chunking

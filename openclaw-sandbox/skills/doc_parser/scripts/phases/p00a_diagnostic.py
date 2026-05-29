@@ -489,6 +489,10 @@ if __name__ == "__main__":
     diag.dirs["inbox"] = os.path.dirname(os.path.abspath(args.pdf))
     success = diag.run(subject="Default", file_filter=filename)
 
-    print(f"\n{'=' * 50}")
-    print(f"Diagnostic Execution Success: {success}")
-    print(f"{'=' * 50}")
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger("Phase0a")
+    logger.info("\n" + "=" * 50)
+    logger.info("Diagnostic Execution Success: %s", success)
+    logger.info("=" * 50)

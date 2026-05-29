@@ -17,7 +17,7 @@ class Phase1ClaimExtraction(PhaseBase):
         )
 
     def run(self, force: bool = False, **kwargs) -> None:
-        input_dir = self.dirs["input"]
+        input_dir = self.dirs["inbox"]
 
         for root, _, files in os.walk(input_dir):
             for file in files:

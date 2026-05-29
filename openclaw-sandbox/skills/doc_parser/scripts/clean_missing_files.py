@@ -9,7 +9,7 @@ if not state_file.exists():
     print("State file not found.")
     exit(0)
 
-with open(state_file) as f:
+with open(state_file, encoding="utf-8") as f:
     state = json.load(f)
 
 to_remove = []
@@ -28,7 +28,8 @@ for subject, filename in to_remove:
     if not state[subject]:
         del state[subject]
 
-with open(state_file, "w") as f:
-    json.dump(state, f, indent=4, ensure_ascii=False)
+from core.utils.atomic_writer import AtomicWriter
+
+AtomicWriter.write_json(str(state_file), state)
 
 print(f"Removed {len(to_remove)} stale entries.")

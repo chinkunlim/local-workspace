@@ -8,6 +8,16 @@ metadata:
         "emoji": "🎓"
       }
   }
+state_tracking:
+  phases: ["p01_compare", "p02_anki"]
+  labels:
+    p01_compare: "P1 (Compare)"
+    p02_anki: "P2 (Anki)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/csv"
 ---
 
 # Academic & Education Assistant

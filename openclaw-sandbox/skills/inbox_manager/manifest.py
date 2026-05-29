@@ -15,7 +15,6 @@ def _run(**kw):
 MANIFEST = SkillManifest(
     skill_name="inbox_manager",
     description="Watches the inbox directory for new files and routes them to the appropriate skill via the LocalTaskQueue.",
-    phases=["daemon"],
     cli_entry="../../core/inbox_daemon.py",
     run_fn=_run,
     file_types=[".pdf", ".m4a", ".mp3", ".wav", ".md"],

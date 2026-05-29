@@ -15,7 +15,6 @@ def _run(**kw):
 MANIFEST = SkillManifest(
     skill_name="knowledge_compiler",
     description="Compiles Markdown notes into interconnected knowledge graphs with bidirectional Obsidian links.",
-    phases=["p1_compile"],
     cli_entry="scripts/run_all.py",
     run_fn=_run,
     file_types=[".md"],

@@ -8,6 +8,17 @@ metadata:
         "emoji": "🎓"
       }
   }
+state_tracking:
+  phases: ["p00_semantic_router", "p01_claim_extraction", "p02_synthesis"]
+  labels:
+    p00_semantic_router: "P0 (Route)"
+    p01_claim_extraction: "P1 (Extract)"
+    p02_synthesis: "P2 (Synthesis)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "text/markdown"
 ---
 
 # Student Researcher

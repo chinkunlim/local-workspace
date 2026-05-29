@@ -8,6 +8,15 @@ metadata:
         "emoji": "📚"
       }
   }
+state_tracking:
+  phases: ["p1"]
+  labels:
+    p1: "P1 (Fetch)"
+io_contracts:
+  consumes:
+    - "text/markdown"
+  produces:
+    - "application/pdf"
 ---
 
 # Academic Library Agent
