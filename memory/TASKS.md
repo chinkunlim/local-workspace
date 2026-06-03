@@ -48,7 +48,13 @@
 
 ## ✅ Completed
 
-- [x] 2026-05-29: **V9.23 Pipeline State Recovery & Eager Copy Stabilization**
+- [x] 2026-06-03: **V9.25 Semantic Matcher Fix & Doc Parser DPI Boost**
+  - Fixed N-to-N matching hallucination in `core/ai/semantic_matcher.py`.
+  - Upgraded `Phase1aPDFEngine` to 600 DPI image extraction with auto Markdown injection.
+  - Corrected `doc_parser/run_all.py` `GlobalRegistry` initialization.
+  - Clarified file dropping intent routing.
+
+- [x] 2026-05-29: **V9.24 Pipeline State Recovery & Eager Copy Stabilization**
   - Formalized Eager Execution and Draft Overwriting logic across `smart_highlighter` and `note_generator`.
   - Created `core/scripts/recover_state_from_logs.py` to reliably scan logs and inject missing states back into `.pipeline_state.json`.
   - Fixed bugs where `smart_highlighter` and `proofreader` dashboards mistakenly aggregated files in `⏸️` status or double-counted them.

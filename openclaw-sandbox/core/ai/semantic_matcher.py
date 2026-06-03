@@ -3,7 +3,6 @@ import re
 from typing import Dict, List
 
 from core.ai.llm_client import OllamaClient
-from core.utils.config_manager import config_manager
 
 
 class SemanticMatcher:
@@ -45,22 +44,25 @@ class SemanticMatcher:
             "講義具有前後連貫順序（例如 L01-L04 可能對應講義 01，L05-L07 對應講義 02）。\n"
             "請根據語音內容，判斷這段語音最符合哪幾份講義。\n\n"
             "【語音逐字稿開頭】：\n"
-            f"{transcript_text[:1000]}\n\n"
+            f"{transcript_text[:3000]}\n\n"
             "【備選講義清單】：\n"
         )
 
         for key in sorted_keys:
-            doc_preview = candidate_docs[key][:500]
+            doc_preview = candidate_docs[key][:1500]
             prompt += f"--- 講義 ID: {key} ---\n{doc_preview}...\n\n"
 
         prompt += (
-            '請嚴格只輸出一個 JSON 陣列，包含你認為最對應的講義 ID 字串，例如：["01"] 或 ["01", "02"]。\n'
+            "【重要注意事項】：\n"
+            "1. 一段語音（一堂課）通常最多只會對應 1 份或 2 份講義，請絕對不要將所有講義都列出。\n"
+            "2. 如果這段語音前半段只是一般的行政宣導、點名、閒聊，且沒有包含任何具體學術關鍵字能明確對應到某份講義，請務必輸出空陣列 []。\n"
+            "3. 只有當語音中出現明確且核心的學術專有名詞，且與備選講義預覽內容高度重疊時，才將該講義 ID 納入。\n\n"
+            '請嚴格只輸出一個 JSON 陣列，包含你認為最對應的講義 ID 字串，例如：["講義A"] 或 ["講義A", "講義B"]，若皆不符合請輸出 []。\n'
             "請絕對不要輸出任何其他解釋、思考過程、或 Markdown 標籤。"
         )
 
-        # Use router default config model, or a fallback (e.g. qwen3:8b)
-        router_config = config_manager.get_router_config()
-        model_name = router_config.get("model", "qwen3:8b")
+        # Use the fallback model configured in the LLM client
+        model_name = getattr(self.llm, "fallback_model", None) or "qwen3:8b"
 
         if logger:
             logger.info(f"🔍 啟動語意配對... (使用 {model_name} 比對 {len(sorted_keys)} 份講義)")
@@ -90,8 +92,21 @@ class SemanticMatcher:
             if not isinstance(selected_ids, list):
                 selected_ids = [selected_ids]
 
-            # Convert to strings and filter out hallucinations
-            valid_selections = [str(k) for k in selected_ids if str(k) in candidate_docs]
+            if logger:
+                logger.info(f"💡 LLM 原始配對結果 (未過濾): {selected_ids}")
+
+            valid_selections_set = set()
+            for k in selected_ids:
+                k_str = str(k).strip()
+                if k_str in candidate_docs:
+                    valid_selections_set.add(k_str)
+                else:
+                    # Fallback to partial match if LLM abbreviated the ID
+                    for doc_key in candidate_docs:
+                        if k_str in doc_key or doc_key in k_str:
+                            valid_selections_set.add(doc_key)
+                            break
+            valid_selections = list(valid_selections_set)
 
             if logger:
                 logger.info(f"✅ 語意配對結果: 決定配對講義 {valid_selections}")

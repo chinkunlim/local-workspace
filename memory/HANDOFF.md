@@ -1,18 +1,23 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-05-26
-> **System Status:** 🟢 Stable / Production-Ready (V9.20 — Proofreader Optimization & Auto-Checklist Logging)
+> **Last Updated:** 2026-06-03
+> **System Status:** 🟢 Stable / Production-Ready (V9.25 — Semantic Matcher Fix & Doc Parser DPI Boost)
 
 ---
 
-## Current Session (2026-05-29 — Log Recovery & Pipeline State Stabilization)
+## Current Session (2026-06-03 — V9.25 Semantic Matcher Fix & Doc Parser DPI Boost)
 
-**Date:** 2026-05-29
+**Date:** 2026-06-03
 
-- [x] **Pipeline Eager Execution**: Formalized Eager Execution and Draft Overwriting logic across `smart_highlighter` and `note_generator` downstream from `proofreader` HITL workflows.
-- [x] **Log State Recovery Tool**: Created `core/scripts/recover_state_from_logs.py` to reliably scan logs and inject missing states back into `.pipeline_state.json`, avoiding manual modification of the auto-generated `checklist.md`.
-- [x] **HITL Phase Skips**: Fixed bugs where `smart_highlighter` and `proofreader` dashboards mistakenly aggregated files in `⏸️` status or double-counted them. Added checks to `doc_parser` OCR gate to skip HITL-pending tasks.
-- [x] **Global SKILL.md Sync**: Synchronized all `SKILL.md` to precisely reflect Phase configurations, Telegram HITL behavior, and the new Eager Copy mechanic.
+- [x] **Semantic Matcher Hallucination Fix**: Constrained `match_count=1` per chunk in `core/ai/semantic_matcher.py` and implemented partial string matching (`filename in raw_text`) before invoking the LLM, effectively preventing N-to-N matching hallucinations caused by overly eager prefix parsing.
+- [x] **Doc Parser High-Res Image Pipeline**: Upgraded `Phase1aPDFEngine` to extract cropped images at 600 DPI (previously 300) for enhanced clarity.
+- [x] **Auto-Image Embedding**: Implemented automatic Markdown image tag (`![image](filename)`) injection during the `doc_parser` PDF extraction phase to eliminate the need for manual post-processing of reference graphics.
+- [x] **Global Registry Patch**: Patched `doc_parser/run_all.py` to ensure successful registration with `GlobalRegistry`, preventing pipeline desync during cross-skill asset lookup.
+- [x] **System Logic Documentation**: Addressed user inquiries regarding `inbox_daemon` behavior and `StateManager` tracking, affirming that dropping files directly into `skills/audio_transcriber/input/` successfully triggers local execution without disrupting global pipeline routing.
+
+---
+
+## Previous Session (2026-05-29 — Log Recovery & Pipeline State Stabilization)
 
 ---
 

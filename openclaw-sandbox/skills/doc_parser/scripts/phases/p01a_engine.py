@@ -291,6 +291,7 @@ class Phase1aPDFEngine(PipelineBase):
                 )
                 _fitz_doc = None
 
+            fitz_fail_count = 0
             for _, pic_item in picture_items_indexed:
                 prov_list = getattr(pic_item, "prov", [])
                 if prov_list and isinstance(prov_list, list) and len(prov_list) > 0:
@@ -320,7 +321,7 @@ class Phase1aPDFEngine(PipelineBase):
                             b_new = (1 - t) * page_rect.height
                             t, b = t_new, b_new
                         clip = _fitz.Rect(l, t, r, b)
-                        mat = _fitz.Matrix(300 / 72, 300 / 72)  # 300 DPI
+                        mat = _fitz.Matrix(600 / 72, 600 / 72)  # 300 DPI
                         pix = fitz_page.get_pixmap(matrix=mat, clip=clip)
                         pix.save(filepath)
                         saved = True
@@ -329,7 +330,14 @@ class Phase1aPDFEngine(PipelineBase):
                             "info",
                         )
                     except Exception as _fitz_err:
+                        fitz_fail_count += 1
                         self.warning(f"⚠️ PyMuPDF 提取失敗，回退至 Docling: {_fitz_err}")
+                        if fitz_fail_count >= 3:
+                            self.warning(
+                                "⚠️ PyMuPDF 連續失敗 3 次，此檔案停用 PyMuPDF，後續圖片強制降級至 Docling 提取。"
+                            )
+                            _fitz_doc.close()
+                            _fitz_doc = None
 
                 # --- Fallback: Docling native image (lower res) ---
                 if not saved:
@@ -393,6 +401,13 @@ class Phase1aPDFEngine(PipelineBase):
 
             # ── Anti-Bleed: Export markdown then strip in-figure text ──
             markdown_text = doc.export_to_markdown()
+
+            # Replace <!-- image --> placeholders with actual markdown image tags sequentially
+            for fig in extracted_figures:
+                caption = fig.get("caption", "Image") or "Image"
+                img_tag = f"![{caption}]({fig['src']})"
+                # Replace only the first occurrence per iteration
+                markdown_text = markdown_text.replace("<!-- image -->", img_tag, 1)
 
             # Post-process: remove lines that consist only of axis labels / figure callouts
             # These are short numeric-or-symbol-only lines that are typically chart annotations

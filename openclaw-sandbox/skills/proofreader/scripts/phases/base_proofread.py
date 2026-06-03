@@ -50,7 +50,7 @@ class BaseProofreadPhase(PipelineBase):
                     if os.path.exists(first_path):
                         try:
                             with open(first_path, encoding="utf-8") as f:
-                                candidate_docs[doc_prefix] = f.read()[:500]
+                                candidate_docs[doc_prefix] = f.read()[:1500]
                         except Exception:
                             pass
 

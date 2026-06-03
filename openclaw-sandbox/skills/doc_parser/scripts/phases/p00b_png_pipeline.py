@@ -70,6 +70,9 @@ class Phase0bPNGPipeline(PipelineBase):
         img_id = os.path.splitext(filename)[0]
         ext = os.path.splitext(filename)[1].lower()
 
+        if ext not in [".png", ".jpg", ".jpeg"]:
+            return None
+
         self.info(f"🖼️  [Phase 0b] 開始處理圖片課件: {filename}")
 
         # 1. Validation

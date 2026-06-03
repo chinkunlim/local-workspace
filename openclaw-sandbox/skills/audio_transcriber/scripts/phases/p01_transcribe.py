@@ -581,8 +581,48 @@ class Phase1Transcribe(PipelineBase):
                 if self.chunk_fallback_enabled:
                     try:
                         from pydub import AudioSegment
+                    except ImportError:
+                        self.log("⚠️ [Chunk Fallback] pydub 未安裝，跳過時間切片", "warn")
+                        AudioSegment = None
 
-                        _audio_seg = AudioSegment.from_file(cleaned_path)
+                    if AudioSegment is not None:
+                        try:
+                            _audio_seg = AudioSegment.from_file(cleaned_path)
+                        except Exception as _ce:
+                            self.log(
+                                f"⚠️ [Chunk Fallback] 讀取音檔失敗 ({_ce})，嘗試 FFmpeg 強制洗檔 (Audio Washing)...",
+                                "warn",
+                            )
+                            washed_path = os.path.join(tmp_dir, f"{base_name}_washed.wav")
+                            import subprocess
+
+                            try:
+                                subprocess.run(
+                                    [
+                                        "ffmpeg",
+                                        "-y",
+                                        "-i",
+                                        cleaned_path,
+                                        "-ar",
+                                        "16000",
+                                        "-ac",
+                                        "1",
+                                        "-c:a",
+                                        "pcm_s16le",
+                                        washed_path,
+                                    ],
+                                    check=True,
+                                    capture_output=True,
+                                )
+                                _audio_seg = AudioSegment.from_file(washed_path)
+                                cleaned_path = washed_path  # Replace the corrupt source
+                                self.log("✅ [Chunk Fallback] 洗檔成功！", "info")
+                            except Exception as wash_err:
+                                self.log(f"❌ [Chunk Fallback] 強制洗檔失敗: {wash_err}", "error")
+                                raise RuntimeError(
+                                    "無法解析音檔長度且無法清洗，為防範 OOM 記憶體崩潰，阻斷轉錄。"
+                                )
+
                         duration_sec = len(_audio_seg) / 1000.0
                         max_ms = int(self.max_chunk_duration_sec * 1000)
                         if duration_sec > self.max_chunk_duration_sec * 1.2:
@@ -605,10 +645,6 @@ class Phase1Transcribe(PipelineBase):
                                 f"✅ [Chunk Fallback] 切分為 {len(chunk_paths)} 個 "
                                 f"{self.max_chunk_duration_sec:.0f}s 時間區塊"
                             )
-                    except ImportError:
-                        self.log("⚠️ [Chunk Fallback] pydub 未安裝，跳過時間切片", "warn")
-                    except Exception as _ce:
-                        self.log(f"⚠️ [Chunk Fallback] 切片失敗: {_ce}，繼續使用原始音檔", "warn")
 
                 pure_text = ""
                 ts_text = ""

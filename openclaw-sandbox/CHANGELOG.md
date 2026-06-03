@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.25] — 2026-06-03: Semantic Matcher Fix & Doc Parser DPI Boost
+
+### Fixed
+- **Semantic Matcher Hallucination**: Fixed N-to-N many-to-many hallucination in `core/ai/semantic_matcher.py` by limiting `match_count=1` per chunk search and explicitly using partial string matching (`filename in raw_text`) before LLM calls to prevent over-eager matching.
+- **Doc Parser Registry Missing**: Patched `doc_parser`'s `run_all.py` to ensure it registers correctly with `GlobalRegistry`, preventing pipeline desync on cross-skill lookups.
+
+### Added
+- **Doc Parser DPI Boost & Auto-Image Embedding**: Upgraded `Phase1aPDFEngine` (`p01a_engine.py`) to extract images at 600 DPI (previously 300) for higher clarity. Added logic to automatically inject Markdown image tags (`![image](filename)`) directly into the extracted text adjacent to their reference blocks.
+
+---
+
 ## [V9.24] — 2026-05-30: Telegram UX Fixes & Global Asset Cleanup
 
 ### Fixed

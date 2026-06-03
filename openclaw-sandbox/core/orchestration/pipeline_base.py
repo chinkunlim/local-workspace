@@ -845,5 +845,7 @@ class PipelineBase:
                     input()
 
         if not any_stopped:
+            if "phase_obj" in locals():
+                phase_obj.clear_checkpoint()
             print("🏁 Pipeline 執行完畢。")
             PipelineBase.notify_os("Pipeline 執行完畢")

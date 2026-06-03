@@ -100,6 +100,13 @@ class Phase1bTextSanitizer(PipelineBase):
         )
         AtomicWriter.write_text(out_path, header + content)
 
+        # Register the final parsed document globally so SemanticMatcher can find it
+        from core.state.global_registry import GlobalRegistry
+
+        GlobalRegistry(self.workspace_root).register_asset(
+            subject=subject, file_prefix=pdf_id, skill_name="doc_parser", filepath=out_path
+        )
+
         self.info(
             f"✅ [Phase 1b-S] 淨化完成 — "
             f"移除 {hf_removed} 行頁首/頁尾，修復 {hyph_fixed} 處連字號。"
