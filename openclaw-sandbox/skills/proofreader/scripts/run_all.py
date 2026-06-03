@@ -45,6 +45,7 @@ class ProofreaderOrchestrator(PipelineBase):
         audio_dir = os.path.join(workspace_root, "data", "audio_transcriber", "output", "03_merged")
 
         with self._state_manager._lock:
+            updated_doc_subjects = set()
             for source_dir, three_level in [(doc_parser_dir, True), (audio_dir, False)]:
                 if not os.path.exists(source_dir):
                     continue
@@ -83,6 +84,7 @@ class ProofreaderOrchestrator(PipelineBase):
                             fname = f"{pdf_id}.md"
 
                             if fname not in self._state_manager.state[subj]:
+                                updated_doc_subjects.add(subj)
                                 self._state_manager.state[subj][fname] = {
                                     **dict.fromkeys(self._state_manager.PHASES, "⏳"),
                                     "p2": "⏭️",
@@ -95,6 +97,7 @@ class ProofreaderOrchestrator(PipelineBase):
                                 }
                             else:
                                 if self._state_manager.state[subj][fname].get("hash") != fhash:
+                                    updated_doc_subjects.add(subj)
                                     self._state_manager.state[subj][fname]["hash"] = fhash
                                     self._state_manager.state[subj][fname]["p1"] = "⏳"
                                     self._state_manager.state[subj][fname]["note"] = "來源檔更新"
@@ -126,6 +129,13 @@ class ProofreaderOrchestrator(PipelineBase):
                                     self._state_manager.state[subj][fname]["p2"] = "⏳"
                                     self._state_manager.state[subj][fname]["p3"] = "⏳"
                                     self._state_manager.state[subj][fname]["note"] = "來源檔更新"
+                                elif subj in updated_doc_subjects:
+                                    if self._state_manager.state[subj][fname].get("p2") != "⏳":
+                                        self._state_manager.state[subj][fname]["p2"] = "⏳"
+                                        self._state_manager.state[subj][fname]["p3"] = "⏳"
+                                        self._state_manager.state[subj][fname]["note"] = (
+                                            "講義更新，重新校對"
+                                        )
                                 if self._state_manager.state[subj][fname].get("p1") != "⏭️":
                                     self._state_manager.state[subj][fname]["p1"] = "⏭️"
 

@@ -846,3 +846,15 @@ To prevent context loss while maintaining a clean workspace, files are strictly 
 | v3.0.0 | 2026-04-22 | Added SSoT doc strategy; Anti-Truncation Protocol; dual-tier doc boundary rule |
 | v2.0.0 | 2026-04-19 | Added OOM prevention via LocalTaskQueue; RAM Guard invariant; Zero Temperature mandate |
 | v1.0.0 | 2026-03-30 | Initial version |
+
+## 4. Operational Safety and Deletion Protocols
+
+### 4.1 Interactive Terminal Tools
+Any CLI script or operational tool (e.g. `cleanup_orphans.py`) that performs bulk destructive actions (like `shutil.rmtree` or `os.remove` across the filesystem) **MUST** be fully interactive. It must calculate the items to be deleted, print a detailed summary of those items to stdout, and explicitly prompt the user for a `(y/N)` confirmation before executing the destructive changes.
+
+### 4.2 Automated Soft Delete and Background GC
+When building automated file synchronization daemons (like `inbox_daemon`), do NOT issue immediate deletion commands when a source file is removed. Instead, implement a **Soft Delete** pattern:
+1. Mark the target state record with a `"deleted_at"` timestamp.
+2. If the file is restored within the grace period (e.g., 24 hours), clear the timestamp and recover the data seamlessly without re-running expensive pipelines.
+3. Use a Background Garbage Collection thread (GC Thread) that periodically sweeps for expired records.
+4. Instead of unrecoverable deletion (`rm -rf`), expired outputs should be gracefully moved to a `.trash/` directory as a final safeguard against accidental loss.

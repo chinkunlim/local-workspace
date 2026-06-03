@@ -496,3 +496,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.x.x] — 2026-04 (Pre-GIGO-Prevention Era)
 
 - See `memory/ARCHITECTURE.md` → *Historical Architectural Evolution* for prior milestone descriptions.
+
+### Fixed
+- **GlobalRegistry**: Fixed a bug in `get_asset_paths` where exact string matching failed for documents with suffixes (e.g. `L13` failed to match `L13 Myths`). The registry now supports fuzzy prefix matching to guarantee that explicit document prefixes take precedence over semantic matching.
+- **SemanticMatcher**: Enhanced prompt instructions to pass `target_prefix`. The LLM is now strictly instructed to reject cross-prefix matching (e.g. matching `L13` doc to `L15` audio), significantly reducing hallucinated pairings when a direct document is missing.
+
+### Added
+- **Ops Scripts**: Added `ops/cleanup_orphans.py` to automate Garbage Collection of isolated/deleted pipeline output directories (across phases and `GlobalRegistry`) when input files are removed.
+- **Ops Scripts**: Added `ops/fix_filenames.py` to automatically normalize legacy `LXX ` formatted lecture files into standard `LXX_` prefix formatting.
+
+### Changed
+- **SystemInboxDaemon**: Expanded watchdog scope to include `data/audio_transcriber/input` and `data/doc_parser/input`. Files placed directly into these folders are now properly processed, formatted, and triggered without incorrect path traversal.
+- **Cross-Skill Invalidation**: Added `_invalidate_proofreader` logic to `inbox_daemon`. When `doc_parser` successfully extracts a new file into `.md` format, it now automatically invalidates the P3 (Doc Completeness) state for all audio files in the corresponding subject and triggers `proofreader` to re-pair.
+
+### Added
+- **Soft-Delete & Background GC**: Implemented watchdog listeners in `inbox_daemon` for file deletion (`on_deleted`) and movement (`on_moved`). When a file is removed from an input folder, its corresponding pipeline state is now marked with a `"deleted_at"` timestamp instead of immediate deletion.
+- **Background GC Thread**: Added `_gc_loop` to `SystemInboxDaemon` which periodically sweeps `.pipeline_state.json` files for records softly deleted for more than 24 hours. Expired records are safely removed from the system state and `GlobalRegistry`, with their corresponding output files gracefully moved to the `data/.trash/` directory as a final safety net against accidental data loss.

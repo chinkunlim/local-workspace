@@ -18,6 +18,7 @@ class SemanticMatcher:
         self,
         transcript_text: str,
         candidate_docs: Dict[str, str],
+        target_prefix: str = None,
         logger=None,
     ) -> List[str]:
         """
@@ -26,6 +27,7 @@ class SemanticMatcher:
         Args:
             transcript_text: The transcript content (usually the first N characters).
             candidate_docs: A dict mapping doc_prefix -> doc_content_preview (first N characters).
+            target_prefix: The prefix of the source audio (e.g., 'L15'). Used to prevent mismatched pairs.
             logger: Optional logger for outputting trace information.
 
         Returns:
@@ -52,11 +54,16 @@ class SemanticMatcher:
             doc_preview = candidate_docs[key][:1500]
             prompt += f"--- 講義 ID: {key} ---\n{doc_preview}...\n\n"
 
+        prefix_hint = ""
+        if target_prefix:
+            prefix_hint = f"3. 【極度重要】：這段語音的來源檔名前綴為「{target_prefix}」。請特別注意，如果某份講義 ID 的前綴（例如 L13）與語音前綴（例如 L15）明顯不同，代表它極高機率屬於另一堂課的專屬講義，請嚴格避免誤選！寧缺勿濫。\n"
+
         prompt += (
             "【重要注意事項】：\n"
             "1. 一段語音（一堂課）通常最多只會對應 1 份或 2 份講義，請絕對不要將所有講義都列出。\n"
             "2. 如果這段語音前半段只是一般的行政宣導、點名、閒聊，且沒有包含任何具體學術關鍵字能明確對應到某份講義，請務必輸出空陣列 []。\n"
-            "3. 只有當語音中出現明確且核心的學術專有名詞，且與備選講義預覽內容高度重疊時，才將該講義 ID 納入。\n\n"
+            f"{prefix_hint}"
+            "只有當語音中出現明確且核心的學術專有名詞，且與備選講義預覽內容高度重疊時，才將該講義 ID 納入。\n\n"
             '請嚴格只輸出一個 JSON 陣列，包含你認為最對應的講義 ID 字串，例如：["講義A"] 或 ["講義A", "講義B"]，若皆不符合請輸出 []。\n'
             "請絕對不要輸出任何其他解釋、思考過程、或 Markdown 標籤。"
         )

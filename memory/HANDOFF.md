@@ -1,11 +1,23 @@
 # HANDOFF.md — Session Handoff Record
 
 > **Last Updated:** 2026-06-03
-> **System Status:** 🟢 Stable / Production-Ready (V9.25 — Semantic Matcher Fix & Doc Parser DPI Boost)
+> **System Status:** 🟢 Stable / Production-Ready (V9.26 — GC Thread & Soft-Delete Architecture)
 
 ---
 
-## Current Session (2026-06-03 — V9.25 Semantic Matcher Fix & Doc Parser DPI Boost)
+## Current Session (2026-06-03 — V9.26 GC Thread & Soft-Delete Architecture)
+
+**Date:** 2026-06-03
+
+- [x] **Garbage Collection (GC) Soft-Delete System**: Transformed the pipeline's destructive file handling into a non-destructive 24-hour grace period system. Replaced `os.remove()` and `shutil.rmtree()` in `inbox_daemon` with soft-delete `deleted_at` markers injected into `state.json`.
+- [x] **Background GC Thread**: Deployed a persistent background thread (`_gc_loop`) within `inbox_daemon` that sweeps expired Soft-Delete markers every 5 minutes and safely rotates orphaned `output/` directories to `data/.trash/`.
+- [x] **Cross-Skill Invalidation Protocol**: Empowered `inbox_daemon` to actively intercept updates to upstream skill inputs (e.g., `doc_parser/input/`) and automatically invalidate downstream state caches (e.g., stripping the P3 Docling dependency flag in `proofreader`) to trigger autonomous re-pairing and LLM processing.
+- [x] **Event-Driven File Tracking**: Extended `inbox_daemon`'s watchdog to detect `FileDeletedEvent` and `FileMovedEvent` directly from the filesystem, ensuring UI/Finder actions instantly reflect in the system state.
+- [x] **Interactive CLI Safety Check**: Enhanced cleanup scripts (`cleanup_orphans.py`) with mandatory `(y/N)` prompt validation for operational safety.
+
+---
+
+## Previous Session (2026-06-03 — V9.25 Semantic Matcher Fix & Doc Parser DPI Boost)
 
 **Date:** 2026-06-03
 

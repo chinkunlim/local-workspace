@@ -87,14 +87,29 @@ class GlobalRegistry:
             return data.get(subject, {}).get(file_prefix, {})
 
     def get_asset_paths(self, subject: str, file_prefix: str, skill_name: str) -> list[str]:
-        """Return registered paths for a skill as a flat list (handles str and list values)."""
+        """Return registered paths for a skill as a flat list.
+        Performs prefix matching so 'L13' matches 'L13 Myths' and 'L13_chapter'.
+        """
         with self._lock:
-            raw = self.get_assets(subject, file_prefix).get(skill_name)
-        if raw is None:
-            return []
-        if isinstance(raw, list):
-            return raw
-        return [raw]
+            data = self._load()
+            subject_data = data.get(subject, {})
+
+            all_paths = []
+            for key, skills_map in subject_data.items():
+                if (
+                    key == file_prefix
+                    or key.startswith(f"{file_prefix} ")
+                    or key.startswith(f"{file_prefix}_")
+                    or key.startswith(f"{file_prefix}-")
+                ):
+                    raw = skills_map.get(skill_name)
+                    if raw is not None:
+                        if isinstance(raw, list):
+                            all_paths.extend(raw)
+                        else:
+                            all_paths.append(raw)
+
+            return list(dict.fromkeys(all_paths))
 
     def get_all_subjects(self) -> list:
         with self._lock:

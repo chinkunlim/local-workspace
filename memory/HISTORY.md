@@ -54,3 +54,4 @@
 - **[2026-05-15] [[Archived] Pipeline Integrity & Stability Fixes](sessions/2026-05-15_bddec571.md)** (ID: `bddec571`)
 - **[2026-05-30] [[Archived] 修復管線重複執行與狀態管理異常 (Pipeline State & Router Fix)](sessions/2026-05-30_32729395.md)** (ID: `32729395`)
 - **[2026-06-03] [[Archived] Fix SemanticMatcher and Doc Parser Registration](sessions/2026-06-03_954bbe86.md)** (ID: `954bbe86`)
+- **[2026-06-03] [[Archived] Session c087ba72](sessions/2026-06-03_c087ba72.md)** (ID: `c087ba72`)

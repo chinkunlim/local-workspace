@@ -56,7 +56,7 @@ class BaseProofreadPhase(PipelineBase):
 
                 if candidate_docs:
                     best_prefixes = matcher.find_best_matches(
-                        transcript_text, candidate_docs, logger=self
+                        transcript_text, candidate_docs, target_prefix=prefix, logger=self
                     )
                     for bp in best_prefixes:
                         paths.extend(registry.get_asset_paths(subject, bp, "doc_parser"))

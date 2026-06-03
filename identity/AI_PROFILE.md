@@ -113,3 +113,6 @@
 6. **`memory/DECISIONS.md` & `memory/HISTORY.md`**: Check these before proposing any architectural changes to understand past decisions and historical context.
 
 **Do not guess the state of the project.** Read the files above to acquire your operational memory.
+### Telegram C2 Ecosystem (Open Claw)
+The user operates the system primarily via Telegram commands (e.g. `/wakeup`, `/stop_system`, `/run`) which orchestrate the underlying ecosystem via `bot_daemon.py` and `start.sh`.
+- Running daemon processes (like `inbox_daemon`) in the background IS completely valid and encouraged as long as it is launched via the managed `start.sh` script, which safely routes all output to the `logs/` directory. Do not advise against background execution if the user relies on their Telegram C2 workflow.

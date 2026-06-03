@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-05-29 (V9.24 — Phase 1 & 2 Decoupling + Code Quality Gate Clearance)
+> **Last Updated:** 2026-06-03 (V9.26 — GC Thread & Soft-Delete Architecture)
 
 ---
 
@@ -47,6 +47,13 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-06-03: **V9.26 GC Thread & Soft-Delete Architecture**
+  - Transformed the pipeline's destructive file handling into a non-destructive 24-hour grace period system.
+  - Deployed a persistent background thread (`_gc_loop`) within `inbox_daemon` that sweeps expired Soft-Delete markers.
+  - Empowered `inbox_daemon` to actively intercept updates to upstream skill inputs and automatically invalidate downstream state caches.
+  - Extended `inbox_daemon`'s watchdog to detect `FileDeletedEvent` and `FileMovedEvent` directly from the filesystem.
+  - Enhanced cleanup scripts (`cleanup_orphans.py`) with mandatory `(y/N)` prompt validation.
 
 - [x] 2026-06-03: **V9.25 Semantic Matcher Fix & Doc Parser DPI Boost**
   - Fixed N-to-N matching hallucination in `core/ai/semantic_matcher.py`.
@@ -223,6 +230,13 @@
 ---
 
 ## ✅ Completed
+
+- [x] 2026-06-03: **V9.26 GC Thread & Soft-Delete Architecture**
+  - Transformed the pipeline's destructive file handling into a non-destructive 24-hour grace period system.
+  - Deployed a persistent background thread (`_gc_loop`) within `inbox_daemon` that sweeps expired Soft-Delete markers.
+  - Empowered `inbox_daemon` to actively intercept updates to upstream skill inputs and automatically invalidate downstream state caches.
+  - Extended `inbox_daemon`'s watchdog to detect `FileDeletedEvent` and `FileMovedEvent` directly from the filesystem.
+  - Enhanced cleanup scripts (`cleanup_orphans.py`) with mandatory `(y/N)` prompt validation.
 
 - [x] 2026-05-30: Telegram Bot UX & System Cleanup
   - Fixed AppleScript AppleEvent hijacking for `/resume` via native Terminal tab instantiation.
