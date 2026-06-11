@@ -1,6 +1,6 @@
 # TASKS.md — Task Tracker
 
-> **Last Updated:** 2026-06-03 (V9.26 — GC Thread & Soft-Delete Architecture)
+> **Last Updated:** 2026-06-11 (V9.27 — MarkItDown Registry Fix)
 
 ---
 

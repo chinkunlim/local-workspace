@@ -66,7 +66,7 @@ class Phase1bTextSanitizer(PipelineBase):
         pdf_id = os.path.splitext(filename)[0]
         raw_filename = f"{pdf_id}_raw_extracted.md"
         raw_path = os.path.join(self.dirs["processed"], subject, pdf_id, raw_filename)
-        out_path = os.path.join(self.dirs["processed"], subject, pdf_id, "sanitized.md")
+        out_path = os.path.join(self.dirs["processed"], subject, pdf_id, f"{pdf_id}_sanitized.md")
 
         if not os.path.exists(raw_path):
             self.warning(f"⚠️ [Phase 1b-S] 找不到 {raw_filename}: {raw_path}")

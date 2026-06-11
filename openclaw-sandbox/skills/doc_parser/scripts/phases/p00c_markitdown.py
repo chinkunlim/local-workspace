@@ -166,6 +166,13 @@ class Phase0cMarkItDown(PipelineBase):
             output_hash=out_hash,
         )
 
+        # ── Register to GlobalRegistry ──
+        from core.state.global_registry import GlobalRegistry
+
+        GlobalRegistry(self.workspace_root).register_asset(
+            subject=subj, file_prefix=file_id, skill_name="doc_parser", filepath=raw_output_path
+        )
+
     def _extract_pptx_images(self, pptx_path: str, output_dir: str) -> list[str]:
         """Extract embedded images from a PPTX file.
 

@@ -1,11 +1,21 @@
 # HANDOFF.md — Session Handoff Record
 
-> **Last Updated:** 2026-06-03
-> **System Status:** 🟢 Stable / Production-Ready (V9.26 — GC Thread & Soft-Delete Architecture)
+> **Last Updated:** 2026-06-11
+> **System Status:** 🟢 Stable / Production-Ready (V9.27 — MarkItDown Registry Fix)
 
 ---
 
-## Current Session (2026-06-03 — V9.26 GC Thread & Soft-Delete Architecture)
+## Current Session (2026-06-11 — MarkItDown Registry Fix & Asset Pairing)
+
+**Date:** 2026-06-11
+
+- [x] **MarkItDown Global Registration Bug Fix**: Patched `doc_parser/scripts/phases/p00c_markitdown.py` to correctly register `raw_extracted.md` assets into `GlobalRegistry`. Previously, non-PDF office files bypassed `p01b_text_sanitizer.py` and were completely missing from the global manifest, breaking proofreader matching.
+- [x] **Manifest Path Alignment**: Wrote migration scripts to align all 45 `sanitized.md` paths in `global_manifest.json` to their new `{pdf_id}_sanitized.md` names, eliminating "No Reference Material" errors across the board.
+- [x] **Pairing Verification Check**: Executed system-wide asset pairing verification scripts (`test_all_pairings.py`), confirming 100% prefix-matching accuracy across all subjects and identifying un-paired docs/audio files for user validation.
+
+---
+
+## Previous Session (2026-06-03 — V9.26 GC Thread & Soft-Delete Architecture)
 
 **Date:** 2026-06-03
 

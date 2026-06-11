@@ -55,3 +55,4 @@
 - **[2026-05-30] [[Archived] 修復管線重複執行與狀態管理異常 (Pipeline State & Router Fix)](sessions/2026-05-30_32729395.md)** (ID: `32729395`)
 - **[2026-06-03] [[Archived] Fix SemanticMatcher and Doc Parser Registration](sessions/2026-06-03_954bbe86.md)** (ID: `954bbe86`)
 - **[2026-06-03] [[Archived] Session c087ba72](sessions/2026-06-03_c087ba72.md)** (ID: `c087ba72`)
+- **[2026-06-04] [[Archived] 自動軟刪除與背景回收機制 (Soft-Delete & Background GC)](sessions/2026-06-04_954bbe86.md)** (ID: `954bbe86`)

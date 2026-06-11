@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [V9.27] — 2026-06-11: MarkItDown Registry Fix & Path Alignment
+
+### Fixed
+- **MarkItDown Asset Registration**: Fixed a severe logic gap in `p00c_markitdown.py` where office formats (`.pptx`, `.docx`) were not registered into `GlobalRegistry` because they bypassed `p01b_text_sanitizer.py`. They now correctly inject `raw_extracted.md` into the global manifest.
+- **Global Manifest Stale Paths**: Executed a one-off database migration to fix 45 stale `sanitized.md` paths in `global_manifest.json` to properly point to their new prefixed paths (`{pdf_id}_sanitized.md`), resolving widespread "No Reference Material" errors in the proofreader.
+
+---
+
 ## [V9.25] — 2026-06-03: Semantic Matcher Fix & Doc Parser DPI Boost
 
 ### Fixed

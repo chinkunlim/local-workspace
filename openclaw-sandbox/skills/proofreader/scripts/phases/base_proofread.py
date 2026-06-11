@@ -30,6 +30,9 @@ class BaseProofreadPhase(PipelineBase):
         registry = GlobalRegistry(self.workspace_root)
         paths = registry.get_asset_paths(subject, prefix, "doc_parser")
 
+        # Temporarily disable Semantic Matching per user request
+        use_semantic_fallback = False
+
         # Fast Path Fallback: Semantic Matching
         if not paths and use_semantic_fallback and transcript_text:
             self.log(f"⚠️ 找不到前綴 {prefix} 的直接配對，啟動語意檢索 (Semantic Pairing)...")
